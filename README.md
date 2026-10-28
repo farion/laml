@@ -2,6 +2,28 @@
 
 LAML is a diagram language and Rust compiler. A `.laml` source file produces one SVG, PNG, or PDF image. Relations describe the diagram; mandatory layout rules let the author control node positions without manually drawing them. Styling lives in LAML Style Sheets (LSS), either inline or in local imported files.
 
+## Install the latest release
+
+Linux and macOS (automatically selects x86-64 or Apple Silicon):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/farion/laml/main/scripts/install.sh | sh
+```
+
+Windows x86-64 (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/farion/laml/main/scripts/install.ps1 | iex
+```
+
+The installers fetch the latest **published** release over HTTPS, verify the archive against its `SHA256SUMS`, and install without administrator privileges. The shell installer uses `~/.local/bin` (override with `LAML_INSTALL_DIR`); the Windows installer uses `%LOCALAPPDATA%\Programs\laml`, adds it to the user PATH, and requires a new terminal. Checksums detect corruption; they are not digital signatures. Review any downloaded script before piping it to a shell if you need to audit it.
+
+## Update behaviour
+
+`laml --version` prints the installed version. `laml update` explicitly downloads and verifies the latest published release, then replaces the **running binary's installation**. On Windows the verified replacement is staged and applied after the process exits. A read-only or package-managed installation may require updating through its package manager instead.
+
+Normal `laml check` and `laml build` invocations read a local update cache and never wait for the network. At most once every 24 hours a background process queries GitHub for the latest published version; a known newer version prints a brief notice on subsequent invocations. The app never downloads an update automatically. Set `LAML_NO_UPDATE_CHECK=1` to disable the background request and notices.
+
 ## Build
 
 ```sh
@@ -30,7 +52,7 @@ SVG defaults to embedded Inter Regular with selectable text. `--svg-text=system`
 
 Build any example with `cargo run -- build examples/NAME.laml`. The output filename selects the format (`.svg`, `.png`, or `.pdf`). SVG text modes are selected with `--svg-text=embedded|system|paths` after the optional output filename. The README images are generated with `cargo run -- build examples/NAME.laml docs/images/NAME.png`.
 
-## v1 feature contract
+## Language feature contract
 
 - Line-oriented `.laml` grammar for rectangular nodes, named or unnamed directed/bidirectional relations, classes, labels, and diagram settings.
 - Deterministic automatic placement; mandatory symbolic/word placement rules with minimum gaps and optional edge/centre alignment.
@@ -38,11 +60,11 @@ Build any example with `cargo run -- build examples/NAME.laml`. The output filen
 - Diagram-wide and per-relation label placement (`near`, `along`, `inline`).
 - LSS styling and local recursive imports with a deterministic per-property cascade.
 - SVG in embedded-font, system-font, or glyph-path text mode; PNG and vector PDF exports.
-- `check` and `build` commands, source-linked diagnostics, and conformance tests for deterministic and mandatory geometry.
+- `check`, `build`, and `update` commands, source-linked diagnostics, and conformance tests for deterministic and mandatory geometry.
 
 ## Releases
 
-Pushing a stable version tag such as `v1.0.1` runs the [release workflow](.github/workflows/release.yml). The tag must match the version in `Cargo.toml` and point to a commit containing the workflow. All platform jobs must pass before publication. The GitHub Release contains archives for Linux x86-64, macOS Intel and Apple Silicon, Windows x86-64, and a `SHA256SUMS` file. Each archive contains the executable, example diagrams, README, and license files.
+Pushing a stable version tag such as `v1.1.0` runs the [release workflow](.github/workflows/release.yml). The tag must match the version in `Cargo.toml` and point to a commit containing the workflow. All platform jobs must pass before publication. The GitHub Release contains archives for Linux x86-64, macOS Intel and Apple Silicon, Windows x86-64, and a `SHA256SUMS` file. Each archive contains the executable, example diagrams, README, and license files.
 
 Update `Cargo.toml` and `Cargo.lock`, commit those changes, then push the commit and its matching version tag. Moving an existing version tag is not part of the release process.
 

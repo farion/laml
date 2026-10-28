@@ -17,6 +17,7 @@ pub mod svg;
 mod svg_paths;
 pub mod syntax;
 pub mod text;
+pub mod update;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Node {

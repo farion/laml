@@ -16,6 +16,7 @@ fn temp_dir() -> std::path::PathBuf {
 #[test]
 fn check_example_accepts_syntax_and_imported_styles() {
     let output = Command::new(env!("CARGO_BIN_EXE_laml"))
+        .env("LAML_NO_UPDATE_CHECK", "1")
         .arg("check")
         .arg(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -38,6 +39,7 @@ fn build_example_produces_svg_with_selectable_text_and_embedded_font() {
     let dir = temp_dir();
     let destination = dir.join("architecture.svg");
     let output = Command::new(env!("CARGO_BIN_EXE_laml"))
+        .env("LAML_NO_UPDATE_CHECK", "1")
         .arg("build")
         .arg(concat!(
             env!("CARGO_MANIFEST_DIR"),
@@ -67,6 +69,7 @@ fn parallel_routes_render_as_distinct_paths() {
     let destination = dir.join("parallel.svg");
     fs::write(&source, "semantics {\nA\nB\nA -> B\nA -> B\n}\n").unwrap();
     let output = Command::new(env!("CARGO_BIN_EXE_laml"))
+        .env("LAML_NO_UPDATE_CHECK", "1")
         .args([
             "build",
             source.to_str().unwrap(),
@@ -98,6 +101,7 @@ fn impossible_requested_label_mode_fails_at_layout_line_without_image() {
         "This self loop label is deliberately much too long for any available exterior segment";
     fs::write(&source,format!("semantics {{\nA\nloop: A -> A : {label}\n}}\nlayout {{\nrelation[loop] : label=along\n}}\n")).unwrap();
     let result = Command::new(env!("CARGO_BIN_EXE_laml"))
+        .env("LAML_NO_UPDATE_CHECK", "1")
         .args(["build", source.to_str().unwrap(), output.to_str().unwrap()])
         .output()
         .unwrap();
@@ -114,6 +118,7 @@ fn fixed_width_truncates_text_but_preserves_full_svg_title() {
     let output = dir.join("narrow.svg");
     fs::write(&source,"semantics {\nBackend(label=\"Long Backend Node Label\")\n}\nstyling {\nnode[Backend] {\nwidth: 80\n}\n}\n").unwrap();
     let result = Command::new(env!("CARGO_BIN_EXE_laml"))
+        .env("LAML_NO_UPDATE_CHECK", "1")
         .args(["build", source.to_str().unwrap(), output.to_str().unwrap()])
         .output()
         .unwrap();
@@ -135,6 +140,7 @@ fn cli_exports_png_pdf_and_both_other_svg_text_modes() {
     for extension in ["png", "pdf", "svg"] {
         let path = dir.join(format!("architecture.{extension}"));
         let result = Command::new(env!("CARGO_BIN_EXE_laml"))
+            .env("LAML_NO_UPDATE_CHECK", "1")
             .args(["build", source, path.to_str().unwrap()])
             .output()
             .unwrap();
@@ -153,6 +159,7 @@ fn cli_exports_png_pdf_and_both_other_svg_text_modes() {
     for mode in ["system", "paths"] {
         let output = dir.join(format!("{mode}.svg"));
         let result = Command::new(env!("CARGO_BIN_EXE_laml"))
+            .env("LAML_NO_UPDATE_CHECK", "1")
             .args([
                 "build",
                 source,
@@ -173,6 +180,7 @@ fn cli_exports_png_pdf_and_both_other_svg_text_modes() {
     let output = dir.join("unsupported.png");
     fs::write(&output, b"unchanged").unwrap();
     let result = Command::new(env!("CARGO_BIN_EXE_laml"))
+        .env("LAML_NO_UPDATE_CHECK", "1")
         .args([
             "build",
             source,
@@ -198,6 +206,7 @@ fn png_canvas_limit_fails_without_overwriting_existing_image() {
     .unwrap();
     fs::write(&destination, b"keep existing image").unwrap();
     let result = Command::new(env!("CARGO_BIN_EXE_laml"))
+        .env("LAML_NO_UPDATE_CHECK", "1")
         .args([
             "build",
             source.to_str().unwrap(),
@@ -209,4 +218,17 @@ fn png_canvas_limit_fails_without_overwriting_existing_image() {
     assert!(String::from_utf8_lossy(&result.stderr).contains("64 million pixels"));
     assert_eq!(fs::read(destination).unwrap(), b"keep existing image");
     fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
+fn version_is_available_without_a_diagram() {
+    let result = Command::new(env!("CARGO_BIN_EXE_laml"))
+        .arg("--version")
+        .output()
+        .unwrap();
+    assert!(result.status.success());
+    assert_eq!(
+        String::from_utf8(result.stdout).unwrap().trim(),
+        format!("laml {}", env!("CARGO_PKG_VERSION"))
+    );
 }

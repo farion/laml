@@ -18,11 +18,26 @@ fn main() {
 }
 
 fn usage() -> String {
-    "usage: laml check FILE.laml | laml build FILE.laml [OUTPUT.svg|OUTPUT.png|OUTPUT.pdf] [--svg-text=embedded|system|paths]".into()
+    "usage: laml [--version | update | check FILE.laml | build FILE.laml [OUTPUT.svg|OUTPUT.png|OUTPUT.pdf] [--svg-text=embedded|system|paths]]".into()
 }
 
 fn run() -> Result<(), String> {
     let args: Vec<_> = env::args().skip(1).collect();
+    match args.as_slice() {
+        [version] if version == "--version" => {
+            println!("laml {}", laml::update::VERSION);
+            return Ok(());
+        }
+        [command] if command == "update" => {
+            println!("{}", laml::update::update()?);
+            return Ok(());
+        }
+        [command] if command == "__update-check" => {
+            laml::update::refresh_cache();
+            return Ok(());
+        }
+        _ => {}
+    }
     if args.len() < 2
         || args.len() > 4
         || !matches!(args[0].as_str(), "check" | "build")
@@ -42,6 +57,7 @@ fn run() -> Result<(), String> {
     } else {
         args.get(2)
     };
+    laml::update::notify_in_background();
     let path = Path::new(&args[1]);
     let text = fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
     let diagram =

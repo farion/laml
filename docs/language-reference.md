@@ -1,6 +1,6 @@
 # LAML language reference
 
-A `.laml` file describes one diagram. `laml build FILE.laml [OUTPUT.svg|OUTPUT.png|OUTPUT.pdf] [--svg-text=embedded|system|paths]` produces one image or reports an error; the default output path replaces `.laml` with `.svg`. `laml check FILE.laml` validates syntax, references, imported styles, and directional placement cycles without building geometry or an image.
+A `.laml` file describes one diagram. `laml build FILE.laml [OUTPUT.svg|OUTPUT.png|OUTPUT.pdf] [--svg-text=embedded|system|paths]` produces one image or reports an error; the default output path replaces `.laml` with `.svg`. `laml check FILE.laml` validates syntax, references, imported styles, and directional placement cycles without building geometry or an image. `laml --version` reports the installed version; `laml update` explicitly downloads a verified newer release and updates the current executable.
 
 ## Document shape and identifiers
 
@@ -122,4 +122,4 @@ An imported `.lamlstyle` file contains one `styling { ... }` section. Imports co
 
 The output extension selects SVG, PNG, or PDF. SVG defaults to `--svg-text=embedded`: Inter Regular is embedded, and text remains selectable. `--svg-text=system` keeps selectable SVG text but omits the font; the viewer may substitute a font. `--svg-text=paths` converts SVG text into nonselectable glyph outlines and does not preserve node-level `<title>` metadata. These options apply only to SVG output. PNG uses the SVG's CSS-pixel dimensions rounded to whole pixels, on a white background; the image is limited to 64 million pixels. PDF is vector output with embedded, selectable text; 96 SVG pixels map to one inch of PDF page size. Rectangular nodes may have rounded corners via `corner-radius`. Relations attach to box boundaries. The router prefers a straight route and searches a finite set of detours when blocked. Parallel relations use separate boundary ports; self-relations use exterior loops. At a supported crossing, the later-declared relation receives a bridge and the earlier relation a gap. If no safe routing or label placement is found, `build` fails without writing a replacement image: it does not emit bare crossings or silently ignore mandatory rules.
 
-See [Getting started](getting-started.md), the [language contract](language-definition.md), and the [buildable examples](../examples/).
+The installers and updater are described in the [README](../README.md). Normal `check` and `build` commands do not wait for the network: a cached version is shown if newer, and a background refresh runs at most once per 24 hours. Set `LAML_NO_UPDATE_CHECK=1` to opt out. See [Getting started](getting-started.md), the [language contract](language-definition.md), and the [buildable examples](../examples/).

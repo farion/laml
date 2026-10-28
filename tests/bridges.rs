@@ -34,8 +34,16 @@ fn later_relation_gets_a_bridge_and_earlier_gets_a_small_gap() {
 }
 
 #[test]
+fn crlf_source_preserves_crossing_geometry() {
+    let source = include_str!("../examples/crossing.laml").replace("\r\n", "\n");
+    let crlf = source.replace('\n', "\r\n");
+    assert_eq!(draw(&source).1, draw(&crlf).1);
+}
+
+#[test]
 fn reversing_relation_declarations_reverses_bridge_ownership() {
-    let source = include_str!("../examples/crossing.laml");
+    // Git may check out .laml fixtures with CRLF on Windows.
+    let source = include_str!("../examples/crossing.laml").replace("\r\n", "\n");
     let swapped = source.replace(
         "first: A -> D\n    second: B -> C",
         "second: B -> C\n    first: A -> D",

@@ -1,6 +1,6 @@
 # Getting started with LAML
 
-LAML separates **semantics** (nodes and relations), **layout** (mandatory placement and label rules), and **styling** (appearance). One `.laml` file builds one SVG, PNG, or PDF image.
+LAML separates **semantics** (nodes and relations), **layout** (mandatory placement and label rules), and **styling** (appearance). One `.laml` file builds one SVG, PNG, or PDF image. For a prebuilt executable on Linux, macOS, or Windows, use the [installer instructions](../README.md#install-the-latest-release); run `laml update` when you choose to install a newer version.
 
 ## 1. Describe the diagram
 
