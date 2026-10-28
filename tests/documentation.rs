@@ -29,9 +29,32 @@ fn every_published_example_checks_and_builds() {
         let preview_path = root.join("docs/images").join(format!("{name}.png"));
         let preview =
             fs::read(&preview_path).unwrap_or_else(|e| panic!("{}: {e}", preview_path.display()));
+        let expected = resvg::tiny_skia::Pixmap::decode_png(&preview).unwrap();
+        let actual = resvg::tiny_skia::Pixmap::decode_png(&png(&svg).unwrap()).unwrap();
+        assert_eq!(
+            (expected.width(), expected.height()),
+            (actual.width(), actual.height())
+        );
+        // Cross-platform rasterizers can round a few antialiased edge pixels
+        // differently; large visible changes must still update the screenshot.
+        let changed = expected
+            .pixels()
+            .iter()
+            .zip(actual.pixels())
+            .filter(|(a, b)| {
+                [
+                    a.red().abs_diff(b.red()),
+                    a.green().abs_diff(b.green()),
+                    a.blue().abs_diff(b.blue()),
+                    a.alpha().abs_diff(b.alpha()),
+                ]
+                .into_iter()
+                .any(|difference| difference > 16)
+            })
+            .count();
         assert!(
-            preview == png(&svg).unwrap(),
-            "{} is out of sync with its LAML source",
+            changed * 1000 <= expected.pixels().len() * 3,
+            "{} is out of sync with its LAML source ({changed} changed pixels)",
             preview_path.display()
         );
         assert!(
