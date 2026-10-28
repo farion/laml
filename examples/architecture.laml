@@ -1,0 +1,32 @@
+# Architecture example with local style import and mandatory placement.
+settings {
+    direction: left-to-right
+}
+
+semantics {
+    Client(label="Client application"; classes=external)
+    Backend(label="Backend API"; classes=backend)
+    Broker(label="Message broker"; classes=infrastructure)
+
+    Client -> Backend : HTTPS
+    mqtt(classes=async): Backend -> Broker : MQTT
+}
+
+layout {
+    Client < Backend : align=center; gap=24
+    Broker below Backend : align=center
+}
+
+styling {
+    import "architecture.lamlstyle"
+
+    node.backend {
+        fill: rgb(35, 75, 125)
+        color: rgb(255, 255, 255)
+        font-size: 14
+    }
+
+    relation.async {
+        width: 2
+    }
+}

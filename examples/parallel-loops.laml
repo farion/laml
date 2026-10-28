@@ -1,0 +1,17 @@
+semantics {
+    Service(label="Service")
+    Broker(label="Broker")
+
+    sent: Service -> Broker : request
+    accepted: Service -> Broker : accepted
+    reply: Broker -> Service : response
+    retry: Service -> Service : retry
+}
+layout {
+    Service < Broker : align=center; gap=220
+}
+styling {
+    relation[retry] {
+        color: rgb(170, 49, 49)
+    }
+}

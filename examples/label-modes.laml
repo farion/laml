@@ -1,0 +1,19 @@
+# Global inline text; the named diagonal relation uses along-path text.
+settings {
+    relation-label: inline
+}
+semantics {
+    A(label="Source")
+    B(label="Target")
+    C(label="Producer")
+    D(label="Consumer")
+    inline: A -> B : Batch
+    along: C -> D : Stream
+}
+layout {
+    A < B : align=center; gap=180
+    C < D : gap=180
+    A above C : align=left; gap=120
+    C above D : gap=48
+    relation[along] : label=along
+}

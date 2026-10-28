@@ -1,0 +1,113 @@
+//! Parsed language model. Geometry and SVG rendering are separate phases.
+
+use crate::RelationKind;
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum FlowDirection {
+    #[default]
+    LeftToRight,
+    RightToLeft,
+    TopToBottom,
+    BottomToTop,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum LabelPlacement {
+    #[default]
+    Near,
+    Along,
+    Inline,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Settings {
+    pub direction: FlowDirection,
+    pub strict_case: bool,
+    pub relation_label: LabelPlacement,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NodeDecl {
+    pub id: String,
+    pub label: Option<String>,
+    pub classes: Vec<String>,
+    pub line: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RelationDecl {
+    pub name: Option<String>,
+    pub classes: Vec<String>,
+    /// The semantic source; `A <- B` is normalized to `from=B, to=A`.
+    pub from: String,
+    pub to: String,
+    pub kind: RelationKind,
+    pub label: Option<String>,
+    pub line: usize,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Placement {
+    Left,
+    Right,
+    Above,
+    Below,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Alignment {
+    Top,
+    Center,
+    Bottom,
+    Left,
+    Right,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct LayoutRule {
+    pub first: String,
+    pub second: String,
+    pub placement: Placement,
+    pub align: Option<Alignment>,
+    pub gap: Option<f64>,
+    pub line: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RelationLabelRule {
+    pub name: String,
+    pub placement: LabelPlacement,
+    pub line: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Property {
+    pub name: String,
+    pub value: String,
+    pub line: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StyleRule {
+    pub selector: String,
+    pub properties: Vec<Property>,
+    pub line: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum StyleEntry {
+    Import { path: String, line: usize },
+    Rule(StyleRule),
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Diagram {
+    pub settings: Settings,
+    pub nodes: Vec<NodeDecl>,
+    pub relations: Vec<RelationDecl>,
+    pub layout: Vec<LayoutRule>,
+    pub relation_layout: Vec<RelationLabelRule>,
+    /// Source order is preserved so later matching style rules can override earlier ones.
+    /// Imports are parsed but not resolved by this parser.
+    pub styling: Vec<StyleEntry>,
+}

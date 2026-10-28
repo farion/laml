@@ -1,0 +1,23 @@
+# Four nodes force two diagonal relations to cross.
+semantics {
+    A
+    B
+    C
+    D
+    first: A -> D
+    second: B -> C
+}
+layout {
+    A < B : align=top; gap=120
+    C < D : align=top; gap=120
+    A above C : align=left; gap=120
+    B above D : align=left; gap=120
+}
+styling {
+    relation[first] {
+        color: rgb(35, 75, 125)
+    }
+    relation[second] {
+        color: rgb(170, 49, 49)
+    }
+}
