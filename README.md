@@ -18,12 +18,17 @@ SVG defaults to embedded Inter Regular with selectable text. `--svg-text=system`
 
 ## Examples
 
-- [Architecture](examples/architecture.laml) — local LSS import, styling, and mandatory layout.
-- [Crossing](examples/crossing.laml) — a supported crossing with a bridge.
-- [Parallel relations and loop](examples/parallel-loops.laml) — distinct ports and an exterior self-loop.
-- [Relation-label modes](examples/label-modes.laml) — inline text with a per-relation along-path override.
+| [Architecture](examples/architecture.laml) | [Crossing](examples/crossing.laml) |
+|---|---|
+| [![Client to backend to broker diagram](docs/images/architecture.png)](examples/architecture.laml) | [![Two relations crossing with a bridge](docs/images/crossing.png)](examples/crossing.laml) |
+| Local LSS import, styling, and mandatory layout. | A supported crossing with a bridge. |
 
-Build any example with `cargo run -- build examples/NAME.laml`. The output filename selects the format (`.svg`, `.png`, or `.pdf`). SVG text modes are selected with `--svg-text=embedded|system|paths` after the optional output filename.
+| [Parallel relations and loop](examples/parallel-loops.laml) | [Relation-label modes](examples/label-modes.laml) |
+|---|---|
+| [![Service and broker with parallel relations, response arrow, and retry loop](docs/images/parallel-loops.png)](examples/parallel-loops.laml) | [![Inline Batch label and angled Stream label between two node pairs](docs/images/label-modes.png)](examples/label-modes.laml) |
+| Distinct ports and an exterior self-loop. | Inline text with a per-relation along-path override. |
+
+Build any example with `cargo run -- build examples/NAME.laml`. The output filename selects the format (`.svg`, `.png`, or `.pdf`). SVG text modes are selected with `--svg-text=embedded|system|paths` after the optional output filename. The README images are generated with `cargo run -- build examples/NAME.laml docs/images/NAME.png`.
 
 ## v1 feature contract
 
