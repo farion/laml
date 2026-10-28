@@ -91,7 +91,12 @@ fn unpack(archive: &[u8], member: &str) -> Result<Vec<u8>, String> {
             .by_index(index)
             .map_err(|e| format!("invalid zip member: {e}"))?;
         // PowerShell ZIP writers may use Windows path separators.
-        if file.name().replace('\\', "/") != member {
+        if file
+            .name()
+            .map_err(|e| format!("invalid zip member name: {e}"))?
+            .replace('\\', "/")
+            != member
+        {
             continue;
         }
         if found.is_some() || file.is_dir() || file.size() > MAX_BINARY {
