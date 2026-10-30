@@ -287,6 +287,41 @@ pub fn place(
                 try_soft(n, &eq_y, &mut y, bound, &pref_y);
             }
         }
+        // An unheaded edge has no semantic direction. Source node order is
+        // only a deterministic proximity tie-break, never a hard constraint.
+        for relation in &diagram.relations {
+            if !matches!(
+                relation.kind,
+                crate::RelationKind::Undirected | crate::RelationKind::Bidirectional
+            ) {
+                continue;
+            }
+            let (a, b) = (find(&relation.from), find(&relation.to));
+            if a == b {
+                continue;
+            }
+            let (first, second) = (a.min(b), a.max(b));
+            let horizontal = matches!(
+                diagram.settings.direction,
+                FlowDirection::LeftToRight | FlowDirection::RightToLeft
+            );
+            let extent = if horizontal {
+                boxes[first].width
+            } else {
+                boxes[first].height
+            };
+            let bound = Minimum {
+                a: first,
+                b: second,
+                distance: extent + 64.0,
+                line: 0,
+            };
+            if horizontal {
+                try_soft(n, &eq_x, &mut x, bound, &pref_x);
+            } else {
+                try_soft(n, &eq_y, &mut y, bound, &pref_y);
+            }
+        }
     }
     // Preserve earlier node positions where possible: move the later node's
     // alignment group to clear collisions. If Y is impossible, try X.

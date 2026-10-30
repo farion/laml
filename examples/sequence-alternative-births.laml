@@ -1,4 +1,4 @@
-# Both alternatives create and destroy the same logical lifeline.
+// Both alternatives create and destroy the same logical lifeline.
 settings {
     type: sequence
 }

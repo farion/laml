@@ -1,4 +1,4 @@
-# Found and lost messages use an unknown endpoint, not a lifeline.
+// Found and lost messages use an unknown endpoint, not a lifeline.
 settings {
     type: sequence
 }

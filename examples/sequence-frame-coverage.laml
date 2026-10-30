@@ -1,4 +1,4 @@
-# Mandatory frame scope and a gate on the named ref frame.
+// Mandatory frame scope and a gate on the named ref frame.
 settings {
     type: sequence
 }

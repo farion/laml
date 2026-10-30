@@ -1,5 +1,5 @@
 use crate::styles::{Element, StyleSheet, Value};
-use crate::syntax::NodeDecl;
+use crate::syntax::{DiagramType, NodeDecl, NodeKind, NodePart};
 use crate::text::{ellipsize, measure};
 
 #[derive(Clone, Debug)]
@@ -7,6 +7,9 @@ pub struct BoxNode {
     pub id: String,
     pub label: String,
     pub lines: Vec<String>,
+    pub body: Vec<NodePart>,
+    pub abstract_node: bool,
+    pub kind: NodeKind,
     pub x: f64,
     pub y: f64,
     pub width: f64,
@@ -41,14 +44,24 @@ fn color(sheet: &StyleSheet, element: &Element<'_>, property: &str, default: &st
     }
 }
 
-pub fn measure_node(node: &NodeDecl, styles: &StyleSheet) -> Result<BoxNode, String> {
+pub fn measure_node(
+    node: &NodeDecl,
+    styles: &StyleSheet,
+    diagram_type: DiagramType,
+) -> Result<BoxNode, String> {
     let element = Element::Node {
         id: &node.id,
         classes: &node.classes,
     };
     let font_size = number(styles, &element, "font-size", 14.0);
     let padding = number(styles, &element, "padding", 12.0);
-    let label = node.label.clone().unwrap_or_else(|| node.id.clone());
+    let name = node.label.clone().unwrap_or_else(|| node.id.clone());
+    let label = match node.kind {
+        NodeKind::Interface => format!("«interface»\n{name}"),
+        NodeKind::Enumeration => format!("«enumeration»\n{name}"),
+        NodeKind::DataType => format!("«dataType»\n{name}"),
+        _ => name,
+    };
     let original: Vec<&str> = label.split('\n').collect();
     let line_height = font_size * 1.25;
     let fixed_width = styles.get(&element, "width").and_then(|d| match d.value {
@@ -81,23 +94,48 @@ pub fn measure_node(node: &NodeDecl, styles: &StyleSheet) -> Result<BoxNode, Str
     {
         return Err("styled height is less than styled min-height".into());
     }
-    let longest = original
+    let mut longest = original
         .iter()
         .try_fold(0.0_f64, |max, text| -> Result<f64, String> {
             Ok(max.max(measure(text, font_size)?))
         })?;
+    for part in &node.parts {
+        if let NodePart::Member { text, .. } = part {
+            longest = longest.max(measure(text, font_size)?);
+        }
+    }
     let width = fixed_width.unwrap_or_else(|| {
         explicit_min_width
             .unwrap_or(100.0)
             .max(longest + padding * 2.0)
     });
-    let natural_height = line_height * original.len() as f64 + padding * 2.0;
+    let body_height: f64 = node
+        .parts
+        .iter()
+        .map(|part| match part {
+            NodePart::Member { .. } => line_height,
+            NodePart::Separator => 8.0,
+        })
+        .sum();
+    let natural_height = line_height * original.len() as f64
+        + body_height
+        + if node.parts.is_empty() { 0.0 } else { 4.0 }
+        + padding * 2.0;
     let height =
         fixed_height.unwrap_or_else(|| explicit_min_height.unwrap_or(50.0).max(natural_height));
     let available_width = width - padding * 2.0;
     let available_height = height - padding * 2.0;
     if available_width < 0.0 || available_height < line_height {
         return Err("fixed node box cannot fit even one line of text and padding".into());
+    }
+    if diagram_type != DiagramType::Generic
+        && (longest > available_width + 0.01 || natural_height > height + 0.01)
+    {
+        return Err("fixed UML node box would hide its name or members".into());
+    }
+    // A body is structural: it is not safe to silently omit addressable rows.
+    if !node.parts.is_empty() && natural_height > height + 0.01 {
+        return Err("fixed node box cannot fit its member rows".into());
     }
     let visible = original
         .len()
@@ -108,10 +146,21 @@ pub fn measure_node(node: &NodeDecl, styles: &StyleSheet) -> Result<BoxNode, Str
         let force = vertical_overflow && index + 1 == visible;
         lines.push(ellipsize(text, available_width, font_size, force)?);
     }
+    let mut body = node.parts.clone();
+    if diagram_type == DiagramType::Generic {
+        for part in &mut body {
+            if let NodePart::Member { text, .. } = part {
+                *text = ellipsize(text, available_width, font_size, false)?;
+            }
+        }
+    }
     Ok(BoxNode {
         id: node.id.clone(),
         label,
         lines,
+        body,
+        abstract_node: node.abstract_node,
+        kind: node.kind,
         x: 0.0,
         y: 0.0,
         width,

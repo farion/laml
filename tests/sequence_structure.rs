@@ -281,7 +281,7 @@ fn inline_decomposition_renders_child_lifelines_and_main_messages() {
 fn css_descendant_selectors_scope_reused_child_ids() {
     use laml::{styles::load, svg::TextMode, syntax::Diagram};
     use std::path::Path;
-    let source = "settings {\ntype: sequence\n}\nsemantics {\nAPI(classes=critical)\nWorker\ndecompose API \"One\" {\nCache\n}\ndecompose Worker \"Two\" {\nCache\n}\n}\nstyling {\nnode[Cache] {\nfill: \"#dddddd\"\n}\nnode[API] node[Cache] {\nfill: \"#aa0000\"\n}\nnode[Worker] node[Cache] {\nfill: \"#0000aa\"\n}\n}\n";
+    let source = "settings {\ntype: sequence\n}\nsemantics {\nAPI(style-classes=critical)\nWorker\ndecompose API \"One\" {\nCache\n}\ndecompose Worker \"Two\" {\nCache\n}\n}\nstyling {\nnode[Cache] {\nfill: \"#dddddd\"\n}\nnode[API] node[Cache] {\nfill: \"#aa0000\"\n}\nnode[Worker] node[Cache] {\nfill: \"#0000aa\"\n}\n}\n";
     let diagram = parse(source).unwrap();
     let sheet = load(
         &Diagram {
@@ -389,7 +389,7 @@ fn global_fragment_stays_visible_across_inline_decomposition() {
 fn css_descendant_selectors_reach_nested_messages_not_other_subdiagrams() {
     use laml::{styles::load, svg::TextMode, syntax::Diagram};
     use std::path::Path;
-    let source = "settings {\ntype: sequence\n}\nsemantics {\nAPI(classes=critical)\nWorker\ndecompose API \"One\" {\nCache\nDB\nquery: Cache -> DB : read\n}\ndecompose Worker \"Two\" {\nCache\nDB\nquery: Cache -> DB : read\n}\n}\nstyling {\nrelation[query] {\ncolor: \"#333333\"\n}\nnode[API] relation[query] {\ncolor: \"#aa0000\"\n}\nnode[Worker] relation[query] {\ncolor: \"#0000aa\"\n}\n}\n";
+    let source = "settings {\ntype: sequence\n}\nsemantics {\nAPI(style-classes=critical)\nWorker\ndecompose API \"One\" {\nCache\nDB\nquery: Cache -> DB : read\n}\ndecompose Worker \"Two\" {\nCache\nDB\nquery: Cache -> DB : read\n}\n}\nstyling {\nrelation[query] {\ncolor: \"#333333\"\n}\nnode[API] relation[query] {\ncolor: \"#aa0000\"\n}\nnode[Worker] relation[query] {\ncolor: \"#0000aa\"\n}\n}\n";
     let diagram = parse(source).unwrap();
     let sheet = load(
         &Diagram {

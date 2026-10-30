@@ -1,4 +1,4 @@
-# Four nodes force two diagonal relations to cross.
+// Four nodes force two diagonal relations to cross.
 semantics {
     A
     B

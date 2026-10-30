@@ -6,10 +6,10 @@ LAML separates **semantics** (nodes and relations), **layout** (mandatory placem
 
 ```text
 semantics {
-    Browser(label="Customer portal"; classes=channel)
-    WebEdge(label="Web gateway"; classes=edge)
-    Catalog(label="Catalog service"; classes=service)
-    CatalogDB(label="Catalog store"; classes=data)
+    Browser(label="Customer portal"; style-classes=channel)
+    WebEdge(label="Web gateway"; style-classes=edge)
+    Catalog(label="Catalog service"; style-classes=service)
+    CatalogDB(label="Catalog store"; style-classes=data)
 
     Browser -> WebEdge : HTTPS
     WebEdge -> Catalog : query
@@ -17,7 +17,7 @@ semantics {
 }
 ```
 
-`Browser`, `WebEdge`, `Catalog`, and `CatalogDB` are node identifiers. `label` supplies visible text; `classes` group objects for styling. Relations can be unnamed or have a name such as `query: WebEdge -> Catalog` for individual targeting. Visible relation text follows the final `:`. `A <- B` means B to A; `A <-> B` is bidirectional. The [complete architecture example](../examples/architecture.laml) has twelve nodes arranged into four layers.
+`Browser`, `WebEdge`, `Catalog`, and `CatalogDB` are node identifiers. `label` supplies visible text; `style-classes` group objects for styling. Relations can be unnamed or have a name such as `query: WebEdge -> Catalog` for individual targeting. Visible relation text follows the final `:`. `A <- B` means B to A; `A <-> B` is bidirectional. The [complete architecture example](../examples/architecture.laml) has twelve nodes arranged into four layers.
 
 ## 2. Add only the placement rules you need
 
@@ -86,7 +86,7 @@ To build lifelines, calls, fragments and annotated occurrences instead, follow t
 
 ## 5. Syntax reminders
 
-- Write one declaration or property per line. Use `;` only between inline attributes, such as `label="API"; classes=backend`.
+- Write one declaration or property per line. Use `;` only between inline attributes, such as `label="API"; style-classes=backend`.
 - Identifiers match `[A-Za-z_][A-Za-z0-9_]*`. Node labels and import paths are double-quoted; strings support `\n`, `\r`, `\t`, `\"`, and `\\` escapes. A relation label can extend unquoted to the end of its line.
 - `#` begins a comment outside a quoted string. For hexadecimal colours, use quoted `"#rrggbb"` (or use `rgb(r,g,b)`).
 - Named relations are required for per-relation layout and styling; endpoints must refer to declared nodes.

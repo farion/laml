@@ -1,4 +1,4 @@
-# Branching, loop, and parallel fragment frames.
+// Branching, loop, and parallel fragment frames.
 settings {
     type: sequence
 }

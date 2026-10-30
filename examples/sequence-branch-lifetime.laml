@@ -1,4 +1,4 @@
-# A lifeline created in an alternative is destroyed in the same operand.
+// A lifeline created in an alternative is destroyed in the same operand.
 settings {
     type: sequence
 }

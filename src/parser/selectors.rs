@@ -33,7 +33,9 @@ pub(super) fn validate_selector(selector: &str, line: usize) -> Result<(), Parse
         }
         return Err(error(line, "invalid contextual style selector"));
     }
-    let valid = if let Some(class) = selector
+    let valid = if selector == "*" {
+        true
+    } else if let Some(class) = selector
         .strip_prefix("node.")
         .or_else(|| selector.strip_prefix("relation."))
         .or_else(|| selector.strip_prefix('.'))

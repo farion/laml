@@ -29,6 +29,7 @@ pub struct Node {
 pub enum RelationKind {
     Directed,
     Bidirectional,
+    Undirected,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -89,7 +90,10 @@ pub fn resolve_direction_preferences(
                 id: relation.to.clone(),
             })?;
 
-        if relation.kind == RelationKind::Bidirectional {
+        if matches!(
+            relation.kind,
+            RelationKind::Bidirectional | RelationKind::Undirected
+        ) {
             continue;
         }
         if from == to || has_path(&adjacency, to, from) {

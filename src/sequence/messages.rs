@@ -125,7 +125,7 @@ pub(super) fn parse_relation_prefix(text: &str, line: usize) -> Result<MessageOp
             let (key, value) = split_once_top_level(entry.trim(), '=')
                 .ok_or_else(|| error(line, "expected relation attribute=value"))?;
             match (key.trim(), value.trim()) {
-                ("classes", list) if !classes => {
+                ("style-classes", list) if !classes => {
                     options.classes = list
                         .split(',')
                         .map(str::trim)
@@ -151,8 +151,8 @@ pub(super) fn parse_relation_prefix(text: &str, line: usize) -> Result<MessageOp
                     options.arrow = Some(false);
                     arrow = true;
                 }
-                ("classes" | "kind" | "arrow", _)
-                    if classes && key.trim() == "classes"
+                ("style-classes" | "kind" | "arrow", _)
+                    if classes && key.trim() == "style-classes"
                         || kind && key.trim() == "kind"
                         || arrow && key.trim() == "arrow" =>
                 {
@@ -184,7 +184,7 @@ pub(super) fn parse_participant(
                 "label" if label.is_none() => {
                     label = Some(quoted_string(value.trim()).map_err(|msg| error(line, msg))?)
                 }
-                "classes" if classes.is_none() => {
+                "style-classes" if classes.is_none() => {
                     let names = value
                         .split(',')
                         .map(str::trim)
@@ -212,7 +212,7 @@ pub(super) fn parse_participant(
                     }
                     ty = Some(value);
                 }
-                "label" | "classes" | "selector" | "type" => {
+                "label" | "style-classes" | "selector" | "type" => {
                     return Err(error(line, "duplicate participant attribute"));
                 }
                 _ => return Err(error(line, "unknown participant attribute")),

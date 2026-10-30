@@ -15,9 +15,11 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
         .nodes
         .iter()
         .map(|node| {
-            nodes::measure_node(node, styles).map_err(|message| GeometryError {
-                line: node.line,
-                message,
+            nodes::measure_node(node, styles, diagram.settings.diagram_type).map_err(|message| {
+                GeometryError {
+                    line: node.line,
+                    message,
+                }
             })
         })
         .collect::<Result<_, _>>()?;

@@ -7,9 +7,11 @@ use crate::lex::{
     without_comment,
 };
 use crate::syntax::{
-    Diagram, FlowDirection, LabelPlacement, NodeDecl, Property, RelationDecl, StyleEntry, StyleRule,
+    Diagram, DiagramType, FlowDirection, LabelPlacement, Property, RelationDecl, StyleEntry,
+    StyleRule,
 };
 
+mod bodies;
 mod layout;
 mod selectors;
 use layout::{parse_layout, parse_relation_label};
@@ -32,6 +34,7 @@ enum Section {
     Top,
     Settings,
     Semantics,
+    NodeBody(usize),
     Layout,
     Styling,
     StyleRule(StyleRule),
@@ -46,11 +49,31 @@ pub fn parse_stylesheet(source: &str) -> Result<Vec<StyleEntry>, ParseError> {
     Ok(parse_document(source, true)?.styling)
 }
 
+fn prescan_type(source: &str) -> DiagramType {
+    let mut settings = false;
+    for raw in source.lines() {
+        let text = without_comment(raw).trim();
+        if !settings {
+            settings = text == "settings {";
+        } else if text == "}" {
+            settings = false;
+        } else if let Some(value) = text.strip_prefix("type:") {
+            return match value.trim() {
+                "class" => DiagramType::Class,
+                "object" => DiagramType::Object,
+                _ => DiagramType::Generic,
+            };
+        }
+    }
+    DiagramType::Generic
+}
+
 fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError> {
     let mut diagram = Diagram::default();
     let mut section = Section::Top;
     let mut seen = [false; 4];
-    let mut seen_settings = [false; 3];
+    let mut seen_settings = [false; 4];
+    diagram.settings.diagram_type = prescan_type(source);
     for (index, original) in source.lines().enumerate() {
         let line = index + 1;
         let text = without_comment(original).trim();
@@ -86,9 +109,21 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
             Section::Semantics => {
                 if text == "}" {
                     Section::Top
+                } else if let Some(header) = text.strip_suffix('{') {
+                    bodies::node(header.trim(), line, &mut diagram)?;
+                    Section::NodeBody(diagram.nodes.len() - 1)
                 } else {
                     parse_semantic(text, line, &mut diagram)?;
                     Section::Semantics
+                }
+            }
+            Section::NodeBody(index) => {
+                if text == "}" {
+                    bodies::close(line, &diagram.nodes[index], diagram.settings.diagram_type)?;
+                    Section::Semantics
+                } else {
+                    bodies::member(text, line, &mut diagram, index)?;
+                    Section::NodeBody(index)
                 }
             }
             Section::Layout => {
@@ -189,7 +224,7 @@ fn attributes(text: &str, line: usize) -> Result<(String, Vec<(String, String)>)
             let (key, value) = split_once_top_level(entry.trim(), '=')
                 .ok_or_else(|| error(line, "expected attribute=value"))?;
             let (key, value) = (key.trim(), value.trim());
-            if !valid_identifier(key) || value.is_empty() {
+            if !(valid_identifier(key) || key == "style-classes") || value.is_empty() {
                 return Err(error(line, "invalid attribute"));
             }
             if result
@@ -222,43 +257,34 @@ fn parse_semantic(text: &str, line: usize, diagram: &mut Diagram) -> Result<(), 
     // Prefixes end at a colon before the arrow; labels begin at a colon after it.
     let arrow_at = find_arrow(text);
     if arrow_at.is_none() {
-        let (id, attrs) = attributes(text, line)?;
-        if id.is_empty() {
-            return Err(error(line, "node identifier required"));
-        }
-        let mut node = NodeDecl {
-            id,
-            label: None,
-            classes: Vec::new(),
-            line,
-        };
-        for (key, value) in attrs {
-            match key.as_str() {
-                "label" => {
-                    node.label = Some(quoted_string(&value).map_err(|msg| error(line, msg))?)
-                }
-                "classes" => node.classes = classes(&value, line)?,
-                _ => return Err(error(line, format!("unknown node attribute '{key}'"))),
-            }
-        }
-        diagram.nodes.push(node);
-        return Ok(());
+        return bodies::node(text, line, diagram);
     }
     let arrow_at = arrow_at.expect("checked above");
-    let (name, attrs, body) = match split_once_top_level(text, ':') {
-        Some((prefix, rest)) if prefix.len() < arrow_at => {
-            let (name, attrs) = attributes(prefix, line)?;
-            (
-                if name.is_empty() { None } else { Some(name) },
-                attrs,
-                rest.trim(),
-            )
+    let (name, attrs, body) = if let Some(prefixed) = text.strip_prefix('@') {
+        let (head, body) = prefixed
+            .split_once(char::is_whitespace)
+            .ok_or_else(|| error(line, "expected @relation-id followed by a relation"))?;
+        let (id, attrs) = attributes(head, line)?;
+        if id.is_empty() {
+            return Err(error(line, "relation ID cannot be empty"));
         }
-        _ => (None, Vec::new(), text),
+        (Some(id), attrs, body.trim())
+    } else {
+        match split_once_top_level(text, ':') {
+            Some((prefix, rest)) if prefix.len() < arrow_at => {
+                let (name, attrs) = attributes(prefix, line)?;
+                (
+                    if name.is_empty() { None } else { Some(name) },
+                    attrs,
+                    rest.trim(),
+                )
+            }
+            _ => (None, Vec::new(), text),
+        }
     };
     let mut relation_classes = Vec::new();
     for (key, value) in attrs {
-        if key != "classes" {
+        if key != "style-classes" {
             return Err(error(line, format!("unknown relation attribute '{key}'")));
         }
         relation_classes = classes(&value, line)?;
@@ -289,7 +315,8 @@ fn parse_semantic(text: &str, line: usize, diagram: &mut Diagram) -> Result<(), 
         "->" => (tokens[0], tokens[2], RelationKind::Directed),
         "<-" => (tokens[2], tokens[0], RelationKind::Directed),
         "<->" => (tokens[0], tokens[2], RelationKind::Bidirectional),
-        _ => return Err(error(line, "expected ->, <-, or <->")),
+        "--" => (tokens[0], tokens[2], RelationKind::Undirected),
+        _ => return Err(error(line, "expected ->, <-, <->, or --")),
     };
     diagram.relations.push(RelationDecl {
         name,
@@ -307,7 +334,7 @@ fn parse_setting(
     text: &str,
     line: usize,
     diagram: &mut Diagram,
-    seen: &mut [bool; 3],
+    seen: &mut [bool; 4],
 ) -> Result<(), ParseError> {
     let (key, value) =
         split_once_top_level(text, ':').ok_or_else(|| error(line, "expected setting: value"))?;
@@ -316,6 +343,7 @@ fn parse_setting(
         "direction" => 0,
         "naming-convention" => 1,
         "relation-label" => 2,
+        "type" => 3,
         _ => return Err(error(line, format!("unknown setting '{}'", key.trim()))),
     };
     if seen[slot] {
@@ -344,6 +372,13 @@ fn parse_setting(
                 "along" => LabelPlacement::Along,
                 "inline" => LabelPlacement::Inline,
                 _ => return Err(error(line, "invalid relation-label setting")),
+            }
+        }
+        "type" => {
+            diagram.settings.diagram_type = match value {
+                "class" => DiagramType::Class,
+                "object" => DiagramType::Object,
+                _ => return Err(error(line, "invalid graph diagram type")),
             }
         }
         _ => return Err(error(line, format!("unknown setting '{}'", key.trim()))),

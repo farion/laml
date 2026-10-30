@@ -2,6 +2,14 @@ use laml::parser::parse;
 use laml::syntax::{Alignment, FlowDirection, Placement, StyleEntry};
 
 #[test]
+fn named_relation_uses_at_prefix_with_style_classes() {
+    let source = "semantics {\nA\nB\n@signal(style-classes=critical) A -> B : message\n}\n";
+    let diagram = parse(source).unwrap();
+    assert_eq!(diagram.relations[0].name.as_deref(), Some("signal"));
+    assert_eq!(diagram.relations[0].classes, ["critical"]);
+}
+
+#[test]
 fn parses_published_example() {
     let diagram = parse(include_str!("../examples/architecture.laml")).unwrap();
     assert_eq!(diagram.nodes.len(), 12);
@@ -17,10 +25,10 @@ settings {
     naming-convention: uppercase-nodes-lowercase-relations
 }
 semantics {
-    A(label="Backend #1 -> running"; classes=backend,critical) # comment
-    B(classes=database)
-    mqtt(classes=protocol,async): A -> B : MQTT
-    (classes=protocol): B <- A : HTTP
+    A(label="Backend #1 -> running"; style-classes=backend,critical) // comment
+    B(style-classes=database)
+    mqtt(style-classes=protocol,async): A -> B : MQTT
+    (style-classes=protocol): B <- A : HTTP
     A <-> B
 }
 layout {
@@ -91,7 +99,7 @@ fn errors_are_linked_to_source_lines() {
             "duplicate setting",
         ),
         (
-            "semantics {\nA(classes=foo; classes=bar)\n}\n",
+            "semantics {\nA(style-classes=foo; style-classes=bar)\n}\n",
             2,
             "duplicate attribute",
         ),

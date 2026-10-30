@@ -2,7 +2,8 @@
 
 use crate::geometry::BoxNode;
 use crate::route::{Point, Route};
-use crate::text::FONT;
+use crate::syntax::{NodeKind, NodePart};
+use crate::text::{FONT, measure};
 use base64::Engine;
 use std::fmt::Write;
 
@@ -128,8 +129,9 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
                 .iter()
                 .map(|p| format!("{:.2},{:.2}", p.x, p.y))
                 .collect();
-            writeln!(svg,"<polyline points=\"{}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\" stroke-linecap=\"round\" stroke-linejoin=\"round\" marker-end=\"url(#arrow)\"{} />",
+            writeln!(svg,"<polyline points=\"{}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"{}{} />",
                 points.join(" "), route.color, route.width,
+                if route.marker_end { " marker-end=\"url(#arrow)\"" } else { "" },
                 if route.bidirectional { " marker-start=\"url(#arrow)\"" } else { "" }).unwrap();
         } else {
             let fragments = crate::svg_paths::fragments(route)?;
@@ -138,7 +140,7 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
                 writeln!(svg,"<path d=\"{}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"{}{} />",
                     path,route.color,route.width,
                     if i==0 && route.bidirectional { " marker-start=\"url(#arrow)\"" } else { "" },
-                    if i==last { " marker-end=\"url(#arrow)\"" } else { "" }).unwrap();
+                    if i==last && route.marker_end { " marker-end=\"url(#arrow)\"" } else { "" }).unwrap();
             }
         }
         if let Some(label) = &route.label {
@@ -157,12 +159,60 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
         writeln!(svg,"<g data-node-id=\"{}\"><title>{}</title><rect x=\"{:.2}\" y=\"{:.2}\" width=\"{:.2}\" height=\"{:.2}\" rx=\"{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
             escape(&node.id),escape(&node.label),node.x,node.y,node.width,node.height,node.radius,node.fill,node.border_color,node.border_width).unwrap();
         let line_height = node.font_size * 1.25;
-        let first_baseline = node.y
-            + (node.height - line_height * node.lines.len() as f64) / 2.0
-            + line_height * 0.78;
+        let first_baseline = if node.body.is_empty() {
+            node.y
+                + (node.height - line_height * node.lines.len() as f64) / 2.0
+                + line_height * 0.78
+        } else {
+            node.y + node.padding + line_height * 0.78
+        };
         for (i, line) in node.lines.iter().enumerate() {
-            writeln!(svg,"<text x=\"{:.2}\" y=\"{:.2}\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\">{}</text>",
-                node.x+node.width/2.0,first_baseline+line_height*i as f64,node.font_size,node.color,escape(line)).unwrap();
+            writeln!(svg,"<text x=\"{:.2}\" y=\"{:.2}\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\"{}>{}</text>",
+                node.x+node.width/2.0,first_baseline+line_height*i as f64,node.font_size,node.color,
+                if node.abstract_node { " font-style=\"italic\"" } else { "" },escape(line)).unwrap();
+            if node.kind == NodeKind::Object {
+                let width = measure(line, node.font_size)?;
+                let center = node.x + node.width / 2.0;
+                let baseline = first_baseline + line_height * i as f64;
+                writeln!(svg,"<line x1=\"{:.2}\" x2=\"{:.2}\" y1=\"{:.2}\" y2=\"{:.2}\" stroke=\"{}\" stroke-width=\"1\" />",
+                    center-width/2.0,center+width/2.0,baseline+2.0,baseline+2.0,node.color).unwrap();
+            }
+        }
+        if !node.body.is_empty() {
+            let mut y = node.y + node.padding + line_height * node.lines.len() as f64;
+            writeln!(svg,"<line x1=\"{:.2}\" y1=\"{y:.2}\" x2=\"{:.2}\" y2=\"{y:.2}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
+                node.x, node.x+node.width, node.border_color, node.border_width).unwrap();
+            y += 4.0;
+            for part in &node.body {
+                match part {
+                    NodePart::Separator => {
+                        y += 4.0;
+                        writeln!(svg,"<line x1=\"{:.2}\" y1=\"{y:.2}\" x2=\"{:.2}\" y2=\"{y:.2}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
+                            node.x,node.x+node.width,node.border_color,node.border_width).unwrap();
+                        y += 4.0;
+                    }
+                    NodePart::Member {
+                        id,
+                        text,
+                        abstract_member,
+                        static_member,
+                        ..
+                    } => {
+                        let baseline = y + line_height * 0.78;
+                        writeln!(svg,"<text x=\"{:.2}\" y=\"{baseline:.2}\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\"{}{}>{}</text>",
+                            node.x+node.padding,node.font_size,node.color,
+                            if *abstract_member { " font-style=\"italic\"" } else { "" },
+                            id.as_ref().map(|id| format!(" data-member-id=\"{}\"",escape(id))).unwrap_or_default(),
+                            escape(text)).unwrap();
+                        if *static_member {
+                            let width = measure(text, node.font_size)?;
+                            writeln!(svg,"<line x1=\"{:.2}\" x2=\"{:.2}\" y1=\"{:.2}\" y2=\"{:.2}\" stroke=\"{}\" stroke-width=\"1\" />",
+                                node.x+node.padding,node.x+node.padding+width,baseline+2.0,baseline+2.0,node.color).unwrap();
+                        }
+                        y += line_height;
+                    }
+                }
+            }
         }
         svg.push_str("</g>\n");
     }

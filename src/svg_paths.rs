@@ -109,6 +109,7 @@ mod tests {
             width: 2.0,
             font_size: 14.0,
             bidirectional: false,
+            marker_end: true,
         }
     }
     #[test]

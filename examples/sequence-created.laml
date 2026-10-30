@@ -1,4 +1,4 @@
-# A first + can introduce a lifeline at the point it appears.
+// A first + can introduce a lifeline at the point it appears.
 settings {
     type: sequence
 }

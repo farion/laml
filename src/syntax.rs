@@ -19,11 +19,53 @@ pub enum LabelPlacement {
     Inline,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum DiagramType {
+    #[default]
+    Generic,
+    Class,
+    Object,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum NodeKind {
+    #[default]
+    Generic,
+    Class,
+    Interface,
+    Enumeration,
+    DataType,
+    Object,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MemberKind {
+    Text,
+    Field,
+    Method,
+    Slot,
+    Literal,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum NodePart {
+    Separator,
+    Member {
+        id: Option<String>,
+        text: String,
+        kind: MemberKind,
+        abstract_member: bool,
+        static_member: bool,
+        line: usize,
+    },
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Settings {
     pub direction: FlowDirection,
     pub strict_case: bool,
     pub relation_label: LabelPlacement,
+    pub diagram_type: DiagramType,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -31,6 +73,9 @@ pub struct NodeDecl {
     pub id: String,
     pub label: Option<String>,
     pub classes: Vec<String>,
+    pub kind: NodeKind,
+    pub abstract_node: bool,
+    pub parts: Vec<NodePart>,
     pub line: usize,
 }
 

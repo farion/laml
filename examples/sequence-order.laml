@@ -1,4 +1,4 @@
-# Explicit ordering between two independently named events.
+// Explicit ordering between two independently named events.
 settings {
     type: sequence
 }

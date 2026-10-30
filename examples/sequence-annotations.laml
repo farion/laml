@@ -1,4 +1,4 @@
-# Visible annotations attach to send/receive ends of named messages.
+// Visible annotations attach to send/receive ends of named messages.
 settings {
     type: sequence
 }

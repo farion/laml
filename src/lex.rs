@@ -10,8 +10,17 @@ pub(crate) fn without_comment(input: &str) -> &str {
             escaped = true;
         } else if ch == '"' {
             quoted = !quoted;
-        } else if ch == '#' && !quoted {
-            return &input[..index];
+        } else if !quoted {
+            // A comment needs a token boundary; https:// in a label is not a comment.
+            let slash_comment = input[index..].starts_with("//")
+                && (index == 0
+                    || input[..index]
+                        .chars()
+                        .next_back()
+                        .is_some_and(char::is_whitespace));
+            if slash_comment {
+                return &input[..index];
+            }
         }
     }
     input
@@ -82,7 +91,8 @@ pub(crate) fn find_arrow(input: &str) -> Option<usize> {
                 _ if depth == 0
                     && (input[index..].starts_with("<->")
                         || input[index..].starts_with("->")
-                        || input[index..].starts_with("<-")) =>
+                        || input[index..].starts_with("<-")
+                        || input[index..].starts_with("--")) =>
                 {
                     return Some(index);
                 }
@@ -124,4 +134,35 @@ pub(crate) fn quoted_string(value: &str) -> Result<String, &'static str> {
         });
     }
     Ok(output)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::without_comment;
+
+    #[test]
+    fn slash_comments_require_a_token_boundary() {
+        assert_eq!(without_comment("// whole line"), "");
+        assert_eq!(without_comment("A // comment"), "A ");
+        assert_eq!(
+            without_comment("A -> B : https://example.test/path"),
+            "A -> B : https://example.test/path"
+        );
+        assert_eq!(
+            without_comment("A -> B : https://example.test/path // comment"),
+            "A -> B : https://example.test/path "
+        );
+    }
+
+    #[test]
+    fn slash_comments_inside_quotes_are_visible_text() {
+        assert_eq!(
+            without_comment("A(label=\"https://example.test//path\") // comment"),
+            "A(label=\"https://example.test//path\") "
+        );
+        assert_eq!(
+            without_comment("A(label=\"escaped \\\" // text\") // comment"),
+            "A(label=\"escaped \\\" // text\") "
+        );
+    }
 }

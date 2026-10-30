@@ -1,4 +1,4 @@
-# Named connections to the boundary of an interaction-use frame.
+// Named connections to the boundary of an interaction-use frame.
 settings {
     type: sequence
 }

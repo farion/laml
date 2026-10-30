@@ -1,11 +1,11 @@
-# Reuse node/relation LSS and style sequence-only elements separately.
+// Reuse node/relation LSS and style sequence-only elements separately.
 settings {
     type: sequence
 }
 semantics {
     Client
-    API(label="Orders API"; classes=critical)
-    request(classes=protocol): Client -> API+ : GET /orders
+    API(label="Orders API"; style-classes=critical)
+    request(style-classes=protocol): Client -> API+ : GET /orders
     <-- : 200 OK
 }
 styling {

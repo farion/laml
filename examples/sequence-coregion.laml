@@ -4,7 +4,7 @@ settings {
 semantics {
     A
     B
-    API(classes=critical)
+    API(style-classes=critical)
     first: A -> API : request
     second: B -> API : signal
     coregion API {

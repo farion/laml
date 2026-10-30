@@ -5,7 +5,7 @@ fn sequence_type_is_explicit_and_does_not_match_comments_or_labels() {
     assert!(!is_sequence_source(
         "semantics {\nA(label=\"type: sequence\")\n}\n"
     ));
-    assert!(!is_sequence_source("settings {\n# type: sequence\n}\n"));
+    assert!(!is_sequence_source("settings {\n// type: sequence\n}\n"));
     assert!(is_sequence_source(
         "settings {\ntype: sequence\n}\nsemantics {\nA\n}\n"
     ));
@@ -33,7 +33,7 @@ fn parses_lifelines_messages_activations_and_short_reply() {
 
 #[test]
 fn named_and_unnamed_messages_accept_existing_relation_class_syntax() {
-    let source = "settings {\ntype: sequence\n}\nsemantics {\nA\nB\nrequest(classes=protocol): A -> B : call\n(classes=protocol): A ->> B : event\n}\n";
+    let source = "settings {\ntype: sequence\n}\nsemantics {\nA\nB\nrequest(style-classes=protocol): A -> B : call\n(style-classes=protocol): A ->> B : event\n}\n";
     let diagram = parse(source).unwrap();
     assert!(
         matches!(&diagram.events[0], Event::Message(m) if m.name.as_deref() == Some("request") && m.classes == ["protocol"])

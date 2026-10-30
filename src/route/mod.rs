@@ -40,6 +40,7 @@ pub struct Route {
     pub width: f64,
     pub font_size: f64,
     pub bidirectional: bool,
+    pub marker_end: bool,
 }
 #[derive(Clone, Debug)]
 pub struct Bridge {
@@ -285,6 +286,7 @@ pub fn route(
             width,
             font_size,
             bidirectional: relation.kind == crate::RelationKind::Bidirectional,
+            marker_end: relation.kind != crate::RelationKind::Undirected,
         });
     }
     Ok(routed)

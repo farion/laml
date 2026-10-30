@@ -1,24 +1,24 @@
-# Four architectural layers and three request flows; all placement is source-driven.
+// Four architectural layers and three request flows; all placement is source-driven.
 settings {
     direction: left-to-right
 }
 
 semantics {
-    Browser(label="Customer portal"; classes=channel)
-    Mobile(label="Mobile app"; classes=channel)
-    Partner(label="Partner API"; classes=channel)
+    Browser(label="Customer portal"; style-classes=channel)
+    Mobile(label="Mobile app"; style-classes=channel)
+    Partner(label="Partner API"; style-classes=channel)
 
-    WebEdge(label="Web gateway"; classes=edge)
-    MobileEdge(label="Mobile gateway"; classes=edge)
-    PartnerEdge(label="Partner gateway"; classes=edge)
+    WebEdge(label="Web gateway"; style-classes=edge)
+    MobileEdge(label="Mobile gateway"; style-classes=edge)
+    PartnerEdge(label="Partner gateway"; style-classes=edge)
 
-    Catalog(label="Catalog service"; classes=service)
-    Orders(label="Order service"; classes=service)
-    Billing(label="Billing service"; classes=service)
+    Catalog(label="Catalog service"; style-classes=service)
+    Orders(label="Order service"; style-classes=service)
+    Billing(label="Billing service"; style-classes=service)
 
-    CatalogDB(label="Catalog store"; classes=data)
-    OrdersDB(label="Order store"; classes=data)
-    Ledger(label="Payment ledger"; classes=data)
+    CatalogDB(label="Catalog store"; style-classes=data)
+    OrdersDB(label="Order store"; style-classes=data)
+    Ledger(label="Payment ledger"; style-classes=data)
 
     Browser -> WebEdge : HTTPS
     WebEdge -> Catalog : query

@@ -38,9 +38,32 @@ impl Drop for Fixture {
 
 fn parse_diagram(styling: &str) -> laml::syntax::Diagram {
     parse(&format!(
-        "semantics {{\nA(classes=backend,critical)\n}}\nstyling {{\n{styling}\n}}\n"
+        "semantics {{\nA(style-classes=backend,critical)\n}}\nstyling {{\n{styling}\n}}\n"
     ))
     .unwrap()
+}
+
+#[test]
+fn universal_defaults_lose_to_type_selectors_even_when_declared_later() {
+    let f = Fixture::new();
+    let diagram = parse_diagram("node {\ncolor: rgb(1, 2, 3)\n}\n* {\ncolor: rgb(4, 5, 6)\n}");
+    let sheet = load(&diagram, &f.diagram()).unwrap();
+    let node = Element::Node {
+        id: "A",
+        classes: &diagram.nodes[0].classes,
+    };
+    assert_eq!(
+        sheet.get(&node, "color").unwrap().value,
+        Value::Color("#010203".into())
+    );
+    let relation = Element::Relation {
+        name: None,
+        classes: &[],
+    };
+    assert_eq!(
+        sheet.get(&relation, "color").unwrap().value,
+        Value::Color("#040506".into())
+    );
 }
 
 #[test]

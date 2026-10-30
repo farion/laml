@@ -2,6 +2,7 @@
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Selector {
+    All,
     AllNodes,
     AllRelations,
     AllLifelines,
@@ -112,7 +113,9 @@ impl Selector {
                 Self::NodeIdCoregion(id.into())
             };
         }
-        if let Some(class) = text.strip_prefix("node.") {
+        if text == "*" {
+            Self::All
+        } else if let Some(class) = text.strip_prefix("node.") {
             Self::NodeClass(class.into())
         } else if let Some(class) = text.strip_prefix("relation.") {
             Self::RelationClass(class.into())
@@ -178,7 +181,8 @@ impl Selector {
 
     pub(super) fn specificity(&self) -> u8 {
         match self {
-            Self::AllNodes
+            Self::All
+            | Self::AllNodes
             | Self::AllRelations
             | Self::AllLifelines
             | Self::AllActivations
@@ -222,6 +226,7 @@ impl Selector {
 
     pub(super) fn matches(&self, element: &Element<'_>, ancestors: &[String]) -> bool {
         match (self, element) {
+            (Self::All, _) => true,
             (Self::AllNodes, Element::Node { .. })
             | (Self::AllRelations, Element::Relation { .. })
             | (Self::AllLifelines, Element::Lifeline { .. })

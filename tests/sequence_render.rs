@@ -192,7 +192,7 @@ fn coregion_marks_only_the_named_lifeline() {
     use laml::styles::load;
     use laml::syntax::Diagram;
     use std::path::Path;
-    let styled = reordered.replace("API\n", "API(classes=critical)\n")
+    let styled = reordered.replace("API\n", "API(style-classes=critical)\n")
         + "styling {\nnode.critical coregion {\ncolor: \"#771133\"\n}\n}\n";
     let diagram = parse(&styled).unwrap();
     let sheet = load(
@@ -279,7 +279,7 @@ fn relation_class_styles_messages_without_changing_other_arrows() {
     use laml::styles::load;
     use laml::syntax::Diagram;
     use std::path::Path;
-    let source = "settings {\ntype: sequence\n}\nsemantics {\nA\nB\nrequest(classes=protocol): A -> B : call\nA ->> B : event\n}\nstyling {\nrelation.protocol {\ncolor: \"#aabbcc\"\n}\n}\n";
+    let source = "settings {\ntype: sequence\n}\nsemantics {\nA\nB\nrequest(style-classes=protocol): A -> B : call\nA ->> B : event\n}\nstyling {\nrelation.protocol {\ncolor: \"#aabbcc\"\n}\n}\n";
     let diagram = parse(source).unwrap();
     let sheet = load(
         &Diagram {
@@ -304,7 +304,7 @@ fn contextual_lss_targets_parts_of_a_classed_participant() {
     use laml::styles::load;
     use laml::syntax::Diagram;
     use std::path::Path;
-    let source = "settings {\ntype: sequence\n}\nsemantics {\nClient\nAPI(label=\"Orders\"; classes=critical)\nClient -> API+ : request\n}\nstyling {\nnode.critical {\nfill: \"#332211\"\n}\nnode.critical lifeline {\ncolor: \"#112233\"\n}\nnode.critical activation {\nfill: \"#aabbcc\"\n}\n}\n";
+    let source = "settings {\ntype: sequence\n}\nsemantics {\nClient\nAPI(label=\"Orders\"; style-classes=critical)\nClient -> API+ : request\n}\nstyling {\nnode.critical {\nfill: \"#332211\"\n}\nnode.critical lifeline {\ncolor: \"#112233\"\n}\nnode.critical activation {\nfill: \"#aabbcc\"\n}\n}\n";
     let diagram = parse(source).unwrap();
     assert_eq!(diagram.participants[1].classes, ["critical"]);
     let sheet = load(

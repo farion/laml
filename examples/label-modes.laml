@@ -1,4 +1,4 @@
-# Global inline text; the named diagonal relation uses along-path text.
+// Global inline text; the named diagonal relation uses along-path text.
 settings {
     relation-label: inline
 }

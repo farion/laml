@@ -52,7 +52,12 @@ impl StyleSheet {
             if !rule.selector.matches(element, &self.ancestors) {
                 continue;
             }
-            let current = rule.selector.specificity();
+            // Universal defaults have lower priority than every typed selector.
+            let current = if rule.selector == Selector::All {
+                0
+            } else {
+                rule.selector.specificity() + 1
+            };
             if current < specificity {
                 continue;
             }

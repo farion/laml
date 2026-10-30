@@ -276,6 +276,7 @@ mod tests {
             width: 2.0,
             font_size: 14.0,
             bidirectional: false,
+            marker_end: true,
         };
         let second = vec![p(100.0, 0.0), p(100.0, 200.0)];
         let planned = plan(&second, &[], &[first], 2, 3, 2.0).unwrap();
@@ -298,6 +299,7 @@ mod tests {
             width: 2.0,
             font_size: 14.0,
             bidirectional: false,
+            marker_end: true,
         };
         assert!(plan(&[p(100.0, 90.0), p(100.0, 200.0)], &[], &[first], 2, 3, 2.0).is_none());
     }

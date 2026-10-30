@@ -1,4 +1,4 @@
-# A standalone LSS file contains only a styling section.
+// A standalone LSS file contains only a styling section.
 styling {
     .service {
         font-size: 15

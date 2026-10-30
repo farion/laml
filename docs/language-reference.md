@@ -4,7 +4,7 @@ A `.laml` file describes one diagram. `laml build FILE.laml [OUTPUT.svg|OUTPUT.p
 
 ## Document shape and identifiers
 
-A file contains exactly one `semantics` section and at most one each of `settings`, `layout`, and `styling`, in any order. Each section opens with `{` on the heading line and closes with `}` on its own line. Put one declaration or property on each line. Blank lines are allowed, and `#` starts a comment outside a double-quoted string.
+A file contains exactly one `semantics` section and at most one each of `settings`, `layout`, and `styling`, in any order. Each section opens with `{` on the heading line and closes with `}` on its own line. Put one declaration or property on each line. Blank lines are allowed, and `//` starts a comment at a token boundary outside a double-quoted string; an unquoted `https://` is not a comment.
 
 ```text
 settings {
@@ -49,15 +49,15 @@ The optional naming convention requires node IDs to start with an uppercase ASCI
 
 ```text
 semantics {
-    Backend(label="Backend API"; classes=backend,critical)
+    Backend(label="Backend API"; style-classes=backend,critical)
     Broker
-    mqtt(classes=protocol): Backend -> Broker : MQTT
+    mqtt(style-classes=protocol): Backend -> Broker : MQTT
 }
 ```
 
-A node's identifier is used by relations and layout. `label="..."` replaces the visible ID; `classes=one,two` assigns styling classes. Unknown or repeated attributes and duplicate node IDs are errors. Node text wraps only at explicit `\n` breaks. A fixed-size node truncates overflowing text with an ellipsis at grapheme boundaries; the selectable-text SVG node `<title>` retains the complete label. A box too small for a line and padding is an error.
+A node's identifier is used by relations and layout. `label="..."` replaces the visible ID; `style-classes=one,two` assigns styling classes. Unknown or repeated attributes and duplicate node IDs are errors. Node text wraps only at explicit `\n` breaks. A fixed-size node truncates overflowing text with an ellipsis at grapheme boundaries; the selectable-text SVG node `<title>` retains the complete label. A box too small for a line and padding is an error.
 
-Relations use `->`, `<-`, or `<->`. For example, `A -> B : MQTT`, `A <- B`, and `A <-> B` are valid relation declarations; `A <- B` is directed from B to A. A relation is unnamed unless prefixed by an identifier, as with `mqtt:`; a prefix can also contain `classes=...` with or without a name. Text after the final `:` is its visible label. A relation name is required to target that relation with a `relation[name]` selector or layout rule. Unknown endpoints and duplicate relation names are errors. Multiple relations may share endpoints; each needs a distinct route and port. Up to four exterior self-loops per node can be routed; more are rejected.
+Relations use `->`, `<-`, or `<->`. For example, `A -> B : MQTT`, `A <- B`, and `A <-> B` are valid relation declarations; `A <- B` is directed from B to A. A relation is unnamed unless prefixed by an identifier, as with `mqtt:`; a prefix can also contain `style-classes=...` with or without a name. Text after the final `:` is its visible label. A relation name is required to target that relation with a `relation[name]` selector or layout rule. Unknown endpoints and duplicate relation names are errors. Multiple relations may share endpoints; each needs a distinct route and port. Up to four exterior self-loops per node can be routed; more are rejected.
 
 Directed relations give source-order *preferences* for automatic placement, not hard rules. A later relation that closes a preference cycle remains in the diagram but loses that automatic directional preference. Bidirectional relations express no preferred direction. Mandatory layout rules always take precedence over preferences.
 
@@ -104,7 +104,7 @@ styling {
 }
 ```
 
-Selectors: `.class`, `node.class`, `relation.class`, `node[ID]`, `relation[ID]`, `node`, `relation`. An unmatched selector is allowed. The cascade resolves each property independently: object-specific > typed class > unqualified class > type-wide; later declarations win at equal specificity. The order of names in an object's `classes` list does not affect precedence. A known property that does not apply to a matched object has no effect there.
+Selectors: `.class`, `node.class`, `relation.class`, `node[ID]`, `relation[ID]`, `node`, `relation`. An unmatched selector is allowed. The cascade resolves each property independently: object-specific > typed class > unqualified class > type-wide; later declarations win at equal specificity. The order of names in an object's `style-classes` list does not affect precedence. A known property that does not apply to a matched object has no effect there.
 
 | Property | Value | Applies to |
 |---|---|---|

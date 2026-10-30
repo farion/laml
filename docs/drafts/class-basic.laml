@@ -1,0 +1,17 @@
+// Working class-diagram foundation; advanced UML relations remain under development.
+settings {
+    type: class
+}
+semantics {
+    class Kunde {
+        name: String
+        --
+        +void bestellen()
+    }
+    class Bestellung {
+        nummer: String
+        --
+        +void abschliessen()
+    }
+    Kunde -- Bestellung
+}

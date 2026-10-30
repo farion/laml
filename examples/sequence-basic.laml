@@ -1,4 +1,4 @@
-# Basic sequence diagram: calls, replies, an interaction use, and a self-message.
+// Basic sequence diagram: calls, replies, an interaction use, and a self-message.
 settings {
     type: sequence
 }

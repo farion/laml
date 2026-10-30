@@ -1,0 +1,13 @@
+// Working object-diagram foundation; rich links remain under development.
+settings {
+    type: object
+}
+semantics {
+    kunde1(of=Kunde) {
+        name = "Ada"
+    }
+    bestellung1(of=Bestellung) {
+        nummer = "B-17"
+    }
+    kunde1 -- bestellung1
+}
