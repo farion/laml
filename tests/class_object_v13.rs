@@ -81,6 +81,14 @@ fn class_and_object_compartment_errors_are_not_silent() {
 }
 
 #[test]
+fn unsupported_uml_arrow_is_rejected_instead_of_drawn_as_a_gne_edge() {
+    let source = "settings {\ntype: class\n}\nsemantics {\nA\nB\nA -> B\n}\n";
+    let err = parse(source).unwrap_err();
+    assert!(err.message.contains("not implemented yet"));
+    assert!(parse("semantics {\nA\nB\nA -> B\n}\n").is_ok());
+}
+
+#[test]
 fn undirected_links_prefer_proximity_but_yield_to_hard_layout() {
     let source = "semantics {\nA\nB\nA -- B\n}\n";
     let diagram = parse(source).unwrap();

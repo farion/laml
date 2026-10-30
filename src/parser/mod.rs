@@ -400,6 +400,14 @@ fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {
         }
     }
     for (index, relation) in diagram.relations.iter().enumerate() {
+        if diagram.settings.diagram_type != DiagramType::Generic
+            && relation.kind != RelationKind::Undirected
+        {
+            return Err(error(
+                relation.line,
+                "UML relationship operator is not implemented yet; do not treat a GNE arrow as UML notation",
+            ));
+        }
         if let Some(name) = &relation.name {
             if diagram.relations[..index]
                 .iter()
