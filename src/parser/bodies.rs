@@ -19,6 +19,8 @@ pub(super) fn node(text: &str, line: usize, diagram: &mut Diagram) -> Result<(),
     };
     let abstract_node = source.starts_with("abstract ");
     let source = source.strip_prefix("abstract ").unwrap_or(source);
+    let anonymous = source.starts_with("anonymous ");
+    let source = source.strip_prefix("anonymous ").unwrap_or(source);
     let note = if let Some(tail) = source.strip_prefix("note ") {
         let at = tail
             .find('"')
@@ -38,6 +40,8 @@ pub(super) fn node(text: &str, line: usize, diagram: &mut Diagram) -> Result<(),
         (NodeKind::Enumeration, name)
     } else if let Some(name) = source.strip_prefix("datatype ") {
         (NodeKind::DataType, name)
+    } else if anonymous && source.starts_with("object(") {
+        (NodeKind::Object, &source["object".len()..])
     } else if let Some(name) = source.strip_prefix("object ") {
         (NodeKind::Object, name)
     } else {
@@ -56,8 +60,32 @@ pub(super) fn node(text: &str, line: usize, diagram: &mut Diagram) -> Result<(),
             "element kind is not supported by this UML diagram type",
         ));
     }
-    let (name, attrs) = attributes(name, line)?;
-    if name.is_empty() {
+    if anonymous && (kind != NodeKind::Object || explicit_id.is_none()) {
+        return Err(error(line, "anonymous object requires an explicit @id"));
+    }
+    let (prepared, templates) = if kind == NodeKind::Class && name.contains('<') {
+        let open = name.find('<').expect("contains checked");
+        let close = name[open + 1..]
+            .find('>')
+            .ok_or_else(|| error(line, "unclosed template parameters"))?
+            + open
+            + 1;
+        let list = &name[open + 1..close];
+        let names: Vec<_> = list.split(',').map(str::trim).collect();
+        if names.is_empty() || names.iter().any(|name| !valid_identifier(name)) {
+            return Err(error(line, "invalid template parameter"));
+        }
+        let mut prepared = name[..open].to_string();
+        prepared.push_str(&name[close + 1..]);
+        (
+            prepared,
+            names.into_iter().map(str::to_string).collect::<Vec<_>>(),
+        )
+    } else {
+        (name.to_string(), Vec::new())
+    };
+    let (name, attrs) = attributes(&prepared, line)?;
+    if name.is_empty() && !anonymous {
         return Err(error(line, "node name required"));
     }
     let mut result = NodeDecl {
@@ -66,6 +94,7 @@ pub(super) fn node(text: &str, line: usize, diagram: &mut Diagram) -> Result<(),
         classes: Vec::new(),
         kind,
         abstract_node,
+        templates: templates.clone(),
         parts: Vec::new(),
         line,
     };
@@ -83,12 +112,18 @@ pub(super) fn node(text: &str, line: usize, diagram: &mut Diagram) -> Result<(),
         }
     }
     if kind == NodeKind::Object {
+        if anonymous && classifier.is_none() {
+            return Err(error(line, "anonymous object requires of=Classifier"));
+        }
         let name = result.label.take().unwrap_or(name);
         result.label = Some(if let Some(ty) = classifier {
             format!("{name}:{ty}")
         } else {
             name
         });
+    } else if !templates.is_empty() {
+        let shown = result.label.take().unwrap_or(name);
+        result.label = Some(format!("{shown}<{}>", templates.join(", ")));
     } else if result.label.is_none() && result.id != name {
         result.label = Some(name);
     }
@@ -127,16 +162,24 @@ pub(super) fn member(
         node.parts.push(NodePart::Separator);
         return Ok(());
     }
-    let (id, mut content) = if let Some(rest) = text.strip_prefix('@') {
-        let (id, content) = rest
+    let (id, member_classes, mut content) = if let Some(rest) = text.strip_prefix('@') {
+        let (head, content) = rest
             .split_once(char::is_whitespace)
             .ok_or_else(|| error(line, "expected member after @id"))?;
-        if !valid_identifier(id) {
+        let (id, attrs) = attributes(head, line)?;
+        if id.is_empty() {
             return Err(error(line, "invalid explicit member ID"));
         }
-        (Some(id.to_string()), content.trim())
+        let mut member_classes = Vec::new();
+        for (key, value) in attrs {
+            if key != "style-classes" {
+                return Err(error(line, format!("unknown member attribute '{key}'")));
+            }
+            member_classes = classes(&value, line)?;
+        }
+        (Some(id), member_classes, content.trim())
     } else {
-        (None, text)
+        (None, Vec::new(), text)
     };
     if let Some(id) = &id
         && diagram.nodes.iter().any(|other| {
@@ -223,6 +266,7 @@ pub(super) fn member(
     }
     node.parts.push(NodePart::Member {
         id,
+        classes: member_classes,
         text: literal.unwrap_or_else(|| content.to_string()),
         kind,
         abstract_member,

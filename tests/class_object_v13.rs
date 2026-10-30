@@ -47,6 +47,24 @@ fn classifier_kinds_use_distinct_visible_headers() {
 }
 
 #[test]
+fn compact_template_name_and_anonymous_instance_have_stable_ids() {
+    let template = "settings {\ntype: class\n}\nsemantics {\nclass Repository<T>\n}\n";
+    let diagram = parse(template).unwrap();
+    assert_eq!(diagram.nodes[0].id, "Repository");
+    assert_eq!(diagram.nodes[0].templates, ["T"]);
+    assert!(image(template).contains("Repository&lt;T&gt;"));
+
+    let anonymous =
+        "settings {\ntype: object\n}\nsemantics {\n@gast anonymous object(of=Kunde)\n}\n";
+    let diagram = parse(anonymous).unwrap();
+    assert_eq!(diagram.nodes[0].id, "gast");
+    assert_eq!(diagram.nodes[0].label.as_deref(), Some(":Kunde"));
+    assert!(image(anonymous).contains(":Kunde"));
+    let invalid = anonymous.replace("@gast ", "");
+    assert!(parse(&invalid).unwrap_err().message.contains("@id"));
+}
+
+#[test]
 fn object_slots_and_underlined_header_are_visible() {
     let source = "settings {\ntype: object\n}\nsemantics {\n@kunde object kunde1(of=Kunde) {\nname = \"Ada\"\n}\n}\n";
     let diagram = parse(source).unwrap();
@@ -78,6 +96,33 @@ fn class_and_object_compartment_errors_are_not_silent() {
         let err = parse(source).unwrap_err();
         assert!(err.message.contains(expected), "{err:?}");
     }
+}
+
+#[test]
+fn member_styles_select_id_kind_and_class_without_hiding_connected_members() {
+    let source = "settings {\ntype: class\n}\nsemantics {\nA {\n@key(style-classes=primary) id: UUID\n--\n@run +void run()\n}\n}\nstyling {\nmember[kind=method] {\ndisplay: none\n}\nmember.primary {\ncolor: \"#aa0000\"\nfont-size: 18\n}\nnode[A] member[key] {\nfont-size: 20\n}\n}\n";
+    let diagram = parse(source).unwrap();
+    let sheet = load(&diagram, std::path::Path::new("examples/architecture.laml")).unwrap();
+    let boxes = place(&diagram, &sheet).unwrap();
+    assert_eq!(boxes[0].body.len(), 1);
+    assert_eq!(boxes[0].body_styles[0].font_size, 20.0);
+    let svg = render(&boxes, &[]).unwrap();
+    assert!(svg.contains("id: UUID"));
+    assert!(!svg.contains("void run"));
+    assert!(svg.contains("fill=\"#aa0000\""));
+
+    let hidden = "semantics {\nA {\n@secret id: UUID\n}\nB\n@r A --> secret\n}\nstyling {\nmember[secret] {\ndisplay: none\n}\n}\n";
+    let diagram = parse(hidden).unwrap();
+    let sheet = load(&diagram, std::path::Path::new("examples/architecture.laml")).unwrap();
+    assert!(
+        place(&diagram, &sheet)
+            .unwrap_err()
+            .message
+            .contains("hidden member")
+    );
+    let invalid = "semantics {\nA\n}\nstyling {\nnode[A] {\ndisplay: none\n}\n}\n";
+    let diagram = parse(invalid).unwrap();
+    assert!(load(&diagram, std::path::Path::new("examples/architecture.laml")).is_err());
 }
 
 #[test]

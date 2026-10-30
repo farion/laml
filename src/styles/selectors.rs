@@ -1,10 +1,12 @@
 //! CSS-like LSS selectors and contextual sequence visual parts.
+use crate::syntax::MemberKind;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Selector {
     All,
     AllNodes,
     AllRelations,
+    AllMembers,
     AllLifelines,
     AllActivations,
     AllFragments,
@@ -17,7 +19,10 @@ pub enum Selector {
     Class(String),
     NodeClass(String),
     RelationClass(String),
+    MemberClass(String),
+    MemberKind(MemberKind),
     NodeId(String),
+    MemberId(String),
     RelationId(String),
     LifelineId(String),
     ActivationId(String),
@@ -57,6 +62,18 @@ pub enum Selector {
 }
 
 impl Selector {
+    pub(super) fn targets_member(&self) -> bool {
+        match self {
+            Self::AllMembers | Self::MemberId(_) | Self::MemberClass(_) | Self::MemberKind(_) => {
+                true
+            }
+            Self::ScopedId { child, .. } | Self::ScopedClass { child, .. } => {
+                child.targets_member()
+            }
+            _ => false,
+        }
+    }
+
     pub(super) fn parse(text: &str) -> Self {
         if let Some((parent, child)) = text.split_once(' ') {
             let child_node = child
@@ -119,12 +136,24 @@ impl Selector {
             Self::NodeClass(class.into())
         } else if let Some(class) = text.strip_prefix("relation.") {
             Self::RelationClass(class.into())
+        } else if let Some(class) = text.strip_prefix("member.") {
+            Self::MemberClass(class.into())
         } else if let Some(class) = text.strip_prefix('.') {
             Self::Class(class.into())
         } else if let Some(id) = text.strip_prefix("node[") {
             Self::NodeId(id.trim_end_matches(']').into())
         } else if let Some(id) = text.strip_prefix("relation[") {
             Self::RelationId(id.trim_end_matches(']').into())
+        } else if let Some(kind) = text.strip_prefix("member[kind=") {
+            Self::MemberKind(match kind.trim_end_matches(']') {
+                "field" => MemberKind::Field,
+                "method" => MemberKind::Method,
+                "slot" => MemberKind::Slot,
+                "literal" => MemberKind::Literal,
+                _ => MemberKind::Text,
+            })
+        } else if let Some(id) = text.strip_prefix("member[") {
+            Self::MemberId(id.trim_end_matches(']').into())
         } else if let Some(id) = text.strip_prefix("lifeline[") {
             Self::LifelineId(id.trim_end_matches(']').into())
         } else if let Some(id) = text.strip_prefix("activation[") {
@@ -165,6 +194,7 @@ impl Selector {
             match text {
                 "node" => Self::AllNodes,
                 "relation" => Self::AllRelations,
+                "member" => Self::AllMembers,
                 "lifeline" => Self::AllLifelines,
                 "activation" => Self::AllActivations,
                 "fragment" => Self::AllFragments,
@@ -184,6 +214,7 @@ impl Selector {
             Self::All
             | Self::AllNodes
             | Self::AllRelations
+            | Self::AllMembers
             | Self::AllLifelines
             | Self::AllActivations
             | Self::AllFragments
@@ -196,6 +227,8 @@ impl Selector {
             Self::Class(_) => 1,
             Self::NodeClass(_)
             | Self::RelationClass(_)
+            | Self::MemberClass(_)
+            | Self::MemberKind(_)
             | Self::NodeClassLifeline(_)
             | Self::NodeClassActivation(_)
             | Self::NodeClassCoregion(_)
@@ -204,6 +237,7 @@ impl Selector {
             Self::FragmentOperator(_) => 2,
             Self::NodeId(_)
             | Self::RelationId(_)
+            | Self::MemberId(_)
             | Self::LifelineId(_)
             | Self::ActivationId(_)
             | Self::FragmentId(_)
@@ -229,6 +263,7 @@ impl Selector {
             (Self::All, _) => true,
             (Self::AllNodes, Element::Node { .. })
             | (Self::AllRelations, Element::Relation { .. })
+            | (Self::AllMembers, Element::Member { .. })
             | (Self::AllLifelines, Element::Lifeline { .. })
             | (Self::AllActivations, Element::Activation { .. })
             | (Self::AllFragments, Element::Fragment { .. })
@@ -243,10 +278,13 @@ impl Selector {
                 Element::Node { classes, .. } | Element::Relation { classes, .. },
             ) => classes.iter().any(|c| c == class),
             (Self::NodeClass(class), Element::Node { classes, .. })
-            | (Self::RelationClass(class), Element::Relation { classes, .. }) => {
+            | (Self::RelationClass(class), Element::Relation { classes, .. })
+            | (Self::MemberClass(class), Element::Member { classes, .. }) => {
                 classes.iter().any(|c| c == class)
             }
             (Self::NodeId(target), Element::Node { id, .. }) => target == id,
+            (Self::MemberId(target), Element::Member { id: Some(id), .. }) => target == id,
+            (Self::MemberKind(target), Element::Member { kind, .. }) => target == kind,
             (Self::ScopedId { owner, child }, _) => {
                 ancestors.iter().any(|ancestor| ancestor == owner)
                     && child.matches(element, ancestors)
@@ -313,6 +351,11 @@ pub enum Element<'a> {
     Relation {
         name: Option<&'a str>,
         classes: &'a [String],
+    },
+    Member {
+        id: Option<&'a str>,
+        classes: &'a [String],
+        kind: MemberKind,
     },
     Lifeline {
         id: &'a str,

@@ -11,11 +11,18 @@ pub enum NodeShape {
 }
 
 #[derive(Clone, Debug)]
+pub struct RowStyle {
+    pub font_size: f64,
+    pub color: String,
+}
+
+#[derive(Clone, Debug)]
 pub struct BoxNode {
     pub id: String,
     pub label: String,
     pub lines: Vec<String>,
     pub body: Vec<NodePart>,
+    pub body_styles: Vec<RowStyle>,
     pub abstract_node: bool,
     pub kind: NodeKind,
     pub shape: NodeShape,
@@ -53,6 +60,66 @@ fn color(sheet: &StyleSheet, element: &Element<'_>, property: &str, default: &st
     }
 }
 
+fn visible_body(
+    node: &NodeDecl,
+    styles: &StyleSheet,
+    size: f64,
+    default_color: &str,
+) -> (Vec<NodePart>, Vec<RowStyle>) {
+    let scoped = styles.with_ancestor(&node.id, &node.classes);
+    let mut visible = Vec::new();
+    let mut rows = Vec::new();
+    for part in &node.parts {
+        match part {
+            NodePart::Separator => {
+                visible.push(NodePart::Separator);
+                rows.push(RowStyle {
+                    font_size: size,
+                    color: default_color.into(),
+                });
+            }
+            NodePart::Member {
+                id, classes, kind, ..
+            } => {
+                let element = Element::Member {
+                    id: id.as_deref(),
+                    classes,
+                    kind: *kind,
+                };
+                if matches!(scoped.get(&element, "display").map(|d| &d.value), Some(Value::Keyword(mode)) if mode == "none")
+                {
+                    continue;
+                }
+                visible.push(part.clone());
+                rows.push(RowStyle {
+                    font_size: number(&scoped, &element, "font-size", size),
+                    color: color(&scoped, &element, "color", default_color),
+                });
+            }
+        }
+    }
+    let mut body = Vec::new();
+    let mut styled = Vec::new();
+    for (index, part) in visible.iter().enumerate() {
+        if matches!(part, NodePart::Separator)
+            && (body.is_empty()
+                || matches!(body.last(), Some(NodePart::Separator))
+                || !visible[index + 1..]
+                    .iter()
+                    .any(|p| matches!(p, NodePart::Member { .. })))
+        {
+            continue;
+        }
+        body.push(part.clone());
+        styled.push(rows[index].clone());
+    }
+    while matches!(body.last(), Some(NodePart::Separator)) {
+        body.pop();
+        styled.pop();
+    }
+    (body, styled)
+}
+
 pub fn measure_node(
     node: &NodeDecl,
     styles: &StyleSheet,
@@ -83,12 +150,14 @@ pub fn measure_node(
     {
         return Err("UML node form cannot be replaced by an LSS shape".into());
     }
-    if matches!(shape, NodeShape::Diamond | NodeShape::Ellipse) && !node.parts.is_empty() {
+    let font_size = number(styles, &element, "font-size", 14.0);
+    let text_color = color(styles, &element, "color", "#17212e");
+    let (mut body, body_styles) = visible_body(node, styles, font_size, &text_color);
+    if matches!(shape, NodeShape::Diamond | NodeShape::Ellipse) && !body.is_empty() {
         return Err(
             "nonrectangular GNE node with compartments needs supported inset geometry".into(),
         );
     }
-    let font_size = number(styles, &element, "font-size", 14.0);
     let padding = number(styles, &element, "padding", 12.0);
     let name = node.label.clone().unwrap_or_else(|| node.id.clone());
     let label = match node.kind {
@@ -134,9 +203,9 @@ pub fn measure_node(
         .try_fold(0.0_f64, |max, text| -> Result<f64, String> {
             Ok(max.max(measure(text, font_size)?))
         })?;
-    for part in &node.parts {
+    for (part, row) in body.iter().zip(&body_styles) {
         if let NodePart::Member { text, .. } = part {
-            longest = longest.max(measure(text, font_size)?);
+            longest = longest.max(measure(text, row.font_size)?);
         }
     }
     let width_factor = match shape {
@@ -149,11 +218,11 @@ pub fn measure_node(
             .unwrap_or(100.0)
             .max(longest * width_factor + padding * 2.0)
     });
-    let body_height: f64 = node
-        .parts
+    let body_height: f64 = body
         .iter()
-        .map(|part| match part {
-            NodePart::Member { .. } => line_height,
+        .zip(&body_styles)
+        .map(|(part, row)| match part {
+            NodePart::Member { .. } => row.font_size * 1.25,
             NodePart::Separator => 8.0,
         })
         .sum();
@@ -165,7 +234,7 @@ pub fn measure_node(
             1.0
         }
         + body_height
-        + if node.parts.is_empty() { 0.0 } else { 4.0 }
+        + if body.is_empty() { 0.0 } else { 4.0 }
         + padding * 2.0;
     let height =
         fixed_height.unwrap_or_else(|| explicit_min_height.unwrap_or(50.0).max(natural_height));
@@ -181,7 +250,7 @@ pub fn measure_node(
         return Err("fixed node box would hide text or violate its shape boundary".into());
     }
     // A body is structural: it is not safe to silently omit addressable rows.
-    if !node.parts.is_empty() && natural_height > height + 0.01 {
+    if !body.is_empty() && natural_height > height + 0.01 {
         return Err("fixed node box cannot fit its member rows".into());
     }
     let visible = original
@@ -193,11 +262,10 @@ pub fn measure_node(
         let force = vertical_overflow && index + 1 == visible;
         lines.push(ellipsize(text, available_width, font_size, force)?);
     }
-    let mut body = node.parts.clone();
     if diagram_type == DiagramType::Generic {
-        for part in &mut body {
+        for (part, row) in body.iter_mut().zip(&body_styles) {
             if let NodePart::Member { text, .. } = part {
-                *text = ellipsize(text, available_width, font_size, false)?;
+                *text = ellipsize(text, available_width, row.font_size, false)?;
             }
         }
     }
@@ -206,6 +274,7 @@ pub fn measure_node(
         label,
         lines,
         body,
+        body_styles,
         abstract_node: node.abstract_node,
         kind: node.kind,
         shape,
@@ -225,7 +294,7 @@ pub fn measure_node(
                 "#eff4fa"
             },
         ),
-        color: color(styles, &element, "color", "#17212e"),
+        color: text_color,
         border_color: color(styles, &element, "border-color", "#395373"),
         border_width: number(styles, &element, "border-width", 1.0),
         radius: number(styles, &element, "corner-radius", 0.0),

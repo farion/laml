@@ -237,7 +237,7 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
             writeln!(svg,"<line x1=\"{:.2}\" y1=\"{y:.2}\" x2=\"{:.2}\" y2=\"{y:.2}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
                 node.x, node.x+node.width, node.border_color, node.border_width).unwrap();
             y += 4.0;
-            for part in &node.body {
+            for (part, row) in node.body.iter().zip(&node.body_styles) {
                 match part {
                     NodePart::Separator => {
                         y += 4.0;
@@ -252,18 +252,18 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
                         static_member,
                         ..
                     } => {
-                        let baseline = y + line_height * 0.78;
+                        let baseline = y + row.font_size * 1.25 * 0.78;
                         writeln!(svg,"<text x=\"{:.2}\" y=\"{baseline:.2}\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\"{}{}>{}</text>",
-                            node.x+node.padding,node.font_size,node.color,
+                            node.x+node.padding,row.font_size,row.color,
                             if *abstract_member { " font-style=\"italic\"" } else { "" },
                             id.as_ref().map(|id| format!(" data-member-id=\"{}\"",escape(id))).unwrap_or_default(),
                             escape(text)).unwrap();
                         if *static_member {
-                            let width = measure(text, node.font_size)?;
+                            let width = measure(text, row.font_size)?;
                             writeln!(svg,"<line x1=\"{:.2}\" x2=\"{:.2}\" y1=\"{:.2}\" y2=\"{:.2}\" stroke=\"{}\" stroke-width=\"1\" />",
-                                node.x+node.padding,node.x+node.padding+width,baseline+2.0,baseline+2.0,node.color).unwrap();
+                                node.x+node.padding,node.x+node.padding+width,baseline+2.0,baseline+2.0,row.color).unwrap();
                         }
-                        y += line_height;
+                        y += row.font_size * 1.25;
                     }
                 }
             }

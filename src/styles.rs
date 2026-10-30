@@ -150,8 +150,16 @@ fn expand(
                 stack.pop();
             }
             StyleEntry::Rule(rule) => {
+                let selector = Selector::parse(&rule.selector);
                 let mut declarations = Vec::new();
                 for property in &rule.properties {
+                    if property.name == "display" && !selector.targets_member() {
+                        return Err(err(
+                            current,
+                            property.line,
+                            "display is currently supported only for members",
+                        ));
+                    }
                     declarations.push(Declaration {
                         name: property.name.clone(),
                         value: validate_value(property, current)?,
@@ -160,7 +168,7 @@ fn expand(
                     });
                 }
                 sheet.rules.push(Rule {
-                    selector: Selector::parse(&rule.selector),
+                    selector,
                     declarations,
                 });
             }
@@ -176,6 +184,8 @@ fn validate_value(property: &Property, path: &Path) -> Result<Value, StyleError>
             Ok(Value::Keyword(value.to_string()))
         }
         "shape" => Err(err(path, property.line, "unknown node shape")),
+        "display" if matches!(value, "none" | "block") => Ok(Value::Keyword(value.to_string())),
+        "display" => Err(err(path, property.line, "display must be none or block")),
         "fill" | "color" | "border-color" => parse_color(value)
             .map(Value::Color)
             .map_err(|message| err(path, property.line, message)),
@@ -226,7 +236,8 @@ fn parse_color(input: &str) -> Result<String, &'static str> {
 
 fn applicable(property: &str, element: &Element<'_>) -> bool {
     match element {
-        Element::Node { .. } => true, // all currently known properties are node-applicable
+        Element::Node { .. } => property != "display", // node hiding needs reference filtering
+        Element::Member { .. } => matches!(property, "color" | "font-size" | "display"),
         Element::Continuation { .. } | Element::Note { .. } => matches!(
             property,
             "fill" | "color" | "border-color" | "border-width" | "font-size"

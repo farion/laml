@@ -11,7 +11,7 @@ pub(super) fn center(node: &BoxNode) -> Point {
 pub(super) fn member_port(node: &BoxNode, member: &str, towards: Point) -> Option<Point> {
     let line_height = node.font_size * 1.25;
     let mut y = node.y + node.padding + line_height * node.lines.len() as f64 + 4.0;
-    for part in &node.body {
+    for (part, row) in node.body.iter().zip(&node.body_styles) {
         match part {
             crate::syntax::NodePart::Separator => y += 8.0,
             crate::syntax::NodePart::Member { id, .. } => {
@@ -22,10 +22,10 @@ pub(super) fn member_port(node: &BoxNode, member: &str, towards: Point) -> Optio
                         } else {
                             node.x
                         },
-                        y: y + line_height / 2.0,
+                        y: y + row.font_size * 1.25 / 2.0,
                     });
                 }
-                y += line_height;
+                y += row.font_size * 1.25;
             }
         }
     }

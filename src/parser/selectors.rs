@@ -35,15 +35,22 @@ pub(super) fn validate_selector(selector: &str, line: usize) -> Result<(), Parse
     }
     let valid = if selector == "*" {
         true
+    } else if let Some(kind) = selector
+        .strip_prefix("member[kind=")
+        .and_then(|s| s.strip_suffix(']'))
+    {
+        matches!(kind, "field" | "method" | "slot" | "literal" | "text")
     } else if let Some(class) = selector
         .strip_prefix("node.")
         .or_else(|| selector.strip_prefix("relation."))
+        .or_else(|| selector.strip_prefix("member."))
         .or_else(|| selector.strip_prefix('.'))
     {
         valid_identifier(class)
     } else if let Some(id) = selector
         .strip_prefix("node[")
         .or_else(|| selector.strip_prefix("relation["))
+        .or_else(|| selector.strip_prefix("member["))
         .or_else(|| selector.strip_prefix("lifeline["))
         .or_else(|| selector.strip_prefix("activation["))
         .or_else(|| selector.strip_prefix("fragment["))
@@ -72,6 +79,7 @@ pub(super) fn validate_selector(selector: &str, line: usize) -> Result<(), Parse
             selector,
             "node"
                 | "relation"
+                | "member"
                 | "lifeline"
                 | "activation"
                 | "fragment"

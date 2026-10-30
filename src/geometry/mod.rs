@@ -23,6 +23,18 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
             })
         })
         .collect::<Result<_, _>>()?;
+    for relation in &diagram.relations {
+        for endpoint in [&relation.from, &relation.to] {
+            if !boxes.iter().any(|node| node.id == *endpoint || node.body.iter().any(|part| {
+                matches!(part, crate::syntax::NodePart::Member { id: Some(id), .. } if id == endpoint)
+            })) {
+                return Err(GeometryError {
+                    line: relation.line,
+                    message: format!("visible relation targets hidden member '{endpoint}'"),
+                });
+            }
+        }
+    }
     constraints::place(diagram, &mut boxes, styles)?;
     Ok(boxes)
 }

@@ -53,6 +53,7 @@ pub enum NodePart {
     Separator,
     Member {
         id: Option<String>,
+        classes: Vec<String>,
         text: String,
         kind: MemberKind,
         abstract_member: bool,
@@ -76,6 +77,7 @@ pub struct NodeDecl {
     pub classes: Vec<String>,
     pub kind: NodeKind,
     pub abstract_node: bool,
+    pub templates: Vec<String>,
     pub parts: Vec<NodePart>,
     pub line: usize,
 }
