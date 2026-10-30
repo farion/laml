@@ -1,0 +1,12 @@
+# Named connections to the boundary of an interaction-use frame.
+settings {
+    type: sequence
+}
+semantics {
+    API(label="Backend API")
+
+    ref "Process order" {
+        API -> gate[request] : submit
+        gate[result] -> API : complete
+    }
+}

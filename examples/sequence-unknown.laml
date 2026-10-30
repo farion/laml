@@ -1,0 +1,10 @@
+# Found and lost messages use an unknown endpoint, not a lifeline.
+settings {
+    type: sequence
+}
+semantics {
+    API(label="Backend API")
+
+    ? -> API : external event
+    API -> ? : notification
+}

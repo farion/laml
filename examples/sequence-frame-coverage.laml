@@ -1,0 +1,19 @@
+# Mandatory frame scope and a gate on the named ref frame.
+settings {
+    type: sequence
+}
+semantics {
+    Client
+    API
+    Worker
+    checkout: alt "ready" {
+        Client ->> API : request
+    }
+    lookup: ref "Lookup(item): result" {
+        Worker -> gate[result] : done
+    }
+}
+layout {
+    checkout covers Client,API
+    lookup covers Worker
+}

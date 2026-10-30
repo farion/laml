@@ -1,0 +1,20 @@
+# Both alternatives create and destroy the same logical lifeline.
+settings {
+    type: sequence
+}
+semantics {
+    Client
+    alt "create from pool" {
+        (kind=create): Client -> Resource+ : borrow
+        Client -> Resource! : release
+    }
+    else "construct" {
+        (kind=create): Client -> Resource+ : construct
+        Client -> Resource! : release
+    }
+}
+styling {
+    node[Resource] {
+        fill: "#e9f1fb"
+    }
+}

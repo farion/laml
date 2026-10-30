@@ -1,0 +1,15 @@
+# A lifeline created in an alternative is destroyed in the same operand.
+settings {
+    type: sequence
+}
+semantics {
+    Client
+    alt "create" {
+        spawn(kind=create): Client -> Resource+ : allocate
+        Resource ->> Client : ready
+        Client -> Resource! : release
+    }
+    else "skip" {
+        Client ->> Client : no allocation
+    }
+}

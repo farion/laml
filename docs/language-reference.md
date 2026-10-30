@@ -118,6 +118,40 @@ Colours are `rgb(r,g,b)` with integer channels 0–255, quoted `"#rrggbb"`, or `
 
 An imported `.lamlstyle` file contains one `styling { ... }` section. Imports contribute rules at their position in the cascade and may contain nested imports. Paths resolve relative to the importing file and must remain within the diagram source's directory tree after symlink resolution. Missing files, escapes, and cycles are errors. LSS imports contain styling, not semantics or layout.
 
+## Sequence diagrams
+
+Select the separate sequence grammar with `settings { type: sequence }` (one entry per line). Files without `type: sequence` retain the graph grammar above. In sequence sources, `direction`, `relation-label`, and graph routing settings do not apply. `semantic-check: off` disables only the numeric `min <= max` loop-bound check; it never relaxes reference or mandatory layout checks.
+
+```text
+settings {
+    type: sequence
+}
+semantics {
+    Client
+    API(selector="u"; type="Service")
+    request: Client -> API+ : query
+    <-- : result
+    checkout: alt "cache hit" {
+        Client ->> API : notify
+    }
+    else "miss" {
+        Client ->> API : refresh
+    }
+}
+layout {
+    Client < API : gap=48
+    checkout covers Client,API
+}
+```
+
+Participants draw a head and dashed lifeline; declaration alone does not start execution. `+` starts a bar, `-` ends it, `!` ends the lifeline with X. `A -> B!` and `B! <- A` draw deletion messages. An undeclared target with `+` first introduces a lifeline; `kind=create` in a message prefix chooses the dashed, open creation arrow. `?` is a found/lost message endpoint. `->`/`<-` draw filled synchronous calls, `->>`/`<<-` open asynchronous arrows, and `<--` a dashed reply. A leading `<--` targets the last unambiguous open call; reply arrowheads may be filled with `reply(arrow=filled): <--`. Named messages can be referenced through `.send` and `.receive`. Explicit general ordering can also address a locally named bar: `order[execution(API,work).start,request.receive]` and `order[request.receive,execution(API,work).finish]`. The finish reference requires an explicit earlier close.
+
+`alt`, `opt`, `loop`, `par`, `break`, `strict`, `seq`, `critical`, `neg`, `assert`, `ignore`, and `consider` use brace-delimited fragments. `else "guard" {` separates `alt` operands, `and "guard" {` separates `par` operands. `loop(min=0; max=*; guard="ready") {` displays bounds and a guard without evaluating them. `ignore "m,s" {` displays a curly-braced message list. Adjacent operators such as `strict alt "ready" {` or `opt loop(min=0; max=2) {` share one descriptor as the UML nesting shorthand. Named frames may be constrained in `layout` with `checkout covers Client,API`; all intervening lifelines must be listed. Alternative operands can each create and destroy the same lifeline ID, producing separate visible segments. Divergent open execution bars or lifeline lifetimes at a fragment join fail.
+
+Other visible constructs include `ref "Name(args): result" { ... }` or a combined-fragment block with a named `gate[id]` on its boundary; two opposite-direction messages using the same gate ID in one frame meet one point on that boundary; `at[request.receive] : invariant="ready"` or `action="Read"`; `at[execution(API,work).start] : time-observation="t0"`; `order[first.receive,second.send]`; `coregion API { ... }` with named occurrence ends; and `decompose API "Internals" { ... }` with child lifelines in the same source. Notes and continuations are named in `semantics` and placed in `layout`, for example `hint over API : gap=16` and `wait spans Client,API`. Qualified IDs such as `API.Cache` address an inline decomposition from root layout. LSS descendant selectors such as `node[API] node[Cache]` and `node[API] relation[query]` style only the corresponding descendants. `annotation` and `annotation[action]` style visible annotations; `ordering` styles general-ordering paths and arrowheads; `gate[result]` styles a named gate. Gate styling defaults to its message colour and font size.
+
+See the [sequence conformance worklist](uml-sequence-conformance.md) for the UML clauses and remaining release checks.
+
 ## Output and routing
 
 The output extension selects SVG, PNG, or PDF. SVG defaults to `--svg-text=embedded`: Inter Regular is embedded, and text remains selectable. `--svg-text=system` keeps selectable SVG text but omits the font; the viewer may substitute a font. `--svg-text=paths` converts SVG text into nonselectable glyph outlines and does not preserve node-level `<title>` metadata. These options apply only to SVG output. PNG uses the SVG's CSS-pixel dimensions rounded to whole pixels, on a white background; the image is limited to 64 million pixels. PDF is vector output with embedded, selectable text; 96 SVG pixels map to one inch of PDF page size. Rectangular nodes may have rounded corners via `corner-radius`. Relations attach to box boundaries. The router prefers a straight route and searches a finite set of detours when blocked. Parallel relations use separate boundary ports; self-relations use exterior loops. At a supported crossing, the later-declared relation receives a bridge and the earlier relation a gap. If no safe routing or label placement is found, `build` fails without writing a replacement image: it does not emit bare crossings or silently ignore mandatory rules.

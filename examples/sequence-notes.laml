@@ -1,0 +1,23 @@
+settings {
+    type: sequence
+}
+semantics {
+    Client(label="Browser")
+    API(label="Orders API")
+    request: Client -> API+ : GET /orders
+    retryHint: note "If the request times out, retry once."
+    responseHint: note "This note points to request.receive."
+    <-- : 200 OK
+}
+layout {
+    Client < API : gap=48
+    retryHint over API : gap=16
+    responseHint over request.receive : gap=16
+}
+styling {
+    note[retryHint] {
+        fill: "#fff4d6"
+        border-color: "#9a6a10"
+        color: "#523a0d"
+    }
+}

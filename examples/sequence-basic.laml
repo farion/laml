@@ -1,0 +1,17 @@
+# v1.2 work-in-progress: basic sequence diagram.
+settings {
+    type: sequence
+}
+semantics {
+    Client(label="Browser")
+    API(label="Orders API")
+
+    Client -> API+ : GET /orders
+    <-- : 200 OK
+    Client ->> API : notify
+    ref "Reconcile inventory"
+    API -> API : retry
+}
+layout {
+    Client < API : gap=80
+}

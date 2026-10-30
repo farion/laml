@@ -1,0 +1,23 @@
+settings {
+    type: sequence
+}
+semantics {
+    Client
+    API(label="Orders API")
+    request: Client -> API+ : fetch
+    work: API+ : "Validate order"
+    check: API+ : "Check stock"
+    check: API-
+    work: API-
+    <-- : 200 OK
+}
+styling {
+    activation[API] {
+        fill: "#e1e8f0"
+    }
+    node[API] activation[check] {
+        fill: "#b9d7c3"
+        color: "#153b24"
+        font-size: 15
+    }
+}

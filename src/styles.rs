@@ -1,7 +1,9 @@
 //! LSS validation, safe local imports, and deterministic per-property cascade.
 
 use crate::parser::parse_stylesheet;
+mod selectors;
 use crate::syntax::{Diagram, Property, StyleEntry};
+pub use selectors::{Element, Selector};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -9,76 +11,6 @@ use std::path::{Path, PathBuf};
 pub enum Value {
     Number(f64),
     Color(String), // canonical #rrggbb or "none"
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Selector {
-    AllNodes,
-    AllRelations,
-    Class(String),
-    NodeClass(String),
-    RelationClass(String),
-    NodeId(String),
-    RelationId(String),
-}
-
-impl Selector {
-    fn parse(text: &str) -> Self {
-        if let Some(class) = text.strip_prefix("node.") {
-            Self::NodeClass(class.into())
-        } else if let Some(class) = text.strip_prefix("relation.") {
-            Self::RelationClass(class.into())
-        } else if let Some(class) = text.strip_prefix('.') {
-            Self::Class(class.into())
-        } else if let Some(id) = text.strip_prefix("node[") {
-            Self::NodeId(id.trim_end_matches(']').into())
-        } else if let Some(id) = text.strip_prefix("relation[") {
-            Self::RelationId(id.trim_end_matches(']').into())
-        } else if text == "node" {
-            Self::AllNodes
-        } else {
-            Self::AllRelations // parser has already validated selector syntax
-        }
-    }
-
-    fn specificity(&self) -> u8 {
-        match self {
-            Self::AllNodes | Self::AllRelations => 0,
-            Self::Class(_) => 1,
-            Self::NodeClass(_) | Self::RelationClass(_) => 2,
-            Self::NodeId(_) | Self::RelationId(_) => 3,
-        }
-    }
-
-    fn matches(&self, element: &Element<'_>) -> bool {
-        match (self, element) {
-            (Self::AllNodes, Element::Node { .. })
-            | (Self::AllRelations, Element::Relation { .. }) => true,
-            (
-                Self::Class(class),
-                Element::Node { classes, .. } | Element::Relation { classes, .. },
-            ) => classes.iter().any(|c| c == class),
-            (Self::NodeClass(class), Element::Node { classes, .. })
-            | (Self::RelationClass(class), Element::Relation { classes, .. }) => {
-                classes.iter().any(|c| c == class)
-            }
-            (Self::NodeId(target), Element::Node { id, .. }) => target == id,
-            (Self::RelationId(target), Element::Relation { name: Some(id), .. }) => target == id,
-            _ => false,
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum Element<'a> {
-    Node {
-        id: &'a str,
-        classes: &'a [String],
-    },
-    Relation {
-        name: Option<&'a str>,
-        classes: &'a [String],
-    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -98,16 +30,26 @@ pub struct Rule {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct StyleSheet {
     pub rules: Vec<Rule>,
+    ancestors: Vec<String>,
 }
 
 impl StyleSheet {
+    pub(crate) fn with_ancestor(&self, id: &str, classes: &[String]) -> Self {
+        let mut scoped = self.clone();
+        scoped.ancestors.push(id.into());
+        scoped
+            .ancestors
+            .extend(classes.iter().map(|class| format!(".{class}:{id}")));
+        scoped
+    }
+
     /// Return a winning declaration; object-specific beats class-specific,
     /// equally specific later declarations override earlier ones.
     pub fn get<'a>(&'a self, element: &Element<'_>, property: &str) -> Option<&'a Declaration> {
         let mut winner = None;
         let mut specificity = 0;
         for rule in &self.rules {
-            if !rule.selector.matches(element) {
+            if !rule.selector.matches(element, &self.ancestors) {
                 continue;
             }
             let current = rule.selector.specificity();
@@ -275,6 +217,24 @@ fn parse_color(input: &str) -> Result<String, &'static str> {
 fn applicable(property: &str, element: &Element<'_>) -> bool {
     match element {
         Element::Node { .. } => true, // all currently known properties are node-applicable
-        Element::Relation { .. } => matches!(property, "color" | "width" | "font-size"),
+        Element::Continuation { .. } | Element::Note { .. } => matches!(
+            property,
+            "fill" | "color" | "border-color" | "border-width" | "font-size"
+        ),
+        Element::Relation { .. } | Element::Lifeline { .. } | Element::Gate { .. } => {
+            matches!(property, "color" | "width" | "font-size")
+        }
+        Element::Coregion { .. } | Element::Ordering => matches!(property, "color" | "width"),
+        Element::Annotation { .. } => matches!(property, "fill" | "color" | "width" | "font-size"),
+        Element::Activation { .. } => {
+            matches!(
+                property,
+                "fill" | "border-color" | "border-width" | "width" | "font-size" | "color"
+            )
+        }
+        Element::Fragment { .. } => matches!(
+            property,
+            "fill" | "border-color" | "border-width" | "color" | "font-size" | "width"
+        ),
     }
 }

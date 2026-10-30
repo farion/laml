@@ -1,0 +1,19 @@
+settings {
+    type: sequence
+}
+semantics {
+    Client
+    API
+    request: Client -> API : request
+    condition: continuation "Wait for response"
+    at[request.receive] : invariant="ready"
+}
+layout {
+    condition spans Client,API : gap=16
+}
+styling {
+    continuation[condition] {
+        fill: "#eef6ff"
+        border-color: "#455d79"
+    }
+}

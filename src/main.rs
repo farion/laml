@@ -60,6 +60,43 @@ fn run() -> Result<(), String> {
     laml::update::notify_in_background();
     let path = Path::new(&args[1]);
     let text = fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    if laml::sequence::is_sequence_source(&text) {
+        let sequence = laml::sequence::parse(&text)
+            .map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?;
+        let style_input = laml::syntax::Diagram {
+            styling: sequence.styling.clone(),
+            ..Default::default()
+        };
+        let styles = load(&style_input, path)
+            .map_err(|e| format!("{}:{}: {}", e.path.display(), e.line, e.message))?;
+        if args[0] == "check" {
+            println!(
+                "parsed sequence: {} lifelines, {} events; full geometry not checked",
+                sequence.participants.len(),
+                sequence.events.len()
+            );
+            return Ok(());
+        }
+        if path.extension().and_then(|e| e.to_str()) != Some("laml") {
+            return Err("build input must have a .laml extension".into());
+        }
+        let output = output_arg
+            .map(PathBuf::from)
+            .unwrap_or_else(|| path.with_extension("svg"));
+        let format = output
+            .extension()
+            .and_then(|e| e.to_str())
+            .ok_or("build output must end in .svg, .png or .pdf")?;
+        if !matches!(format, "svg" | "png" | "pdf") {
+            return Err("build output must end in .svg, .png or .pdf".into());
+        }
+        if text_arg.is_some() && format != "svg" {
+            return Err("--svg-text is only available for SVG output".into());
+        }
+        let svg = laml::sequence::render::render_with_styles(&sequence, &styles, mode)
+            .map_err(|e| format!("{}: sequence rendering failed: {e}", path.display()))?;
+        return write_image(&svg, &output, format);
+    }
     let diagram =
         parse(&text).map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?;
     let styles = load(&diagram, path)
@@ -98,16 +135,20 @@ fn run() -> Result<(), String> {
         .map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?;
     let svg = render_with_mode(&boxes, &routes, mode)
         .map_err(|e| format!("{}: SVG rendering failed: {e}", path.display()))?;
+    write_image(&svg, &output, format)
+}
+
+fn write_image(svg: &str, output: &Path, format: &str) -> Result<(), String> {
     let content = match format {
-        "svg" => svg.into_bytes(),
-        "png" => laml::export::png(&svg).map_err(|e| format!("{}: {e}", path.display()))?,
-        "pdf" => laml::export::pdf(&svg).map_err(|e| format!("{}: {e}", path.display()))?,
-        _ => unreachable!(),
+        "svg" => svg.as_bytes().to_vec(),
+        "png" => laml::export::png(svg).map_err(|e| format!("{}: {e}", output.display()))?,
+        "pdf" => laml::export::pdf(svg).map_err(|e| format!("{}: {e}", output.display()))?,
+        _ => return Err("unsupported output format".into()),
     };
     // Do not overwrite an existing image until every validation phase succeeds.
     let temporary = output.with_extension(format!("{format}.{}.tmp", std::process::id()));
     fs::write(&temporary, content).map_err(|e| format!("{}: {e}", temporary.display()))?;
-    if let Err(e) = fs::rename(&temporary, &output) {
+    if let Err(e) = fs::rename(&temporary, output) {
         let _ = fs::remove_file(&temporary);
         return Err(format!("{}: {e}", output.display()));
     }

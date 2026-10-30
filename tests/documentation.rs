@@ -16,6 +16,61 @@ fn every_published_example_checks_and_builds() {
             continue;
         }
         let source = fs::read_to_string(&path).unwrap();
+        if laml::sequence::is_sequence_source(&source) {
+            let diagram = laml::sequence::parse(&source)
+                .unwrap_or_else(|e| panic!("{}: {e:?}", path.display()));
+            let sheet = load(
+                &laml::syntax::Diagram {
+                    styling: diagram.styling.clone(),
+                    ..Default::default()
+                },
+                &path,
+            )
+            .unwrap_or_else(|e| panic!("{}: {e:?}", path.display()));
+            let svg = laml::sequence::render::render_with_styles(
+                &diagram,
+                &sheet,
+                laml::svg::TextMode::Embedded,
+            )
+            .unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+            assert!(svg.starts_with("<svg "), "{}", path.display());
+            let output = png(&svg).unwrap();
+            assert!(output.starts_with(b"\x89PNG"));
+            let name = path.file_stem().unwrap().to_str().unwrap();
+            let preview = root.join("docs/images").join(format!("{name}.png"));
+            if preview.exists() {
+                let expected =
+                    resvg::tiny_skia::Pixmap::decode_png(&fs::read(&preview).unwrap()).unwrap();
+                let actual = resvg::tiny_skia::Pixmap::decode_png(&output).unwrap();
+                assert_eq!(
+                    (expected.width(), expected.height()),
+                    (actual.width(), actual.height())
+                );
+                let changed = expected
+                    .pixels()
+                    .iter()
+                    .zip(actual.pixels())
+                    .filter(|(a, b)| {
+                        [
+                            a.red().abs_diff(b.red()),
+                            a.green().abs_diff(b.green()),
+                            a.blue().abs_diff(b.blue()),
+                            a.alpha().abs_diff(b.alpha()),
+                        ]
+                        .into_iter()
+                        .any(|difference| difference > 16)
+                    })
+                    .count();
+                assert!(
+                    changed * 1000 <= expected.pixels().len() * 3,
+                    "{} is out of sync with its sequence source",
+                    preview.display()
+                );
+                assert!(readme.contains(&format!("docs/images/{name}.png")));
+                assert!(readme.contains(&format!("examples/{name}.laml")));
+            }
+            continue;
+        }
         let diagram = parse(&source).unwrap_or_else(|e| panic!("{}: {e:?}", path.display()));
         let sheet = load(&diagram, &path).unwrap_or_else(|e| panic!("{}: {e:?}", path.display()));
         validate_ordering(&diagram).unwrap_or_else(|e| panic!("{}: {e:?}", path.display()));

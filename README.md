@@ -50,6 +50,13 @@ SVG defaults to embedded Inter Regular with selectable text. `--svg-text=system`
 | [![Service and broker with parallel relations, response arrow, and retry loop](docs/images/parallel-loops.png)](examples/parallel-loops.laml) | [![Inline Batch label and angled Stream label between two node pairs](docs/images/label-modes.png)](examples/label-modes.laml) |
 | Distinct ports and an exterior self-loop. | Inline text with a per-relation along-path override. |
 
+| [Sequence: calls and replies](examples/sequence-basic.laml) | [Sequence: alternative lifetimes](examples/sequence-alternative-births.laml) |
+|---|---|
+| [![Browser request, reply and interaction reference](docs/images/sequence-basic.png)](examples/sequence-basic.laml) | [![Alternative operands create and destroy the same Resource lifeline](docs/images/sequence-alternative-births.png)](examples/sequence-alternative-births.laml) |
+| Lifelines, executions, messages and a `ref` frame. | The same participant ID has separate lifetime segments in two operands. |
+
+Set `type: sequence` in `settings` to use the sequence grammar. Sequence diagrams use the same SVG/PNG/vector-PDF export commands; their node, message, fragment, annotation, gate and ordering visuals are styled with LSS. See the [sequence syntax](docs/language-reference.md#sequence-diagrams) and [UML 2.5.1 notation audit](docs/uml-sequence-conformance.md). The outer UML `sd` interaction frame is intentionally deferred; divergent open executions at fragment joins are rejected rather than implicitly resolved.
+
 Build any example with `cargo run -- build examples/NAME.laml`. The output filename selects the format (`.svg`, `.png`, or `.pdf`). SVG text modes are selected with `--svg-text=embedded|system|paths` after the optional output filename. The README images are generated with `cargo run -- build examples/NAME.laml docs/images/NAME.png`.
 
 ## Language feature contract
@@ -60,11 +67,12 @@ Build any example with `cargo run -- build examples/NAME.laml`. The output filen
 - Diagram-wide and per-relation label placement (`near`, `along`, `inline`).
 - LSS styling and local recursive imports with a deterministic per-property cascade.
 - SVG in embedded-font, system-font, or glyph-path text mode; PNG and vector PDF exports.
+- Separate sequence grammar with lifelines, calls and replies, creation/deletion, fragments, interaction uses, annotations, coregions, inline part decompositions and mandatory layout constraints.
 - `check`, `build`, and `update` commands, source-linked diagnostics, and conformance tests for deterministic and mandatory geometry.
 
 ## Releases
 
-Pushing a stable version tag such as `v1.1.0` runs the [release workflow](.github/workflows/release.yml). The tag must match the version in `Cargo.toml` and point to a commit containing the workflow. All platform jobs must pass before publication. The GitHub Release contains archives for Linux x86-64, macOS Intel and Apple Silicon, Windows x86-64, and a `SHA256SUMS` file. Each archive contains the executable, example diagrams, README, and license files.
+Pushing a stable version tag such as `v1.2.0` runs the [release workflow](.github/workflows/release.yml). The tag must match the version in `Cargo.toml` and point to a commit containing the workflow. All platform jobs must pass before publication. The GitHub Release contains archives for Linux x86-64, macOS Intel and Apple Silicon, Windows x86-64, and a `SHA256SUMS` file. Each archive contains the executable, example diagrams, README, and license files.
 
 Update `Cargo.toml` and `Cargo.lock`, commit those changes, then push the commit and its matching version tag. Moving an existing version tag is not part of the release process.
 

@@ -1,0 +1,11 @@
+settings {
+    type: sequence
+}
+semantics {
+    Client
+    spawn(kind=create): Worker(label="Worker: Job")+ <- Client : allocate
+    Worker! <- Client : release
+}
+layout {
+    Worker < Client
+}

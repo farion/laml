@@ -1,0 +1,25 @@
+# UML 2.5.1 sequence-notation audit (v1.2 worklist)
+
+Normative source: [OMG UML 2.5.1 PDF](https://www.omg.org/spec/UML/2.5.1/PDF), clauses 8 and 17. “Supported” here means drawable notation and static checks, **not** an executable UML model. The outer `sd` interaction frame was expressly deferred beyond v1.2. Branch-dependent execution bars at an operand join deliberately fail, rather than receiving invented endpoints.
+
+| Clause | Visible notation | LAML status / evidence | Remaining work |
+|---|---|---|---|
+| 17.2.4.1 | Outer `sd` frame, name, parameters, local attributes | Explicitly deferred | Do not present v1.2 as literal coverage of this shape. |
+| 17.2.4.3–4 | Occurrences; thin, overlapping and wide labeled executions; associated atomic Action symbol | `API+`/`API-`, local activation IDs and labels, `at[message.receive] : action="Read"` with link | Further collision-aware placement between unrelated boxes and labels. |
+| 17.2.4.5 | State invariant `{constraint}` or state symbol | `at[message.receive] : invariant="ready"` and `state="Ready"` | General positioning and optional note-associated display. |
+| 17.2.4.6 | Formal gate on interaction frame | Named `gate[id]` on `ref` frames | The deferred outer interaction frame cannot display its formal gate in v1.2. |
+| 17.3.4.1 | Lifeline head, selector, type, `self`, decomposition clause | `API(selector="u"; type="Service")`, `self`, and inline `decompose` head with `ref Name` | More exact compartment/head variants if needed. |
+| 17.4.4.1 | Sync, async call/signal, reply, creation, deletion, lost/found; direction and arrowhead | `->`, `<-`, `->>`, `<<-`, `<--`, `?`, `kind=create`, `arrow=filled`, `A -> B!`, `B! <- A`; labels are visible literal text | Collision-aware label placement; other explicit call-resolution cases. |
+| 17.4.4.2–3 | Destruction X; frame gate point | X and `gate[id]` rendered on the innermost enclosing `ref` or combined-fragment boundary; an outside-to-gate message and gate-to-inside message share one visible point | The deferred outer interaction frame has no gate in v1.2. |
+| 17.5.4 | General-ordering link | `order[request.receive,logged.send]` and named bar boundaries `execution(API,work).start`/`.finish`; contradictory endpoint cycles fail | Unnamed execution ends are not addressable; named execution boundaries also anchor time/duration observations and constraints. `ordering` LSS styles path and arrowhead. |
+| 17.6.4.2–3 | Operand guards, nested combined fragments, pentagon operator, dashed operand boundaries | `alt`, `par`, `opt`, `loop`, `critical`, `strict`, `seq`, `break`, `neg`, `assert` and other operator names; named frames and `frameId covers A,B` | General operator-specific trace semantics (not evaluated) and precise occurrence geometry; multi-operator pentagon shorthand is drawable. |
+| 17.6.4.4 | Consider/ignore curly message-name list, combinations | `ignore "m,s"`, `consider "m,s"`, `assert consider "m,s"` | Operator shorthands such as `assert strict consider` or `strict alt` are drawable; explicit nested blocks can express the same visible grouping. |
+| 17.6.4.5 | Continuation rounded symbol spanning lifelines | Named `continuation` in semantics, mandatory `spans` in layout | Additional placement and collision handling. |
+| 17.6.4.7–10 | Strict vertical order, loop bounds, parallel/coregion | Literal guards and numeric/symbolic loop bounds; `loop(0,0)` valid; endpoint-scoped coregions and mandatory `above : gap=...` | Cross-lifeline strict ordering verification and collision-aware placement of unrelated annotations. Mandatory coregion gaps now expand later rows and enclosing frames. |
+| 17.7.4.1 | Interaction use ref rectangle, name, arguments, return text, gates | `ref "Name(args): value"` literal label and `gate[id]`; named ref may use `covers` | No target is loaded or formal/actual gate model inferred. One-line refs share `fragment[ref]` styling; named gates have `gate[id]` styling. |
+| 17.7.4.2 | Part decomposition, inline sublifelines, strict, extra-global frames | Same-source `decompose API "Name" { ... }`, qualified child layout/notes/frames and spanning outer fragments | Exact cross-subdiagram temporal constraints. Root combined frames visibly cross inline decompositions; one-to-one operand trace correspondence is model semantics, not inferred from an image. |
+| 17.8.1 Tables 17.1–17.2 | Enumerated sequence nodes and paths | Most drawable primitives above exist; time/duration observation/constraint shapes are anchored by named message ends (Figure 17.5) | Finish diagram-level placement audit and inspect exports for collisions. |
+
+## Release gate
+
+Do **not** mark v1.2 complete or tag it until the remaining drawable/placement cases above have either been implemented and tested against the cited notation, or Frieder has explicitly changed the scope. Graph diagrams must remain unchanged; all Rust files must remain at most 500 lines. Run all-target tests, strict Clippy, and SVG/PNG/vector-PDF example builds before release.

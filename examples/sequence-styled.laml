@@ -1,0 +1,28 @@
+# Reuse node/relation LSS and style sequence-only elements separately.
+settings {
+    type: sequence
+}
+semantics {
+    Client
+    API(label="Orders API"; classes=critical)
+    request(classes=protocol): Client -> API+ : GET /orders
+    <-- : 200 OK
+}
+styling {
+    node[API] {
+        fill: "#24446b"
+        color: "#ffffff"
+        font-size: 16
+    }
+    relation.protocol {
+        color: "#aa3131"
+        width: 2
+    }
+    node.critical lifeline {
+        color: "#24446b"
+    }
+    node.critical activation {
+        fill: "#e8eff7"
+        width: 14
+    }
+}

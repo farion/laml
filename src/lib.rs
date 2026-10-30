@@ -12,6 +12,7 @@ pub mod layout;
 mod lex;
 pub mod parser;
 pub mod route;
+pub mod sequence;
 pub mod styles;
 pub mod svg;
 mod svg_paths;

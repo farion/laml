@@ -1,0 +1,17 @@
+# Explicit ordering between two independently named events.
+settings {
+    type: sequence
+}
+semantics {
+    Client
+    API
+    Audit
+
+    par "process" {
+        request: Client -> API : submit
+    }
+    and "record" {
+        logged: API ->> Audit : log
+    }
+    order[request.receive,logged.send]
+}

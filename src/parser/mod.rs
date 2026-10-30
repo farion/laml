@@ -11,7 +11,9 @@ use crate::syntax::{
 };
 
 mod layout;
+mod selectors;
 use layout::{parse_layout, parse_relation_label};
+use selectors::validate_selector;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ParseError {
@@ -347,28 +349,6 @@ fn parse_setting(
         _ => return Err(error(line, format!("unknown setting '{}'", key.trim()))),
     }
     Ok(())
-}
-
-fn validate_selector(selector: &str, line: usize) -> Result<(), ParseError> {
-    let valid = if let Some(class) = selector
-        .strip_prefix("node.")
-        .or_else(|| selector.strip_prefix("relation."))
-        .or_else(|| selector.strip_prefix('.'))
-    {
-        valid_identifier(class)
-    } else if let Some(id) = selector
-        .strip_prefix("node[")
-        .or_else(|| selector.strip_prefix("relation["))
-    {
-        id.strip_suffix(']').is_some_and(valid_identifier)
-    } else {
-        selector == "node" || selector == "relation"
-    };
-    if valid {
-        Ok(())
-    } else {
-        Err(error(line, "invalid style selector"))
-    }
 }
 
 fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {

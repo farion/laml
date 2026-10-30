@@ -1,0 +1,25 @@
+settings {
+    type: sequence
+}
+semantics {
+    A
+    B
+    API(classes=critical)
+    first: A -> API : request
+    second: B -> API : signal
+    coregion API {
+        first.receive
+        second.receive
+    }
+}
+layout {
+    A < API : gap=48
+    B < API : gap=48
+    second.receive above first.receive
+}
+styling {
+    node.critical coregion {
+        color: "#771133"
+        width: 2
+    }
+}

@@ -1,0 +1,11 @@
+# A first + can introduce a lifeline at the point it appears.
+settings {
+    type: sequence
+}
+semantics {
+    Client
+
+    Client -> API+ : start API
+    API ->> Client : ready
+    API!
+}

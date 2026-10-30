@@ -1,0 +1,27 @@
+settings {
+    type: sequence
+}
+semantics {
+    Client
+    API(label="Gateway")
+    Client -> API : request
+    decompose API "Gateway internals" {
+        Cache
+        DB
+        query: Cache -> DB : query
+        DB -> Cache : result
+    }
+    API -> Client : response
+}
+layout {
+    Client < API : gap=48
+    API.Cache < API.DB : gap=36
+}
+styling {
+    node[API] node[Cache] {
+        fill: "#e4f1ff"
+    }
+    node[API] relation[query] {
+        color: "#325a88"
+    }
+}

@@ -1,0 +1,16 @@
+# Visible annotations attach to send/receive ends of named messages.
+settings {
+    type: sequence
+}
+semantics {
+    Client
+    API
+
+    request: Client -> API : GET /orders
+    at[request.send] : time-observation="t0"
+    at[request.receive] : time-constraint="t <= 200 ms"
+    at[request.send] : state="Ready"
+    response: Client <-- API : 200 OK
+    between[request.send,response.receive] : duration-observation="elapsed"
+    between[request.receive,response.send] : duration-constraint="<= 200 ms"
+}
