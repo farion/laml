@@ -30,7 +30,7 @@ fn check_example_accepts_syntax_and_imported_styles() {
         String::from_utf8_lossy(&output.stderr)
     );
     let text = String::from_utf8(output.stdout).unwrap();
-    assert!(text.contains("3 nodes, 2 relations, 2 layout rules, 3 style rules"));
+    assert!(text.contains("12 nodes, 11 relations, 11 layout rules, 5 style rules"));
     assert!(text.contains("full geometry not checked"));
 }
 
@@ -56,8 +56,8 @@ fn build_example_produces_svg_with_selectable_text_and_embedded_font() {
     let svg = fs::read_to_string(&destination).unwrap();
     assert!(svg.contains("<svg "));
     assert!(svg.contains("data:font/otf;base64,"));
-    assert_eq!(svg.matches("<polyline ").count(), 2);
-    assert_eq!(svg.matches("<rect ").count(), 3);
+    assert_eq!(svg.matches("<polyline ").count(), 11);
+    assert_eq!(svg.matches("<rect ").count(), 12);
     assert!(svg.contains("<text "));
     fs::remove_dir_all(dir).unwrap();
 }

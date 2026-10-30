@@ -72,6 +72,12 @@ fn every_published_example_checks_and_builds() {
             continue;
         }
         let diagram = parse(&source).unwrap_or_else(|e| panic!("{}: {e:?}", path.display()));
+        if path.file_stem().unwrap() == "architecture" {
+            assert!(
+                diagram.nodes.len() >= 10,
+                "first README example must show at least ten nodes"
+            );
+        }
         let sheet = load(&diagram, &path).unwrap_or_else(|e| panic!("{}: {e:?}", path.display()));
         validate_ordering(&diagram).unwrap_or_else(|e| panic!("{}: {e:?}", path.display()));
         let boxes = place(&diagram, &sheet).unwrap_or_else(|e| panic!("{}: {e:?}", path.display()));
@@ -120,6 +126,28 @@ fn every_published_example_checks_and_builds() {
             readme.contains(&format!("examples/{name}.laml")),
             "{name}: source is missing from README"
         );
+    }
+}
+
+#[test]
+fn sequence_guide_complete_examples_build() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let guide = fs::read_to_string(root.join("docs/sequence-diagrams.md")).unwrap();
+    let example_source = root.join("examples/sequence-basic.laml");
+    for (index, block) in guide.split("```text\n").skip(1).take(2).enumerate() {
+        let source = block.split("```").next().unwrap();
+        let diagram = laml::sequence::parse(source)
+            .unwrap_or_else(|e| panic!("sequence guide block {index}: {e:?}"));
+        let sheet = load(
+            &laml::syntax::Diagram {
+                styling: diagram.styling.clone(),
+                ..Default::default()
+            },
+            &example_source,
+        )
+        .unwrap();
+        laml::sequence::render::render_with_styles(&diagram, &sheet, laml::svg::TextMode::System)
+            .unwrap_or_else(|e| panic!("sequence guide block {index}: {e}"));
     }
 }
 

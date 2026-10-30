@@ -4,9 +4,9 @@ use laml::syntax::{Alignment, FlowDirection, Placement, StyleEntry};
 #[test]
 fn parses_published_example() {
     let diagram = parse(include_str!("../examples/architecture.laml")).unwrap();
-    assert_eq!(diagram.nodes.len(), 3);
-    assert_eq!(diagram.relations.len(), 2);
-    assert_eq!(diagram.layout.len(), 2);
+    assert_eq!(diagram.nodes.len(), 12);
+    assert_eq!(diagram.relations.len(), 11);
+    assert_eq!(diagram.layout.len(), 11);
 }
 
 #[test]

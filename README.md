@@ -42,8 +42,8 @@ SVG defaults to embedded Inter Regular with selectable text. `--svg-text=system`
 
 | [Architecture](examples/architecture.laml) | [Crossing](examples/crossing.laml) |
 |---|---|
-| [![Client to backend to broker diagram](docs/images/architecture.png)](examples/architecture.laml) | [![Two relations crossing with a bridge](docs/images/crossing.png)](examples/crossing.laml) |
-| Local LSS import, styling, and mandatory layout. | A supported crossing with a bridge. |
+| [![Twelve-node architecture across channel, gateway, service and data layers](docs/images/architecture.png)](examples/architecture.laml) | [![Two relations crossing with a bridge](docs/images/crossing.png)](examples/crossing.laml) |
+| Twelve nodes, four layers, service calls, local LSS import and mandatory layout. | A supported crossing with a bridge. |
 
 | [Parallel relations and loop](examples/parallel-loops.laml) | [Relation-label modes](examples/label-modes.laml) |
 |---|---|
@@ -55,7 +55,7 @@ SVG defaults to embedded Inter Regular with selectable text. `--svg-text=system`
 | [![Browser request, reply and interaction reference](docs/images/sequence-basic.png)](examples/sequence-basic.laml) | [![Alternative operands create and destroy the same Resource lifeline](docs/images/sequence-alternative-births.png)](examples/sequence-alternative-births.laml) |
 | Lifelines, executions, messages and a `ref` frame. | The same participant ID has separate lifetime segments in two operands. |
 
-Set `type: sequence` in `settings` to use the sequence grammar. Sequence diagrams use the same SVG/PNG/vector-PDF export commands; their node, message, fragment, annotation, gate and ordering visuals are styled with LSS. See the [sequence syntax](docs/language-reference.md#sequence-diagrams) and [UML 2.5.1 notation audit](docs/uml-sequence-conformance.md). The outer UML `sd` interaction frame is intentionally deferred; divergent open executions at fragment joins are rejected rather than implicitly resolved.
+Set `type: sequence` in `settings` to use the sequence grammar. Sequence diagrams use the same SVG/PNG/vector-PDF export commands; their node, message, fragment, annotation, gate and ordering visuals are styled with LSS. Start with the [sequence-diagram guide](docs/sequence-diagrams.md), then use the [syntax reference](docs/language-reference.md#sequence-diagrams) and [UML 2.5.1 notation audit](docs/uml-sequence-conformance.md). The outer UML `sd` interaction frame is intentionally deferred; divergent open executions at fragment joins are rejected rather than implicitly resolved.
 
 Build any example with `cargo run -- build examples/NAME.laml`. The output filename selects the format (`.svg`, `.png`, or `.pdf`). SVG text modes are selected with `--svg-text=embedded|system|paths` after the optional output filename. The README images are generated with `cargo run -- build examples/NAME.laml docs/images/NAME.png`.
 
@@ -90,3 +90,4 @@ The test suite includes buildable examples, export formats, mandatory geometry, 
 - [Getting started](docs/getting-started.md)
 - [Language reference](docs/language-reference.md)
 - [Language contract](docs/language-definition.md)
+- [Sequence-diagram guide](docs/sequence-diagrams.md)

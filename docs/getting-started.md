@@ -6,27 +6,30 @@ LAML separates **semantics** (nodes and relations), **layout** (mandatory placem
 
 ```text
 semantics {
-    Client(label="Client application"; classes=external)
-    Backend(label="Backend API"; classes=backend)
-    Broker(label="Message broker"; classes=infrastructure)
+    Browser(label="Customer portal"; classes=channel)
+    WebEdge(label="Web gateway"; classes=edge)
+    Catalog(label="Catalog service"; classes=service)
+    CatalogDB(label="Catalog store"; classes=data)
 
-    Client -> Backend : HTTPS
-    mqtt(classes=async): Backend -> Broker : MQTT
+    Browser -> WebEdge : HTTPS
+    WebEdge -> Catalog : query
+    Catalog -> CatalogDB : read
 }
 ```
 
-`Client`, `Backend`, and `Broker` are node identifiers. `label` supplies visible text; `classes` group objects for styling. Relations can be unnamed or have a name such as `mqtt` for individual targeting. Visible relation text follows the final `:`. `A <- B` means B to A; `A <-> B` is bidirectional. The [complete architecture example](../examples/architecture.laml) uses these declarations.
+`Browser`, `WebEdge`, `Catalog`, and `CatalogDB` are node identifiers. `label` supplies visible text; `classes` group objects for styling. Relations can be unnamed or have a name such as `query: WebEdge -> Catalog` for individual targeting. Visible relation text follows the final `:`. `A <- B` means B to A; `A <-> B` is bidirectional. The [complete architecture example](../examples/architecture.laml) has twelve nodes arranged into four layers.
 
 ## 2. Add only the placement rules you need
 
 ```text
 layout {
-    Client < Backend : align=center; gap=24
-    Broker below Backend : align=left
+    Browser < WebEdge : align=center; gap=110
+    WebEdge < Catalog : align=center; gap=110
+    Catalog < CatalogDB : align=center; gap=110
 }
 ```
 
-The first rule separates the **boxes** by at least 24 layout units and aligns their vertical centres. The second puts `Broker` below `Backend` and aligns their left edges. These rules are mandatory, not preferences; `gap` is a minimum rather than an exact distance. A directional rule without `align` places no requirement on the perpendicular axis. One layout unit corresponds to one SVG/CSS pixel.
+These rules separate each pair of **boxes** by at least 110 layout units and align their vertical centres. The complete example also aligns three lanes with mandatory `above` rules. These rules are mandatory, not preferences; `gap` is a minimum rather than an exact distance. A directional rule without `align` places no requirement on the perpendicular axis. One layout unit corresponds to one SVG/CSS pixel.
 
 Symbols and words are equivalent: `<` / `left of`, `>` / `right of`, `^` / `above`, `v` / `below`. A contradictory set of mandatory rules fails with a source-line diagnostic. Relations guide automatic placement but never override a mandatory rule.
 
@@ -51,19 +54,18 @@ These sections are part of the [buildable label-modes example](../examples/label
 styling {
     import "architecture.lamlstyle"
 
-    node.backend {
+    node.service {
         fill: rgb(35, 75, 125)
         color: rgb(255, 255, 255)
-        font-size: 14
     }
 
-    relation.async {
-        width: 2
+    node.channel {
+        fill: rgb(235, 245, 255)
     }
 }
 ```
 
-LAML Style Sheets (LSS) have CSS-like selectors, but declarations use newline-separated `property: value` entries, without semicolons. `.async` matches a class on either kind of object; `node.backend` and `relation.async` target just one kind. `node[Backend]` and `relation[mqtt]` target individual named objects. Imports load local `.lamlstyle` files relative to the file containing the import.
+LAML Style Sheets (LSS) have CSS-like selectors, but declarations use newline-separated `property: value` entries, without semicolons. `.service` matches a class on either kind of object; `node.service` and `node.channel` target just nodes. `node[Catalog]` and `relation[query]` target individual named objects. Imports load local `.lamlstyle` files relative to the file containing the import.
 
 ## 4. Build and inspect
 
@@ -80,7 +82,7 @@ cargo run -- build examples/architecture.laml examples/architecture-paths.svg --
 
 `check` validates the source, references, imported styles, and directional placement cycles; `build` also measures boxes, solves placement, routes relations, and writes SVG. Routing uses distinct boundary ports for parallel relations, exterior self-loops, and bridges for supported crossings. If no safe route is found, the build fails rather than drawing an overlapping or bare-crossing stroke. The default SVG embeds Inter Regular and retains selectable text. The `--svg-text=system` option omits the font while keeping text selectable (the viewer must provide Inter or substitute another font); `--svg-text=paths` turns text into nonselectable glyph outlines. PNG has a white background. PDF is a vector document with selectable text.
 
-Other buildable examples: [crossing](../examples/crossing.laml), [parallel relations and loop](../examples/parallel-loops.laml), and [label modes](../examples/label-modes.laml).
+To build lifelines, calls, fragments and annotated occurrences instead, follow the [sequence-diagram working guide](sequence-diagrams.md). Other buildable graph examples: [crossing](../examples/crossing.laml), [parallel relations and loop](../examples/parallel-loops.laml), and [label modes](../examples/label-modes.laml).
 
 ## 5. Syntax reminders
 

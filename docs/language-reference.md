@@ -150,7 +150,7 @@ Participants draw a head and dashed lifeline; declaration alone does not start e
 
 Other visible constructs include `ref "Name(args): result" { ... }` or a combined-fragment block with a named `gate[id]` on its boundary; two opposite-direction messages using the same gate ID in one frame meet one point on that boundary; `at[request.receive] : invariant="ready"` or `action="Read"`; `at[execution(API,work).start] : time-observation="t0"`; `order[first.receive,second.send]`; `coregion API { ... }` with named occurrence ends; and `decompose API "Internals" { ... }` with child lifelines in the same source. Notes and continuations are named in `semantics` and placed in `layout`, for example `hint over API : gap=16` and `wait spans Client,API`. Qualified IDs such as `API.Cache` address an inline decomposition from root layout. LSS descendant selectors such as `node[API] node[Cache]` and `node[API] relation[query]` style only the corresponding descendants. `annotation` and `annotation[action]` style visible annotations; `ordering` styles general-ordering paths and arrowheads; `gate[result]` styles a named gate. Gate styling defaults to its message colour and font size.
 
-See the [sequence conformance worklist](uml-sequence-conformance.md) for the UML clauses and remaining release checks.
+Follow the [sequence-diagram working guide](sequence-diagrams.md) for complete, buildable diagrams, then consult the [UML notation audit](uml-sequence-conformance.md) for clause-level coverage and boundaries.
 
 ## Output and routing
 

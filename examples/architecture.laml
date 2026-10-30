@@ -1,32 +1,70 @@
-# Architecture example with local style import and mandatory placement.
+# Four architectural layers and three request flows; all placement is source-driven.
 settings {
     direction: left-to-right
 }
 
 semantics {
-    Client(label="Client application"; classes=external)
-    Backend(label="Backend API"; classes=backend)
-    Broker(label="Message broker"; classes=infrastructure)
+    Browser(label="Customer portal"; classes=channel)
+    Mobile(label="Mobile app"; classes=channel)
+    Partner(label="Partner API"; classes=channel)
 
-    Client -> Backend : HTTPS
-    mqtt(classes=async): Backend -> Broker : MQTT
+    WebEdge(label="Web gateway"; classes=edge)
+    MobileEdge(label="Mobile gateway"; classes=edge)
+    PartnerEdge(label="Partner gateway"; classes=edge)
+
+    Catalog(label="Catalog service"; classes=service)
+    Orders(label="Order service"; classes=service)
+    Billing(label="Billing service"; classes=service)
+
+    CatalogDB(label="Catalog store"; classes=data)
+    OrdersDB(label="Order store"; classes=data)
+    Ledger(label="Payment ledger"; classes=data)
+
+    Browser -> WebEdge : HTTPS
+    WebEdge -> Catalog : query
+    Catalog -> CatalogDB : read
+    Mobile -> MobileEdge : HTTPS
+    MobileEdge -> Orders : place order
+    Orders -> OrdersDB : persist
+    Partner -> PartnerEdge : HTTPS
+    PartnerEdge -> Billing : invoice
+    Billing -> Ledger : record
+    Catalog -> Orders : reserve
+    Orders -> Billing : charge
 }
 
 layout {
-    Client < Backend : align=center; gap=24
-    Broker below Backend : align=center
+    Browser < WebEdge : align=center; gap=110
+    WebEdge < Catalog : align=center; gap=110
+    Catalog < CatalogDB : align=center; gap=110
+
+    Browser above Mobile : align=center; gap=110
+    Mobile above Partner : align=center; gap=110
+    WebEdge above MobileEdge : align=center; gap=110
+    MobileEdge above PartnerEdge : align=center; gap=110
+    Catalog above Orders : align=center; gap=110
+    Orders above Billing : align=center; gap=110
+    CatalogDB above OrdersDB : align=center; gap=110
+    OrdersDB above Ledger : align=center; gap=110
 }
 
 styling {
     import "architecture.lamlstyle"
 
-    node.backend {
+    node.channel {
+        fill: rgb(235, 245, 255)
+        border-color: rgb(70, 110, 155)
+    }
+    node.edge {
+        fill: rgb(217, 235, 252)
+        border-color: rgb(60, 99, 146)
+    }
+    node.service {
         fill: rgb(35, 75, 125)
         color: rgb(255, 255, 255)
-        font-size: 14
     }
-
-    relation.async {
-        width: 2
+    node.data {
+        fill: rgb(228, 242, 231)
+        border-color: rgb(80, 130, 90)
     }
 }

@@ -1,4 +1,4 @@
-# UML 2.5.1 sequence-notation audit (v1.2 worklist)
+# UML 2.5.1 sequence-notation audit (v1.2)
 
 Normative source: [OMG UML 2.5.1 PDF](https://www.omg.org/spec/UML/2.5.1/PDF), clauses 8 and 17. “Supported” here means drawable notation and static checks, **not** an executable UML model. The outer `sd` interaction frame was expressly deferred beyond v1.2. Branch-dependent execution bars at an operand join deliberately fail, rather than receiving invented endpoints.
 
@@ -20,6 +20,6 @@ Normative source: [OMG UML 2.5.1 PDF](https://www.omg.org/spec/UML/2.5.1/PDF), c
 | 17.7.4.2 | Part decomposition, inline sublifelines, strict, extra-global frames | Same-source `decompose API "Name" { ... }`, qualified child layout/notes/frames and spanning outer fragments | Exact cross-subdiagram temporal constraints. Root combined frames visibly cross inline decompositions; one-to-one operand trace correspondence is model semantics, not inferred from an image. |
 | 17.8.1 Tables 17.1–17.2 | Enumerated sequence nodes and paths | Most drawable primitives above exist; time/duration observation/constraint shapes are anchored by named message ends (Figure 17.5) | Finish diagram-level placement audit and inspect exports for collisions. |
 
-## Release gate
+## Coverage boundary and release validation
 
-Do **not** mark v1.2 complete or tag it until the remaining drawable/placement cases above have either been implemented and tested against the cited notation, or Frieder has explicitly changed the scope. Graph diagrams must remain unchanged; all Rust files must remain at most 500 lines. Run all-target tests, strict Clippy, and SVG/PNG/vector-PDF example builds before release.
+This is a **drawable notation** audit, not a claim that LAML implements UML's interaction metamodel or interprets event traces. The table records bounded placement limits and the explicitly deferred outer `sd` frame; do not present these as supported shapes or model checks. A release requires unchanged graph behavior, Rust files of at most 500 lines, all-target tests, strict Clippy, SVG/PNG/vector-PDF example builds, and successful release jobs on every published platform. The local checks alone do not establish a published release.

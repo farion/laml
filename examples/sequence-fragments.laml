@@ -1,4 +1,4 @@
-# v1.2 work-in-progress: branching and parallel frames.
+# Branching, loop, and parallel fragment frames.
 settings {
     type: sequence
 }

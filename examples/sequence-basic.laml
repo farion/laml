@@ -1,4 +1,4 @@
-# v1.2 work-in-progress: basic sequence diagram.
+# Basic sequence diagram: calls, replies, an interaction use, and a self-message.
 settings {
     type: sequence
 }

@@ -1,7 +1,7 @@
 # A standalone LSS file contains only a styling section.
 styling {
-    .backend {
-        fill: rgb(210, 225, 245)
-        font-size: 14
+    .service {
+        font-size: 15
+        padding: 14
     }
 }
