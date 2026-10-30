@@ -2,6 +2,14 @@ use crate::styles::{Element, StyleSheet, Value};
 use crate::syntax::{DiagramType, NodeDecl, NodeKind, NodePart};
 use crate::text::{ellipsize, measure};
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NodeShape {
+    Rectangle,
+    Ellipse,
+    Diamond,
+    Note,
+}
+
 #[derive(Clone, Debug)]
 pub struct BoxNode {
     pub id: String,
@@ -10,6 +18,7 @@ pub struct BoxNode {
     pub body: Vec<NodePart>,
     pub abstract_node: bool,
     pub kind: NodeKind,
+    pub shape: NodeShape,
     pub x: f64,
     pub y: f64,
     pub width: f64,
@@ -53,6 +62,32 @@ pub fn measure_node(
         id: &node.id,
         classes: &node.classes,
     };
+    let shape = match styles.get(&element, "shape").map(|d| &d.value) {
+        Some(Value::Keyword(value)) => match value.as_str() {
+            "rectangle" => NodeShape::Rectangle,
+            "ellipse" => NodeShape::Ellipse,
+            "diamond" => NodeShape::Diamond,
+            "note" => NodeShape::Note,
+            _ => return Err("unknown node shape".into()),
+        },
+        _ if node.kind == NodeKind::Note => NodeShape::Note,
+        _ => NodeShape::Rectangle,
+    };
+    if diagram_type != DiagramType::Generic
+        && shape
+            != if node.kind == NodeKind::Note {
+                NodeShape::Note
+            } else {
+                NodeShape::Rectangle
+            }
+    {
+        return Err("UML node form cannot be replaced by an LSS shape".into());
+    }
+    if matches!(shape, NodeShape::Diamond | NodeShape::Ellipse) && !node.parts.is_empty() {
+        return Err(
+            "nonrectangular GNE node with compartments needs supported inset geometry".into(),
+        );
+    }
     let font_size = number(styles, &element, "font-size", 14.0);
     let padding = number(styles, &element, "padding", 12.0);
     let name = node.label.clone().unwrap_or_else(|| node.id.clone());
@@ -104,10 +139,15 @@ pub fn measure_node(
             longest = longest.max(measure(text, font_size)?);
         }
     }
+    let width_factor = match shape {
+        NodeShape::Rectangle | NodeShape::Note => 1.0,
+        NodeShape::Ellipse => 1.6,
+        NodeShape::Diamond => 2.0,
+    };
     let width = fixed_width.unwrap_or_else(|| {
         explicit_min_width
             .unwrap_or(100.0)
-            .max(longest + padding * 2.0)
+            .max(longest * width_factor + padding * 2.0)
     });
     let body_height: f64 = node
         .parts
@@ -117,21 +157,28 @@ pub fn measure_node(
             NodePart::Separator => 8.0,
         })
         .sum();
-    let natural_height = line_height * original.len() as f64
+    let natural_height = line_height
+        * original.len() as f64
+        * if matches!(shape, NodeShape::Ellipse | NodeShape::Diamond) {
+            1.7
+        } else {
+            1.0
+        }
         + body_height
         + if node.parts.is_empty() { 0.0 } else { 4.0 }
         + padding * 2.0;
     let height =
         fixed_height.unwrap_or_else(|| explicit_min_height.unwrap_or(50.0).max(natural_height));
-    let available_width = width - padding * 2.0;
+    let available_width = width / width_factor - padding * 2.0;
     let available_height = height - padding * 2.0;
     if available_width < 0.0 || available_height < line_height {
         return Err("fixed node box cannot fit even one line of text and padding".into());
     }
-    if diagram_type != DiagramType::Generic
+    if (diagram_type != DiagramType::Generic
+        || matches!(shape, NodeShape::Diamond | NodeShape::Ellipse))
         && (longest > available_width + 0.01 || natural_height > height + 0.01)
     {
-        return Err("fixed UML node box would hide its name or members".into());
+        return Err("fixed node box would hide text or violate its shape boundary".into());
     }
     // A body is structural: it is not safe to silently omit addressable rows.
     if !node.parts.is_empty() && natural_height > height + 0.01 {
@@ -161,6 +208,7 @@ pub fn measure_node(
         body,
         abstract_node: node.abstract_node,
         kind: node.kind,
+        shape,
         x: 0.0,
         y: 0.0,
         width,

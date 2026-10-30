@@ -1,6 +1,6 @@
 //! SVG output with selectable or outlined text measured against bundled Inter.
 
-use crate::geometry::BoxNode;
+use crate::geometry::{BoxNode, NodeShape};
 use crate::route::{Point, Route};
 use crate::syntax::{EndSymbol, NodeKind, NodePart};
 use crate::text::{FONT, measure};
@@ -194,11 +194,19 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
             escape(&node.label)
         )
         .unwrap();
-        if node.kind == NodeKind::Note {
+        if node.shape == NodeShape::Note {
             let fold = 12.0_f64.min(node.width / 4.0).min(node.height / 4.0);
             writeln!(svg,"<path d=\"M{:.2},{:.2} H{:.2} L{:.2},{:.2} V{:.2} H{:.2} Z M{:.2},{:.2} V{:.2} H{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
                 node.x,node.y,node.x+node.width-fold,node.x+node.width,node.y+fold,
                 node.y+node.height,node.x,node.x+node.width-fold,node.y,node.y+fold,node.x+node.width,
+                node.fill,node.border_color,node.border_width).unwrap();
+        } else if node.shape == NodeShape::Ellipse {
+            writeln!(svg,"<ellipse cx=\"{:.2}\" cy=\"{:.2}\" rx=\"{:.2}\" ry=\"{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
+                node.x+node.width/2.0,node.y+node.height/2.0,node.width/2.0,node.height/2.0,node.fill,node.border_color,node.border_width).unwrap();
+        } else if node.shape == NodeShape::Diamond {
+            writeln!(svg,"<polygon points=\"{:.2},{:.2} {:.2},{:.2} {:.2},{:.2} {:.2},{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
+                node.x+node.width/2.0,node.y,node.x+node.width,node.y+node.height/2.0,
+                node.x+node.width/2.0,node.y+node.height,node.x,node.y+node.height/2.0,
                 node.fill,node.border_color,node.border_width).unwrap();
         } else {
             writeln!(svg,"<rect x=\"{:.2}\" y=\"{:.2}\" width=\"{:.2}\" height=\"{:.2}\" rx=\"{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",

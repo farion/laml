@@ -32,6 +32,15 @@ fn parses_lifelines_messages_activations_and_short_reply() {
 }
 
 #[test]
+fn named_sequence_message_accepts_global_at_prefix() {
+    let source = "settings {\ntype: sequence\n}\nsemantics {\nA\nB\n@request A -> B : call\n}\n";
+    let diagram = parse(source).unwrap();
+    assert!(
+        matches!(&diagram.events[0], Event::Message(m) if m.name.as_deref() == Some("request"))
+    );
+}
+
+#[test]
 fn named_and_unnamed_messages_accept_existing_relation_class_syntax() {
     let source = "settings {\ntype: sequence\n}\nsemantics {\nA\nB\nrequest(style-classes=protocol): A -> B : call\n(style-classes=protocol): A ->> B : event\n}\n";
     let diagram = parse(source).unwrap();

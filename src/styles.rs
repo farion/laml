@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 pub enum Value {
     Number(f64),
     Color(String), // canonical #rrggbb or "none"
+    Keyword(String),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -171,6 +172,10 @@ fn expand(
 fn validate_value(property: &Property, path: &Path) -> Result<Value, StyleError> {
     let value = property.value.trim();
     match property.name.as_str() {
+        "shape" if matches!(value, "rectangle" | "ellipse" | "diamond" | "note") => {
+            Ok(Value::Keyword(value.to_string()))
+        }
+        "shape" => Err(err(path, property.line, "unknown node shape")),
         "fill" | "color" | "border-color" => parse_color(value)
             .map(Value::Color)
             .map_err(|message| err(path, property.line, message)),

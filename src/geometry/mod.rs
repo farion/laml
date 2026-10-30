@@ -5,7 +5,7 @@ mod constraints;
 mod nodes;
 
 pub use constraints::GeometryError;
-pub use nodes::BoxNode;
+pub use nodes::{BoxNode, NodeShape};
 
 use crate::styles::StyleSheet;
 use crate::syntax::Diagram;

@@ -1,8 +1,8 @@
 use laml::export;
-use laml::geometry::place;
+use laml::geometry::{NodeShape, place};
 use laml::parser::parse;
 use laml::route::route;
-use laml::styles::StyleSheet;
+use laml::styles::{StyleSheet, load};
 use laml::svg::render;
 use laml::syntax::{DiagramType, MemberKind, NodeKind, NodePart};
 
@@ -78,6 +78,40 @@ fn class_and_object_compartment_errors_are_not_silent() {
         let err = parse(source).unwrap_err();
         assert!(err.message.contains(expected), "{err:?}");
     }
+}
+
+#[test]
+fn generic_shapes_route_to_visible_ellipse_and_diamond_outlines() {
+    let source = "semantics {\nA\nB\nA -- B\n}\nstyling {\nnode[A] {\nshape: ellipse\n}\nnode[B] {\nshape: diamond\n}\n}\n";
+    let diagram = parse(source).unwrap();
+    let styles = load(&diagram, std::path::Path::new("examples/architecture.laml")).unwrap();
+    let boxes = place(&diagram, &styles).unwrap();
+    assert_eq!(boxes[0].shape, NodeShape::Ellipse);
+    assert_eq!(boxes[1].shape, NodeShape::Diamond);
+    let routes = route(&diagram, &boxes, &styles).unwrap();
+    let first = routes[0].points[0];
+    let last = *routes[0].points.last().unwrap();
+    let (a, b) = (&boxes[0], &boxes[1]);
+    let ellipse = ((first.x - a.x - a.width / 2.0) / (a.width / 2.0)).powi(2)
+        + ((first.y - a.y - a.height / 2.0) / (a.height / 2.0)).powi(2);
+    let diamond = (last.x - b.x - b.width / 2.0).abs() / (b.width / 2.0)
+        + (last.y - b.y - b.height / 2.0).abs() / (b.height / 2.0);
+    assert!((ellipse - 1.0).abs() < 1e-6);
+    assert!((diamond - 1.0).abs() < 1e-6);
+    let svg = render(&boxes, &routes).unwrap();
+    assert!(svg.contains("<ellipse "));
+    assert!(svg.contains("<polygon "));
+    assert!(export::png(&svg).is_ok());
+    assert!(export::pdf(&svg).is_ok());
+    let uml = source.replacen("semantics {", "settings {\ntype: class\n}\nsemantics {", 1);
+    let diagram = parse(&uml).unwrap();
+    let styles = load(&diagram, std::path::Path::new("examples/architecture.laml")).unwrap();
+    assert!(
+        place(&diagram, &styles)
+            .unwrap_err()
+            .message
+            .contains("UML node form")
+    );
 }
 
 #[test]

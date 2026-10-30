@@ -266,12 +266,7 @@ pub(super) fn parse_semantic(
     let arrow_at = find_arrow(text)
         .or_else(|| text.find(" <<- "))
         .ok_or_else(|| error(line, "expected sequence message arrow"))?;
-    let (body, options) = match split_once_top_level(text, ':') {
-        Some((prefix, rest)) if prefix.len() < arrow_at => {
-            (rest.trim(), parse_relation_prefix(prefix, line)?)
-        }
-        _ => (text, MessageOptions::default()),
-    };
+    let (body, options) = messages::extract_message_prefix(text, arrow_at, line)?;
     let (heads, label) = match split_once_top_level(body, ':') {
         Some((heads, label)) => (
             heads.trim(),

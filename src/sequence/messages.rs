@@ -165,6 +165,25 @@ pub(super) fn parse_relation_prefix(text: &str, line: usize) -> Result<MessageOp
     Ok(options)
 }
 
+pub(super) fn extract_message_prefix(
+    text: &str,
+    arrow_at: usize,
+    line: usize,
+) -> Result<(&str, MessageOptions), ParseError> {
+    if let Some(prefixed) = text.strip_prefix('@') {
+        let (prefix, body) = prefixed
+            .split_once(char::is_whitespace)
+            .ok_or_else(|| error(line, "expected sequence message after @id"))?;
+        return Ok((body.trim(), parse_relation_prefix(prefix, line)?));
+    }
+    match split_once_top_level(text, ':') {
+        Some((prefix, body)) if prefix.len() < arrow_at => {
+            Ok((body.trim(), parse_relation_prefix(prefix, line)?))
+        }
+        _ => Ok((text, MessageOptions::default())),
+    }
+}
+
 pub(super) fn parse_participant(
     text: &str,
     line: usize,

@@ -1,6 +1,6 @@
 use super::labels::segment_hits_rect;
 use super::{Point, Route};
-use crate::geometry::BoxNode;
+use crate::geometry::{BoxNode, NodeShape};
 
 pub(super) fn center(node: &BoxNode) -> Point {
     Point {
@@ -35,13 +35,52 @@ pub(super) fn port(node: &BoxNode, towards: Point) -> Point {
     let c = center(node);
     let dx = towards.x - c.x;
     let dy = towards.y - c.y;
-    let scale = ((dx.abs() / (node.width / 2.0)).max(dy.abs() / (node.height / 2.0))).max(1e-9);
+    let (rx, ry) = ((node.width / 2.0).max(1e-9), (node.height / 2.0).max(1e-9));
+    let scale = match node.shape {
+        NodeShape::Rectangle | NodeShape::Note => (dx.abs() / rx).max(dy.abs() / ry),
+        NodeShape::Ellipse => ((dx / rx).powi(2) + (dy / ry).powi(2)).sqrt(),
+        NodeShape::Diamond => dx.abs() / rx + dy.abs() / ry,
+    }
+    .max(1e-9);
     Point {
         x: c.x + dx / scale,
         y: c.y + dy / scale,
     }
 }
 pub(super) fn intersection(a: Point, b: Point, node: &BoxNode) -> bool {
+    let c = center(node);
+    let rx = (node.width / 2.0).max(1e-9);
+    let ry = (node.height / 2.0).max(1e-9);
+    match node.shape {
+        NodeShape::Ellipse => {
+            let (ax, ay) = ((a.x - c.x) / rx, (a.y - c.y) / ry);
+            let (dx, dy) = ((b.x - a.x) / rx, (b.y - a.y) / ry);
+            let denominator = dx * dx + dy * dy;
+            let t = if denominator < 1e-12 {
+                0.0
+            } else {
+                (-(ax * dx + ay * dy) / denominator).clamp(0.0, 1.0)
+            };
+            return (ax + t * dx).powi(2) + (ay + t * dy).powi(2) < 1.0 - 1e-5;
+        }
+        NodeShape::Diamond => {
+            let mut candidates = vec![0.0, 1.0];
+            for (start, delta, target) in [(a.x, b.x - a.x, c.x), (a.y, b.y - a.y, c.y)] {
+                if delta.abs() > 1e-9 {
+                    let t = (target - start) / delta;
+                    if (0.0..=1.0).contains(&t) {
+                        candidates.push(t);
+                    }
+                }
+            }
+            return candidates.into_iter().any(|t| {
+                let x = a.x + (b.x - a.x) * t;
+                let y = a.y + (b.y - a.y) * t;
+                (x - c.x).abs() / rx + (y - c.y).abs() / ry < 1.0 - 1e-5
+            });
+        }
+        NodeShape::Rectangle | NodeShape::Note => {}
+    }
     // Open interior; touching a boundary at a valid port is allowed.
     let left = node.x + 1e-5;
     let right = node.x + node.width - 1e-5;
