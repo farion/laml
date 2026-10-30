@@ -81,10 +81,116 @@ fn class_and_object_compartment_errors_are_not_silent() {
 }
 
 #[test]
+fn notes_render_folded_shape_and_annotate_nodes_in_both_uml_types() {
+    for (kind, named) in [
+        ("class", "class Kunde"),
+        ("object", "object kunde1(of=Kunde)"),
+    ] {
+        let source = format!(
+            "settings {{\ntype: {kind}\n}}\nsemantics {{\n{named}\nnote Hinweis \"Nur aktive Kunden\"\nHinweis .. {}\n}}\n",
+            if kind == "class" { "Kunde" } else { "kunde1" }
+        );
+        let svg = image(&source);
+        assert!(svg.contains("Nur aktive Kunden"));
+        assert!(svg.contains("stroke-dasharray=\"6 4\""));
+        assert!(svg.contains("<path d=\"M"));
+        assert!(export::png(&svg).is_ok());
+    }
+    let bad = "settings {\ntype: class\n}\nsemantics {\nA\nB\nA .. B\n}\n";
+    assert!(parse(bad).unwrap_err().message.contains("requires a note"));
+}
+
+#[test]
+fn relations_can_connect_explicitly_named_member_rows() {
+    let source = "semantics {\nKunde {\n@kundenId id: UUID\n}\nBestellung {\n@kundeId kundeId: UUID\n}\n@fk kundeId --> kundenId\n}\n";
+    let diagram = parse(source).unwrap();
+    let styles = StyleSheet::default();
+    let boxes = place(&diagram, &styles).unwrap();
+    let routes = route(&diagram, &boxes, &styles).unwrap();
+    assert_eq!(routes.len(), 1);
+    assert_eq!(routes[0].from, 1);
+    assert_eq!(routes[0].to, 0);
+    assert!(routes[0].points[0].y > boxes[1].y + boxes[1].font_size * 1.25);
+    assert!(routes[0].points.last().unwrap().y > boxes[0].y + boxes[0].font_size * 1.25);
+    assert!(image(source).contains("data-member-id=\"kundeId\""));
+}
+
+#[test]
+fn explicitly_assigned_ids_are_unique_across_graph_element_kinds() {
+    for source in [
+        "semantics {\n@same class A {\n@same id: Int\n}\n}\n",
+        "semantics {\nA {\n@same id: Int\n}\nB\n@same A -- B\n}\n",
+        "semantics {\nA\nB\n@A A -- B\n}\n",
+    ] {
+        assert!(
+            parse(source).unwrap_err().message.contains("global ID"),
+            "{source}"
+        );
+    }
+}
+
+#[test]
+fn association_end_multiplicities_and_roles_render_and_validate() {
+    let source = "settings {\ntype: class\n}\nsemantics {\nKunde\nBestellung\n@orders Kunde \"1\"/kunde -- \"0..*\"/+bestellungen Bestellung : bestellt\n}\n";
+    let diagram = parse(source).unwrap();
+    assert_eq!(
+        diagram.relations[0].source_end.multiplicity.as_deref(),
+        Some("1")
+    );
+    assert_eq!(
+        diagram.relations[0].target_end.role.as_deref(),
+        Some("+bestellungen")
+    );
+    let svg = image(source);
+    for text in ["kunde", "0..*", "+bestellungen", "bestellt"] {
+        assert!(svg.contains(text), "{text}");
+    }
+    assert!(export::png(&svg).is_ok());
+    assert!(export::pdf(&svg).is_ok());
+    for (diagram_type, adornment, expected) in [
+        ("class", "\"3..1\"", "multiplicity"),
+        ("object", "\"0..*\"", "object links"),
+    ] {
+        let text = format!(
+            "settings {{\ntype: {diagram_type}\n}}\nsemantics {{\nA\nB\nA {adornment} -- B\n}}\n"
+        );
+        assert!(parse(&text).unwrap_err().message.contains(expected));
+    }
+}
+
+#[test]
+fn uml_operators_render_distinct_semantic_markers() {
+    for (operator, expected, dashed) in [
+        ("--> ", "marker-end=\"url(#arrow)\"", false),
+        ("--|> ", "marker-end=\"url(#triangle)\"", false),
+        ("..|> ", "marker-end=\"url(#triangle)\"", true),
+        ("..> ", "marker-end=\"url(#arrow)\"", true),
+        ("*-- ", "marker-start=\"url(#filled-diamond)\"", false),
+        ("o-- ", "marker-start=\"url(#open-diamond)\"", false),
+        ("*--> ", "marker-start=\"url(#filled-diamond)\"", false),
+    ] {
+        let source = format!(
+            "settings {{\ntype: class\n}}\nsemantics {{\nWhole\nPart\nWhole {operator}Part\n}}\n"
+        );
+        let svg = image(&source);
+        assert!(svg.contains(expected), "{operator}");
+        assert_eq!(
+            svg.contains("stroke-dasharray=\"6 4\""),
+            dashed,
+            "{operator}"
+        );
+        assert!(export::png(&svg).is_ok(), "{operator}");
+        assert!(export::pdf(&svg).is_ok(), "{operator}");
+    }
+    let object = "settings {\ntype: object\n}\nsemantics {\na\nb\na *-- b\n}\n";
+    assert!(parse(object).unwrap_err().message.contains("not valid"));
+}
+
+#[test]
 fn unsupported_uml_arrow_is_rejected_instead_of_drawn_as_a_gne_edge() {
     let source = "settings {\ntype: class\n}\nsemantics {\nA\nB\nA -> B\n}\n";
     let err = parse(source).unwrap_err();
-    assert!(err.message.contains("not implemented yet"));
+    assert!(err.message.contains("not valid"));
     assert!(parse("semantics {\nA\nB\nA -> B\n}\n").is_ok());
 }
 

@@ -2,7 +2,7 @@
 
 use crate::geometry::BoxNode;
 use crate::route::{Point, Route};
-use crate::syntax::{NodeKind, NodePart};
+use crate::syntax::{EndSymbol, NodeKind, NodePart};
 use crate::text::{FONT, measure};
 use base64::Engine;
 use std::fmt::Write;
@@ -20,6 +20,17 @@ fn escape(value: &str) -> String {
         }
     }
     output
+}
+fn marker(symbol: EndSymbol, start: bool) -> &'static str {
+    match (symbol, start) {
+        (EndSymbol::None, _) => "",
+        (EndSymbol::Arrow, _) => "url(#arrow)",
+        (EndSymbol::Triangle, _) => "url(#triangle)",
+        (EndSymbol::OpenDiamond, true) => "url(#open-diamond)",
+        (EndSymbol::OpenDiamond, false) => "url(#open-diamond-end)",
+        (EndSymbol::FilledDiamond, true) => "url(#filled-diamond)",
+        (EndSymbol::FilledDiamond, false) => "url(#filled-diamond-end)",
+    }
 }
 fn include_point(point: Point, bounds: &mut (f64, f64, f64, f64)) {
     bounds.0 = bounds.0.min(point.x);
@@ -91,7 +102,7 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
                 &mut bounds,
             );
         }
-        if let Some(label) = &route.label {
+        for label in route.label.iter().chain(route.end_labels.iter()) {
             include_point(
                 Point {
                     x: label.x,
@@ -121,29 +132,49 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
         let font = base64::engine::general_purpose::STANDARD.encode(FONT);
         writeln!(svg, "<style>@font-face {{ font-family: 'Inter'; src: url('data:font/otf;base64,{font}') format('opentype'); }}</style>").unwrap();
     }
-    svg.push_str("<marker id=\"arrow\" markerWidth=\"10\" markerHeight=\"8\" refX=\"9\" refY=\"4\" orient=\"auto-start-reverse\" markerUnits=\"userSpaceOnUse\"><path d=\"M0,0 L10,4 L0,8 Z\" fill=\"context-stroke\"/></marker></defs>\n");
+    svg.push_str("<marker id=\"arrow\" markerWidth=\"10\" markerHeight=\"8\" refX=\"9\" refY=\"4\" orient=\"auto-start-reverse\" markerUnits=\"userSpaceOnUse\"><path d=\"M0,0 L10,4 L0,8 Z\" fill=\"context-stroke\"/></marker>");
+    svg.push_str("<marker id=\"triangle\" markerWidth=\"13\" markerHeight=\"11\" refX=\"12\" refY=\"5.5\" orient=\"auto-start-reverse\" markerUnits=\"userSpaceOnUse\"><path d=\"M1,1 L12,5.5 L1,10 Z\" fill=\"white\" stroke=\"context-stroke\" stroke-width=\"1.5\"/></marker>");
+    svg.push_str("<marker id=\"open-diamond\" markerWidth=\"17\" markerHeight=\"11\" refX=\"1\" refY=\"5.5\" orient=\"auto\" markerUnits=\"userSpaceOnUse\"><path d=\"M1,5.5 L8,1 L16,5.5 L8,10 Z\" fill=\"white\" stroke=\"context-stroke\" stroke-width=\"1.5\"/></marker>");
+    svg.push_str("<marker id=\"filled-diamond\" markerWidth=\"17\" markerHeight=\"11\" refX=\"1\" refY=\"5.5\" orient=\"auto\" markerUnits=\"userSpaceOnUse\"><path d=\"M1,5.5 L8,1 L16,5.5 L8,10 Z\" fill=\"context-stroke\"/></marker>");
+    svg.push_str("<marker id=\"open-diamond-end\" markerWidth=\"17\" markerHeight=\"11\" refX=\"16\" refY=\"5.5\" orient=\"auto\" markerUnits=\"userSpaceOnUse\"><path d=\"M1,5.5 L8,1 L16,5.5 L8,10 Z\" fill=\"white\" stroke=\"context-stroke\" stroke-width=\"1.5\"/></marker>");
+    svg.push_str("<marker id=\"filled-diamond-end\" markerWidth=\"17\" markerHeight=\"11\" refX=\"16\" refY=\"5.5\" orient=\"auto\" markerUnits=\"userSpaceOnUse\"><path d=\"M1,5.5 L8,1 L16,5.5 L8,10 Z\" fill=\"context-stroke\"/></marker></defs>\n");
     for route in routes {
+        let start = marker(route.appearance.start, true);
+        let end = marker(route.appearance.end, false);
+        let start_marker = if start.is_empty() {
+            String::new()
+        } else {
+            format!(" marker-start=\"{start}\"")
+        };
+        let end_marker = if end.is_empty() {
+            String::new()
+        } else {
+            format!(" marker-end=\"{end}\"")
+        };
+        let dash = if route.appearance.dashed {
+            " stroke-dasharray=\"6 4\""
+        } else {
+            ""
+        };
         if route.bridges.is_empty() && route.gaps.is_empty() {
             let points: Vec<String> = route
                 .points
                 .iter()
                 .map(|p| format!("{:.2},{:.2}", p.x, p.y))
                 .collect();
-            writeln!(svg,"<polyline points=\"{}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"{}{} />",
-                points.join(" "), route.color, route.width,
-                if route.marker_end { " marker-end=\"url(#arrow)\"" } else { "" },
-                if route.bidirectional { " marker-start=\"url(#arrow)\"" } else { "" }).unwrap();
+            writeln!(svg,"<polyline points=\"{}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"{dash}{end_marker}{start_marker} />",
+                points.join(" "), route.color, route.width).unwrap();
         } else {
             let fragments = crate::svg_paths::fragments(route)?;
             let last = fragments.len() - 1;
             for (i, path) in fragments.iter().enumerate() {
-                writeln!(svg,"<path d=\"{}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"{}{} />",
+                writeln!(svg,"<path d=\"{}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"{dash}{}{} />",
                     path,route.color,route.width,
-                    if i==0 && route.bidirectional { " marker-start=\"url(#arrow)\"" } else { "" },
-                    if i==last && route.marker_end { " marker-end=\"url(#arrow)\"" } else { "" }).unwrap();
+                    if i==0 { &start_marker } else { "" },
+                    if i==last { &end_marker } else { "" }).unwrap();
             }
         }
-        if let Some(label) = &route.label {
+        for label in route.label.iter().chain(route.end_labels.iter()) {
             let cx = label.x + label.width / 2.0;
             let cy = label.y + label.height / 2.0;
             let rotation = if label.angle.abs() > 1e-9 {
@@ -156,8 +187,23 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
         }
     }
     for node in boxes {
-        writeln!(svg,"<g data-node-id=\"{}\"><title>{}</title><rect x=\"{:.2}\" y=\"{:.2}\" width=\"{:.2}\" height=\"{:.2}\" rx=\"{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
-            escape(&node.id),escape(&node.label),node.x,node.y,node.width,node.height,node.radius,node.fill,node.border_color,node.border_width).unwrap();
+        writeln!(
+            svg,
+            "<g data-node-id=\"{}\"><title>{}</title>",
+            escape(&node.id),
+            escape(&node.label)
+        )
+        .unwrap();
+        if node.kind == NodeKind::Note {
+            let fold = 12.0_f64.min(node.width / 4.0).min(node.height / 4.0);
+            writeln!(svg,"<path d=\"M{:.2},{:.2} H{:.2} L{:.2},{:.2} V{:.2} H{:.2} Z M{:.2},{:.2} V{:.2} H{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
+                node.x,node.y,node.x+node.width-fold,node.x+node.width,node.y+fold,
+                node.y+node.height,node.x,node.x+node.width-fold,node.y,node.y+fold,node.x+node.width,
+                node.fill,node.border_color,node.border_width).unwrap();
+        } else {
+            writeln!(svg,"<rect x=\"{:.2}\" y=\"{:.2}\" width=\"{:.2}\" height=\"{:.2}\" rx=\"{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
+                node.x,node.y,node.width,node.height,node.radius,node.fill,node.border_color,node.border_width).unwrap();
+        }
         let line_height = node.font_size * 1.25;
         let first_baseline = if node.body.is_empty() {
             node.y

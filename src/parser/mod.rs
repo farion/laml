@@ -1,7 +1,6 @@
 //! Parser for the documented, line-oriented first language subset.
 //! This produces an AST; style imports, layout feasibility, and SVG are later phases.
 
-use crate::RelationKind;
 use crate::lex::{
     find_arrow, quoted_string, split_once_top_level, split_top_level, valid_identifier,
     without_comment,
@@ -12,6 +11,9 @@ use crate::syntax::{
 };
 
 mod bodies;
+mod ends;
+mod graph_operators;
+mod graph_relations;
 mod layout;
 mod selectors;
 use layout::{parse_layout, parse_relation_label};
@@ -113,7 +115,7 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
                     bodies::node(header.trim(), line, &mut diagram)?;
                     Section::NodeBody(diagram.nodes.len() - 1)
                 } else {
-                    parse_semantic(text, line, &mut diagram)?;
+                    graph_relations::parse_semantic(text, line, &mut diagram)?;
                     Section::Semantics
                 }
             }
@@ -253,83 +255,6 @@ fn classes(value: &str, line: usize) -> Result<Vec<String>, ParseError> {
         .collect()
 }
 
-fn parse_semantic(text: &str, line: usize, diagram: &mut Diagram) -> Result<(), ParseError> {
-    // Prefixes end at a colon before the arrow; labels begin at a colon after it.
-    let arrow_at = find_arrow(text);
-    if arrow_at.is_none() {
-        return bodies::node(text, line, diagram);
-    }
-    let arrow_at = arrow_at.expect("checked above");
-    let (name, attrs, body) = if let Some(prefixed) = text.strip_prefix('@') {
-        let (head, body) = prefixed
-            .split_once(char::is_whitespace)
-            .ok_or_else(|| error(line, "expected @relation-id followed by a relation"))?;
-        let (id, attrs) = attributes(head, line)?;
-        if id.is_empty() {
-            return Err(error(line, "relation ID cannot be empty"));
-        }
-        (Some(id), attrs, body.trim())
-    } else {
-        match split_once_top_level(text, ':') {
-            Some((prefix, rest)) if prefix.len() < arrow_at => {
-                let (name, attrs) = attributes(prefix, line)?;
-                (
-                    if name.is_empty() { None } else { Some(name) },
-                    attrs,
-                    rest.trim(),
-                )
-            }
-            _ => (None, Vec::new(), text),
-        }
-    };
-    let mut relation_classes = Vec::new();
-    for (key, value) in attrs {
-        if key != "style-classes" {
-            return Err(error(line, format!("unknown relation attribute '{key}'")));
-        }
-        relation_classes = classes(&value, line)?;
-    }
-    let (endpoints, label) = match split_once_top_level(body, ':') {
-        Some((endpoints, label)) => {
-            let label = label.trim();
-            if label.is_empty() {
-                return Err(error(line, "empty relation label"));
-            }
-            let label = if label.starts_with('"') {
-                quoted_string(label).map_err(|msg| error(line, msg))?
-            } else {
-                label.into()
-            };
-            if label.trim().is_empty() {
-                return Err(error(line, "empty relation label"));
-            }
-            (endpoints.trim(), Some(label))
-        }
-        None => (body.trim(), None),
-    };
-    let tokens: Vec<_> = endpoints.split_whitespace().collect();
-    if tokens.len() != 3 || !valid_identifier(tokens[0]) || !valid_identifier(tokens[2]) {
-        return Err(error(line, "expected relation: A -> B"));
-    }
-    let (from, to, kind) = match tokens[1] {
-        "->" => (tokens[0], tokens[2], RelationKind::Directed),
-        "<-" => (tokens[2], tokens[0], RelationKind::Directed),
-        "<->" => (tokens[0], tokens[2], RelationKind::Bidirectional),
-        "--" => (tokens[0], tokens[2], RelationKind::Undirected),
-        _ => return Err(error(line, "expected ->, <-, <->, or --")),
-    };
-    diagram.relations.push(RelationDecl {
-        name,
-        classes: relation_classes,
-        from: from.into(),
-        to: to.into(),
-        kind,
-        label,
-        line,
-    });
-    Ok(())
-}
-
 fn parse_setting(
     text: &str,
     line: usize,
@@ -399,15 +324,29 @@ fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {
             return Err(error(node.line, "node identifier must start uppercase"));
         }
     }
-    for (index, relation) in diagram.relations.iter().enumerate() {
-        if diagram.settings.diagram_type != DiagramType::Generic
-            && relation.kind != RelationKind::Undirected
-        {
-            return Err(error(
-                relation.line,
-                "UML relationship operator is not implemented yet; do not treat a GNE arrow as UML notation",
-            ));
+    let mut assigned = std::collections::HashSet::new();
+    for node in &diagram.nodes {
+        assigned.insert(node.id.as_str());
+    }
+    for node in &diagram.nodes {
+        for part in &node.parts {
+            if let crate::syntax::NodePart::Member {
+                id: Some(id), line, ..
+            } = part
+                && !assigned.insert(id.as_str())
+            {
+                return Err(error(*line, format!("duplicate global ID '{id}'")));
+            }
         }
+    }
+    for relation in &diagram.relations {
+        if let Some(id) = relation.name.as_deref()
+            && !assigned.insert(id)
+        {
+            return Err(error(relation.line, format!("duplicate global ID '{id}'")));
+        }
+    }
+    for (index, relation) in diagram.relations.iter().enumerate() {
         if let Some(name) = &relation.name {
             if diagram.relations[..index]
                 .iter()
@@ -420,9 +359,29 @@ fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {
                 return Err(error(relation.line, "relation name must start lowercase"));
             }
         }
+        if diagram.settings.diagram_type != DiagramType::Generic
+            && relation.appearance.dashed
+            && relation.appearance.start == crate::syntax::EndSymbol::None
+            && relation.appearance.end == crate::syntax::EndSymbol::None
+            && ![&relation.from, &relation.to].iter().any(|id| {
+                diagram
+                    .nodes
+                    .iter()
+                    .any(|node| node.id == **id && node.kind == crate::syntax::NodeKind::Note)
+            })
+        {
+            return Err(error(
+                relation.line,
+                "dotted UML annotation requires a note endpoint",
+            ));
+        }
         for endpoint in [&relation.from, &relation.to] {
-            if !diagram.nodes.iter().any(|node| &node.id == endpoint) {
-                return Err(error(relation.line, format!("unknown node '{endpoint}'")));
+            if !diagram.nodes.iter().any(|node| {
+                &node.id == endpoint || node.parts.iter().any(|part| {
+                    matches!(part, crate::syntax::NodePart::Member { id: Some(id), .. } if id == endpoint)
+                })
+            }) {
+                return Err(error(relation.line, format!("unknown node or member '{endpoint}'")));
             }
         }
     }

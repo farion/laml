@@ -138,6 +138,16 @@ pub fn place(
             .position(|b| b.id == id)
             .expect("parsed diagram has checked node IDs")
     };
+    let owner = |id: &str| {
+        boxes
+            .iter()
+            .position(|b| {
+                b.id == id || b.body.iter().any(|part| {
+            matches!(part, crate::syntax::NodePart::Member { id: Some(member), .. } if member == id)
+        })
+            })
+            .expect("parsed diagram has checked member IDs")
+    };
     for rule in &diagram.layout {
         let a = find(&rule.first);
         let b = find(&rule.second);
@@ -235,8 +245,8 @@ pub fn place(
             .relations
             .iter()
             .map(|r| crate::Relation {
-                from: r.from.clone(),
-                to: r.to.clone(),
+                from: boxes[owner(&r.from)].id.clone(),
+                to: boxes[owner(&r.to)].id.clone(),
                 kind: r.kind,
             })
             .collect();
@@ -248,8 +258,8 @@ pub fn place(
             .expect("parsed diagram has checked relation endpoints");
         for index in preferences.accepted {
             let relation = &diagram.relations[index];
-            let a = find(&relation.from);
-            let b = find(&relation.to);
+            let a = owner(&relation.from);
+            let b = owner(&relation.to);
             let distance = if matches!(
                 diagram.settings.direction,
                 FlowDirection::LeftToRight | FlowDirection::RightToLeft
@@ -296,7 +306,7 @@ pub fn place(
             ) {
                 continue;
             }
-            let (a, b) = (find(&relation.from), find(&relation.to));
+            let (a, b) = (owner(&relation.from), owner(&relation.to));
             if a == b {
                 continue;
             }

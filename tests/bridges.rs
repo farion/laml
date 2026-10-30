@@ -25,7 +25,10 @@ fn later_relation_gets_a_bridge_and_earlier_gets_a_small_gap() {
     assert!(routes[1].gaps.is_empty());
     assert!(routes[0].gaps[0].half < 20.0);
     assert!(svg.contains(" Q"));
-    assert_eq!(svg.matches("<path d=").count(), 4); // three route fragments plus arrow marker
+    assert_eq!(
+        svg.matches("<path d=").count(),
+        svg.matches("<marker id=").count() + 3
+    ); // three route fragments plus one path per available marker
     assert_eq!(
         svg,
         draw(source).1,

@@ -8,6 +8,29 @@ pub(super) fn center(node: &BoxNode) -> Point {
         y: node.y + node.height / 2.0,
     }
 }
+pub(super) fn member_port(node: &BoxNode, member: &str, towards: Point) -> Option<Point> {
+    let line_height = node.font_size * 1.25;
+    let mut y = node.y + node.padding + line_height * node.lines.len() as f64 + 4.0;
+    for part in &node.body {
+        match part {
+            crate::syntax::NodePart::Separator => y += 8.0,
+            crate::syntax::NodePart::Member { id, .. } => {
+                if id.as_deref() == Some(member) {
+                    return Some(Point {
+                        x: if towards.x >= node.x + node.width / 2.0 {
+                            node.x + node.width
+                        } else {
+                            node.x
+                        },
+                        y: y + line_height / 2.0,
+                    });
+                }
+                y += line_height;
+            }
+        }
+    }
+    None
+}
 pub(super) fn port(node: &BoxNode, towards: Point) -> Point {
     let c = center(node);
     let dx = towards.x - c.x;
@@ -125,16 +148,21 @@ pub(super) fn route_is_clear(points: &[Point], boxes: &[BoxNode], previous: &[Ro
             return false;
         }
         for route in previous {
-            if route.label.as_ref().is_some_and(|label| {
-                segment_hits_rect(
-                    pair[0],
-                    pair[1],
-                    label.x,
-                    label.y,
-                    label.width,
-                    label.height,
-                )
-            }) {
+            if route
+                .label
+                .iter()
+                .chain(route.end_labels.iter())
+                .any(|label| {
+                    segment_hits_rect(
+                        pair[0],
+                        pair[1],
+                        label.x,
+                        label.y,
+                        label.width,
+                        label.height,
+                    )
+                })
+            {
                 return false;
             }
             // Route/route crossings are examined by the bridge planner.

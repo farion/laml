@@ -6,11 +6,12 @@ use crate::styles::{Element, StyleSheet, Value};
 use crate::syntax::{Diagram, LabelPlacement, RelationDecl};
 
 mod bridges;
+mod end_labels;
 mod geometry;
 mod labels;
 mod parallel;
 mod self_loops;
-use geometry::{center, port, route_is_clear};
+use geometry::{center, member_port, port, route_is_clear};
 use labels::{label_along, label_inline, label_near};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -34,6 +35,7 @@ pub struct Route {
     pub bridges: Vec<Bridge>,
     pub gaps: Vec<Gap>,
     pub label: Option<Label>,
+    pub end_labels: Vec<Label>,
     pub from: usize,
     pub to: usize,
     pub color: String,
@@ -41,6 +43,7 @@ pub struct Route {
     pub font_size: f64,
     pub bidirectional: bool,
     pub marker_end: bool,
+    pub appearance: crate::syntax::EdgeAppearance,
 }
 #[derive(Clone, Debug)]
 pub struct Bridge {
@@ -72,6 +75,14 @@ fn candidates(
 ) -> Vec<Vec<Point>> {
     let a = &boxes[from];
     let b = &boxes[to];
+    let source_member = diagram
+        .relations
+        .get(index)
+        .and_then(|relation| (relation.from != a.id).then_some(relation.from.as_str()));
+    let target_member = diagram
+        .relations
+        .get(index)
+        .and_then(|relation| (relation.to != b.id).then_some(relation.to.as_str()));
     let ca = center(a);
     let cb = center(b);
     let mut results = vec![vec![port(a, cb), port(b, ca)]];
@@ -106,26 +117,30 @@ fn candidates(
             let first_horizontal = (points[0].y - points[1].y).abs() < 1e-6;
             let last = points.len() - 1;
             let last_horizontal = (points[last - 1].y - points[last].y).abs() < 1e-6;
-            let start_offset =
-                if parallel::has_competing_port(diagram, index, boxes, from, points[0], previous) {
-                    offset
-                } else {
-                    0.0
-                };
-            let end_offset = if parallel::has_competing_port(
-                diagram,
-                index,
-                boxes,
-                to,
-                points[last],
-                previous,
-            ) {
+            let start_offset = if source_member.is_none()
+                && parallel::has_competing_port(diagram, index, boxes, from, points[0], previous)
+            {
                 offset
             } else {
                 0.0
             };
-            let start = parallel::shift_port(a, points[0], start_offset)?;
-            let end = parallel::shift_port(b, points[last], end_offset)?;
+            let end_offset = if target_member.is_none()
+                && parallel::has_competing_port(diagram, index, boxes, to, points[last], previous)
+            {
+                offset
+            } else {
+                0.0
+            };
+            let start = if let Some(id) = source_member {
+                member_port(a, id, points[1])?
+            } else {
+                parallel::shift_port(a, points[0], start_offset)?
+            };
+            let end = if let Some(id) = target_member {
+                member_port(b, id, points[last - 1])?
+            } else {
+                parallel::shift_port(b, points[last], end_offset)?
+            };
             points[0] = start;
             points[last] = end;
             // Shifting a boundary port must shift its adjacent elbow too.
@@ -182,14 +197,26 @@ pub fn route(
 ) -> Result<Vec<Route>, RouteError> {
     let mut routed = Vec::new();
     for (index, relation) in diagram.relations.iter().enumerate() {
-        let from = boxes
-            .iter()
-            .position(|b| b.id == relation.from)
-            .expect("parsed relation endpoint");
-        let to = boxes
-            .iter()
-            .position(|b| b.id == relation.to)
-            .expect("parsed relation endpoint");
+        let owner = |id: &str| {
+            boxes
+                .iter()
+                .position(|b| {
+                    b.id == id || b.body.iter().any(|part| {
+            matches!(part, crate::syntax::NodePart::Member { id: Some(member), .. } if member == id)
+        })
+                })
+                .expect("parsed relation endpoint")
+        };
+        let from = owner(&relation.from);
+        let to = owner(&relation.to);
+        if from == to && (relation.from != boxes[from].id || relation.to != boxes[to].id) {
+            return Err(RouteError {
+                line: relation.line,
+                message:
+                    "member-to-member relation within one node needs a separate exterior route"
+                        .into(),
+            });
+        }
         let (color, width, font_size) = style(relation, sheet);
         let options = if from == to {
             let rank = diagram.relations[..index]
@@ -269,10 +296,24 @@ pub fn route(
                 label_error = Some("relation label conflicts with required bridge".into());
                 continue;
             }
-            choice = Some((points, label, label_gap, plan));
+            let end_labels = match end_labels::place(
+                relation,
+                &points,
+                font_size,
+                boxes,
+                &routed,
+                label.as_ref(),
+            ) {
+                Ok(labels) => labels,
+                Err(message) => {
+                    label_error = Some(message);
+                    continue;
+                }
+            };
+            choice = Some((points, label, end_labels, label_gap, plan));
             break;
         }
-        let (points,label,label_gap,plan) = choice.ok_or_else(|| RouteError { line: if label_error.is_some() {label_line} else {relation.line},
+        let (points,label,end_labels,label_gap,plan) = choice.ok_or_else(|| RouteError { line: if label_error.is_some() {label_line} else {relation.line},
             message: label_error.unwrap_or_else(|| "bounded router cannot avoid nodes/relations or make a safe bridge for the selected ports".into()) })?;
         let new_bridges = plan.apply(&mut routed);
         routed.push(Route {
@@ -280,6 +321,7 @@ pub fn route(
             bridges: new_bridges,
             gaps: label_gap.into_iter().collect(),
             label,
+            end_labels,
             from,
             to,
             color,
@@ -287,6 +329,7 @@ pub fn route(
             font_size,
             bidirectional: relation.kind == crate::RelationKind::Bidirectional,
             marker_end: relation.kind != crate::RelationKind::Undirected,
+            appearance: relation.appearance,
         });
     }
     Ok(routed)

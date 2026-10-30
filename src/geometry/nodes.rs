@@ -167,7 +167,16 @@ pub fn measure_node(
         height,
         font_size,
         padding,
-        fill: color(styles, &element, "fill", "#eff4fa"),
+        fill: color(
+            styles,
+            &element,
+            "fill",
+            if node.kind == NodeKind::Note {
+                "#fff8d6"
+            } else {
+                "#eff4fa"
+            },
+        ),
         color: color(styles, &element, "color", "#17212e"),
         border_color: color(styles, &element, "border-color", "#395373"),
         border_width: number(styles, &element, "border-width", 1.0),

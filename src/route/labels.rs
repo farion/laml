@@ -120,6 +120,7 @@ fn label_clear(
             .iter()
             .any(|p| near_marker(x, y, w, h, *p, r.width))
             || r.label.as_ref().is_some_and(|other| overlaps(label, other))
+            || r.end_labels.iter().any(|other| overlaps(label, other))
             || r.points
                 .windows(2)
                 .any(|pair| segment_hits_rect(pair[0], pair[1], x, y, w, h))

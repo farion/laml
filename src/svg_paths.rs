@@ -103,6 +103,7 @@ mod tests {
             bridges: vec![],
             gaps: vec![],
             label: None,
+            end_labels: Vec::new(),
             from: 0,
             to: 1,
             color: String::new(),
@@ -110,6 +111,7 @@ mod tests {
             font_size: 14.0,
             bidirectional: false,
             marker_end: true,
+            appearance: Default::default(),
         }
     }
     #[test]

@@ -13,6 +13,13 @@ pub(super) fn offset(
     b: usize,
     styles: &StyleSheet,
 ) -> Result<f64, String> {
+    let relation = &diagram.relations[relation_index];
+    if !(relation.from == boxes[a].id || relation.from == boxes[b].id)
+        || !(relation.to == boxes[a].id || relation.to == boxes[b].id)
+    {
+        // A member's address is not a node ID; it keeps its row anchor.
+        return Ok(0.0);
+    }
     let mut siblings = Vec::new();
     let mut widest = 0.0_f64;
     for (index, rel) in diagram.relations.iter().enumerate() {

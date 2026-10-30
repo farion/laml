@@ -36,6 +36,7 @@ pub enum NodeKind {
     Enumeration,
     DataType,
     Object,
+    Note,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -79,6 +80,29 @@ pub struct NodeDecl {
     pub line: usize,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum EndSymbol {
+    #[default]
+    None,
+    Arrow,
+    Triangle,
+    OpenDiamond,
+    FilledDiamond,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EdgeAppearance {
+    pub start: EndSymbol,
+    pub end: EndSymbol,
+    pub dashed: bool,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct EndAnnotation {
+    pub multiplicity: Option<String>,
+    pub role: Option<String>,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RelationDecl {
     pub name: Option<String>,
@@ -87,6 +111,9 @@ pub struct RelationDecl {
     pub from: String,
     pub to: String,
     pub kind: RelationKind,
+    pub appearance: EdgeAppearance,
+    pub source_end: EndAnnotation,
+    pub target_end: EndAnnotation,
     pub label: Option<String>,
     pub line: usize,
 }

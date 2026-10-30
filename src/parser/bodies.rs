@@ -19,7 +19,18 @@ pub(super) fn node(text: &str, line: usize, diagram: &mut Diagram) -> Result<(),
     };
     let abstract_node = source.starts_with("abstract ");
     let source = source.strip_prefix("abstract ").unwrap_or(source);
-    let (kind, name) = if let Some(name) = source.strip_prefix("class ") {
+    let note = if let Some(tail) = source.strip_prefix("note ") {
+        let at = tail
+            .find('"')
+            .ok_or_else(|| error(line, "note requires quoted text"))?;
+        let value = quoted_string(tail[at..].trim()).map_err(|msg| error(line, msg))?;
+        Some((tail[..at].trim(), value))
+    } else {
+        None
+    };
+    let (kind, name) = if let Some((name, _)) = &note {
+        (NodeKind::Note, *name)
+    } else if let Some(name) = source.strip_prefix("class ") {
         (NodeKind::Class, name)
     } else if let Some(name) = source.strip_prefix("interface ") {
         (NodeKind::Interface, name)
@@ -37,7 +48,8 @@ pub(super) fn node(text: &str, line: usize, diagram: &mut Diagram) -> Result<(),
         }
     };
     if (diagram.settings.diagram_type == DiagramType::Class && kind == NodeKind::Object)
-        || (diagram.settings.diagram_type == DiagramType::Object && kind != NodeKind::Object)
+        || (diagram.settings.diagram_type == DiagramType::Object
+            && !matches!(kind, NodeKind::Object | NodeKind::Note))
     {
         return Err(error(
             line,
@@ -50,7 +62,7 @@ pub(super) fn node(text: &str, line: usize, diagram: &mut Diagram) -> Result<(),
     }
     let mut result = NodeDecl {
         id: explicit_id.unwrap_or_else(|| name.clone()),
-        label: None,
+        label: note.map(|(_, text)| text),
         classes: Vec::new(),
         kind,
         abstract_node,
@@ -60,7 +72,9 @@ pub(super) fn node(text: &str, line: usize, diagram: &mut Diagram) -> Result<(),
     let mut classifier = None;
     for (key, value) in attrs {
         match key.as_str() {
-            "label" => result.label = Some(quoted_string(&value).map_err(|msg| error(line, msg))?),
+            "label" if result.label.is_none() => {
+                result.label = Some(quoted_string(&value).map_err(|msg| error(line, msg))?)
+            }
             "style-classes" => result.classes = classes(&value, line)?,
             "of" if kind == NodeKind::Object && !value.trim().is_empty() => {
                 classifier = Some(value.trim().to_string());
