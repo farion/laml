@@ -36,6 +36,7 @@ pub struct BoxNode {
     pub abstract_node: bool,
     pub kind: NodeKind,
     pub is_container: bool,
+    pub deployment: bool,
     pub shape: NodeShape,
     pub x: f64,
     pub y: f64,
@@ -59,7 +60,7 @@ impl BoxNode {
             && x >= self.x + 1.0
             && x + width <= self.x + self.width - 1.0
             && y >= self.y
-                + if self.kind == NodeKind::Component {
+                + if self.kind != NodeKind::Package {
                     self.port_start
                 } else {
                     self.padding + self.font_size * 1.25 * self.lines.len() as f64 + 4.0
@@ -292,6 +293,9 @@ pub fn measure_node(
     if node.kind == NodeKind::Package {
         longest += 12.0; // leave room for the folder-tab shoulder
     }
+    if node.kind.is_deployment_target() {
+        longest += 14.0; // reserve the visible right face of the node cube
+    }
     if node.kind == NodeKind::Component && !ports.iter().any(|port| port.side == PortSide::Top) {
         longest += 52.0; // reserve the UML corner glyph beside the measured heading
     }
@@ -337,6 +341,8 @@ pub fn measure_node(
     }
     let top_band = if ports.iter().any(|port| port.side == PortSide::Top) {
         line_height + 8.0
+    } else if node.kind.is_deployment_target() {
+        16.0 // top face, inside the measured silhouette
     } else if template.is_some() {
         line_height + 12.0
     } else {
@@ -463,6 +469,7 @@ pub fn measure_node(
         abstract_node: node.abstract_node,
         kind: node.kind,
         is_container: node.kind == NodeKind::Package,
+        deployment: diagram_type == DiagramType::Deployment,
         shape,
         x: 0.0,
         y: 0.0,

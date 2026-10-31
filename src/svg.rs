@@ -8,6 +8,7 @@ use base64::Engine;
 use std::fmt::Write;
 mod compact;
 mod component_container;
+mod deployment;
 mod escape;
 use escape::escape;
 
@@ -200,6 +201,7 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
     {
         component_container::draw(&mut svg, node);
     }
+    deployment::backgrounds(&mut svg, boxes);
     for route in routes {
         let start = marker(route.appearance.start, true);
         let end = marker(route.appearance.end, false);
@@ -256,7 +258,11 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
             escape(&node.label)
         )
         .unwrap();
-        if node.kind == NodeKind::Component && node.is_container {
+        if node.kind.is_deployment_target() {
+            if !node.is_container {
+                deployment::cube(&mut svg, node);
+            }
+        } else if node.kind == NodeKind::Component && node.is_container {
             // Its background was painted before internal routes; draw the heading and ports now.
         } else if matches!(node.kind, NodeKind::Socket | NodeKind::Lollipop) {
             compact::draw(&mut svg, node);
@@ -301,6 +307,7 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
             && node.ports.is_empty()
             && node.template.is_none()
             && node.kind != NodeKind::Package
+            && !node.kind.is_deployment_target()
         {
             node.y
                 + (node.height - line_height * node.lines.len() as f64) / 2.0
@@ -327,7 +334,7 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
                 }
                 (x + span, "start")
             } else {
-                (node.x + node.width / 2.0, "middle")
+                (deployment::center(node), "middle")
             };
             writeln!(svg,"<text x=\"{text_x:.2}\" y=\"{baseline:.2}\" text-anchor=\"{anchor}\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\"{}>{}</text>",
                 node.font_size,node.color,

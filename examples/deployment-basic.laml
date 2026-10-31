@@ -1,0 +1,19 @@
+settings {
+    type: deployment
+}
+semantics {
+    device Edge {
+        executionEnvironment Runtime {
+            artifact WorkerJar
+        }
+    }
+    device Database
+    artifact GatewayJar
+    component Gateway
+    @link Edge -- Database : TLS
+    @runs GatewayJar ..> Edge <<deploy>>
+    @realizes GatewayJar ..> Gateway <<manifest>>
+}
+layout {
+    Edge < Database : gap=100
+}

@@ -1,0 +1,15 @@
+// One built artifact manifests a component and runs in an execution environment.
+settings {
+    type: deployment
+}
+semantics {
+    component Billing
+    artifact BillingJar(label="billing.jar")
+    executionEnvironment JVM
+    @manifestation BillingJar ..> Billing <<manifest>>
+    @deployment BillingJar ..> JVM <<deploy>>
+}
+layout {
+    BillingJar ^ Billing : gap=72
+    Billing < JVM : gap=120
+}

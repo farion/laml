@@ -13,6 +13,9 @@ pub(super) fn header(node: &NodeDecl, name: String, diagram_type: DiagramType) -
     };
     let label = match node.kind {
         NodeKind::Component => format!("«component»\n{name}"),
+        NodeKind::Device => format!("«device»\n{name}"),
+        NodeKind::ExecutionEnvironment => format!("«executionEnvironment»\n{name}"),
+        NodeKind::Artifact => format!("«artifact»\n{name}"),
         NodeKind::Interface => format!("«interface»\n{name}"),
         NodeKind::Enumeration => format!("«enumeration»\n{name}"),
         NodeKind::DataType => format!("«dataType»\n{name}"),

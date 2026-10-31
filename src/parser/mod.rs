@@ -14,11 +14,13 @@ mod bindings;
 mod bodies;
 mod component;
 mod component_connectors;
+mod deployment;
 mod ends;
 mod graph_operators;
 mod graph_relations;
 mod layout;
 mod member_notation;
+mod node_kinds;
 mod node_modifiers;
 mod part_types;
 mod port_bodies;
@@ -76,6 +78,7 @@ fn prescan_type(source: &str) -> DiagramType {
                 "class" => DiagramType::Class,
                 "object" => DiagramType::Object,
                 "component" => DiagramType::Component,
+                "deployment" => DiagramType::Deployment,
                 _ => DiagramType::Generic,
             };
         }
@@ -149,6 +152,27 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
                             .iter()
                             .position(|node| &node.id == parent)
                             .expect("validated container parent");
+                        Section::NodeBody(outer)
+                    } else {
+                        Section::Semantics
+                    }
+                } else if let Some(header) = text.strip_suffix('{') {
+                    bodies::node(header.trim(), line, &mut diagram, true, Some(&scope))?;
+                    Section::NodeBody(diagram.nodes.len() - 1)
+                } else {
+                    graph_relations::parse_semantic(text, line, &mut diagram, Some(&scope))?;
+                    Section::NodeBody(index)
+                }
+            }
+            Section::NodeBody(index) if deployment::target(diagram.nodes[index].kind) => {
+                let scope = diagram.nodes[index].id.clone();
+                if text == "}" {
+                    if let Some(parent) = &diagram.nodes[index].parent {
+                        let outer = diagram
+                            .nodes
+                            .iter()
+                            .position(|node| &node.id == parent)
+                            .expect("validated deployment parent");
                         Section::NodeBody(outer)
                     } else {
                         Section::Semantics
@@ -390,6 +414,7 @@ fn parse_setting(
                 "class" => DiagramType::Class,
                 "object" => DiagramType::Object,
                 "component" => DiagramType::Component,
+                "deployment" => DiagramType::Deployment,
                 _ => return Err(error(line, "invalid graph diagram type")),
             }
         }

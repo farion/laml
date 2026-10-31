@@ -31,7 +31,7 @@ Unqualified identifiers match `[A-Za-z_][A-Za-z0-9_]*`; nested package paths use
 
 | Name | Values | Default |
 |---|---|---|
-| `type` | `class`, `object`, `component`, `sequence` (omitted for generic node-edge) | Generic graph |
+| `type` | `class`, `object`, `component`, `deployment`, `sequence` (omitted for generic node-edge) | Generic graph |
 | `direction` | `left-to-right`, `right-to-left`, `top-to-bottom`, `bottom-to-top` | `left-to-right` |
 | `naming-convention` | `uppercase-nodes-lowercase-relations` | Off |
 | `relation-label` | `near`, `along`, `inline` | `near` |
@@ -69,6 +69,10 @@ Set `type: class` or `type: object` in `settings`. Class declarations (`class`, 
 ## Component diagrams
 
 Set `type: component`. Declare components and interfaces, with `..>` for component dependencies or required box interfaces and `..|>` for provided box interfaces. Named relations can opt into compact provided `lollipop` or required `socket` interface notation when their interface box is otherwise unused. Component ports require `provides=Interface` or `requires=Interface`. A contained `part name(of=DeclaredComponent)` inherits that component type's ports. Inside the containing component, `partA::out == partB::in` assembles opposite-role ports of the same interface; `Owner::outer => part::inner` delegates a boundary port to a same-role part port. Both are solid port-to-port connectors, not generic dependencies. Details, examples and limits are in the [component guide](component-diagrams.md) and [notation audit](uml-component-conformance.md).
+
+## Deployment diagrams
+
+Set `type: deployment` for `node`, `device`, and `executionEnvironment` cubes, `artifact` rectangles and component boxes. Nodes may contain other nodes or artifacts, while packages are scoped groupings rather than deployment targets. `Node -- Node` is a communication path; `Artifact ..> Node <<deploy>>` depicts an external deployment; `Artifact ..> Component <<manifest>>` depicts an artifact's manifestation of a component. These endpoints, keywords and directions are validated rather than inferred from a generic dependency. The [deployment guide](deployment-diagrams.md) and [UML notation audit](uml-deployment-conformance.md) give buildable examples and limits.
 
 ## Layout
 
@@ -171,4 +175,4 @@ Follow the [sequence-diagram working guide](sequence-diagrams.md) for complete, 
 
 The output extension selects SVG, PNG, or PDF. SVG defaults to `--svg-text=embedded`: Inter Regular is embedded, and text remains selectable. `--svg-text=system` keeps selectable SVG text but omits the font; the viewer may substitute a font. `--svg-text=paths` converts SVG text into nonselectable glyph outlines and does not preserve node-level `<title>` metadata. These options apply only to SVG output. PNG uses the SVG's CSS-pixel dimensions rounded to whole pixels, on a white background; the image is limited to 64 million pixels. PDF is vector output with embedded, selectable text; 96 SVG pixels map to one inch of PDF page size. Rectangular nodes may have rounded corners via `corner-radius`. Relations attach to box boundaries. The router prefers a straight route and searches a finite set of detours when blocked. Parallel relations use separate boundary ports; self-relations use exterior loops. At a supported crossing, the later-declared relation receives a bridge and the earlier relation a gap. If no safe routing or label placement is found, `build` fails without writing a replacement image: it does not emit bare crossings or silently ignore mandatory rules.
 
-The installers and updater are described in the [README](../README.md). Normal `check` and `build` commands do not wait for the network: a cached version is shown if newer, and a background refresh runs at most once per 24 hours. Set `LAML_NO_UPDATE_CHECK=1` to opt out. See [Getting started](getting-started.md), the [class/object guide](class-object-diagrams.md), the [component guide](component-diagrams.md), the [language contract](language-definition.md), and the [buildable examples](../examples/).
+The installers and updater are described in the [README](../README.md). Normal `check` and `build` commands do not wait for the network: a cached version is shown if newer, and a background refresh runs at most once per 24 hours. Set `LAML_NO_UPDATE_CHECK=1` to opt out. See [Getting started](getting-started.md), the [class/object guide](class-object-diagrams.md), the [component guide](component-diagrams.md), the [deployment guide](deployment-diagrams.md), the [language contract](language-definition.md), and the [buildable examples](../examples/).

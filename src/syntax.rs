@@ -26,6 +26,7 @@ pub enum DiagramType {
     Class,
     Object,
     Component,
+    Deployment,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -35,6 +36,10 @@ pub enum NodeKind {
     Class,
     Component,
     ComponentPart,
+    DeploymentNode,
+    Device,
+    ExecutionEnvironment,
+    Artifact,
     Interface,
     Enumeration,
     DataType,
@@ -48,6 +53,15 @@ pub enum NodeKind {
     Socket,
     Object,
     Note,
+}
+
+impl NodeKind {
+    pub fn is_deployment_target(self) -> bool {
+        matches!(
+            self,
+            Self::DeploymentNode | Self::Device | Self::ExecutionEnvironment
+        )
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

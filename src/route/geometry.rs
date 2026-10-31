@@ -272,12 +272,12 @@ pub(super) fn route_is_clear(points: &[Point], boxes: &[BoxNode], previous: &[Ro
                     .iter()
                     .filter_map(|line| crate::text::measure(line, node.font_size).ok())
                     .fold(0.0_f64, f64::max);
-                let tab_width = if node.kind == crate::syntax::NodeKind::Component {
+                let tab_width = if node.kind != crate::syntax::NodeKind::Package {
                     node.width
                 } else {
                     (title_width + node.padding * 2.0 + 12.0).min(node.width - 8.0)
                 };
-                let tab_height = if node.kind == crate::syntax::NodeKind::Component {
+                let tab_height = if node.kind != crate::syntax::NodeKind::Package {
                     node.port_start
                 } else {
                     node.padding + node.font_size * 1.25 * node.lines.len() as f64 + 4.0
@@ -287,6 +287,7 @@ pub(super) fn route_is_clear(points: &[Point], boxes: &[BoxNode], previous: &[Ro
                 )
             } else {
                 intersection(pair[0], pair[1], node)
+                    || (node.deployment && super::outline_clearance::hugs(pair[0], pair[1], node))
             }
         }) {
             return false;

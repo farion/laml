@@ -11,6 +11,7 @@ mod detours;
 mod end_labels;
 mod geometry;
 mod labels;
+mod outline_clearance;
 mod parallel;
 mod qualifiers;
 mod route_labels;

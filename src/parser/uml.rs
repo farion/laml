@@ -115,6 +115,9 @@ pub(super) fn validate_relation(
     if diagram.settings.diagram_type == DiagramType::Component {
         return super::component::validate(relation, from, to);
     }
+    if diagram.settings.diagram_type == DiagramType::Deployment {
+        return super::deployment::validate_relation(relation, from, to);
+    }
     if member_end {
         return Err(error(
             relation.line,

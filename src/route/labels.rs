@@ -83,6 +83,7 @@ pub(super) fn segment_hits_rect(a: Point, b: Point, x: f64, y: f64, w: f64, h: f
         abstract_node: false,
         kind: crate::syntax::NodeKind::Generic,
         is_container: false,
+        deployment: false,
         shape: crate::geometry::NodeShape::Rectangle,
         x,
         y,

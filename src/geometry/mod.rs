@@ -66,7 +66,7 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
         })
         .collect::<Result<_, _>>()?;
     for node in &mut boxes {
-        if node.kind == NodeKind::Component
+        if (node.kind == NodeKind::Component || node.kind.is_deployment_target())
             && diagram
                 .nodes
                 .iter()

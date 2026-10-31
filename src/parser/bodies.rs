@@ -43,44 +43,12 @@ pub(super) fn node(
     } else {
         None
     };
-    let (kind, name) = if let Some((name, _)) = &note {
-        (NodeKind::Note, *name)
-    } else if let Some(name) = source.strip_prefix("association class ") {
-        (NodeKind::AssociationClass, name)
-    } else if source == "association" {
-        (NodeKind::Association, "")
-    } else if source == "junction" {
-        (NodeKind::Junction, "")
-    } else if let Some(name) = source.strip_prefix("association ") {
-        (NodeKind::Association, name)
-    } else if let Some(name) = source.strip_prefix("junction ") {
-        (NodeKind::Junction, name)
-    } else if let Some(name) = source.strip_prefix("package ") {
-        (NodeKind::Package, name)
-    } else if let Some(name) = source.strip_prefix("class ") {
-        (NodeKind::Class, name)
-    } else if let Some(name) = source.strip_prefix("component ") {
-        (NodeKind::Component, name)
-    } else if let Some(name) = source.strip_prefix("part ") {
-        (NodeKind::ComponentPart, name)
-    } else if let Some(name) = source.strip_prefix("interface ") {
-        (NodeKind::Interface, name)
-    } else if let Some(name) = source.strip_prefix("enum ") {
-        (NodeKind::Enumeration, name)
-    } else if let Some(name) = source.strip_prefix("datatype ") {
-        (NodeKind::DataType, name)
-    } else if anonymous && source.starts_with("object(") {
-        (NodeKind::Object, &source["object".len()..])
-    } else if let Some(name) = source.strip_prefix("object ") {
-        (NodeKind::Object, name)
-    } else {
-        match diagram.settings.diagram_type {
-            DiagramType::Generic => (NodeKind::Generic, source),
-            DiagramType::Class => (NodeKind::Class, source),
-            DiagramType::Object => (NodeKind::Object, source),
-            DiagramType::Component => (NodeKind::Component, source),
-        }
-    };
+    let (kind, name) = super::node_kinds::classify(
+        source,
+        note.as_ref().map(|(name, _)| *name),
+        anonymous,
+        diagram.settings.diagram_type,
+    );
     if (diagram.settings.diagram_type == DiagramType::Class
         && matches!(kind, NodeKind::Object | NodeKind::Junction))
         || (diagram.settings.diagram_type == DiagramType::Object
@@ -94,13 +62,38 @@ pub(super) fn node(
                     | NodeKind::Package
                     | NodeKind::Note
             ))
-        || (diagram.settings.diagram_type != DiagramType::Component && kind == NodeKind::Component)
+        || (diagram.settings.diagram_type == DiagramType::Deployment
+            && !matches!(
+                kind,
+                NodeKind::DeploymentNode
+                    | NodeKind::Device
+                    | NodeKind::ExecutionEnvironment
+                    | NodeKind::Artifact
+                    | NodeKind::Component
+                    | NodeKind::Package
+                    | NodeKind::Note
+            ))
+        || (!matches!(
+            diagram.settings.diagram_type,
+            DiagramType::Component | DiagramType::Deployment
+        ) && kind == NodeKind::Component)
+        || (diagram.settings.diagram_type != DiagramType::Deployment
+            && matches!(
+                kind,
+                NodeKind::DeploymentNode
+                    | NodeKind::Device
+                    | NodeKind::ExecutionEnvironment
+                    | NodeKind::Artifact
+            ))
+        || (diagram.settings.diagram_type != DiagramType::Component
+            && kind == NodeKind::ComponentPart)
     {
         return Err(error(
             line,
             "element kind is not supported by this UML diagram type",
         ));
     }
+    super::deployment::validate_node(diagram, kind, parent, block, visibility, &stereotypes, line)?;
     if kind == NodeKind::AssociationClass && diagram.settings.diagram_type != DiagramType::Class {
         return Err(error(line, "association class requires type: class"));
     }

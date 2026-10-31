@@ -1,0 +1,21 @@
+// Nested infrastructure with two communication paths.
+settings {
+    type: deployment
+}
+semantics {
+    node Region {
+        device Edge {
+            executionEnvironment JVM {
+                artifact GatewayJar
+            }
+        }
+        device Database
+        device Monitor
+        @database Edge -- Database : private link
+        @metrics Edge -- Monitor : metrics
+    }
+}
+layout {
+    Region.Edge < Region.Database : gap=110
+    Region.Database < Region.Monitor : gap=110
+}

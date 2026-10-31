@@ -73,6 +73,7 @@ pub(super) fn measure(node: &NodeDecl, sheet: &StyleSheet) -> Result<BoxNode, St
         abstract_node: false,
         kind: node.kind,
         is_container: false,
+        deployment: false,
         shape: if matches!(node.kind, NodeKind::Lollipop | NodeKind::Socket) {
             NodeShape::Ellipse
         } else {
