@@ -224,7 +224,7 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
             writeln!(svg,"<text x=\"{:.2}\" y=\"{:.2}\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\"{}>{}</text>",
                 node.x+node.width/2.0,first_baseline+line_height*i as f64,node.font_size,node.color,
                 if node.abstract_node { " font-style=\"italic\"" } else { "" },escape(line)).unwrap();
-            if node.kind == NodeKind::Object {
+            if node.kind == NodeKind::Object && i + 1 == node.lines.len() {
                 let width = measure(line, node.font_size)?;
                 let center = node.x + node.width / 2.0;
                 let baseline = first_baseline + line_height * i as f64;

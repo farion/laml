@@ -153,11 +153,15 @@ fn expand(
                 let selector = Selector::parse(&rule.selector);
                 let mut declarations = Vec::new();
                 for property in &rule.properties {
-                    if property.name == "display" && !selector.targets_member() {
+                    if property.name == "display"
+                        && !(selector.targets_member()
+                            || selector.targets_node()
+                            || selector.targets_relation())
+                    {
                         return Err(err(
                             current,
                             property.line,
-                            "display is currently supported only for members",
+                            "display is supported only for graph nodes, relations and members",
                         ));
                     }
                     declarations.push(Declaration {
@@ -236,13 +240,14 @@ fn parse_color(input: &str) -> Result<String, &'static str> {
 
 fn applicable(property: &str, element: &Element<'_>) -> bool {
     match element {
-        Element::Node { .. } => property != "display", // node hiding needs reference filtering
+        Element::Node { .. } => true,
         Element::Member { .. } => matches!(property, "color" | "font-size" | "display"),
         Element::Continuation { .. } | Element::Note { .. } => matches!(
             property,
             "fill" | "color" | "border-color" | "border-width" | "font-size"
         ),
-        Element::Relation { .. } | Element::Lifeline { .. } | Element::Gate { .. } => {
+        Element::Relation { .. } => matches!(property, "color" | "width" | "font-size" | "display"),
+        Element::Lifeline { .. } | Element::Gate { .. } => {
             matches!(property, "color" | "width" | "font-size")
         }
         Element::Coregion { .. } | Element::Ordering => matches!(property, "color" | "width"),

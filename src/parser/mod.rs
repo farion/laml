@@ -16,6 +16,8 @@ mod graph_operators;
 mod graph_relations;
 mod layout;
 mod selectors;
+mod stereotypes;
+mod uml;
 use layout::{parse_layout, parse_relation_label};
 use selectors::validate_selector;
 
@@ -80,6 +82,12 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
         let line = index + 1;
         let text = without_comment(original).trim();
         if text.is_empty() {
+            if original.trim().is_empty()
+                && let Section::NodeBody(index) = section
+                && diagram.nodes[index].note_lines.is_some()
+            {
+                bodies::note_line("", &mut diagram.nodes[index]);
+            }
             continue;
         }
         section = match section {
@@ -112,7 +120,7 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
                 if text == "}" {
                     Section::Top
                 } else if let Some(header) = text.strip_suffix('{') {
-                    bodies::node(header.trim(), line, &mut diagram)?;
+                    bodies::node(header.trim(), line, &mut diagram, true)?;
                     Section::NodeBody(diagram.nodes.len() - 1)
                 } else {
                     graph_relations::parse_semantic(text, line, &mut diagram)?;
@@ -121,8 +129,18 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
             }
             Section::NodeBody(index) => {
                 if text == "}" {
-                    bodies::close(line, &diagram.nodes[index], diagram.settings.diagram_type)?;
+                    bodies::close(
+                        line,
+                        &mut diagram.nodes[index],
+                        diagram.settings.diagram_type,
+                    )?;
                     Section::Semantics
+                } else if diagram.nodes[index].note_lines.is_some() {
+                    bodies::note_line(
+                        if text == "\\}" { "}" } else { text },
+                        &mut diagram.nodes[index],
+                    );
+                    Section::NodeBody(index)
                 } else {
                     bodies::member(text, line, &mut diagram, index)?;
                     Section::NodeBody(index)
@@ -384,6 +402,7 @@ fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {
                 return Err(error(relation.line, format!("unknown node or member '{endpoint}'")));
             }
         }
+        uml::validate_relation(diagram, relation)?;
     }
     for rule in &diagram.layout {
         for id in [&rule.first, &rule.second] {
@@ -403,7 +422,7 @@ fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {
                 format!("unknown named relation '{}'", rule.name),
             ));
         };
-        if target.label.is_none() {
+        if target.display_label().is_none() {
             return Err(error(rule.line, "relation has no label to place"));
         }
         if diagram.relation_layout[..index]

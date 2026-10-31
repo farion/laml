@@ -3,14 +3,19 @@
 
 mod constraints;
 mod nodes;
+mod visibility;
 
 pub use constraints::GeometryError;
 pub use nodes::{BoxNode, NodeShape};
+pub(crate) use visibility::filtered as visible_diagram;
 
 use crate::styles::StyleSheet;
 use crate::syntax::Diagram;
 
 pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, GeometryError> {
+    let visible = visible_diagram(diagram, styles)
+        .map_err(|(line, message)| GeometryError { line, message })?;
+    let diagram = &visible;
     let mut boxes: Vec<_> = diagram
         .nodes
         .iter()

@@ -62,6 +62,24 @@ pub enum Selector {
 }
 
 impl Selector {
+    pub(super) fn targets_node(&self) -> bool {
+        match self {
+            Self::AllNodes | Self::NodeId(_) | Self::NodeClass(_) => true,
+            Self::ScopedId { child, .. } | Self::ScopedClass { child, .. } => child.targets_node(),
+            _ => false,
+        }
+    }
+
+    pub(super) fn targets_relation(&self) -> bool {
+        match self {
+            Self::AllRelations | Self::RelationId(_) | Self::RelationClass(_) => true,
+            Self::ScopedId { child, .. } | Self::ScopedClass { child, .. } => {
+                child.targets_relation()
+            }
+            _ => false,
+        }
+    }
+
     pub(super) fn targets_member(&self) -> bool {
         match self {
             Self::AllMembers | Self::MemberId(_) | Self::MemberClass(_) | Self::MemberKind(_) => {

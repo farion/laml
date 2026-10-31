@@ -160,7 +160,8 @@ pub fn place(
             {
                 continue;
             }
-            let Some(label) = relation.label.as_deref() else {
+            let shown_label = relation.display_label();
+            let Some(label) = shown_label.as_deref() else {
                 continue;
             };
             let element = Element::Relation {

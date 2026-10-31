@@ -47,12 +47,37 @@ fn classifier_kinds_use_distinct_visible_headers() {
 }
 
 #[test]
+fn stereotypes_are_visible_without_becoming_style_classes_or_unchecked_bindings() {
+    let source = "settings {\ntype: class\n}\nsemantics {\nclass Dienst <<service>>\ninterface API\n@use Dienst ..|> API <<integration>> : verbindet\n}\n";
+    let diagram = parse(source).unwrap();
+    assert_eq!(diagram.nodes[0].stereotypes, ["service"]);
+    assert!(diagram.nodes[0].classes.is_empty());
+    assert_eq!(diagram.relations[0].stereotypes, ["integration"]);
+    let svg = image(source);
+    assert!(svg.contains("«service»"));
+    assert!(svg.contains("«integration»: verbindet"));
+    assert!(export::png(&svg).is_ok());
+    assert!(export::pdf(&svg).is_ok());
+    let binding = source.replace("<<integration>>", "<<bind>>");
+    assert!(
+        parse(&binding)
+            .unwrap_err()
+            .message
+            .contains("binding validation")
+    );
+}
+
+#[test]
 fn compact_template_name_and_anonymous_instance_have_stable_ids() {
     let template = "settings {\ntype: class\n}\nsemantics {\nclass Repository<T>\n}\n";
     let diagram = parse(template).unwrap();
     assert_eq!(diagram.nodes[0].id, "Repository");
     assert_eq!(diagram.nodes[0].templates, ["T"]);
     assert!(image(template).contains("Repository&lt;T&gt;"));
+    for head in ["Repository<T, T>", "Repository<T>Suffix", "Repository<>"] {
+        let source = format!("settings {{\ntype: class\n}}\nsemantics {{\nclass {head}\n}}\n");
+        assert!(parse(&source).is_err(), "{head}");
+    }
 
     let anonymous =
         "settings {\ntype: object\n}\nsemantics {\n@gast anonymous object(of=Kunde)\n}\n";
@@ -120,9 +145,56 @@ fn member_styles_select_id_kind_and_class_without_hiding_connected_members() {
             .message
             .contains("hidden member")
     );
-    let invalid = "semantics {\nA\n}\nstyling {\nnode[A] {\ndisplay: none\n}\n}\n";
-    let diagram = parse(invalid).unwrap();
-    assert!(load(&diagram, std::path::Path::new("examples/architecture.laml")).is_err());
+    let hide_node = "semantics {\nA\n}\nstyling {\nnode[A] {\ndisplay: none\n}\n}\n";
+    let diagram = parse(hide_node).unwrap();
+    let sheet = load(&diagram, std::path::Path::new("examples/architecture.laml")).unwrap();
+    assert!(place(&diagram, &sheet).unwrap().is_empty());
+}
+
+#[test]
+fn hidden_nodes_and_relations_cannot_leave_visible_references_or_mandatory_rules() {
+    let source = "semantics {\nA\nB\nC\n@hidden A --> B\n@shown B --> C\n}\nstyling {\nnode[A] {\ndisplay: none\n}\nrelation[hidden] {\ndisplay: none\n}\n}\n";
+    let diagram = parse(source).unwrap();
+    let sheet = load(&diagram, std::path::Path::new("examples/architecture.laml")).unwrap();
+    let boxes = place(&diagram, &sheet).unwrap();
+    let routes = route(&diagram, &boxes, &sheet).unwrap();
+    assert_eq!(boxes.len(), 2);
+    assert_eq!(routes.len(), 1);
+    assert_eq!(boxes[routes[0].from].id, "B");
+    let svg = render(&boxes, &routes).unwrap();
+    assert!(!svg.contains(">A</text>"));
+    let referenced = source.replace("relation[hidden] {", "relation[shown] {");
+    let diagram = parse(&referenced).unwrap();
+    let sheet = load(&diagram, std::path::Path::new("examples/architecture.laml")).unwrap();
+    assert!(
+        place(&diagram, &sheet)
+            .unwrap_err()
+            .message
+            .contains("hidden node")
+    );
+    let layout = source.replace("styling {", "layout {\nA < B\n}\nstyling {");
+    let diagram = parse(&layout).unwrap();
+    let sheet = load(&diagram, std::path::Path::new("examples/architecture.laml")).unwrap();
+    assert!(
+        place(&diagram, &sheet)
+            .unwrap_err()
+            .message
+            .contains("mandatory layout")
+    );
+    let label_layout = source
+        .replace(
+            "styling {",
+            "layout {\nrelation[hidden] : label=near\n}\nstyling {",
+        )
+        .replace("@hidden A --> B", "@hidden A --> B : ignored");
+    let diagram = parse(&label_layout).unwrap();
+    let sheet = load(&diagram, std::path::Path::new("examples/architecture.laml")).unwrap();
+    assert!(
+        place(&diagram, &sheet)
+            .unwrap_err()
+            .message
+            .contains("hidden relation")
+    );
 }
 
 #[test]
@@ -177,6 +249,30 @@ fn notes_render_folded_shape_and_annotate_nodes_in_both_uml_types() {
     }
     let bad = "settings {\ntype: class\n}\nsemantics {\nA\nB\nA .. B\n}\n";
     assert!(parse(bad).unwrap_err().message.contains("requires a note"));
+}
+
+#[test]
+fn multiline_note_keeps_text_lines_without_parsing_them_as_graph_compartments() {
+    let source = "settings {\ntype: class\n}\nsemantics {\nclass Kunde\nnote Hinweis {\nErste Zeile\n\n--\n\\}\nLetzte Zeile\n}\nHinweis .. Kunde\n}\n";
+    let diagram = parse(source).unwrap();
+    assert_eq!(
+        diagram.nodes[1].label.as_deref(),
+        Some("Erste Zeile\n\n--\n}\nLetzte Zeile")
+    );
+    assert!(diagram.nodes[1].parts.is_empty());
+    let svg = image(source);
+    assert!(svg.contains("Erste Zeile"));
+    assert!(svg.contains("Letzte Zeile"));
+    assert!(export::png(&svg).is_ok());
+    assert!(export::pdf(&svg).is_ok());
+    assert!(
+        parse("semantics {\nnote Hinweis {\n\n}\n}\n")
+            .unwrap_err()
+            .message
+            .contains("visible text")
+    );
+    assert!(parse("semantics {\nnote Hinweis {\n--\n}\n}\n").is_ok());
+    assert!(parse("semantics {\nnote Hinweis \"eins\" {\nzwei\n}\n}\n").is_err());
 }
 
 #[test]
@@ -235,6 +331,41 @@ fn association_end_multiplicities_and_roles_render_and_validate() {
         );
         assert!(parse(&text).unwrap_err().message.contains(expected));
     }
+}
+
+#[test]
+fn uml_rejects_relationship_glyphs_that_misstate_the_element_kinds() {
+    for (source, reason) in [
+        (
+            "settings {\ntype: class\n}\nsemantics {\nA\nA --|> A\n}\n",
+            "itself",
+        ),
+        (
+            "settings {\ntype: class\n}\nsemantics {\nA\nB\nA \"1\" --|> B\n}\n",
+            "association-end",
+        ),
+        (
+            "settings {\ntype: class\n}\nsemantics {\nA\nB\nA /r ..> B\n}\n",
+            "association-end",
+        ),
+        (
+            "settings {\ntype: class\n}\nsemantics {\nA\nnote N \"text\"\nN -- A\n}\n",
+            "note attaches",
+        ),
+        (
+            "settings {\ntype: object\n}\nsemantics {\na\nb\na .. b\n}\n",
+            "dotted UML annotation",
+        ),
+    ] {
+        let err = parse(source).unwrap_err();
+        assert!(err.message.contains(reason), "{err:?}");
+    }
+    let realization =
+        "settings {\ntype: class\n}\nsemantics {\nclass C\ninterface API\nC ..|> API\n}\n";
+    assert!(image(realization).contains("marker-end=\"url(#triangle)\""));
+    // `..|>` can also denote a generic UML Realization; an interface is not required.
+    let generic_realization = "settings {\ntype: class\n}\nsemantics {\nA\nB\nA ..|> B\n}\n";
+    assert!(image(generic_realization).contains("marker-end=\"url(#triangle)\""));
 }
 
 #[test]

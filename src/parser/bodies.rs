@@ -3,7 +3,12 @@ use super::{ParseError, attributes, classes, error};
 use crate::lex::{quoted_string, valid_identifier};
 use crate::syntax::{Diagram, DiagramType, MemberKind, NodeDecl, NodeKind, NodePart};
 
-pub(super) fn node(text: &str, line: usize, diagram: &mut Diagram) -> Result<(), ParseError> {
+pub(super) fn node(
+    text: &str,
+    line: usize,
+    diagram: &mut Diagram,
+    block: bool,
+) -> Result<(), ParseError> {
     let mut source = text.trim();
     let explicit_id = if let Some(rest) = source.strip_prefix('@') {
         let (id, tail) = rest
@@ -17,16 +22,24 @@ pub(super) fn node(text: &str, line: usize, diagram: &mut Diagram) -> Result<(),
     } else {
         None
     };
+    let (source, stereotypes) =
+        super::stereotypes::suffix(source, line, diagram.settings.diagram_type)?;
     let abstract_node = source.starts_with("abstract ");
     let source = source.strip_prefix("abstract ").unwrap_or(source);
     let anonymous = source.starts_with("anonymous ");
     let source = source.strip_prefix("anonymous ").unwrap_or(source);
     let note = if let Some(tail) = source.strip_prefix("note ") {
-        let at = tail
-            .find('"')
-            .ok_or_else(|| error(line, "note requires quoted text"))?;
-        let value = quoted_string(tail[at..].trim()).map_err(|msg| error(line, msg))?;
-        Some((tail[..at].trim(), value))
+        if let Some(at) = tail.find('"') {
+            if block {
+                return Err(error(line, "note block cannot also have inline text"));
+            }
+            let value = quoted_string(tail[at..].trim()).map_err(|msg| error(line, msg))?;
+            Some((tail[..at].trim(), value))
+        } else if block {
+            Some((tail.trim(), String::new()))
+        } else {
+            return Err(error(line, "note requires quoted text or a text block"));
+        }
     } else {
         None
     };
@@ -72,11 +85,21 @@ pub(super) fn node(text: &str, line: usize, diagram: &mut Diagram) -> Result<(),
             + 1;
         let list = &name[open + 1..close];
         let names: Vec<_> = list.split(',').map(str::trim).collect();
-        if names.is_empty() || names.iter().any(|name| !valid_identifier(name)) {
-            return Err(error(line, "invalid template parameter"));
+        if names.is_empty()
+            || names.iter().any(|name| !valid_identifier(name))
+            || names
+                .iter()
+                .enumerate()
+                .any(|(index, name)| names[..index].contains(name))
+        {
+            return Err(error(line, "invalid or duplicate template parameter"));
+        }
+        let suffix = &name[close + 1..];
+        if !suffix.is_empty() && !suffix.starts_with('(') {
+            return Err(error(line, "unexpected text after template parameters"));
         }
         let mut prepared = name[..open].to_string();
-        prepared.push_str(&name[close + 1..]);
+        prepared.push_str(suffix);
         (
             prepared,
             names.into_iter().map(str::to_string).collect::<Vec<_>>(),
@@ -92,9 +115,15 @@ pub(super) fn node(text: &str, line: usize, diagram: &mut Diagram) -> Result<(),
         id: explicit_id.unwrap_or_else(|| name.clone()),
         label: note.map(|(_, text)| text),
         classes: Vec::new(),
+        stereotypes,
         kind,
         abstract_node,
         templates: templates.clone(),
+        note_lines: if block && kind == NodeKind::Note {
+            Some(Vec::new())
+        } else {
+            None
+        },
         parts: Vec::new(),
         line,
     };
@@ -276,11 +305,23 @@ pub(super) fn member(
     Ok(())
 }
 
+pub(super) fn note_line(text: &str, node: &mut NodeDecl) {
+    if let Some(lines) = &mut node.note_lines {
+        lines.push(text.into());
+    }
+}
+
 pub(super) fn close(
     line: usize,
-    node: &NodeDecl,
+    node: &mut NodeDecl,
     diagram_type: DiagramType,
 ) -> Result<(), ParseError> {
+    if let Some(lines) = node.note_lines.take() {
+        if lines.iter().all(|line| line.trim().is_empty()) {
+            return Err(error(line, "note block needs visible text"));
+        }
+        node.label = Some(lines.join("\n"));
+    }
     if diagram_type != DiagramType::Generic
         && node
             .parts

@@ -75,9 +75,12 @@ pub struct NodeDecl {
     pub id: String,
     pub label: Option<String>,
     pub classes: Vec<String>,
+    pub stereotypes: Vec<String>,
     pub kind: NodeKind,
     pub abstract_node: bool,
     pub templates: Vec<String>,
+    /// Raw lines for a note block; finalized into `label` when its block closes.
+    pub note_lines: Option<Vec<String>>,
     pub parts: Vec<NodePart>,
     pub line: usize,
 }
@@ -109,6 +112,7 @@ pub struct EndAnnotation {
 pub struct RelationDecl {
     pub name: Option<String>,
     pub classes: Vec<String>,
+    pub stereotypes: Vec<String>,
     /// The semantic source; `A <- B` is normalized to `from=B, to=A`.
     pub from: String,
     pub to: String,
@@ -118,6 +122,24 @@ pub struct RelationDecl {
     pub target_end: EndAnnotation,
     pub label: Option<String>,
     pub line: usize,
+}
+
+impl RelationDecl {
+    pub fn display_label(&self) -> Option<String> {
+        if self.stereotypes.is_empty() {
+            return self.label.clone();
+        }
+        let marker = self
+            .stereotypes
+            .iter()
+            .map(|name| format!("«{name}»"))
+            .collect::<Vec<_>>()
+            .join(" ");
+        Some(match &self.label {
+            Some(label) => format!("{marker}: {label}"),
+            None => marker,
+        })
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

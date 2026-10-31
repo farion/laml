@@ -166,6 +166,18 @@ pub fn measure_node(
         NodeKind::DataType => format!("«dataType»\n{name}"),
         _ => name,
     };
+    let label = if node.stereotypes.is_empty() {
+        label
+    } else {
+        format!(
+            "{}\n{label}",
+            node.stereotypes
+                .iter()
+                .map(|name| format!("«{name}»"))
+                .collect::<Vec<_>>()
+                .join(" ")
+        )
+    };
     let original: Vec<&str> = label.split('\n').collect();
     let line_height = font_size * 1.25;
     let fixed_width = styles.get(&element, "width").and_then(|d| match d.value {

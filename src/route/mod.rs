@@ -195,6 +195,9 @@ pub fn route(
     boxes: &[BoxNode],
     sheet: &StyleSheet,
 ) -> Result<Vec<Route>, RouteError> {
+    let visible = crate::geometry::visible_diagram(diagram, sheet)
+        .map_err(|(line, message)| RouteError { line, message })?;
+    let diagram = &visible;
     let mut routed = Vec::new();
     for (index, relation) in diagram.relations.iter().enumerate() {
         let owner = |id: &str| {
@@ -241,6 +244,7 @@ pub fn route(
                 })?;
             candidates(diagram, index, from, to, boxes, &routed, offset)
         };
+        let shown_label = relation.display_label();
         let label_rule = diagram
             .relation_layout
             .iter()
@@ -256,7 +260,7 @@ pub fn route(
             let Some(plan) = bridges::plan(&points, boxes, &routed, from, to, width) else {
                 continue;
             };
-            let labeled = match relation.label.as_deref() {
+            let labeled = match shown_label.as_deref() {
                 None => Ok((None, None)),
                 Some(text) => match placement {
                     LabelPlacement::Near => {

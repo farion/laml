@@ -9,7 +9,7 @@ pub(super) fn parse_semantic(
     // Prefixes end at a colon before the arrow; labels begin at a colon after it.
     let arrow_at = find_arrow(text).or_else(|| text.find(" .. ").map(|offset| offset + 1));
     if arrow_at.is_none() {
-        return bodies::node(text, line, diagram);
+        return bodies::node(text, line, diagram, false);
     }
     let arrow_at = arrow_at.expect("checked above");
     let (name, attrs, body) = if let Some(prefixed) = text.strip_prefix('@') {
@@ -59,6 +59,8 @@ pub(super) fn parse_semantic(
         }
         None => (body.trim(), None),
     };
+    let (endpoints, stereotypes) =
+        stereotypes::suffix(endpoints, line, diagram.settings.diagram_type)?;
     let tokens: Vec<_> = endpoints.split_whitespace().collect();
     let operator_index = tokens
         .iter()
@@ -98,6 +100,7 @@ pub(super) fn parse_semantic(
     diagram.relations.push(RelationDecl {
         name,
         classes: relation_classes,
+        stereotypes,
         from: from.into(),
         to: to.into(),
         kind,
