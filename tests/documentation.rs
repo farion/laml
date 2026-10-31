@@ -5,6 +5,23 @@ use laml::{
 use std::fs;
 use std::path::Path;
 
+fn text_blocks(guide: &str) -> Vec<String> {
+    guide
+        .replace("\r\n", "\n")
+        .split("```text\n")
+        .skip(1)
+        .map(|block| block.split("```").next().unwrap().to_owned())
+        .collect()
+}
+
+#[test]
+fn guide_examples_are_extracted_from_lf_and_crlf_files() {
+    let source = "intro\n```text\nsemantics {\nA\n}\n```\n";
+    let crlf = source.replace('\n', "\r\n");
+    assert_eq!(text_blocks(source), text_blocks(&crlf));
+    assert_eq!(text_blocks(&crlf).len(), 1);
+}
+
 #[test]
 fn every_published_example_checks_and_builds() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -134,8 +151,9 @@ fn sequence_guide_complete_examples_build() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let guide = fs::read_to_string(root.join("docs/sequence-diagrams.md")).unwrap();
     let example_source = root.join("examples/sequence-basic.laml");
-    for (index, block) in guide.split("```text\n").skip(1).take(2).enumerate() {
-        let source = block.split("```").next().unwrap();
+    let blocks = text_blocks(&guide);
+    assert!(blocks.len() >= 2, "missing sequence guide examples");
+    for (index, source) in blocks.iter().take(2).enumerate() {
         let diagram = laml::sequence::parse(source)
             .unwrap_or_else(|e| panic!("sequence guide block {index}: {e:?}"));
         let sheet = load(
@@ -155,13 +173,8 @@ fn sequence_guide_complete_examples_build() {
 fn class_guide_complete_example_builds_all_formats() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let guide = fs::read_to_string(root.join("docs/class-object-diagrams.md")).unwrap();
-    let source = guide
-        .split("```text\n")
-        .nth(1)
-        .unwrap()
-        .split("```")
-        .next()
-        .unwrap();
+    let blocks = text_blocks(&guide);
+    let source = blocks.first().expect("missing class guide example");
     let diagram = parse(source).unwrap();
     let styles = load(&diagram, &root.join("examples/class-basic.laml")).unwrap();
     let nodes = place(&diagram, &styles).unwrap();
