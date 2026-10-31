@@ -3,6 +3,11 @@ use super::{Diagram, ParseError, error, uml};
 use crate::syntax::{DiagramType, NodeDecl};
 
 fn resolve(nodes: &[NodeDecl], scope: Option<&str>, raw: &str) -> String {
+    // A root-qualified default path remains absolute even when a local package
+    // happens to contain a shadowing path with the same suffix.
+    if raw.contains('.') && nodes.iter().any(|node| node.has_endpoint(raw)) {
+        return raw.into();
+    }
     let mut current = scope;
     while let Some(owner) = current {
         let candidate = format!("{owner}.{raw}");

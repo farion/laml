@@ -15,6 +15,14 @@ fn repeated_member_names_resolve_in_nearest_package_scope() {
 }
 
 #[test]
+fn fully_qualified_default_paths_are_not_shadowed_by_local_packages() {
+    let source = "settings {\ntype: class\n}\nsemantics {\npackage P {\nclass A {\nid: UUID\n}\n}\npackage Q {\npackage P {\nclass A {\nid: UUID\n}\n}\nnote N \"target root\"\nN .. P.A::id\n}\n}\n";
+    let diagram = parse(source).unwrap();
+    assert_eq!(diagram.relations[0].from, "Q.N");
+    assert_eq!(diagram.relations[0].to, "P.A::id");
+}
+
+#[test]
 fn explicit_member_ids_are_stable_and_unique_across_scopes_and_nodes() {
     let source = "settings {\ntype: class\n}\nsemantics {\npackage P {\nclass A {\n@globalMember id: UUID\n}\n}\nnote N \"why\"\nN .. globalMember\n}\n";
     let diagram = parse(source).unwrap();
