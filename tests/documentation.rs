@@ -23,6 +23,32 @@ fn guide_examples_are_extracted_from_lf_and_crlf_files() {
 }
 
 #[test]
+fn readme_showcases_cover_all_four_supported_diagram_families() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let readme = fs::read_to_string(root.join("README.md")).unwrap();
+    for (kind, minimum_nodes, minimum_relations) in
+        [("generic", 9, 6), ("class", 10, 5), ("object", 7, 5)]
+    {
+        let name = format!("showcase-{kind}");
+        assert!(readme.contains(&format!("examples/{name}.laml")));
+        assert!(readme.contains(&format!("docs/images/{name}.png")));
+        let source = fs::read_to_string(root.join(format!("examples/{name}.laml"))).unwrap();
+        let diagram = parse(&source).unwrap();
+        assert!(diagram.nodes.len() >= minimum_nodes, "{kind} nodes");
+        assert!(
+            diagram.relations.len() >= minimum_relations,
+            "{kind} relations"
+        );
+    }
+    let source = fs::read_to_string(root.join("examples/showcase-sequence.laml")).unwrap();
+    let sequence = laml::sequence::parse(&source).unwrap();
+    assert!(sequence.participants.len() >= 4);
+    assert!(sequence.events.len() >= 18);
+    assert!(readme.contains("examples/showcase-sequence.laml"));
+    assert!(readme.contains("docs/images/showcase-sequence.png"));
+}
+
+#[test]
 fn every_published_example_checks_and_builds() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let examples = root.join("examples");

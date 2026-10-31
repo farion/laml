@@ -1,0 +1,66 @@
+// Sequence notation: calls, replies, fragments, notes, annotations and lifelines.
+settings {
+    type: sequence
+}
+semantics {
+    Browser(label="Browser"; style-classes=client)
+    API(label="Orders API"; style-classes=service)
+    DB(label="Database")
+    Worker(label="Worker")
+
+    @request Browser -> API+ : POST /orders
+    at[request.send] : time-observation="t0"
+    at[request.receive] : invariant="authenticated"
+    hint: note "The request starts an API execution."
+    @lookup API -> DB+ : load cart
+    @found API <-- DB : cart data
+    DB-
+    alt "cart valid" {
+        @reserve API ->> Worker : reserve inventory
+        API -> API : calculate total
+    }
+    else "cart expired" {
+        API ->> Browser : request new cart
+    }
+    loop(min=0; max=2; guard="payment pending") {
+        @payment API -> DB+ : authorize payment
+        @paid API <-- DB : approved
+        DB-
+    }
+    API-
+    @response Browser <-- API : 201 Created
+    between[request.send,response.receive] : duration-constraint="<= 2 s"
+    checkpoint: continuation "Asynchronous fulfillment"
+    ref "Send confirmation"
+    Browser ->> Worker : subscribe
+    Worker -> ? : webhook
+}
+layout {
+    Browser < API : gap=84
+    API < DB : gap=84
+    DB < Worker : gap=84
+    hint over request.receive : gap=18
+    checkpoint spans Browser,Worker : gap=20
+}
+styling {
+    node.client {
+        fill: "#e4f1ff"
+    }
+    node.service {
+        fill: "#e9f7ee"
+        border-color: "#2c7854"
+    }
+    relation[request] {
+        color: "#245780"
+        width: 3
+    }
+    fragment {
+        fill: "#f8f9fc"
+    }
+    note[hint] {
+        fill: "#fff4da"
+    }
+    continuation[checkpoint] {
+        fill: "#e8f0ff"
+    }
+}

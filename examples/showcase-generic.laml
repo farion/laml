@@ -1,0 +1,81 @@
+// Generic node-edge: scoped containers, shapes, ports, labels, styling and notes.
+settings {
+    relation-label: near
+}
+semantics {
+    package Platform {
+        @gateway Gateway(style-classes=entry) {
+            +accept(request)
+            --
+            @input port Ingress
+            @output port Egress
+        }
+        Dispatcher(style-classes=worker) {
+            route: Rule
+            text "Fallback: queue"
+        }
+        Validator(style-classes=worker) {
+            +check()
+        }
+    }
+    Cloud(style-classes=external)
+    Queue(style-classes=storage)
+    Archive(style-classes=storage)
+    Choice(style-classes=decision)
+    note Hint {
+        Validation happens before
+        durable delivery.
+    }
+    @receive Cloud --> input : receive
+    @dispatch output --> Platform.Dispatcher : dispatch
+    @verify Platform.Dispatcher --> Platform.Validator : validate
+    @decide Platform.Validator --> Choice : classify
+    @buffer Choice --> Queue : enqueue
+    @store Queue --> Archive : persist
+    Hint .. relation[receive]
+}
+layout {
+    Cloud < Platform : gap=120
+    Platform < Choice : gap=130
+    Choice < Queue : gap=125
+    Queue above Archive : align=center; gap=150
+    Hint above Cloud : gap=115
+    port[input] : side=left
+    port[output] : side=right
+    relation[store] : label=inline
+}
+styling {
+    * {
+        font-size: 14
+    }
+    node.entry {
+        icon: "folder"
+        fill: "#e4f1ff"
+        border-color: "#235784"
+    }
+    node.worker {
+        fill: "#ecf8f1"
+        border-color: "#2a7853"
+    }
+    node.external {
+        shape: ellipse
+        fill: "#e7e8ff"
+    }
+    node.decision {
+        shape: diamond
+        fill: "#fff2d6"
+    }
+    node.storage {
+        fill: "#f2f4f7"
+    }
+    node[Hint] {
+        fill: "#fff7d8"
+    }
+    port[output] {
+        fill: "#235784"
+    }
+    relation[verify] {
+        color: "#2a7853"
+        width: 3
+    }
+}

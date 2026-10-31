@@ -1,0 +1,83 @@
+// Class notation: packages, classifiers, templates, association ends and checked UML edges.
+settings {
+    type: class
+}
+semantics {
+    package Domain {
+        abstract class Order<T:Class=String>(style-classes=core) <<aggregate>> {
+            @orderId +id: UUID
+            static +counter: Int
+            --
+            abstract +total(): Money
+        }
+        class Line(style-classes=core) {
+            +sku: String
+            +quantity: Int
+            --
+            +subtotal(): Money
+        }
+        class Customer {
+            +name: String
+        }
+        enum State {
+            OPEN
+            PAID
+            CLOSED
+        }
+        datatype Money {
+            +amount: Decimal
+        }
+        interface Pricing {
+            +quote(): Money
+        }
+    }
+    class Checkout(style-classes=service) {
+        -attempts: Int
+        --
+        +submit(): State
+    }
+    class Repository<U:Class=String>
+    class SqlRepository
+    interface Audit
+    @audits Checkout ..|> Audit
+    @owns Domain.Order "1" *-- "1..*" Domain.Line
+    @placed Domain.Customer "1"/customer -- "0..*"/+orders Domain.Order : places
+    @priced Checkout ..|> Domain.Pricing
+    @requests Checkout ..> Domain.Order
+    @bind SqlRepository ..> Repository <<bind(U->String)>>
+    note Policy {
+        Each order has at least one line.
+        Operations are diagram text, not code.
+    }
+    Policy .. relation[placed]
+}
+layout {
+    Domain.Order < Domain.Line : gap=220
+    Domain.Customer < Domain.Order : align=center; gap=230
+    Domain < Checkout : gap=150
+    Checkout < Repository : gap=155
+    Repository above SqlRepository : align=center; gap=120
+    Policy above Domain : gap=130
+}
+styling {
+    node.core {
+        fill: "#e4f1ff"
+        border-color: "#28628b"
+    }
+    node.service {
+        fill: "#ecf8f1"
+        border-color: "#2b7857"
+    }
+    node[Policy] {
+        fill: "#fff4da"
+    }
+    relation[owns] {
+        color: "#29647c"
+    }
+    relation[audits] {
+        interface-notation: lollipop
+    }
+    relation[placed] {
+        color: "#805638"
+    }
+}

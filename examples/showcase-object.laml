@@ -1,0 +1,67 @@
+// Object snapshot: typed, untyped and anonymous instances with literal slots and links.
+settings {
+    type: object
+}
+semantics {
+    customer(of=Customer; style-classes=person) {
+        name = "Ada Lovelace"
+        tier = "Gold"
+    }
+    cart(of=Cart; style-classes=order) {
+        number = "C-1024"
+        state = "Open"
+    }
+    itemA(of=LineItem; style-classes=line) {
+        sku = "BK-42"
+        quantity = 2
+    }
+    itemB(of=LineItem; style-classes=line) {
+        sku = "PN-7"
+        quantity = 1
+    }
+    payment(of=Payment; style-classes=order) {
+        amount = "49.90 EUR"
+        status = "Authorized"
+    }
+    @visitor anonymous object(of=Visitor) {
+        session = "s-19"
+    }
+    @owns customer /owner -- /basket cart
+    @first cart /cart -- /firstItem itemA
+    @second cart /cart -- /secondItem itemB
+    @settled cart /cart -- /payment payment
+    visitor -- customer
+    note Snapshot {
+        A link joins these particular instances.
+        Slot values are displayed, not evaluated.
+    }
+    Snapshot .. relation[owns]
+}
+layout {
+    customer < cart : gap=270
+    cart < itemA : gap=220
+    itemA above itemB : align=center; gap=110
+    cart above payment : align=center; gap=185
+    visitor above customer : gap=125
+    Snapshot above cart : gap=150
+}
+styling {
+    node.person {
+        fill: "#e4f1ff"
+        border-color: "#285a89"
+    }
+    node.order {
+        fill: "#ecf8f1"
+        border-color: "#347655"
+    }
+    node.line {
+        fill: "#fff4dc"
+    }
+    node[Snapshot] {
+        fill: "#fff8e4"
+    }
+    relation[settled] {
+        color: "#2b7857"
+        width: 3
+    }
+}

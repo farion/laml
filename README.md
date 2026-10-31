@@ -40,6 +40,34 @@ SVG defaults to embedded Inter Regular with selectable text; diagrams with abstr
 
 ## Examples
 
+These four larger examples show the supported diagram families together with their source. Click an image to inspect it at full size; the examples are executable `.laml` files built by LAML. Each also builds as SVG and vector PDF.
+
+### Generic node-edge diagram · [source](examples/showcase-generic.laml)
+
+[![Generic platform graph with a package, named ports, ellipse, diamond, note-to-edge attachment, compartments and inline label](docs/images/showcase-generic.png)](docs/images/showcase-generic.png)
+
+Scoped containers, rectangle/ellipse/diamond/note shapes, addressable members and boundary ports, deterministic routing, mandatory placement, inline labels, LSS selectors, an optional icon and a note attached to a named relation.
+
+### UML class diagram · [source](examples/showcase-class.laml)
+
+[![Class diagram with package, abstract template, classifier kinds, association ends, two interface notations and checked template binding](docs/images/showcase-class.png)](docs/images/showcase-class.png)
+
+Classifier compartments, visibility and static/abstract notation, a dashed template corner, package grouping, composition and named association ends, box-form and compact-interface realizations, dependency, note-to-relation attachment, and a checked template binding. It illustrates the [supported UML notation subset](docs/uml-class-object-conformance.md), not a full UML model.
+
+### UML object diagram · [source](examples/showcase-object.laml)
+
+[![Object diagram with six underlined instances, typed slots, named links, an anonymous typed object and a note](docs/images/showcase-object.png)](docs/images/showcase-object.png)
+
+Typed and anonymous instances, literal slots, named link ends, scoped styling, and a note attached to a named link. Object links deliberately have no association multiplicities.
+
+### UML sequence diagram · [source](examples/showcase-sequence.laml)
+
+[![Four-lifeline sequence diagram with calls, replies, fragments, annotations, a continuation, reference and found or lost message](docs/images/showcase-sequence.png)](docs/images/showcase-sequence.png)
+
+Executions, synchronous and asynchronous messages, replies, a self-call, alternative and bounded-loop frames, a note, time and duration annotations, an interaction use, a continuation and a lost message. Guards and values are displayed, not executed.
+
+### Smaller focused examples
+
 | [Architecture](examples/architecture.laml) | [Crossing](examples/crossing.laml) |
 |---|---|
 | [![Twelve-node architecture across channel, gateway, service and data layers](docs/images/architecture.png)](examples/architecture.laml) | [![Two relations crossing with a bridge](docs/images/crossing.png)](examples/crossing.laml) |
