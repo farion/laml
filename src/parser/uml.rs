@@ -99,7 +99,12 @@ pub(super) fn validate_relation(
         return Ok(());
     }
     if note_end {
-        if !unmarked_dotted || from.kind == to.kind || end_label {
+        if !unmarked_dotted
+            || from.kind == to.kind
+            || end_label
+            || relation.label.is_some()
+            || !relation.stereotypes.is_empty()
+        {
             return Err(error(
                 relation.line,
                 "a UML note attaches only by an unadorned dotted line to a non-note element",

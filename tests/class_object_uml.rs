@@ -32,6 +32,14 @@ fn uml_rejects_relationship_glyphs_that_misstate_the_element_kinds() {
             "note attaches",
         ),
         (
+            "settings {\ntype: class\n}\nsemantics {\nclass A\nnote N \"text\"\nN .. A : unvalidated\n}\n",
+            "unadorned dotted line",
+        ),
+        (
+            "settings {\ntype: class\n}\nsemantics {\nclass A\nnote N \"text\"\nN .. A <<special>>\n}\n",
+            "unadorned dotted line",
+        ),
+        (
             "settings {\ntype: object\n}\nsemantics {\na\nb\na .. b\n}\n",
             "dotted UML annotation",
         ),
