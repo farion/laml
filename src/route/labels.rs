@@ -76,6 +76,8 @@ pub(super) fn segment_hits_rect(a: Point, b: Point, x: f64, y: f64, w: f64, h: f
         body_styles: Vec::new(),
         ports: Vec::new(),
         port_start: 0.0,
+        top_band: 0.0,
+        bottom_band: 0.0,
         abstract_node: false,
         kind: crate::syntax::NodeKind::Generic,
         shape: crate::geometry::NodeShape::Rectangle,

@@ -89,7 +89,7 @@ pub(super) fn parse_layout(text: &str, line: usize) -> Result<LayoutRule, ParseE
 
 pub(super) fn parse_port_side(text: &str, line: usize) -> Result<PortLayoutRule, ParseError> {
     let (target, attribute) = split_once_top_level(text, ':')
-        .ok_or_else(|| error(line, "expected port[id] : side=left|right"))?;
+        .ok_or_else(|| error(line, "expected port[id] : side=left|right|top|bottom"))?;
     let id = target
         .trim()
         .strip_prefix("port[")
@@ -99,19 +99,16 @@ pub(super) fn parse_port_side(text: &str, line: usize) -> Result<PortLayoutRule,
         return Err(error(line, "invalid port ID in layout"));
     }
     let (key, value) = split_once_top_level(attribute.trim(), '=')
-        .ok_or_else(|| error(line, "expected port side=left|right"))?;
+        .ok_or_else(|| error(line, "expected port side=left|right|top|bottom"))?;
     if key.trim() != "side" {
         return Err(error(line, "unknown port layout attribute"));
     }
     let side = match value.trim() {
         "left" => PortSide::Left,
         "right" => PortSide::Right,
-        _ => {
-            return Err(error(
-                line,
-                "only left/right port sides are currently implemented",
-            ));
-        }
+        "top" => PortSide::Top,
+        "bottom" => PortSide::Bottom,
+        _ => return Err(error(line, "port side must be left, right, top or bottom")),
     };
     Ok(PortLayoutRule {
         id: id.into(),

@@ -16,7 +16,7 @@ pub(super) fn member_port(node: &BoxNode, member: &str, towards: Point) -> Optio
         });
     }
     let line_height = node.font_size * 1.25;
-    let mut y = node.y + node.padding + line_height * node.lines.len() as f64 + 4.0;
+    let mut y = node.y + node.padding + node.top_band + line_height * node.lines.len() as f64 + 4.0;
     for (part, row) in node.body.iter().zip(&node.body_styles) {
         match part {
             crate::syntax::NodePart::Separator => y += 8.0,

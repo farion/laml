@@ -1,6 +1,6 @@
 use super::ports::BoxPort;
 use crate::styles::{Element, StyleSheet, Value};
-use crate::syntax::{DiagramType, NodeDecl, NodeKind, NodePart};
+use crate::syntax::{DiagramType, NodeDecl, NodeKind, NodePart, PortLayoutRule, PortSide};
 use crate::text::{ellipsize, measure};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -26,6 +26,8 @@ pub struct BoxNode {
     pub body_styles: Vec<RowStyle>,
     pub ports: Vec<BoxPort>,
     pub port_start: f64,
+    pub top_band: f64,
+    pub bottom_band: f64,
     pub abstract_node: bool,
     pub kind: NodeKind,
     pub shape: NodeShape,
@@ -159,6 +161,7 @@ pub fn measure_node(
     node: &NodeDecl,
     styles: &StyleSheet,
     diagram_type: DiagramType,
+    port_rules: &[PortLayoutRule],
 ) -> Result<BoxNode, String> {
     let element = Element::Node {
         id: &node.id,
@@ -197,7 +200,7 @@ pub fn measure_node(
         }
         Some(BoxPort {
             label: port.label.clone(),
-            side: crate::syntax::PortSide::Right,
+            side: port_rules.iter().find(|rule| rule.id == id).map_or(PortSide::Right, |rule| rule.side),
             x: 0.0,
             y: 0.0,
             color: color(&scoped, &element, "color", &text_color),
@@ -283,6 +286,33 @@ pub fn measure_node(
     for port in &ports {
         longest = longest.max(measure(&port.label, font_size)? + 16.0);
     }
+    for side in [PortSide::Top, PortSide::Bottom] {
+        let mut count = 0;
+        let mut widest: f64 = 0.0;
+        for port in ports.iter().filter(|port| port.side == side) {
+            count += 1;
+            widest = widest.max(measure(&port.label, font_size)?);
+        }
+        if count > 0 {
+            // Ports are equally spaced: reserve an entire label-width plus a gap
+            // per slot, not merely the sum of widths across the whole box.
+            longest = longest.max((count + 1) as f64 * (widest + 8.0));
+        }
+    }
+    let top_band = if ports.iter().any(|port| port.side == PortSide::Top) {
+        line_height + 8.0
+    } else {
+        0.0
+    };
+    let bottom_band = if ports.iter().any(|port| port.side == PortSide::Bottom) {
+        line_height + 8.0
+    } else {
+        0.0
+    };
+    let side_port_count = ports
+        .iter()
+        .filter(|port| matches!(port.side, PortSide::Left | PortSide::Right))
+        .count();
     let width_factor = match shape {
         NodeShape::Rectangle | NodeShape::Note => 1.0,
         NodeShape::Ellipse => 1.6,
@@ -310,10 +340,12 @@ pub fn measure_node(
         }
         + body_height
         + if body.is_empty() { 0.0 } else { 4.0 }
-        + if ports.is_empty() {
+        + top_band
+        + bottom_band
+        + if side_port_count == 0 {
             0.0
         } else {
-            4.0 + ports.len() as f64 * line_height
+            4.0 + side_port_count as f64 * line_height
         }
         + padding * 2.0;
     let height =
@@ -353,6 +385,7 @@ pub fn measure_node(
         }
     }
     let port_start = padding
+        + top_band
         + line_height * original.len() as f64
         + body_height
         + if body.is_empty() { 0.0 } else { 4.0 }
@@ -364,6 +397,8 @@ pub fn measure_node(
         body,
         body_styles,
         port_start,
+        top_band,
+        bottom_band,
         ports,
         abstract_node: node.abstract_node,
         kind: node.kind,

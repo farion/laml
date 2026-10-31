@@ -249,6 +249,8 @@ pub enum EndPosition {
 pub enum PortSide {
     Left,
     Right,
+    Top,
+    Bottom,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

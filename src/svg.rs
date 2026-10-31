@@ -218,7 +218,7 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
                 + (node.height - line_height * node.lines.len() as f64) / 2.0
                 + line_height * 0.78
         } else {
-            node.y + node.padding + line_height * 0.78
+            node.y + node.padding + node.top_band + line_height * 0.78
         };
         for (i, line) in node.lines.iter().enumerate() {
             writeln!(svg,"<text x=\"{:.2}\" y=\"{:.2}\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\"{}>{}</text>",
@@ -233,7 +233,8 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
             }
         }
         if !node.body.is_empty() {
-            let mut y = node.y + node.padding + line_height * node.lines.len() as f64;
+            let mut y =
+                node.y + node.padding + node.top_band + line_height * node.lines.len() as f64;
             writeln!(svg,"<line x1=\"{:.2}\" y1=\"{y:.2}\" x2=\"{:.2}\" y2=\"{y:.2}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
                 node.x, node.x+node.width, node.border_color, node.border_width).unwrap();
             y += 4.0;
@@ -275,18 +276,54 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
             }
         }
         if !node.ports.is_empty() {
-            let separator = node.y + node.port_start - 4.0;
-            writeln!(svg, "<line x1=\"{:.2}\" y1=\"{separator:.2}\" x2=\"{:.2}\" y2=\"{separator:.2}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
-                node.x, node.x + node.width, node.border_color, node.border_width).unwrap();
+            let mut separators = Vec::new();
+            if node.top_band > 0.0 {
+                separators.push(node.y + node.padding + node.top_band - 4.0);
+            }
+            if node.ports.iter().any(|port| {
+                matches!(
+                    port.side,
+                    crate::syntax::PortSide::Left | crate::syntax::PortSide::Right
+                )
+            }) {
+                separators.push(node.y + node.port_start - 4.0);
+            }
+            if node.bottom_band > 0.0 {
+                separators.push(node.y + node.height - node.padding - node.bottom_band);
+            }
+            for separator in separators {
+                writeln!(svg, "<line x1=\"{:.2}\" y1=\"{separator:.2}\" x2=\"{:.2}\" y2=\"{separator:.2}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
+                    node.x, node.x + node.width, node.border_color, node.border_width).unwrap();
+            }
             for port in &node.ports {
                 writeln!(svg, "<rect data-port-id=\"{}\" x=\"{:.2}\" y=\"{:.2}\" width=\"10\" height=\"10\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
                     escape(&port.id), port.x-5.0, port.y-5.0, port.fill, port.border_color, node.border_width).unwrap();
-                let (x, anchor) = match port.side {
-                    crate::syntax::PortSide::Left => (node.x + node.padding, "start"),
-                    crate::syntax::PortSide::Right => (node.x + node.width - node.padding, "end"),
+                let (x, y, anchor) = match port.side {
+                    crate::syntax::PortSide::Left => (
+                        node.x + node.padding,
+                        port.y + node.font_size * 0.28,
+                        "start",
+                    ),
+                    crate::syntax::PortSide::Right => (
+                        node.x + node.width - node.padding,
+                        port.y + node.font_size * 0.28,
+                        "end",
+                    ),
+                    crate::syntax::PortSide::Top => (
+                        port.x,
+                        node.y + node.padding + node.font_size * 0.78,
+                        "middle",
+                    ),
+                    crate::syntax::PortSide::Bottom => (
+                        port.x,
+                        node.y + node.height - node.padding - node.bottom_band
+                            + 4.0
+                            + node.font_size * 0.78,
+                        "middle",
+                    ),
                 };
-                writeln!(svg,"<text x=\"{x:.2}\" y=\"{:.2}\" text-anchor=\"{anchor}\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\">{}</text>",
-                    port.y+node.font_size*0.28,node.font_size,port.color,escape(&port.label)).unwrap();
+                writeln!(svg,"<text x=\"{x:.2}\" y=\"{y:.2}\" text-anchor=\"{anchor}\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\">{}</text>",
+                    node.font_size,port.color,escape(&port.label)).unwrap();
             }
         }
         svg.push_str("</g>\n");
