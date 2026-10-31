@@ -355,6 +355,20 @@ pub(super) fn member(
     {
         return Err(error(line, "object body accepts only name = value slots"));
     }
+    if diagram_type == DiagramType::Object && kind == MemberKind::Slot {
+        let slot = content
+            .split_once('=')
+            .expect("validated object slot")
+            .0
+            .trim();
+        if node.parts.iter().any(|part| {
+            matches!(part, NodePart::Member {
+            kind: MemberKind::Slot, text, ..
+        } if text.split_once('=').is_some_and(|(prior, _)| prior.trim() == slot))
+        }) {
+            return Err(error(line, format!("duplicate UML object slot '{slot}'")));
+        }
+    }
     if diagram_type == DiagramType::Class {
         if node.kind == NodeKind::Interface && content.starts_with(['-', '#', '~']) {
             return Err(error(line, "UML interface features must be public"));

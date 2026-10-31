@@ -1,6 +1,18 @@
 use laml::{export, geometry::place, parser::parse, route::route, styles::StyleSheet, svg::render};
 
 #[test]
+fn object_slot_names_are_unique_even_with_explicit_aliases() {
+    let source = "settings {\ntype: object\n}\nsemantics {\nobject customer {\nname = Ada\n@other name = Bea\n}\n}\n";
+    assert!(
+        parse(source)
+            .unwrap_err()
+            .message
+            .contains("duplicate UML object slot 'name'")
+    );
+    parse(&source.replace("@other name = Bea", "@other city = Berlin")).unwrap();
+}
+
+#[test]
 fn interface_features_are_public_and_enum_literals_have_unique_names() {
     for bad in [
         "settings {\ntype: class\n}\nsemantics {\ninterface API {\n-private(): void\n}\n}\n",
