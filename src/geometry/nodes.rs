@@ -198,9 +198,6 @@ pub fn measure_node(
     if node.kind == NodeKind::Package && shape != NodeShape::Rectangle {
         return Err("package container requires a rectangular frame".into());
     }
-    if !ports.is_empty() && matches!(shape, NodeShape::Ellipse | NodeShape::Diamond) {
-        return Err("ports on nonrectangular nodes need supported contour geometry".into());
-    }
     if matches!(shape, NodeShape::Diamond | NodeShape::Ellipse) && !body.is_empty() {
         return Err(
             "nonrectangular GNE node with compartments needs supported inset geometry".into(),
@@ -367,7 +364,7 @@ pub fn measure_node(
     let width = fixed_width.unwrap_or_else(|| {
         explicit_min_width
             .unwrap_or(100.0)
-            .max(longest * width_factor + padding * 2.0)
+            .max((longest + padding * 2.0) * width_factor)
     });
     let body_height: f64 = body
         .iter()

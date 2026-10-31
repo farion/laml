@@ -7,6 +7,7 @@ mod junctions;
 mod lollipop;
 mod members;
 mod nodes;
+mod port_contours;
 mod ports;
 mod visibility;
 
@@ -86,5 +87,6 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
     }
     containers::place(diagram, &mut boxes, styles)?;
     ports::position(diagram, &mut boxes);
+    port_contours::validate(&boxes)?;
     Ok(boxes)
 }

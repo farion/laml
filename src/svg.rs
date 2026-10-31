@@ -420,21 +420,31 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
             if node.bottom_band > 0.0 {
                 separators.push(node.y + node.height - node.padding - node.bottom_band);
             }
-            for separator in separators {
-                writeln!(svg, "<line x1=\"{:.2}\" y1=\"{separator:.2}\" x2=\"{:.2}\" y2=\"{separator:.2}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
-                    node.x, node.x + node.width, node.border_color, node.border_width).unwrap();
+            if !matches!(node.shape, NodeShape::Ellipse | NodeShape::Diamond) {
+                for separator in separators {
+                    writeln!(svg, "<line x1=\"{:.2}\" y1=\"{separator:.2}\" x2=\"{:.2}\" y2=\"{separator:.2}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
+                        node.x, node.x + node.width, node.border_color, node.border_width).unwrap();
+                }
             }
             for port in &node.ports {
                 writeln!(svg, "<rect data-port-id=\"{}\" x=\"{:.2}\" y=\"{:.2}\" width=\"10\" height=\"10\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
                     escape(&port.id), port.x-5.0, port.y-5.0, port.fill, port.border_color, node.border_width).unwrap();
                 let (x, y, anchor) = match port.side {
                     crate::syntax::PortSide::Left => (
-                        node.x + node.padding,
+                        if matches!(node.shape, NodeShape::Ellipse | NodeShape::Diamond) {
+                            port.x + node.padding + 4.0
+                        } else {
+                            node.x + node.padding
+                        },
                         port.y + node.font_size * 0.28,
                         "start",
                     ),
                     crate::syntax::PortSide::Right => (
-                        node.x + node.width - node.padding,
+                        if matches!(node.shape, NodeShape::Ellipse | NodeShape::Diamond) {
+                            port.x - node.padding - 4.0
+                        } else {
+                            node.x + node.width - node.padding
+                        },
                         port.y + node.font_size * 0.28,
                         "end",
                     ),

@@ -93,6 +93,26 @@ pub(super) fn position(diagram: &Diagram, boxes: &mut [BoxNode]) {
                     )
                 }
             };
+            let (x, y) = if matches!(current.shape, NodeShape::Ellipse | NodeShape::Diamond) {
+                let (cx, cy) = (
+                    current.x + current.width / 2.0,
+                    current.y + current.height / 2.0,
+                );
+                let (rx, ry) = (current.width / 2.0, current.height / 2.0);
+                let contour = |fraction: f64| match current.shape {
+                    NodeShape::Ellipse => (1.0 - fraction.powi(2)).max(0.0).sqrt(),
+                    NodeShape::Diamond => (1.0 - fraction.abs()).max(0.0),
+                    _ => unreachable!(),
+                };
+                match port.side {
+                    PortSide::Left => (cx - rx * contour((y - cy) / ry), y),
+                    PortSide::Right => (cx + rx * contour((y - cy) / ry), y),
+                    PortSide::Top => (x, cy - ry * contour((x - cx) / rx)),
+                    PortSide::Bottom => (x, cy + ry * contour((x - cx) / rx)),
+                }
+            } else {
+                (x, y)
+            };
             port.x = x;
             port.y = y;
         }
