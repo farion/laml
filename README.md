@@ -57,8 +57,8 @@ SVG defaults to embedded Inter Regular with selectable text. `--svg-text=system`
 
 | [Classes and association ends](examples/class-basic.laml) | [Object instances](examples/object-basic.laml) |
 |---|---|
-| [![Two classes with members, association-end multiplicities and roles, and an attached note](docs/images/class-basic.png)](examples/class-basic.laml) | [![Two underlined object instances connected by a link](docs/images/object-basic.png)](examples/object-basic.laml) |
-| Typed classifiers, compartments, ends and note-to-edge attachment. | Underlined instances, slots and an object link. |
+| [![Two classes with members, association-end multiplicities and roles, and an attached note](docs/images/class-basic.png)](examples/class-basic.laml) | [![Two underlined object instances connected by a link with end names](docs/images/object-basic.png)](examples/object-basic.laml) |
+| Typed classifiers, compartments, ends and note-to-edge attachment. | Underlined instances, slots and a link with end names. |
 
 | [Named n-ary association](examples/class-nary.laml) | [Nested packages](examples/class-packages.laml) |
 |---|---|

@@ -85,11 +85,8 @@ pub(super) fn parse(
             ),
         )
     };
-    if diagram_type == DiagramType::Object {
-        return Err(error(
-            line,
-            "object links cannot have association end adornments",
-        ));
+    if diagram_type == DiagramType::Object && multiplicity.is_some() {
+        return Err(error(line, "object links cannot show multiplicities"));
     }
     if diagram_type == DiagramType::Class
         && multiplicity

@@ -9,8 +9,8 @@ semantics {
     bestellung1(of=Bestellung) {
         nummer = "B-17"
     }
-    kunde1 -- bestellung1 : erfasst
+    kunde1 /kunde -- /bestellung bestellung1
 }
 layout {
-    kunde1 < bestellung1 : gap=130
+    kunde1 < bestellung1 : gap=220
 }

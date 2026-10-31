@@ -1,4 +1,25 @@
-use laml::parser::parse;
+use laml::{export, geometry::place, parser::parse, route::route, styles::StyleSheet, svg::render};
+
+#[test]
+fn object_links_can_name_ends_but_cannot_assign_multiplicities() {
+    let source = "settings {\ntype: object\n}\nsemantics {\na(of=A)\nb(of=B)\n@link a /owner -- /item b\n}\nlayout {\na < b : gap=180\n}\n";
+    let diagram = parse(source).unwrap();
+    let styles = StyleSheet::default();
+    let nodes = place(&diagram, &styles).unwrap();
+    let routes = route(&diagram, &nodes, &styles).unwrap();
+    let svg = render(&nodes, &routes).unwrap();
+    assert!(svg.contains("owner"));
+    assert!(svg.contains("item"));
+    assert!(export::png(&svg).is_ok());
+    assert!(export::pdf(&svg).is_ok());
+    let bad = source.replace("a /owner", "a \"1\"/owner");
+    assert!(
+        parse(&bad)
+            .unwrap_err()
+            .message
+            .contains("cannot show multiplicities")
+    );
+}
 
 #[test]
 fn uml_members_reject_modifiers_and_kinds_that_misstate_notation() {

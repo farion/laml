@@ -35,7 +35,7 @@ layout {
 }
 ```
 
-`--` inside a class separates its attribute and operation compartments. `--` between two classifiers declares an association with unspecified navigability. `-->` draws a navigable association with an open arrow; `..>` a dashed dependency; `--|>` a generalization with a hollow triangle; `..|>` a dashed realization. `*--` and `o--` put a composition or aggregation diamond at the whole end. End multiplicities (`"1"`, `"0..*"`), roles (`/kunde`, `/+bestellungen`) and qualifiers (`qualifier(id:UUID)`) are separate association-end annotations. A link in an object diagram has none of these association-end multiplicities.
+`--` inside a class separates its attribute and operation compartments. `--` between two classifiers declares an association with unspecified navigability. `-->` draws a navigable association with an open arrow; `..>` a dashed dependency; `--|>` a generalization with a hollow triangle; `..|>` a dashed realization. `*--` and `o--` put a composition or aggregation diamond at the whole end. End multiplicities (`"1"`, `"0..*"`), roles (`/kunde`, `/+bestellungen`) and qualifiers (`qualifier(id:UUID)`) are separate association-end annotations. A link in an object diagram may show end names, but never association-end multiplicities or qualifiers.
 
 A named relation can be styled using `relation[orders]`, have end-label sides fixed using `relation[orders].source : multiplicity=above; role=below` in `layout`, or have its actual boundary side fixed with `relation[orders].target : side=left`. The attributes can share a rule. A side rule requires a direct node endpoint (not a named member, port or self-loop); an impossible route fails. Named relations can also be the target of a dotted note attachment. A member explicitly named with `@kundenId` can be targeted by an edge. An unaliased member can be targeted as `Kunde::name`; ambiguous overloads fail. An `@id` replaces a default ID and is unique across explicitly named graph elements.
 
@@ -45,7 +45,7 @@ Package blocks create containing frames and scoped IDs. Inside `package Vertrieb
 
 ## Objects
 
-[The object example](../examples/object-basic.laml) declares `kunde1(of=Kunde)` with a slot `name = "Ada"`; its underlined heading reads `kunde1:Kunde`. `@gast anonymous object(of=Kunde)` displays `:Kunde` while retaining a stable explicit address. An object link (`kunde1 -- bestellung1`) is not a class association; its slots are literal text, not evaluated expressions.
+[The object example](../examples/object-basic.laml) declares `kunde1(of=Kunde)` with a slot `name = "Ada"`; its underlined heading reads `kunde1:Kunde`. `@gast anonymous object(of=Kunde)` displays `:Kunde` while retaining a stable explicit address. An object link (`kunde1 /kunde -- /bestellung bestellung1`) can display end names but cannot show multiplicities or qualifier boxes. It is not a class association; its slots are literal text, not evaluated expressions.
 
 ## Shared layout and styling
 
