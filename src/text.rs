@@ -4,12 +4,21 @@ use harfrust::{FontRef, ShapeOptions, ShaperData, UnicodeBuffer};
 use unicode_segmentation::UnicodeSegmentation;
 
 pub const FONT: &[u8] = include_bytes!("../assets/Inter-Regular.otf");
+pub const ITALIC_FONT: &[u8] = include_bytes!("../assets/Inter-Italic.otf");
 
 pub fn measure(text: &str, font_size: f64) -> Result<f64, String> {
+    measure_face(text, font_size, FONT)
+}
+
+pub fn measure_italic(text: &str, font_size: f64) -> Result<f64, String> {
+    measure_face(text, font_size, ITALIC_FONT)
+}
+
+fn measure_face(text: &str, font_size: f64, face: &[u8]) -> Result<f64, String> {
     if text.is_empty() {
         return Ok(0.0);
     }
-    let font = FontRef::new(FONT).map_err(|e| format!("bundled Inter font cannot be read: {e}"))?;
+    let font = FontRef::new(face).map_err(|e| format!("bundled Inter font cannot be read: {e}"))?;
     let data = ShaperData::new(&font);
     let shaper = data.shaper(&font).build();
     let mut buffer = UnicodeBuffer::new();

@@ -1,6 +1,6 @@
 //! SVG normalization and vector/raster exports. All formats share one layout.
 
-use crate::text::FONT;
+use crate::text::{FONT, ITALIC_FONT};
 use resvg::{tiny_skia, usvg};
 
 fn tree(svg: &str) -> Result<usvg::Tree, String> {
@@ -8,6 +8,7 @@ fn tree(svg: &str) -> Result<usvg::Tree, String> {
     // Resolve exactly the same bundled face used for measuring and for SVG.
     // Do not rely on fonts installed on the exporting machine.
     options.fontdb_mut().load_font_data(FONT.to_vec());
+    options.fontdb_mut().load_font_data(ITALIC_FONT.to_vec());
     usvg::Tree::from_str(svg, &options).map_err(|e| format!("cannot parse generated SVG: {e}"))
 }
 

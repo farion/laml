@@ -1,7 +1,7 @@
 use super::ports::BoxPort;
 use crate::styles::{Element, StyleSheet, Value};
 use crate::syntax::{DiagramType, NodeDecl, NodeKind, NodePart, PortLayoutRule, PortSide};
-use crate::text::{ellipsize, measure};
+use crate::text::{ellipsize, measure, measure_italic};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NodeShape {
@@ -293,21 +293,34 @@ pub fn measure_node(
             Ok(max.max(measure(text, font_size)?))
         })?;
     if let Some(last) = original.last() {
-        longest = longest.max(measure(last, font_size)? + icon_space);
+        let width = if node.abstract_node {
+            measure_italic(last, font_size)?
+        } else {
+            measure(last, font_size)?
+        };
+        longest = longest.max(width + icon_space);
     }
     if node.kind == NodeKind::Package {
         longest += 12.0; // leave room for the folder-tab shoulder
     }
     for (part, row) in body.iter().zip(&body_styles) {
-        if let NodePart::Member { text, .. } = part {
+        if let NodePart::Member {
+            text,
+            abstract_member,
+            ..
+        } = part
+        {
             let shown = super::members::visible_text(text, row);
             longest = longest.max(
-                measure(shown, row.font_size)?
-                    + if row.icon.is_some() {
-                        row.font_size + 4.0
-                    } else {
-                        0.0
-                    },
+                if *abstract_member {
+                    measure_italic(shown, row.font_size)?
+                } else {
+                    measure(shown, row.font_size)?
+                } + if row.icon.is_some() {
+                    row.font_size + 4.0
+                } else {
+                    0.0
+                },
             );
         }
     }

@@ -3,7 +3,7 @@
 use crate::geometry::{BoxNode, NodeShape};
 use crate::route::{Point, Route};
 use crate::syntax::{EndSymbol, NodeKind, NodePart};
-use crate::text::{FONT, measure};
+use crate::text::{FONT, ITALIC_FONT, measure, measure_italic};
 use base64::Engine;
 use std::fmt::Write;
 
@@ -169,7 +169,23 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
     svg.push_str("<defs>");
     if mode == TextMode::Embedded {
         let font = base64::engine::general_purpose::STANDARD.encode(FONT);
-        writeln!(svg, "<style>@font-face {{ font-family: 'Inter'; src: url('data:font/otf;base64,{font}') format('opentype'); }}</style>").unwrap();
+        writeln!(svg, "<style>@font-face {{ font-family: 'Inter'; font-style: normal; src: url('data:font/otf;base64,{font}') format('opentype'); }}").unwrap();
+        if boxes.iter().any(|node| {
+            node.abstract_node
+                || node.body.iter().any(|part| {
+                    matches!(
+                        part,
+                        NodePart::Member {
+                            abstract_member: true,
+                            ..
+                        }
+                    )
+                })
+        }) {
+            let italic = base64::engine::general_purpose::STANDARD.encode(ITALIC_FONT);
+            writeln!(svg, "@font-face {{ font-family: 'Inter'; font-style: italic; src: url('data:font/otf;base64,{italic}') format('opentype'); }}").unwrap();
+        }
+        svg.push_str("</style>\n");
     }
     svg.push_str("<marker id=\"arrow\" markerWidth=\"12\" markerHeight=\"8\" refX=\"10\" refY=\"4\" orient=\"auto-start-reverse\" markerUnits=\"userSpaceOnUse\"><path d=\"M0,0 L10,4 L0,8\" fill=\"none\" stroke=\"context-stroke\" stroke-width=\"1.5\"/></marker>");
     svg.push_str("<marker id=\"triangle\" markerWidth=\"13\" markerHeight=\"11\" refX=\"12\" refY=\"5.5\" orient=\"auto-start-reverse\" markerUnits=\"userSpaceOnUse\"><path d=\"M1,1 L12,5.5 L1,10 Z\" fill=\"white\" stroke=\"context-stroke\" stroke-width=\"1.5\"/></marker>");
@@ -316,7 +332,7 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
             };
             writeln!(svg,"<text x=\"{text_x:.2}\" y=\"{baseline:.2}\" text-anchor=\"{anchor}\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\"{}>{}</text>",
                 node.font_size,node.color,
-                if node.abstract_node { " font-style=\"italic\"" } else { "" },escape(line)).unwrap();
+                if node.abstract_node && i + 1 == node.lines.len() { " font-style=\"italic\"" } else { "" },escape(line)).unwrap();
             if node.kind == NodeKind::Object && i + 1 == node.lines.len() {
                 let width = measure(line, node.font_size)?;
                 let center = node.x + node.width / 2.0;
@@ -375,7 +391,11 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
                             rendered_id.as_ref().map(|id| format!(" data-member-id=\"{}\"",escape(id))).unwrap_or_default(),
                             escape(shown)).unwrap();
                         if *static_member {
-                            let width = measure(shown, row.font_size)?;
+                            let width = if *abstract_member {
+                                measure_italic(shown, row.font_size)?
+                            } else {
+                                measure(shown, row.font_size)?
+                            };
                             writeln!(svg,"<line x1=\"{:.2}\" x2=\"{:.2}\" y1=\"{:.2}\" y2=\"{:.2}\" stroke=\"{}\" stroke-width=\"1\" />",
                                 text_x,text_x+width,baseline+2.0,baseline+2.0,row.color).unwrap();
                         }
