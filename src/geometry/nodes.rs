@@ -22,6 +22,7 @@ pub struct RowStyle {
 pub struct BoxNode {
     pub id: String,
     pub label: String,
+    pub template: Option<String>,
     pub lines: Vec<String>,
     pub icons: Vec<String>,
     pub body: Vec<NodePart>,
@@ -206,7 +207,25 @@ pub fn measure_node(
         );
     }
     let padding = number(styles, &element, "padding", 12.0);
-    let name = node.label.clone().unwrap_or_else(|| node.id.clone());
+    let mut name = node.label.clone().unwrap_or_else(|| node.id.clone());
+    let template = if diagram_type == DiagramType::Class
+        && node.kind == NodeKind::Class
+        && !node.templates.is_empty()
+    {
+        if !ports.is_empty() {
+            return Err(
+                "UML template corner and boundary ports need separate collision geometry".into(),
+            );
+        }
+        let suffix = format!("<{}>", node.templates.join(", "));
+        name = name
+            .strip_suffix(&suffix)
+            .ok_or("template heading does not match parameters")?
+            .into();
+        Some(node.templates.join(", "))
+    } else {
+        None
+    };
     let name = match node.visibility {
         Some(marker) if visibility_icon.is_none() => format!("{marker}{name}"),
         _ => name,
@@ -295,6 +314,9 @@ pub fn measure_node(
     for port in &ports {
         longest = longest.max(measure(&port.label, font_size)? + 16.0);
     }
+    if let Some(parameters) = &template {
+        longest = longest.max(measure(parameters, font_size)? + 16.0);
+    }
     for side in [PortSide::Top, PortSide::Bottom] {
         let mut count = 0;
         let mut widest: f64 = 0.0;
@@ -310,6 +332,8 @@ pub fn measure_node(
     }
     let top_band = if ports.iter().any(|port| port.side == PortSide::Top) {
         line_height + 8.0
+    } else if template.is_some() {
+        line_height + 12.0
     } else {
         0.0
     };
@@ -422,6 +446,7 @@ pub fn measure_node(
     Ok(BoxNode {
         id: node.id.clone(),
         label,
+        template,
         lines,
         icons,
         body,

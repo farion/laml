@@ -71,6 +71,7 @@ pub(super) fn segment_hits_rect(a: Point, b: Point, x: f64, y: f64, w: f64, h: f
     let node = BoxNode {
         id: String::new(),
         label: String::new(),
+        template: None,
         lines: Vec::new(),
         icons: Vec::new(),
         body: Vec::new(),

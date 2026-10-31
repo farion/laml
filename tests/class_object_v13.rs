@@ -90,7 +90,18 @@ fn compact_template_name_and_anonymous_instance_have_stable_ids() {
     let diagram = parse(template).unwrap();
     assert_eq!(diagram.nodes[0].id, "Repository");
     assert_eq!(diagram.nodes[0].templates, ["T"]);
-    assert!(image(template).contains("Repository&lt;T&gt;"));
+    let svg = image(template);
+    assert!(svg.contains(">Repository</text>"));
+    assert!(svg.contains(">T</text>"));
+    assert!(svg.contains("stroke-dasharray=\"4 3\""));
+    let generic = "semantics {\nclass Repository<T>\n}\n";
+    assert!(image(generic).contains("Repository&lt;T&gt;"));
+    let fixed =
+        format!("{template}styling {{\nnode[Repository] {{\nwidth: 40\nheight: 30\n}}\n}}\n");
+    let diagram = parse(&fixed).unwrap();
+    let sheet =
+        laml::styles::load(&diagram, std::path::Path::new("examples/architecture.laml")).unwrap();
+    assert!(place(&diagram, &sheet).is_err());
     for head in ["Repository<T, T>", "Repository<T>Suffix", "Repository<>"] {
         let source = format!("settings {{\ntype: class\n}}\nsemantics {{\nclass {head}\n}}\n");
         assert!(parse(&source).is_err(), "{head}");

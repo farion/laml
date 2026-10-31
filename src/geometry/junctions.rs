@@ -61,6 +61,7 @@ pub(super) fn measure(node: &NodeDecl, sheet: &StyleSheet) -> Result<BoxNode, St
     Ok(BoxNode {
         id: node.id.clone(),
         label,
+        template: None,
         lines: Vec::new(),
         icons: Vec::new(),
         body: Vec::new(),

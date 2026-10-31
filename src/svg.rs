@@ -276,14 +276,23 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
                 node.x,node.y,node.width,node.height,node.radius,node.fill,node.border_color,node.border_width).unwrap();
         }
         let line_height = node.font_size * 1.25;
-        let first_baseline =
-            if node.body.is_empty() && node.ports.is_empty() && node.kind != NodeKind::Package {
-                node.y
-                    + (node.height - line_height * node.lines.len() as f64) / 2.0
-                    + line_height * 0.78
-            } else {
-                node.y + node.padding + node.top_band + line_height * 0.78
-            };
+        if let Some(parameters) = &node.template {
+            let width = measure(parameters, node.font_size)? + 12.0;
+            let x = node.x + node.width - width - 4.0;
+            writeln!(svg,"<rect x=\"{x:.2}\" y=\"{:.2}\" width=\"{width:.2}\" height=\"{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-dasharray=\"4 3\" />",node.y+4.0,line_height+4.0,node.fill,node.border_color).unwrap();
+            writeln!(svg,"<text x=\"{:.2}\" y=\"{:.2}\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\">{}</text>",x+6.0,node.y+6.0+node.font_size,node.font_size,node.color,escape(parameters)).unwrap();
+        }
+        let first_baseline = if node.body.is_empty()
+            && node.ports.is_empty()
+            && node.template.is_none()
+            && node.kind != NodeKind::Package
+        {
+            node.y
+                + (node.height - line_height * node.lines.len() as f64) / 2.0
+                + line_height * 0.78
+        } else {
+            node.y + node.padding + node.top_band + line_height * 0.78
+        };
         for (i, line) in node.lines.iter().enumerate() {
             let baseline = first_baseline + line_height * i as f64;
             let last_with_icons = i + 1 == node.lines.len() && !node.icons.is_empty();
