@@ -41,6 +41,12 @@ pub(super) fn classify<'a>(
         (NodeKind::DeploymentNode, name)
     } else if let Some(name) = source.strip_prefix("artifact ") {
         (NodeKind::Artifact, name)
+    } else if let Some(name) = source.strip_prefix("actor ") {
+        (NodeKind::UseCaseActor, name)
+    } else if let Some(name) = source.strip_prefix("usecase ") {
+        (NodeKind::UseCase, name)
+    } else if let Some(name) = source.strip_prefix("system ") {
+        (NodeKind::UseCaseSystem, name)
     } else if let Some(name) = source.strip_prefix("action ") {
         (NodeKind::ActivityAction, name)
     } else if let Some(name) = source.strip_prefix("objectNode ") {
@@ -77,9 +83,10 @@ pub(super) fn classify<'a>(
             DiagramType::Class => (NodeKind::Class, source),
             DiagramType::Object => (NodeKind::Object, source),
             DiagramType::Component => (NodeKind::Component, source),
-            DiagramType::Deployment | DiagramType::State | DiagramType::Activity => {
-                (NodeKind::Generic, source)
-            }
+            DiagramType::Deployment
+            | DiagramType::State
+            | DiagramType::Activity
+            | DiagramType::UseCase => (NodeKind::Generic, source),
         }
     }
 }
@@ -96,6 +103,10 @@ pub(super) fn allowed(kind: NodeKind, ty: DiagramType) -> bool {
         kind,
         NodeKind::State | NodeKind::StateInitial | NodeKind::StateFinal | NodeKind::StateChoice
     );
+    let usecase = matches!(
+        kind,
+        NodeKind::UseCaseActor | NodeKind::UseCase | NodeKind::UseCaseSystem
+    );
     let activity = matches!(
         kind,
         NodeKind::ActivityAction
@@ -110,6 +121,7 @@ pub(super) fn allowed(kind: NodeKind, ty: DiagramType) -> bool {
     );
     match ty {
         DiagramType::Activity => activity || kind == NodeKind::Note,
+        DiagramType::UseCase => usecase || kind == NodeKind::Note,
         DiagramType::Object => matches!(kind, NodeKind::Object | NodeKind::Note),
         DiagramType::Component => matches!(
             kind,
@@ -137,12 +149,14 @@ pub(super) fn allowed(kind: NodeKind, ty: DiagramType) -> bool {
             ) && !deployment
                 && !state
                 && !activity
+                && !usecase
         }
         DiagramType::Generic => {
             !matches!(kind, NodeKind::Component | NodeKind::ComponentPart)
                 && !deployment
                 && !state
                 && !activity
+                && !usecase
         }
     }
 }

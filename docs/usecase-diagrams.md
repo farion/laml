@@ -1,0 +1,33 @@
+# UML use-case diagrams
+
+Set `type: usecase`. LAML draws a checked UML 2.5.1 use-case image subset; it does not infer product requirements, evaluate extension conditions, or execute use cases. The [order example](../examples/usecase-order.laml) builds as SVG, PNG and vector PDF.
+
+```text
+settings {
+    type: usecase
+}
+semantics {
+    actor Customer
+    actor ReturningCustomer(label="Returning\nCustomer")
+    system Shop {
+        usecase Order(label="Place order")
+        usecase Payment(label="Authorize payment")
+        usecase Discount(label="Apply discount")
+        Order ..> Payment <<include>>
+        Discount ..> Order <<extend>>
+    }
+    Customer -- Shop.Order
+    ReturningCustomer --|> Customer
+}
+```
+
+`system Name { ... }` is the labeled system boundary and contains named `usecase` ellipses. Actors are external stick figures and cannot be nested inside that boundary. Child IDs are scoped (`Shop.Order`); an explicit `@id` remains diagram-wide. This **source scope expresses visible placement**, not UML ownership: the subject rectangle does not itself imply ownership of the depicted use cases. The first subset requires one system boundary with at least one use case. Labels can be set independently from IDs using `(label="Visible text")`. Notes attach through unadorned dotted lines.
+
+Relationships are checked by endpoint kind, direction and UML marker:
+
+- `Actor -- UseCase`: plain solid association; either source order is allowed. The system boundary itself is not an association endpoint.
+- `Base ..> Included <<include>>`: dashed directed dependency **from including to included** use case.
+- `Extension ..> Base <<extend>>`: dashed directed dependency **from extension to extended** use case. This subset has no extension-point compartment or executable extension conditions.
+- `Child --|> Parent`: solid open-triangle generalization between two actors or between two use cases in the same system. A generalization cycle fails.
+
+Graph direction is not UML relationship direction. Unlike a class `--` link, an actor-use-case association does not permit arbitrary use-case-to-use-case links. Unsupported operators, stereotypes, cross-boundary relationships and conflicting node shapes fail rather than being rendered with a misleading glyph. See the [UML notation audit](uml-usecase-conformance.md).

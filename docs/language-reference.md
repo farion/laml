@@ -31,7 +31,7 @@ Unqualified identifiers match `[A-Za-z_][A-Za-z0-9_]*`; nested package paths use
 
 | Name | Values | Default |
 |---|---|---|
-| `type` | `class`, `object`, `component`, `deployment`, `state`, `activity`, `sequence` (omitted for generic node-edge) | Generic graph |
+| `type` | `class`, `object`, `component`, `deployment`, `state`, `activity`, `usecase`, `sequence` (omitted for generic node-edge) | Generic graph |
 | `direction` | `left-to-right`, `right-to-left`, `top-to-bottom`, `bottom-to-top` | `left-to-right` |
 | `naming-convention` | `uppercase-nodes-lowercase-relations` | Off |
 | `relation-label` | `near`, `along`, `inline` | `near` |
@@ -81,6 +81,10 @@ Set `type: state` for a checked behavior state-machine image. `state Ready` is a
 ## Activity diagrams
 
 Set `type: activity`. Declare `action`, `objectNode`, `initial`, `activityFinal`, `flowFinal`, `decision`, `merge`, `fork` and `join` explicitly. An action body can declare `input Name` and `output Name` pins; object flows address them as `Action::Name`. Use `control A --> B` for control flow and `object A::out --> B::in` for object flow. Decision exits require `[guard]` labels. The [activity guide](activity-diagrams.md) and [UML notation audit](uml-activity-conformance.md) document the checked topology and unsupported notation.
+
+## Use-case diagrams
+
+Set `type: usecase` for a system boundary containing named `usecase` ellipses and external `actor` stick figures. Actors associate with use cases using `--`. Directed `..> <<include>>` points to the included use case, while `..> <<extend>>` points to the extended base. Same-kind generalization uses `--|>` from specialized to general. The [use-case guide](usecase-diagrams.md) and [UML notation audit](uml-usecase-conformance.md) list the checked relationships and omissions.
 
 ## Layout
 
@@ -183,4 +187,4 @@ Follow the [sequence-diagram working guide](sequence-diagrams.md) for complete, 
 
 The output extension selects SVG, PNG, or PDF. SVG defaults to `--svg-text=embedded`: Inter Regular is embedded, and text remains selectable. `--svg-text=system` keeps selectable SVG text but omits the font; the viewer may substitute a font. `--svg-text=paths` converts SVG text into nonselectable glyph outlines and does not preserve node-level `<title>` metadata. These options apply only to SVG output. PNG uses the SVG's CSS-pixel dimensions rounded to whole pixels, on a white background; the image is limited to 64 million pixels. PDF is vector output with embedded, selectable text; 96 SVG pixels map to one inch of PDF page size. Rectangular nodes may have rounded corners via `corner-radius`. Relations attach to box boundaries. The router prefers a straight route and searches a finite set of detours when blocked. Parallel relations use separate boundary ports; self-relations use exterior loops. At a supported crossing, the later-declared relation receives a bridge and the earlier relation a gap. If no safe routing or label placement is found, `build` fails without writing a replacement image: it does not emit bare crossings or silently ignore mandatory rules.
 
-The installers and updater are described in the [README](../README.md). Normal `check` and `build` commands do not wait for the network: a cached version is shown if newer, and a background refresh runs at most once per 24 hours. Set `LAML_NO_UPDATE_CHECK=1` to opt out. See [Getting started](getting-started.md), the [class/object guide](class-object-diagrams.md), the [component guide](component-diagrams.md), the [deployment guide](deployment-diagrams.md), the [state guide](state-diagrams.md), the [activity guide](activity-diagrams.md), the [language contract](language-definition.md), and the [buildable examples](../examples/).
+The installers and updater are described in the [README](../README.md). Normal `check` and `build` commands do not wait for the network: a cached version is shown if newer, and a background refresh runs at most once per 24 hours. Set `LAML_NO_UPDATE_CHECK=1` to opt out. See [Getting started](getting-started.md), the [class/object guide](class-object-diagrams.md), the [component guide](component-diagrams.md), the [deployment guide](deployment-diagrams.md), the [state guide](state-diagrams.md), the [activity guide](activity-diagrams.md), the [use-case guide](usecase-diagrams.md), the [language contract](language-definition.md), and the [buildable examples](../examples/).

@@ -29,6 +29,7 @@ pub enum DiagramType {
     Deployment,
     State,
     Activity,
+    UseCase,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -55,6 +56,9 @@ pub enum NodeKind {
     ActivityMerge,
     ActivityFork,
     ActivityJoin,
+    UseCaseActor,
+    UseCase,
+    UseCaseSystem,
     Interface,
     Enumeration,
     DataType,

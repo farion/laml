@@ -115,7 +115,10 @@ fn scope(
             node.id == *child
                 && (matches!(
                     node.kind,
-                    NodeKind::Package | NodeKind::Component | NodeKind::State
+                    NodeKind::Package
+                        | NodeKind::Component
+                        | NodeKind::State
+                        | NodeKind::UseCaseSystem
                 ) || node.kind.is_deployment_target())
                 && diagram
                     .nodes

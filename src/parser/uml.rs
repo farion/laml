@@ -130,6 +130,9 @@ pub(super) fn validate_relation(
     if diagram.settings.diagram_type == DiagramType::Activity {
         return super::activity::relation(relation, from, to);
     }
+    if diagram.settings.diagram_type == DiagramType::UseCase {
+        return super::usecase::relation(relation, from, to);
+    }
     if member_end {
         return Err(error(
             relation.line,

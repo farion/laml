@@ -139,16 +139,15 @@ pub fn measure_node(
             _ => return Err("unknown node shape".into()),
         },
         _ if node.kind == NodeKind::Note => NodeShape::Note,
+        _ if node.kind == NodeKind::UseCase => NodeShape::Ellipse,
         _ => NodeShape::Rectangle,
     };
-    if diagram_type != DiagramType::Generic
-        && shape
-            != if node.kind == NodeKind::Note {
-                NodeShape::Note
-            } else {
-                NodeShape::Rectangle
-            }
-    {
+    let expected = match node.kind {
+        NodeKind::Note => NodeShape::Note,
+        NodeKind::UseCase => NodeShape::Ellipse,
+        _ => NodeShape::Rectangle,
+    };
+    if diagram_type != DiagramType::Generic && shape != expected {
         return Err("UML node form cannot be replaced by an LSS shape".into());
     }
     let font_size = number(styles, &element, "font-size", 14.0);

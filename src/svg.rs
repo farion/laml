@@ -2,7 +2,7 @@
 
 use crate::geometry::{BoxNode, NodeShape};
 use crate::route::{Point, Route};
-use crate::syntax::{EndSymbol, NodeKind, NodePart};
+use crate::syntax::{NodeKind, NodePart};
 use crate::text::{FONT, ITALIC_FONT, measure, measure_italic};
 use base64::Engine;
 use std::fmt::Write;
@@ -11,21 +11,12 @@ mod compact;
 mod component_container;
 mod deployment;
 mod escape;
+mod markers;
 mod package;
 mod state;
+mod usecase;
 use escape::escape;
-
-fn marker(symbol: EndSymbol, start: bool) -> &'static str {
-    match (symbol, start) {
-        (EndSymbol::None, _) => "",
-        (EndSymbol::Arrow, _) => "url(#arrow)",
-        (EndSymbol::Triangle, _) => "url(#triangle)",
-        (EndSymbol::OpenDiamond, true) => "url(#open-diamond)",
-        (EndSymbol::OpenDiamond, false) => "url(#open-diamond-end)",
-        (EndSymbol::FilledDiamond, true) => "url(#filled-diamond)",
-        (EndSymbol::FilledDiamond, false) => "url(#filled-diamond-end)",
-    }
-}
+use markers::marker;
 fn include_point(point: Point, bounds: &mut (f64, f64, f64, f64)) {
     bounds.0 = bounds.0.min(point.x);
     bounds.1 = bounds.1.min(point.y);
@@ -183,6 +174,7 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
     }
     deployment::backgrounds(&mut svg, boxes);
     state::backgrounds(&mut svg, boxes);
+    usecase::background(&mut svg, boxes);
     for route in routes {
         let start = marker(route.appearance.start, true);
         let end = marker(route.appearance.end, false);
@@ -255,6 +247,10 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
             NodeKind::StateInitial | NodeKind::StateFinal | NodeKind::StateChoice
         ) {
             state::symbol(&mut svg, node);
+        } else if node.kind == NodeKind::UseCaseActor {
+            usecase::actor(&mut svg, node);
+        } else if node.kind == NodeKind::UseCaseSystem {
+            // Frame painted behind its contained use cases and routed edges.
         } else if node.kind == NodeKind::State && node.is_container {
             // The state frame is behind its internal transitions.
         } else if node.kind.is_deployment_target() {
@@ -302,7 +298,9 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
             writeln!(svg,"<rect x=\"{x:.2}\" y=\"{:.2}\" width=\"{width:.2}\" height=\"{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-dasharray=\"4 3\" />",node.y+4.0,line_height+4.0,node.fill,node.border_color).unwrap();
             writeln!(svg,"<text x=\"{:.2}\" y=\"{:.2}\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\">{}</text>",x+6.0,node.y+6.0+node.font_size,node.font_size,node.color,escape(parameters)).unwrap();
         }
-        let first_baseline = if node.body.is_empty()
+        let first_baseline = if node.kind == NodeKind::UseCaseActor {
+            node.y + node.height - 4.0 - line_height * node.lines.len().saturating_sub(1) as f64
+        } else if node.body.is_empty()
             && node.ports.is_empty()
             && node.template.is_none()
             && node.kind != NodeKind::Package
@@ -333,6 +331,8 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
                     )?;
                 }
                 (x + span, "start")
+            } else if node.kind == NodeKind::UseCaseSystem {
+                (node.x + node.padding, "start")
             } else {
                 (deployment::center(node), "middle")
             };

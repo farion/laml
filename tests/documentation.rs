@@ -264,6 +264,23 @@ fn state_guide_example_builds_all_formats() {
 }
 
 #[test]
+fn usecase_guide_example_builds_all_formats() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let guide = fs::read_to_string(root.join("docs/usecase-diagrams.md")).unwrap();
+    let source = text_blocks(&guide)
+        .into_iter()
+        .next()
+        .expect("missing use-case guide example");
+    let diagram = parse(&source).unwrap();
+    let sheet = load(&diagram, &root.join("examples/usecase-order.laml")).unwrap();
+    let boxes = place(&diagram, &sheet).unwrap();
+    let routes = route(&diagram, &boxes, &sheet).unwrap();
+    let svg = render(&boxes, &routes).unwrap();
+    assert!(png(&svg).unwrap().starts_with(b"\x89PNG"));
+    assert!(laml::export::pdf(&svg).unwrap().starts_with(b"%PDF-"));
+}
+
+#[test]
 fn user_documentation_contains_no_speculative_status_notes() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     for file in [

@@ -1,0 +1,16 @@
+settings {
+    type: usecase
+}
+semantics {
+    actor Customer
+    actor ReturningCustomer(label="Returning\nCustomer")
+    system Shop {
+        usecase Order(label="Place order")
+        usecase Payment(label="Authorize payment")
+        usecase Discount(label="Apply discount")
+        Order ..> Payment <<include>>
+        Discount ..> Order <<extend>>
+    }
+    Customer -- Shop.Order
+    ReturningCustomer --|> Customer
+}

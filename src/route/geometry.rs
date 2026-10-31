@@ -60,6 +60,16 @@ fn note_fold(node: &BoxNode) -> f64 {
 
 pub(super) fn port(node: &BoxNode, towards: Point) -> Point {
     let c = center(node);
+    if node.kind == crate::syntax::NodeKind::UseCaseActor {
+        return Point {
+            x: if towards.x >= c.x {
+                node.x + node.width
+            } else {
+                node.x
+            },
+            y: node.y + 47.0,
+        };
+    }
     let dx = towards.x - c.x;
     let dy = towards.y - c.y;
     let (rx, ry) = if let Some(radius) = compact_radius(node) {

@@ -10,6 +10,7 @@ mod node_notation;
 mod nodes;
 mod port_contours;
 mod ports;
+mod usecase;
 mod visibility;
 
 pub use constraints::GeometryError;
@@ -64,6 +65,8 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
                     | NodeKind::ActivityJoin
             ) {
                 junctions::measure(node, &scoped, diagram.settings.direction)
+            } else if node.kind == NodeKind::UseCaseActor {
+                usecase::actor(node, &scoped)
             } else {
                 nodes::measure_node(
                     node,
@@ -89,6 +92,7 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
     for node in &mut boxes {
         if (node.kind == NodeKind::Component
             || node.kind == NodeKind::State
+            || node.kind == NodeKind::UseCaseSystem
             || node.kind.is_deployment_target())
             && diagram
                 .nodes

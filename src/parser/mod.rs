@@ -32,6 +32,7 @@ mod state;
 mod stereotypes;
 mod template_formals;
 mod uml;
+mod usecase;
 use layout::{parse_layout, parse_port_side, parse_relation_end, parse_relation_label};
 use selectors::validate_selector;
 
@@ -83,6 +84,7 @@ fn prescan_type(source: &str) -> DiagramType {
                 "deployment" => DiagramType::Deployment,
                 "state" => DiagramType::State,
                 "activity" => DiagramType::Activity,
+                "usecase" => DiagramType::UseCase,
                 _ => DiagramType::Generic,
             };
         }
@@ -146,7 +148,10 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
                 }
             }
             Section::NodeBody(index)
-                if diagram.nodes[index].kind == crate::syntax::NodeKind::Package =>
+                if matches!(
+                    diagram.nodes[index].kind,
+                    crate::syntax::NodeKind::Package | crate::syntax::NodeKind::UseCaseSystem
+                ) =>
             {
                 let scope = diagram.nodes[index].id.clone();
                 if text == "}" {
@@ -362,6 +367,7 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
     references::resolve_and_validate(&mut diagram)?;
     state::validate(&diagram)?;
     activity::validate(&diagram)?;
+    usecase::validate(&diagram)?;
     Ok(diagram)
 }
 
@@ -465,6 +471,7 @@ fn parse_setting(
                 "deployment" => DiagramType::Deployment,
                 "state" => DiagramType::State,
                 "activity" => DiagramType::Activity,
+                "usecase" => DiagramType::UseCase,
                 _ => return Err(error(line, "invalid graph diagram type")),
             }
         }
