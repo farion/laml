@@ -30,6 +30,21 @@ fn qualifier_boxes_attach_to_association_ends_in_all_output_formats() {
 }
 
 #[test]
+fn qualifier_boxes_can_attach_above_and_below_classifiers() {
+    let source = "settings {\ntype: class\n}\nsemantics {\nclass A\nclass B\n@q A qualifier(key:UUID) -- qualifier(other:UUID) B\n}\nlayout {\nA above B : align=center; gap=240\n}\n";
+    let diagram = parse(source).unwrap();
+    let sheet = StyleSheet::default();
+    let boxes = place(&diagram, &sheet).unwrap();
+    let routed = route(&diagram, &boxes, &sheet).unwrap();
+    assert_eq!(routed[0].qualifiers.len(), 2);
+    assert!((routed[0].qualifiers[0].y - boxes[0].y - boxes[0].height).abs() < 1e-6);
+    assert!((routed[0].qualifiers[1].y + routed[0].qualifiers[1].height - boxes[1].y).abs() < 1e-6);
+    let svg = render(&boxes, &routed).unwrap();
+    assert!(export::png(&svg).is_ok());
+    assert!(export::pdf(&svg).is_ok());
+}
+
+#[test]
 fn qualifiers_fail_if_they_misrepresent_a_dependency_or_object_link() {
     let base = "settings {\ntype: class\n}\nsemantics {\nA\nB\nA qualifier(id:UUID) -- B\n}\n";
     let dependency = base.replace(" -- B", " ..> B");

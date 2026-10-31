@@ -43,6 +43,9 @@ fn one(
     let adjacent = points[if index == 0 { 1 } else { last - 1 }];
     let edge = points[index];
     let (dx, dy) = (adjacent.x - edge.x, adjacent.y - edge.y);
+    if dx.abs() > 1e-6 && dy.abs() > 1e-6 {
+        return Err("qualifier requires an orthogonal exit from its classifier border".into());
+    }
     let horizontal = dx.abs() >= dy.abs();
     let extent = if horizontal { width } else { height };
     if (if horizontal { dx.abs() } else { dy.abs() }) < extent + 12.0 {
@@ -80,6 +83,15 @@ fn one(
         lines: lines.to_vec(),
         font_size: size,
     };
+    let owner_box = &boxes[owner];
+    if box_.overlaps(
+        owner_box.x + 1e-5,
+        owner_box.y + 1e-5,
+        (owner_box.width - 2e-5).max(0.0),
+        (owner_box.height - 2e-5).max(0.0),
+    ) {
+        return Err("qualifier rectangle would overlap its owning classifier".into());
+    }
     if boxes.iter().enumerate().any(|(i, node)| {
         i != owner
             && !node.contains_package_content(x, y, width, height)
@@ -135,4 +147,56 @@ pub(super) fn attach(
         result.push(qualifier);
     }
     Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn qualifier_refuses_diagonal_exits_and_owning_box_interiors() {
+        let diagram = crate::parser::parse("semantics {\nA\nB\n}\n").unwrap();
+        let boxes =
+            crate::geometry::place(&diagram, &crate::styles::StyleSheet::default()).unwrap();
+        let a = &boxes[0];
+        let edge = Point {
+            x: a.x + a.width,
+            y: a.y + a.height / 2.0,
+        };
+        let mut diagonal = vec![
+            edge,
+            Point {
+                x: edge.x + 200.0,
+                y: edge.y + 20.0,
+            },
+        ];
+        assert!(
+            one(&mut diagonal, 0, &["id: UUID".into()], 14.0, &boxes, 0, &[])
+                .unwrap_err()
+                .contains("orthogonal")
+        );
+        let top = Point {
+            x: a.x + a.width / 2.0,
+            y: a.y,
+        };
+        let mut unsafe_route = vec![
+            top,
+            Point {
+                x: top.x + 200.0,
+                y: top.y,
+            },
+        ];
+        assert!(
+            one(
+                &mut unsafe_route,
+                0,
+                &["id: UUID".into()],
+                14.0,
+                &boxes,
+                0,
+                &[]
+            )
+            .unwrap_err()
+            .contains("owning classifier")
+        );
+    }
 }
