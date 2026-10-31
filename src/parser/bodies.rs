@@ -61,11 +61,10 @@ pub(super) fn node(
         (NodeKind::Association, "")
     } else if source == "junction" {
         (NodeKind::Junction, "")
-    } else if source.starts_with("association ") || source.starts_with("junction ") {
-        return Err(error(
-            line,
-            "junction captions are not implemented; give it an explicit @id",
-        ));
+    } else if let Some(name) = source.strip_prefix("association ") {
+        (NodeKind::Association, name)
+    } else if let Some(name) = source.strip_prefix("junction ") {
+        (NodeKind::Junction, name)
     } else if let Some(name) = source.strip_prefix("package ") {
         (NodeKind::Package, name)
     } else if let Some(name) = source.strip_prefix("class ") {
@@ -105,14 +104,14 @@ pub(super) fn node(
     }
     if matches!(kind, NodeKind::Association | NodeKind::Junction)
         && (block
-            || explicit_id.is_none()
+            || (name.is_empty() && explicit_id.is_none())
             || abstract_node
             || visibility.is_some()
             || !stereotypes.is_empty())
     {
         return Err(error(
             line,
-            "junction needs @id and cannot have a body, visibility or stereotype",
+            "unnamed junction needs @id and cannot have a body, visibility or stereotype",
         ));
     }
     if kind == NodeKind::Package && !block {
@@ -164,7 +163,7 @@ pub(super) fn node(
         id: explicit_id
             .unwrap_or_else(|| parent.map_or(name.clone(), |path| format!("{path}.{name}"))),
         label: if matches!(kind, NodeKind::Association | NodeKind::Junction) {
-            Some(String::new())
+            Some(name.clone())
         } else {
             note.map(|(_, text)| text)
         },

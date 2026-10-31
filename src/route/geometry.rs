@@ -2,9 +2,21 @@ use super::labels::segment_hits_rect;
 use super::{Point, Route};
 use crate::geometry::{BoxNode, NodeShape};
 
+fn small_junction(node: &BoxNode) -> bool {
+    matches!(
+        node.kind,
+        crate::syntax::NodeKind::Association | crate::syntax::NodeKind::Junction
+    )
+}
+
 pub(super) fn center(node: &BoxNode) -> Point {
     Point {
-        x: node.x + node.width / 2.0,
+        x: node.x
+            + if small_junction(node) {
+                12.0
+            } else {
+                node.width / 2.0
+            },
         y: node.y + node.height / 2.0,
     }
 }
@@ -41,7 +53,11 @@ pub(super) fn port(node: &BoxNode, towards: Point) -> Point {
     let c = center(node);
     let dx = towards.x - c.x;
     let dy = towards.y - c.y;
-    let (rx, ry) = ((node.width / 2.0).max(1e-9), (node.height / 2.0).max(1e-9));
+    let (rx, ry) = if small_junction(node) {
+        (12.0, 12.0)
+    } else {
+        ((node.width / 2.0).max(1e-9), (node.height / 2.0).max(1e-9))
+    };
     let scale = match node.shape {
         NodeShape::Rectangle | NodeShape::Note => (dx.abs() / rx).max(dy.abs() / ry),
         NodeShape::Ellipse => ((dx / rx).powi(2) + (dy / ry).powi(2)).sqrt(),
@@ -55,8 +71,16 @@ pub(super) fn port(node: &BoxNode, towards: Point) -> Point {
 }
 pub(super) fn intersection(a: Point, b: Point, node: &BoxNode) -> bool {
     let c = center(node);
-    let rx = (node.width / 2.0).max(1e-9);
-    let ry = (node.height / 2.0).max(1e-9);
+    let rx = if small_junction(node) {
+        12.0
+    } else {
+        (node.width / 2.0).max(1e-9)
+    };
+    let ry = if small_junction(node) {
+        12.0
+    } else {
+        (node.height / 2.0).max(1e-9)
+    };
     match node.shape {
         NodeShape::Ellipse => {
             let (ax, ay) = ((a.x - c.x) / rx, (a.y - c.y) / ry);
@@ -70,6 +94,12 @@ pub(super) fn intersection(a: Point, b: Point, node: &BoxNode) -> bool {
             return (ax + t * dx).powi(2) + (ay + t * dy).powi(2) < 1.0 - 1e-5;
         }
         NodeShape::Diamond => {
+            if small_junction(node)
+                && !node.label.is_empty()
+                && segment_hits_rect(a, b, node.x + 30.0, node.y, node.width - 30.0, node.height)
+            {
+                return true;
+            }
             let mut candidates = vec![0.0, 1.0];
             for (start, delta, target) in [(a.x, b.x - a.x, c.x), (a.y, b.y - a.y, c.y)] {
                 if delta.abs() > 1e-9 {

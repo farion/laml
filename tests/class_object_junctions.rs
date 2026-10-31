@@ -79,11 +79,10 @@ fn nary_association_rejects_binary_or_semantically_marked_arms() {
             .message
             .contains("plain, unlabeled")
     );
-    let wrong = base.replace("@j association", "association j");
-    assert!(
-        parse(&wrong)
-            .unwrap_err()
-            .message
-            .contains("captions are not implemented")
-    );
+    let named = base.replace("@j association", "association j");
+    let diagram = parse(&named).unwrap();
+    let boxes = place(&diagram, &StyleSheet::default()).unwrap();
+    assert!(boxes[3].width > 24.0);
+    let routes = route(&diagram, &boxes, &StyleSheet::default()).unwrap();
+    assert!(render(&boxes, &routes).unwrap().contains(">j</text>"));
 }

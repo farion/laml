@@ -2,6 +2,7 @@
 use super::{BoxNode, NodeShape};
 use crate::styles::{Element, StyleSheet, Value};
 use crate::syntax::{NodeDecl, NodeKind};
+use crate::text::measure as text_width;
 
 pub(super) fn measure(node: &NodeDecl, sheet: &StyleSheet) -> Result<BoxNode, String> {
     let element = Element::Node {
@@ -41,9 +42,20 @@ pub(super) fn measure(node: &NodeDecl, sheet: &StyleSheet) -> Result<BoxNode, St
         node.kind,
         NodeKind::Association | NodeKind::Junction
     ));
+    let label = node.label.clone().unwrap_or_default();
+    let width = if label.is_empty() {
+        24.0
+    } else {
+        24.0 + 12.0 + text_width(&label, 14.0)?
+    };
+    let height = if label.is_empty() {
+        24.0
+    } else {
+        24.0_f64.max(14.0 * 1.25 + 8.0)
+    };
     Ok(BoxNode {
         id: node.id.clone(),
-        label: String::new(),
+        label,
         lines: Vec::new(),
         icons: Vec::new(),
         body: Vec::new(),
@@ -57,8 +69,8 @@ pub(super) fn measure(node: &NodeDecl, sheet: &StyleSheet) -> Result<BoxNode, St
         shape: NodeShape::Diamond,
         x: 0.0,
         y: 0.0,
-        width: 24.0,
-        height: 24.0,
+        width,
+        height,
         fixed_width: None,
         fixed_height: None,
         font_size: 14.0,

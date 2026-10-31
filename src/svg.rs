@@ -244,7 +244,16 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
             escape(&node.label)
         )
         .unwrap();
-        if node.shape == NodeShape::Note {
+        if matches!(node.kind, NodeKind::Association | NodeKind::Junction) {
+            let cy = node.y + node.height / 2.0;
+            writeln!(svg,"<polygon points=\"{:.2},{:.2} {:.2},{:.2} {:.2},{:.2} {:.2},{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
+                node.x+12.0,cy-12.0,node.x+24.0,cy,node.x+12.0,cy+12.0,node.x,cy,
+                node.fill,node.border_color,node.border_width).unwrap();
+            if !node.label.is_empty() {
+                writeln!(svg,"<text x=\"{:.2}\" y=\"{:.2}\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\">{}</text>",
+                    node.x+30.0,cy+node.font_size*0.28,node.font_size,node.color,escape(&node.label)).unwrap();
+            }
+        } else if node.shape == NodeShape::Note {
             let fold = 12.0_f64.min(node.width / 4.0).min(node.height / 4.0);
             writeln!(svg,"<path d=\"M{:.2},{:.2} H{:.2} L{:.2},{:.2} V{:.2} H{:.2} Z M{:.2},{:.2} V{:.2} H{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
                 node.x,node.y,node.x+node.width-fold,node.x+node.width,node.y+fold,
