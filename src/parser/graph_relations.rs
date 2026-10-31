@@ -71,8 +71,8 @@ pub(super) fn parse_semantic(
     if !matches!(tokens.len(), 3..=5)
         || !matches!(operator_index, 1 | 2)
         || !matches!(tokens.len() - operator_index - 1, 1 | 2)
-        || !valid_identifier(tokens[0])
-        || !valid_identifier(tokens[tokens.len() - 1])
+        || !valid_reference(tokens[0])
+        || !valid_reference(tokens[tokens.len() - 1])
     {
         return Err(error(line, "expected relation: A [end] -- [end] B"));
     }

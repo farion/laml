@@ -50,6 +50,11 @@ pub(crate) fn split_top_level(input: &str, delimiter: char) -> Vec<&str> {
             } else if ch == ')' {
                 depth = depth.saturating_sub(1);
             } else if ch == delimiter && depth == 0 {
+                if delimiter == ':'
+                    && (input[index + 1..].starts_with(':') || input[..index].ends_with(':'))
+                {
+                    continue;
+                }
                 parts.push(&input[start..index]);
                 start = index + ch.len_utf8();
             }
@@ -114,6 +119,13 @@ pub(crate) fn valid_identifier(value: &str) -> bool {
         .next()
         .is_some_and(|first| first.is_ascii_alphabetic() || first == '_')
         && chars.all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
+}
+
+pub(crate) fn valid_reference(value: &str) -> bool {
+    match value.split_once("::") {
+        Some((owner, member)) => valid_identifier(owner) && valid_identifier(member),
+        None => valid_identifier(value),
+    }
 }
 
 pub(crate) fn quoted_string(value: &str) -> Result<String, &'static str> {

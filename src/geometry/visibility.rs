@@ -1,6 +1,6 @@
 //! Compute one consistent visible graph before measurement and routing.
 use crate::styles::{Element, StyleSheet, Value};
-use crate::syntax::{Diagram, NodePart};
+use crate::syntax::Diagram;
 
 fn hidden(sheet: &StyleSheet, element: &Element<'_>) -> bool {
     matches!(
@@ -39,6 +39,21 @@ pub(crate) fn filtered(diagram: &Diagram, sheet: &StyleSheet) -> Result<Diagram,
             }
         }
     }
+    for rule in &visible.relation_end_layout {
+        if !visible
+            .relations
+            .iter()
+            .any(|relation| relation.name.as_deref() == Some(rule.name.as_str()))
+        {
+            return Err((
+                rule.line,
+                format!(
+                    "mandatory end-label layout targets hidden relation '{}'",
+                    rule.name
+                ),
+            ));
+        }
+    }
     for rule in &visible.relation_layout {
         if !visible
             .relations
@@ -56,11 +71,7 @@ pub(crate) fn filtered(diagram: &Diagram, sheet: &StyleSheet) -> Result<Diagram,
     }
     for relation in &visible.relations {
         for id in [&relation.from, &relation.to] {
-            if !visible.nodes.iter().any(|node| {
-                node.id == *id || node.parts.iter().any(|part| {
-                matches!(part, NodePart::Member { id: Some(member), .. } if member == id)
-            })
-            }) {
+            if !visible.nodes.iter().any(|node| node.has_endpoint(id)) {
                 return Err((
                     relation.line,
                     format!("visible relation targets hidden node or member '{id}'"),

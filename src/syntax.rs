@@ -53,6 +53,7 @@ pub enum NodePart {
     Separator,
     Member {
         id: Option<String>,
+        default_id: Option<String>,
         classes: Vec<String>,
         text: String,
         kind: MemberKind,
@@ -83,6 +84,28 @@ pub struct NodeDecl {
     pub note_lines: Option<Vec<String>>,
     pub parts: Vec<NodePart>,
     pub line: usize,
+}
+
+impl NodeDecl {
+    pub fn matches_member(&self, part: &NodePart, target: &str) -> bool {
+        match part {
+            NodePart::Member { id: Some(id), .. } => id == target,
+            NodePart::Member {
+                id: None,
+                default_id: Some(name),
+                ..
+            } => target.strip_prefix(&format!("{}::", self.id)) == Some(name.as_str()),
+            _ => false,
+        }
+    }
+
+    pub fn has_endpoint(&self, target: &str) -> bool {
+        self.id == target
+            || self
+                .parts
+                .iter()
+                .any(|part| self.matches_member(part, target))
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -176,6 +199,29 @@ pub struct RelationLabelRule {
     pub line: usize,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EndSide {
+    Above,
+    Below,
+    Left,
+    Right,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EndPosition {
+    Source,
+    Target,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RelationEndRule {
+    pub name: String,
+    pub end: EndPosition,
+    pub multiplicity: Option<EndSide>,
+    pub role: Option<EndSide>,
+    pub line: usize,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Property {
     pub name: String,
@@ -203,6 +249,7 @@ pub struct Diagram {
     pub relations: Vec<RelationDecl>,
     pub layout: Vec<LayoutRule>,
     pub relation_layout: Vec<RelationLabelRule>,
+    pub relation_end_layout: Vec<RelationEndRule>,
     /// Source order is preserved so later matching style rules can override earlier ones.
     /// Imports are parsed but not resolved by this parser.
     pub styling: Vec<StyleEntry>,

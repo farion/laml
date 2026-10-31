@@ -293,8 +293,28 @@ pub(super) fn member(
             ));
         }
     }
+    let default_id = if id.is_some() || kind == MemberKind::Text {
+        None
+    } else {
+        let name = match kind {
+            MemberKind::Slot => content.split_once('=').map(|(name, _)| name.trim()),
+            MemberKind::Method => content
+                .split_once('(')
+                .and_then(|(head, _)| head.split_whitespace().last()),
+            MemberKind::Field => content
+                .split_once(':')
+                .map(|(name, _)| name.trim())
+                .or_else(|| content.split_whitespace().last()),
+            MemberKind::Literal => Some(content.trim()),
+            MemberKind::Text => None,
+        };
+        name.map(|name| name.trim_start_matches(['+', '-', '#', '~']))
+            .filter(|name| valid_identifier(name))
+            .map(str::to_string)
+    };
     node.parts.push(NodePart::Member {
         id,
+        default_id,
         classes: member_classes,
         text: literal.unwrap_or_else(|| content.to_string()),
         kind,

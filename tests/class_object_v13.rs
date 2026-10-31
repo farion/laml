@@ -291,6 +291,34 @@ fn relations_can_connect_explicitly_named_member_rows() {
 }
 
 #[test]
+fn scoped_default_members_have_qualified_targets_and_reject_overload_ambiguity() {
+    let source = "semantics {\nA {\nid: Int\n}\nB {\nid: Int\n}\n@r A::id --> B::id\n}\nstyling {\nmember[A::id] {\ncolor: \"#aa0000\"\n}\n}\n";
+    let diagram = parse(source).unwrap();
+    let sheet = load(&diagram, std::path::Path::new("examples/architecture.laml")).unwrap();
+    let boxes = place(&diagram, &sheet).unwrap();
+    let routed = route(&diagram, &boxes, &sheet).unwrap();
+    assert_eq!(routed.len(), 1);
+    let svg = render(&boxes, &routed).unwrap();
+    assert!(svg.contains("data-member-id=\"A::id\""));
+    assert!(svg.contains("data-member-id=\"B::id\""));
+    assert!(svg.contains("fill=\"#aa0000\""));
+    let overloaded = "semantics {\nA {\nmethod f()\nmethod f(Int x)\n}\nB\nA::f --> B\n}\n";
+    assert!(
+        parse(overloaded)
+            .unwrap_err()
+            .message
+            .contains("ambiguous member")
+    );
+    let aliased = "semantics {\nA {\n@key id: Int\n}\nB\nA::id --> B\n}\n";
+    assert!(
+        parse(aliased)
+            .unwrap_err()
+            .message
+            .contains("unknown node or member")
+    );
+}
+
+#[test]
 fn explicitly_assigned_ids_are_unique_across_graph_element_kinds() {
     for source in [
         "semantics {\n@same class A {\n@same id: Int\n}\n}\n",
@@ -366,6 +394,28 @@ fn uml_rejects_relationship_glyphs_that_misstate_the_element_kinds() {
     // `..|>` can also denote a generic UML Realization; an interface is not required.
     let generic_realization = "settings {\ntype: class\n}\nsemantics {\nA\nB\nA ..|> B\n}\n";
     assert!(image(generic_realization).contains("marker-end=\"url(#triangle)\""));
+}
+
+#[test]
+fn association_end_layout_mandates_text_side_without_reversing_the_relation() {
+    let source = "settings {\ntype: class\n}\nsemantics {\nA\nB\n@r A \"1\"/owner -- \"0..*\"/+parts B\n}\nlayout {\nA < B : align=center; gap=300\nrelation[r].source : multiplicity=below; role=above\nrelation[r].target : multiplicity=above; role=below\n}\n";
+    let diagram = parse(source).unwrap();
+    let sheet = StyleSheet::default();
+    let boxes = place(&diagram, &sheet).unwrap();
+    let routed = route(&diagram, &boxes, &sheet).unwrap();
+    assert_eq!(routed[0].end_labels.len(), 4);
+    let y = routed[0].points[0].y;
+    assert!(routed[0].end_labels[0].y > y);
+    assert!(routed[0].end_labels[1].y + routed[0].end_labels[1].height < y);
+    assert!(routed[0].end_labels[2].y + routed[0].end_labels[2].height < y);
+    assert!(routed[0].end_labels[3].y > y);
+    let missing = source.replace("\"1\"/owner", "\"1\"");
+    assert!(
+        parse(&missing)
+            .unwrap_err()
+            .message
+            .contains("missing multiplicity or role")
+    );
 }
 
 #[test]

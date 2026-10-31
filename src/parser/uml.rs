@@ -1,6 +1,6 @@
 //! Conservative UML-specific relationship checks; graphics alone do not establish UML meaning.
 use super::{ParseError, error};
-use crate::syntax::{Diagram, DiagramType, EndSymbol, NodeKind, NodePart, RelationDecl};
+use crate::syntax::{Diagram, DiagramType, EndSymbol, NodeKind, RelationDecl};
 
 pub(super) fn validate_relation(
     diagram: &Diagram,
@@ -9,13 +9,7 @@ pub(super) fn validate_relation(
     if diagram.settings.diagram_type == DiagramType::Generic {
         return Ok(());
     }
-    let owner = |id: &str| {
-        diagram.nodes.iter().find(|node| {
-            node.id == id || node.parts.iter().any(|part| {
-                matches!(part, NodePart::Member { id: Some(member), .. } if member == id)
-            })
-        })
-    };
+    let owner = |id: &str| diagram.nodes.iter().find(|node| node.has_endpoint(id));
     let from = owner(&relation.from).expect("endpoints validated before UML notation");
     let to = owner(&relation.to).expect("endpoints validated before UML notation");
     let member_end = from.id != relation.from || to.id != relation.to;

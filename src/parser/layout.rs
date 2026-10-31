@@ -1,6 +1,9 @@
 use super::{ParseError, error};
 use crate::lex::{split_once_top_level, split_top_level, valid_identifier};
-use crate::syntax::{Alignment, LabelPlacement, LayoutRule, Placement, RelationLabelRule};
+use crate::syntax::{
+    Alignment, EndPosition, EndSide, LabelPlacement, LayoutRule, Placement, RelationEndRule,
+    RelationLabelRule,
+};
 
 pub(super) fn parse_layout(text: &str, line: usize) -> Result<LayoutRule, ParseError> {
     let (placement, attrs) = match split_once_top_level(text, ':') {
@@ -80,6 +83,62 @@ pub(super) fn parse_layout(text: &str, line: usize) -> Result<LayoutRule, ParseE
         if invalid {
             return Err(error(line, "alignment is incompatible with placement axis"));
         }
+    }
+    Ok(rule)
+}
+
+/// Mandatory per-association-end text side, kept separate from style and arrow direction.
+pub(super) fn parse_relation_end(text: &str, line: usize) -> Result<RelationEndRule, ParseError> {
+    let (target, attrs) = split_once_top_level(text, ':').ok_or_else(|| {
+        error(
+            line,
+            "expected relation[id].source|target : multiplicity=above; role=below",
+        )
+    })?;
+    let (name, end) = target
+        .trim()
+        .strip_prefix("relation[")
+        .and_then(|rest| rest.split_once("]."))
+        .ok_or_else(|| error(line, "expected relation[id].source or relation[id].target"))?;
+    if !valid_identifier(name) {
+        return Err(error(line, "invalid relation ID in end-label layout"));
+    }
+    let end = match end {
+        "source" => EndPosition::Source,
+        "target" => EndPosition::Target,
+        _ => return Err(error(line, "expected .source or .target")),
+    };
+    let mut rule = RelationEndRule {
+        name: name.into(),
+        end,
+        multiplicity: None,
+        role: None,
+        line,
+    };
+    for piece in split_top_level(attrs.trim(), ';') {
+        let (key, value) = split_once_top_level(piece.trim(), '=')
+            .ok_or_else(|| error(line, "expected association-end attribute=value"))?;
+        let side = match value.trim() {
+            "above" => EndSide::Above,
+            "below" => EndSide::Below,
+            "left" => EndSide::Left,
+            "right" => EndSide::Right,
+            _ => return Err(error(line, "invalid association-end text side")),
+        };
+        let slot = match key.trim() {
+            "multiplicity" => &mut rule.multiplicity,
+            "role" => &mut rule.role,
+            _ => return Err(error(line, "unknown association-end layout attribute")),
+        };
+        if slot.replace(side).is_some() {
+            return Err(error(line, "duplicate association-end layout attribute"));
+        }
+    }
+    if rule.multiplicity.is_none() && rule.role.is_none() {
+        return Err(error(
+            line,
+            "association-end rule requires multiplicity or role",
+        ));
     }
     Ok(rule)
 }

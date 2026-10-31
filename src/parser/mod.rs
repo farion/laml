@@ -3,7 +3,7 @@
 
 use crate::lex::{
     find_arrow, quoted_string, split_once_top_level, split_top_level, valid_identifier,
-    without_comment,
+    valid_reference, without_comment,
 };
 use crate::syntax::{
     Diagram, DiagramType, FlowDirection, LabelPlacement, Property, RelationDecl, StyleEntry,
@@ -15,10 +15,11 @@ mod ends;
 mod graph_operators;
 mod graph_relations;
 mod layout;
+mod references;
 mod selectors;
 mod stereotypes;
 mod uml;
-use layout::{parse_layout, parse_relation_label};
+use layout::{parse_layout, parse_relation_end, parse_relation_label};
 use selectors::validate_selector;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -151,9 +152,15 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
                     Section::Top
                 } else {
                     if text.starts_with("relation[") {
-                        diagram
-                            .relation_layout
-                            .push(parse_relation_label(text, line)?);
+                        if text.contains("].source") || text.contains("].target") {
+                            diagram
+                                .relation_end_layout
+                                .push(parse_relation_end(text, line)?);
+                        } else {
+                            diagram
+                                .relation_layout
+                                .push(parse_relation_label(text, line)?);
+                        }
                     } else {
                         diagram.layout.push(parse_layout(text, line)?);
                     }
@@ -221,7 +228,7 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
     if !stylesheet && !seen[1] {
         return Err(error(1, "missing semantics section"));
     }
-    validate_references(&diagram)?;
+    references::validate_references(&diagram)?;
     Ok(diagram)
 }
 
@@ -325,115 +332,6 @@ fn parse_setting(
             }
         }
         _ => return Err(error(line, format!("unknown setting '{}'", key.trim()))),
-    }
-    Ok(())
-}
-
-fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {
-    for (index, node) in diagram.nodes.iter().enumerate() {
-        if diagram.nodes[..index]
-            .iter()
-            .any(|other| other.id == node.id)
-        {
-            return Err(error(node.line, format!("duplicate node '{}'", node.id)));
-        }
-        if diagram.settings.strict_case && !node.id.starts_with(|ch: char| ch.is_ascii_uppercase())
-        {
-            return Err(error(node.line, "node identifier must start uppercase"));
-        }
-    }
-    let mut assigned = std::collections::HashSet::new();
-    for node in &diagram.nodes {
-        assigned.insert(node.id.as_str());
-    }
-    for node in &diagram.nodes {
-        for part in &node.parts {
-            if let crate::syntax::NodePart::Member {
-                id: Some(id), line, ..
-            } = part
-                && !assigned.insert(id.as_str())
-            {
-                return Err(error(*line, format!("duplicate global ID '{id}'")));
-            }
-        }
-    }
-    for relation in &diagram.relations {
-        if let Some(id) = relation.name.as_deref()
-            && !assigned.insert(id)
-        {
-            return Err(error(relation.line, format!("duplicate global ID '{id}'")));
-        }
-    }
-    for (index, relation) in diagram.relations.iter().enumerate() {
-        if let Some(name) = &relation.name {
-            if diagram.relations[..index]
-                .iter()
-                .any(|other| other.name.as_ref() == Some(name))
-            {
-                return Err(error(relation.line, format!("duplicate relation '{name}'")));
-            }
-            if diagram.settings.strict_case && !name.starts_with(|ch: char| ch.is_ascii_lowercase())
-            {
-                return Err(error(relation.line, "relation name must start lowercase"));
-            }
-        }
-        if diagram.settings.diagram_type != DiagramType::Generic
-            && relation.appearance.dashed
-            && relation.appearance.start == crate::syntax::EndSymbol::None
-            && relation.appearance.end == crate::syntax::EndSymbol::None
-            && ![&relation.from, &relation.to].iter().any(|id| {
-                diagram
-                    .nodes
-                    .iter()
-                    .any(|node| node.id == **id && node.kind == crate::syntax::NodeKind::Note)
-            })
-        {
-            return Err(error(
-                relation.line,
-                "dotted UML annotation requires a note endpoint",
-            ));
-        }
-        for endpoint in [&relation.from, &relation.to] {
-            if !diagram.nodes.iter().any(|node| {
-                &node.id == endpoint || node.parts.iter().any(|part| {
-                    matches!(part, crate::syntax::NodePart::Member { id: Some(id), .. } if id == endpoint)
-                })
-            }) {
-                return Err(error(relation.line, format!("unknown node or member '{endpoint}'")));
-            }
-        }
-        uml::validate_relation(diagram, relation)?;
-    }
-    for rule in &diagram.layout {
-        for id in [&rule.first, &rule.second] {
-            if !diagram.nodes.iter().any(|node| &node.id == id) {
-                return Err(error(rule.line, format!("unknown node '{id}'")));
-            }
-        }
-    }
-    for (index, rule) in diagram.relation_layout.iter().enumerate() {
-        let target = diagram
-            .relations
-            .iter()
-            .find(|relation| relation.name.as_deref() == Some(rule.name.as_str()));
-        let Some(target) = target else {
-            return Err(error(
-                rule.line,
-                format!("unknown named relation '{}'", rule.name),
-            ));
-        };
-        if target.display_label().is_none() {
-            return Err(error(rule.line, "relation has no label to place"));
-        }
-        if diagram.relation_layout[..index]
-            .iter()
-            .any(|prior| prior.name == rule.name)
-        {
-            return Err(error(
-                rule.line,
-                format!("duplicate relation layout for '{}'", rule.name),
-            ));
-        }
     }
     Ok(())
 }

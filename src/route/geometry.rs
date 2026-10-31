@@ -14,8 +14,8 @@ pub(super) fn member_port(node: &BoxNode, member: &str, towards: Point) -> Optio
     for (part, row) in node.body.iter().zip(&node.body_styles) {
         match part {
             crate::syntax::NodePart::Separator => y += 8.0,
-            crate::syntax::NodePart::Member { id, .. } => {
-                if id.as_deref() == Some(member) {
+            crate::syntax::NodePart::Member { .. } => {
+                if node.matches_member(part, member) {
                     return Some(Point {
                         x: if towards.x >= node.x + node.width / 2.0 {
                             node.x + node.width

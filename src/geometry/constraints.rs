@@ -141,11 +141,7 @@ pub fn place(
     let owner = |id: &str| {
         boxes
             .iter()
-            .position(|b| {
-                b.id == id || b.body.iter().any(|part| {
-            matches!(part, crate::syntax::NodePart::Member { id: Some(member), .. } if member == id)
-        })
-            })
+            .position(|b| b.has_endpoint(id))
             .expect("parsed diagram has checked member IDs")
     };
     for rule in &diagram.layout {

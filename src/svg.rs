@@ -247,16 +247,22 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
                     }
                     NodePart::Member {
                         id,
+                        default_id,
                         text,
                         abstract_member,
                         static_member,
                         ..
                     } => {
                         let baseline = y + row.font_size * 1.25 * 0.78;
+                        let rendered_id = id.clone().or_else(|| {
+                            default_id
+                                .as_ref()
+                                .map(|name| format!("{}::{name}", node.id))
+                        });
                         writeln!(svg,"<text x=\"{:.2}\" y=\"{baseline:.2}\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\"{}{}>{}</text>",
                             node.x+node.padding,row.font_size,row.color,
                             if *abstract_member { " font-style=\"italic\"" } else { "" },
-                            id.as_ref().map(|id| format!(" data-member-id=\"{}\"",escape(id))).unwrap_or_default(),
+                            rendered_id.as_ref().map(|id| format!(" data-member-id=\"{}\"",escape(id))).unwrap_or_default(),
                             escape(text)).unwrap();
                         if *static_member {
                             let width = measure(text, row.font_size)?;

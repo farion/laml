@@ -203,11 +203,7 @@ pub fn route(
         let owner = |id: &str| {
             boxes
                 .iter()
-                .position(|b| {
-                    b.id == id || b.body.iter().any(|part| {
-            matches!(part, crate::syntax::NodePart::Member { id: Some(member), .. } if member == id)
-        })
-                })
+                .position(|b| b.has_endpoint(id))
                 .expect("parsed relation endpoint")
         };
         let from = owner(&relation.from);
@@ -249,6 +245,15 @@ pub fn route(
             .relation_layout
             .iter()
             .find(|rule| relation.name.as_deref() == Some(rule.name.as_str()));
+        let end_rules = [
+            crate::syntax::EndPosition::Source,
+            crate::syntax::EndPosition::Target,
+        ]
+        .map(|end| {
+            diagram.relation_end_layout.iter().find(|rule| {
+                relation.name.as_deref() == Some(rule.name.as_str()) && rule.end == end
+            })
+        });
         let placement = label_rule.map_or(diagram.settings.relation_label, |rule| rule.placement);
         let label_line = label_rule.map_or(relation.line, |rule| rule.line);
         let mut choice = None;
@@ -307,6 +312,7 @@ pub fn route(
                 boxes,
                 &routed,
                 label.as_ref(),
+                end_rules,
             ) {
                 Ok(labels) => labels,
                 Err(message) => {

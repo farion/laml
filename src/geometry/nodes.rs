@@ -40,6 +40,28 @@ pub struct BoxNode {
     pub line: usize,
 }
 
+impl BoxNode {
+    pub fn matches_member(&self, part: &NodePart, target: &str) -> bool {
+        match part {
+            NodePart::Member { id: Some(id), .. } => id == target,
+            NodePart::Member {
+                id: None,
+                default_id: Some(name),
+                ..
+            } => target.strip_prefix(&format!("{}::", self.id)) == Some(name.as_str()),
+            _ => false,
+        }
+    }
+
+    pub fn has_endpoint(&self, target: &str) -> bool {
+        self.id == target
+            || self
+                .body
+                .iter()
+                .any(|part| self.matches_member(part, target))
+    }
+}
+
 fn number(sheet: &StyleSheet, element: &Element<'_>, property: &str, default: f64) -> f64 {
     match sheet
         .get(element, property)
@@ -79,10 +101,19 @@ fn visible_body(
                 });
             }
             NodePart::Member {
-                id, classes, kind, ..
+                id,
+                default_id,
+                classes,
+                kind,
+                ..
             } => {
+                let scoped_id = id.clone().or_else(|| {
+                    default_id
+                        .as_ref()
+                        .map(|name| format!("{}::{name}", node.id))
+                });
                 let element = Element::Member {
-                    id: id.as_deref(),
+                    id: scoped_id.as_deref(),
                     classes,
                     kind: *kind,
                 };

@@ -1,7 +1,7 @@
 //! Parser-side validation of LSS selectors.
 
 use super::{ParseError, error};
-use crate::lex::valid_identifier;
+use crate::lex::{valid_identifier, valid_reference};
 
 pub(super) fn validate_selector(selector: &str, line: usize) -> Result<(), ParseError> {
     if let Some((parent, child)) = selector.split_once(' ') {
@@ -40,6 +40,11 @@ pub(super) fn validate_selector(selector: &str, line: usize) -> Result<(), Parse
         .and_then(|s| s.strip_suffix(']'))
     {
         matches!(kind, "field" | "method" | "slot" | "literal" | "text")
+    } else if let Some(id) = selector
+        .strip_prefix("member[")
+        .and_then(|id| id.strip_suffix(']'))
+    {
+        valid_reference(id)
     } else if let Some(class) = selector
         .strip_prefix("node.")
         .or_else(|| selector.strip_prefix("relation."))
@@ -50,7 +55,6 @@ pub(super) fn validate_selector(selector: &str, line: usize) -> Result<(), Parse
     } else if let Some(id) = selector
         .strip_prefix("node[")
         .or_else(|| selector.strip_prefix("relation["))
-        .or_else(|| selector.strip_prefix("member["))
         .or_else(|| selector.strip_prefix("lifeline["))
         .or_else(|| selector.strip_prefix("activation["))
         .or_else(|| selector.strip_prefix("fragment["))
