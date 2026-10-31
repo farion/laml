@@ -47,6 +47,21 @@ fn classifier_kinds_use_distinct_visible_headers() {
 }
 
 #[test]
+fn classifier_visibility_is_visible_but_does_not_change_the_node_id() {
+    let source = "settings {\ntype: class\n}\nsemantics {\nabstract +class Dienst\n#interface Intern\nDienst ..|> Intern\n}\n";
+    let diagram = parse(source).unwrap();
+    assert_eq!(diagram.nodes[0].id, "Dienst");
+    assert_eq!(diagram.nodes[0].visibility, Some('+'));
+    assert_eq!(diagram.nodes[1].id, "Intern");
+    let svg = image(source);
+    assert!(svg.contains("+Dienst"));
+    assert!(svg.contains("#Intern"));
+    assert!(svg.contains("font-style=\"italic\""));
+    let bad = "settings {\ntype: object\n}\nsemantics {\n+object Eins\n}\n";
+    assert!(parse(bad).unwrap_err().message.contains("visibility"));
+}
+
+#[test]
 fn stereotypes_are_visible_without_becoming_style_classes_or_unchecked_bindings() {
     let source = "settings {\ntype: class\n}\nsemantics {\nclass Dienst <<service>>\ninterface API\n@use Dienst ..|> API <<integration>> : verbindet\n}\n";
     let diagram = parse(source).unwrap();

@@ -79,6 +79,7 @@ pub struct NodeDecl {
     pub stereotypes: Vec<String>,
     pub kind: NodeKind,
     pub abstract_node: bool,
+    pub visibility: Option<char>,
     pub templates: Vec<String>,
     /// Raw lines for a note block; finalized into `label` when its block closes.
     pub note_lines: Option<Vec<String>>,

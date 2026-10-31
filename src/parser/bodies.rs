@@ -26,6 +26,15 @@ pub(super) fn node(
         super::stereotypes::suffix(source, line, diagram.settings.diagram_type)?;
     let abstract_node = source.starts_with("abstract ");
     let source = source.strip_prefix("abstract ").unwrap_or(source);
+    let visibility = source
+        .chars()
+        .next()
+        .filter(|ch| matches!(ch, '+' | '-' | '#' | '~'));
+    let source = if visibility.is_some() {
+        source[1..].trim_start()
+    } else {
+        source
+    };
     let anonymous = source.starts_with("anonymous ");
     let source = source.strip_prefix("anonymous ").unwrap_or(source);
     let note = if let Some(tail) = source.strip_prefix("note ") {
@@ -73,6 +82,9 @@ pub(super) fn node(
             "element kind is not supported by this UML diagram type",
         ));
     }
+    if visibility.is_some() && matches!(kind, NodeKind::Object | NodeKind::Note) {
+        return Err(error(line, "visibility is not valid on an object or note"));
+    }
     if anonymous && (kind != NodeKind::Object || explicit_id.is_none()) {
         return Err(error(line, "anonymous object requires an explicit @id"));
     }
@@ -118,6 +130,7 @@ pub(super) fn node(
         stereotypes,
         kind,
         abstract_node,
+        visibility,
         templates: templates.clone(),
         note_lines: if block && kind == NodeKind::Note {
             Some(Vec::new())

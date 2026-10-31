@@ -191,6 +191,10 @@ pub fn measure_node(
     }
     let padding = number(styles, &element, "padding", 12.0);
     let name = node.label.clone().unwrap_or_else(|| node.id.clone());
+    let name = match node.visibility {
+        Some(marker) => format!("{marker}{name}"),
+        None => name,
+    };
     let label = match node.kind {
         NodeKind::Interface => format!("«interface»\n{name}"),
         NodeKind::Enumeration => format!("«enumeration»\n{name}"),
