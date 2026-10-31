@@ -13,6 +13,7 @@ mod labels;
 mod parallel;
 mod qualifiers;
 mod self_loops;
+mod side_rules;
 use geometry::{center, member_port, port, route_is_clear};
 use labels::{label_along, label_inline, label_near};
 pub use qualifiers::QualifierBox;
@@ -112,21 +113,8 @@ fn candidates(
         .and_then(|relation| (relation.to != b.id).then_some(relation.to.as_str()));
     let ca = center(a);
     let cb = center(b);
-    let selected_side = |end| {
-        diagram
-            .relations
-            .get(index)
-            .and_then(|relation| relation.name.as_deref())
-            .and_then(|name| {
-                diagram
-                    .relation_end_layout
-                    .iter()
-                    .find(|rule| rule.name == name && rule.end == end)
-                    .and_then(|rule| rule.side)
-            })
-    };
-    let source_side = selected_side(EndPosition::Source);
-    let target_side = selected_side(EndPosition::Target);
+    let source_side = side_rules::requested(diagram, index, EndPosition::Source);
+    let target_side = side_rules::requested(diagram, index, EndPosition::Target);
     let mut results = vec![vec![port(a, cb), port(b, ca)]];
     for bend in [Point { x: cb.x, y: ca.y }, Point { x: ca.x, y: cb.y }] {
         results.push(vec![port(a, bend), bend, port(b, bend)]);
@@ -303,7 +291,12 @@ pub fn route(
                         .into(),
                 });
             }
-            self_loops::candidates(&boxes[from], rank)
+            side_rules::loop_options(
+                diagram,
+                index,
+                &boxes[from],
+                self_loops::candidates(&boxes[from], rank),
+            )
         } else {
             let offset =
                 parallel::offset(diagram, index, boxes, from, to, sheet).map_err(|message| {

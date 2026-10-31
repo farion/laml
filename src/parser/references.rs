@@ -420,10 +420,10 @@ fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {
                 crate::syntax::EndPosition::Source => &target.from,
                 crate::syntax::EndPosition::Target => &target.to,
             };
-            if target.from == target.to || !diagram.nodes.iter().any(|node| &node.id == endpoint) {
+            if !diagram.nodes.iter().any(|node| &node.id == endpoint) {
                 return Err(error(
                     rule.line,
-                    "mandatory relation side requires a direct node endpoint and no self-loop",
+                    "mandatory relation side requires a direct node endpoint",
                 ));
             }
         }

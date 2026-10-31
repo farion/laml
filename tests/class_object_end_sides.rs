@@ -33,6 +33,35 @@ fn relation_side_rules_reject_invalid_and_indirect_endpoints() {
             .message
             .contains("direct node endpoint")
     );
-    let looped = SOURCE.replace("@r A --> B", "@r A --> A");
-    assert!(parse(&looped).unwrap_err().message.contains("self-loop"));
+}
+
+#[test]
+fn self_loop_sides_route_around_the_exterior_for_each_side_pair() {
+    let sheet = StyleSheet::default();
+    for source_side in ["left", "right", "top", "bottom"] {
+        for target_side in ["left", "right", "top", "bottom"] {
+            let text = format!(
+                "settings {{\ntype: class\n}}\nsemantics {{\nclass A\n@loop A -- A\n}}\nlayout {{\nrelation[loop].source : side={source_side}\nrelation[loop].target : side={target_side}\n}}\n"
+            );
+            let diagram = parse(&text).unwrap();
+            let boxes = place(&diagram, &sheet).unwrap();
+            let routes = route(&diagram, &boxes, &sheet)
+                .unwrap_or_else(|error| panic!("{source_side}->{target_side}: {}", error.message));
+            let node = &boxes[0];
+            let side = |p: laml::route::Point| {
+                if (p.x - node.x).abs() < 1e-6 {
+                    "left"
+                } else if (p.x - node.x - node.width).abs() < 1e-6 {
+                    "right"
+                } else if (p.y - node.y).abs() < 1e-6 {
+                    "top"
+                } else {
+                    "bottom"
+                }
+            };
+            assert_eq!(side(routes[0].points[0]), source_side);
+            assert_eq!(side(*routes[0].points.last().unwrap()), target_side);
+            assert!(routes[0].points.len() >= 4);
+        }
+    }
 }
