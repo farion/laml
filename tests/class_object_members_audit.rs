@@ -1,6 +1,22 @@
 use laml::{export, geometry::place, parser::parse, route::route, styles::StyleSheet, svg::render};
 
 #[test]
+fn interface_features_are_public_and_enum_literals_have_unique_names() {
+    for bad in [
+        "settings {\ntype: class\n}\nsemantics {\ninterface API {\n-private(): void\n}\n}\n",
+        "settings {\ntype: class\n}\nsemantics {\nenum State {\nREADY\n@second READY\n}\n}\n",
+    ] {
+        let error = parse(bad).unwrap_err();
+        assert!(
+            error.message.contains("public")
+                || error.message.contains("duplicate UML enumeration literal"),
+            "{error:?}"
+        );
+    }
+    parse("settings {\ntype: class\n}\nsemantics {\ninterface API {\n+run(): void\n}\nenum State {\nREADY\nDONE\n}\n}\n").unwrap();
+}
+
+#[test]
 fn member_modifiers_are_order_independent_and_deduplicated() {
     let source = "settings {\ntype: class\n}\nsemantics {\nclass C {\nstatic field int counter\n--\nabstract method +void start()\n}\n}\n";
     let diagram = parse(source).unwrap();

@@ -356,6 +356,12 @@ pub(super) fn member(
         return Err(error(line, "object body accepts only name = value slots"));
     }
     if diagram_type == DiagramType::Class {
+        if node.kind == NodeKind::Interface && content.starts_with(['-', '#', '~']) {
+            return Err(error(line, "UML interface features must be public"));
+        }
+        if node.kind == NodeKind::Enumeration && node.parts.iter().any(|part| matches!(part,NodePart::Member {kind:MemberKind::Literal,text,..} if text==content)) {
+            return Err(error(line, "duplicate UML enumeration literal"));
+        }
         if node.kind == NodeKind::Enumeration
             && (abstract_member || static_member || forced.is_some())
         {
