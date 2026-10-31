@@ -38,6 +38,13 @@ fn association_class_attaches_its_class_box_to_one_plain_binary_association() {
             .message
             .contains("exactly one")
     );
+    let conflicting_name = source.replace("Kunde -- Bestellung", "Kunde -- Bestellung : bestellt");
+    assert!(
+        parse(&conflicting_name)
+            .unwrap_err()
+            .message
+            .contains("same visible name")
+    );
     let dependency = source.replace("Kunde -- Bestellung", "Kunde ..> Bestellung");
     assert!(
         parse(&dependency)

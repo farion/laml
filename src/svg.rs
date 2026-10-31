@@ -171,7 +171,7 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
         let font = base64::engine::general_purpose::STANDARD.encode(FONT);
         writeln!(svg, "<style>@font-face {{ font-family: 'Inter'; src: url('data:font/otf;base64,{font}') format('opentype'); }}</style>").unwrap();
     }
-    svg.push_str("<marker id=\"arrow\" markerWidth=\"10\" markerHeight=\"8\" refX=\"9\" refY=\"4\" orient=\"auto-start-reverse\" markerUnits=\"userSpaceOnUse\"><path d=\"M0,0 L10,4 L0,8 Z\" fill=\"context-stroke\"/></marker>");
+    svg.push_str("<marker id=\"arrow\" markerWidth=\"10\" markerHeight=\"8\" refX=\"9\" refY=\"4\" orient=\"auto-start-reverse\" markerUnits=\"userSpaceOnUse\"><path d=\"M0,0 L10,4 L0,8\" fill=\"none\" stroke=\"context-stroke\" stroke-width=\"1.5\"/></marker>");
     svg.push_str("<marker id=\"triangle\" markerWidth=\"13\" markerHeight=\"11\" refX=\"12\" refY=\"5.5\" orient=\"auto-start-reverse\" markerUnits=\"userSpaceOnUse\"><path d=\"M1,1 L12,5.5 L1,10 Z\" fill=\"white\" stroke=\"context-stroke\" stroke-width=\"1.5\"/></marker>");
     svg.push_str("<marker id=\"open-diamond\" markerWidth=\"17\" markerHeight=\"11\" refX=\"1\" refY=\"5.5\" orient=\"auto\" markerUnits=\"userSpaceOnUse\"><path d=\"M1,5.5 L8,1 L16,5.5 L8,10 Z\" fill=\"white\" stroke=\"context-stroke\" stroke-width=\"1.5\"/></marker>");
     svg.push_str("<marker id=\"filled-diamond\" markerWidth=\"17\" markerHeight=\"11\" refX=\"1\" refY=\"5.5\" orient=\"auto\" markerUnits=\"userSpaceOnUse\"><path d=\"M1,5.5 L8,1 L16,5.5 L8,10 Z\" fill=\"context-stroke\"/></marker>");

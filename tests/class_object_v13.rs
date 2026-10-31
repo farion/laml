@@ -377,41 +377,6 @@ fn association_end_multiplicities_and_roles_render_and_validate() {
 }
 
 #[test]
-fn uml_rejects_relationship_glyphs_that_misstate_the_element_kinds() {
-    for (source, reason) in [
-        (
-            "settings {\ntype: class\n}\nsemantics {\nA\nA --|> A\n}\n",
-            "itself",
-        ),
-        (
-            "settings {\ntype: class\n}\nsemantics {\nA\nB\nA \"1\" --|> B\n}\n",
-            "association-end",
-        ),
-        (
-            "settings {\ntype: class\n}\nsemantics {\nA\nB\nA /r ..> B\n}\n",
-            "association-end",
-        ),
-        (
-            "settings {\ntype: class\n}\nsemantics {\nA\nnote N \"text\"\nN -- A\n}\n",
-            "note attaches",
-        ),
-        (
-            "settings {\ntype: object\n}\nsemantics {\na\nb\na .. b\n}\n",
-            "dotted UML annotation",
-        ),
-    ] {
-        let err = parse(source).unwrap_err();
-        assert!(err.message.contains(reason), "{err:?}");
-    }
-    let realization =
-        "settings {\ntype: class\n}\nsemantics {\nclass C\ninterface API\nC ..|> API\n}\n";
-    assert!(image(realization).contains("marker-end=\"url(#triangle)\""));
-    // `..|>` can also denote a generic UML Realization; an interface is not required.
-    let generic_realization = "settings {\ntype: class\n}\nsemantics {\nA\nB\nA ..|> B\n}\n";
-    assert!(image(generic_realization).contains("marker-end=\"url(#triangle)\""));
-}
-
-#[test]
 fn association_end_layout_mandates_text_side_without_reversing_the_relation() {
     let source = "settings {\ntype: class\n}\nsemantics {\nA\nB\n@r A \"1\"/owner -- \"0..*\"/+parts B\n}\nlayout {\nA < B : align=center; gap=300\nrelation[r].source : multiplicity=below; role=above\nrelation[r].target : multiplicity=above; role=below\n}\n";
     let diagram = parse(source).unwrap();

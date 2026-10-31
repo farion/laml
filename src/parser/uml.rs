@@ -85,14 +85,19 @@ pub(super) fn validate_relation(
             "association-end roles and multiplicities require an association",
         ));
     }
-    if relation.appearance.end == EndSymbol::Triangle
-        && !relation.appearance.dashed
-        && relation.from == relation.to
-    {
-        return Err(error(
-            relation.line,
-            "a classifier cannot generalize itself",
-        ));
+    if relation.appearance.end == EndSymbol::Triangle && !relation.appearance.dashed {
+        if relation.from == relation.to {
+            return Err(error(
+                relation.line,
+                "a classifier cannot generalize itself",
+            ));
+        }
+        if from.kind != to.kind || matches!(from.kind, NodeKind::Association | NodeKind::Package) {
+            return Err(error(
+                relation.line,
+                "unsupported generalization between different UML classifier kinds",
+            ));
+        }
     }
     Ok(())
 }

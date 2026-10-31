@@ -212,6 +212,16 @@ fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {
                 .iter()
                 .find(|relation| relation.name.as_deref() == Some(attachments[0].target.as_str()))
                 .expect("checked named relation");
+            if target
+                .label
+                .as_deref()
+                .is_some_and(|label| label != node.label.as_deref().unwrap_or(&node.id))
+            {
+                return Err(error(
+                    attachments[0].line,
+                    "association class and association path must have the same visible name",
+                ));
+            }
             if target.appearance.dashed
                 || target.appearance.start != crate::syntax::EndSymbol::None
                 || target.appearance.end != crate::syntax::EndSymbol::None
