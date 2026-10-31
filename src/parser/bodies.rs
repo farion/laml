@@ -59,6 +59,7 @@ pub(super) fn node(
     super::state::validate_node(diagram, kind, parent, block, visibility, &stereotypes, line)?;
     super::activity::validate_node(diagram, kind, parent, block, visibility, &stereotypes, line)?;
     super::usecase::node(diagram, kind, parent, block, visibility, &stereotypes, line)?;
+    super::package_diagram::node(diagram, kind, parent, visibility, &stereotypes, line)?;
     if kind == NodeKind::AssociationClass && diagram.settings.diagram_type != DiagramType::Class {
         return Err(error(line, "association class requires type: class"));
     }
@@ -80,7 +81,8 @@ pub(super) fn node(
     if kind == NodeKind::ComponentPart && block {
         return Err(error(line, "part cannot have a body"));
     }
-    if kind == NodeKind::Package && !block {
+    if kind == NodeKind::Package && !block && diagram.settings.diagram_type != DiagramType::Package
+    {
         return Err(error(line, "package requires a nested declaration block"));
     }
     if visibility.is_some() && matches!(kind, NodeKind::Object | NodeKind::Note) {

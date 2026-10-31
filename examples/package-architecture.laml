@@ -1,0 +1,16 @@
+settings {
+    type: package
+}
+semantics {
+    package Shop {
+        package API
+        package Orders
+        package Pricing
+        Orders ..> Pricing
+    }
+    package Payments
+    package Common
+    Shop.API ..> Payments <<import>>
+    Shop.Orders ..> Common <<access>>
+    Shop.Pricing ..> Common <<merge>>
+}

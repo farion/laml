@@ -23,6 +23,7 @@ mod layout;
 mod member_notation;
 mod node_kinds;
 mod node_modifiers;
+mod package_diagram;
 mod part_types;
 mod port_bodies;
 mod references;
@@ -85,6 +86,7 @@ fn prescan_type(source: &str) -> DiagramType {
                 "state" => DiagramType::State,
                 "activity" => DiagramType::Activity,
                 "usecase" => DiagramType::UseCase,
+                "package" => DiagramType::Package,
                 _ => DiagramType::Generic,
             };
         }
@@ -368,6 +370,7 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
     state::validate(&diagram)?;
     activity::validate(&diagram)?;
     usecase::validate(&diagram)?;
+    package_diagram::validate(&diagram)?;
     Ok(diagram)
 }
 
@@ -472,6 +475,7 @@ fn parse_setting(
                 "state" => DiagramType::State,
                 "activity" => DiagramType::Activity,
                 "usecase" => DiagramType::UseCase,
+                "package" => DiagramType::Package,
                 _ => return Err(error(line, "invalid graph diagram type")),
             }
         }

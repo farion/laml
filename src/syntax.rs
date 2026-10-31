@@ -30,6 +30,7 @@ pub enum DiagramType {
     State,
     Activity,
     UseCase,
+    Package,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

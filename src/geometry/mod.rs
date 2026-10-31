@@ -90,6 +90,24 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
         }
     }
     for node in &mut boxes {
+        if diagram.settings.diagram_type == crate::syntax::DiagramType::Package
+            && node.kind == NodeKind::Package
+            && !diagram
+                .nodes
+                .iter()
+                .any(|child| child.parent.as_deref() == Some(node.id.as_str()))
+        {
+            node.is_container = false;
+            let required =
+                14.0 + node.padding * 2.0 + node.font_size * 1.25 * node.lines.len() as f64 + 4.0;
+            if node.fixed_height.is_some_and(|height| height < required) {
+                return Err(GeometryError {
+                    line: node.line,
+                    message: "fixed leaf package cannot fit its name in the body".into(),
+                });
+            }
+            node.height = node.height.max(required);
+        }
         if (node.kind == NodeKind::Component
             || node.kind == NodeKind::State
             || node.kind == NodeKind::UseCaseSystem

@@ -133,6 +133,9 @@ pub(super) fn validate_relation(
     if diagram.settings.diagram_type == DiagramType::UseCase {
         return super::usecase::relation(relation, from, to);
     }
+    if diagram.settings.diagram_type == DiagramType::Package {
+        return super::package_diagram::relation(diagram, relation, from, to);
+    }
     if member_end {
         return Err(error(
             relation.line,

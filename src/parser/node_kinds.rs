@@ -86,7 +86,8 @@ pub(super) fn classify<'a>(
             DiagramType::Deployment
             | DiagramType::State
             | DiagramType::Activity
-            | DiagramType::UseCase => (NodeKind::Generic, source),
+            | DiagramType::UseCase
+            | DiagramType::Package => (NodeKind::Generic, source),
         }
     }
 }
@@ -122,6 +123,7 @@ pub(super) fn allowed(kind: NodeKind, ty: DiagramType) -> bool {
     match ty {
         DiagramType::Activity => activity || kind == NodeKind::Note,
         DiagramType::UseCase => usecase || kind == NodeKind::Note,
+        DiagramType::Package => matches!(kind, NodeKind::Package | NodeKind::Note),
         DiagramType::Object => matches!(kind, NodeKind::Object | NodeKind::Note),
         DiagramType::Component => matches!(
             kind,

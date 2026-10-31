@@ -40,7 +40,7 @@ SVG defaults to embedded Inter Regular with selectable text; diagrams with abstr
 
 ## Examples
 
-These four larger showcases cover generic, class, object and sequence diagrams. Focused component, deployment, state, activity and use-case examples follow below. Each has a source link. Click an image to inspect it at full size; the examples are executable `.laml` files built by LAML. Each also builds as SVG and vector PDF.
+These four larger showcases cover generic, class, object and sequence diagrams. Focused component, deployment, state, activity, use-case and package examples follow below. Each has a source link. Click an image to inspect it at full size; the examples are executable `.laml` files built by LAML. Each also builds as SVG and vector PDF.
 
 ### Generic node-edge diagram · [source](examples/showcase-generic.laml)
 
@@ -145,6 +145,12 @@ Control and object flows are distinct in the source but share UML's directed-arr
 
 Actor associations, use-case `«include»` / `«extend»` dependencies and same-kind generalization have checked endpoints and directions. See the [use-case guide](docs/usecase-diagrams.md) and [notation audit](docs/uml-usecase-conformance.md).
 
+### UML package diagram · [architecture example](examples/package-architecture.laml)
+
+[![Shop package with contained API, Orders and Pricing packages; public import, private access, merge and unmarked dependency to external packages](docs/images/package-architecture.png)](examples/package-architecture.laml)
+
+Package import (`«import»`), private access (`«access»`), package merge (`«merge»`) and an unmarked dependency remain distinct; no namespace or merge behavior is executed. See the [package-diagram guide](docs/package-diagrams.md) and [notation audit](docs/uml-package-conformance.md).
+
 Set `type: sequence` in `settings` to use the sequence grammar. Sequence diagrams use the same SVG/PNG/vector-PDF export commands; their node, message, fragment, annotation, gate and ordering visuals are styled with LSS. Start with the [sequence-diagram guide](docs/sequence-diagrams.md), then use the [syntax reference](docs/language-reference.md#sequence-diagrams) and [UML 2.5.1 notation audit](docs/uml-sequence-conformance.md). The outer UML `sd` interaction frame is intentionally deferred; divergent open executions at fragment joins are rejected rather than implicitly resolved.
 
 Build any example with `cargo run -- build examples/NAME.laml`. The output filename selects the format (`.svg`, `.png`, or `.pdf`). SVG text modes are selected with `--svg-text=embedded|system|paths` after the optional output filename. The README images are generated with `cargo run -- build examples/NAME.laml docs/images/NAME.png`. Source files and matching images are tested together.
@@ -163,6 +169,7 @@ Build any example with `cargo run -- build examples/NAME.laml`. The output filen
 - Behavior state diagrams with rounded states, initial/final and choice symbols, guarded transitions, entry/do/exit text and one-region composite states; strings are displayed, never executed.
 - Activity diagrams with visible action pins and object nodes, explicit control/object flows, distinct decision/merge and fork/join, and activity/flow finals; no token execution.
 - Use-case diagrams with external stick-figure actors, scoped ellipses inside a system boundary, checked associations, `«include»`, `«extend»` and generalization.
+- Package diagrams with nested packages, leaf folder notation, and distinct checked dependencies, public/private imports and merges.
 - Generic node-edge shapes, nested containers, styled members, boundary ports, optional icons, named edge attachments and conditional icon-license metadata.
 - Separate sequence grammar with lifelines, calls and replies, creation/deletion, fragments, interaction uses, annotations, coregions, inline part decompositions and mandatory layout constraints.
 - `check`, `build`, and `update` commands, source-linked diagnostics, and conformance tests for deterministic and mandatory geometry.
@@ -197,6 +204,8 @@ The test suite includes buildable examples, export formats, mandatory geometry, 
 - [UML activity notation audit and limits](docs/uml-activity-conformance.md)
 - [Use-case diagram guide](docs/usecase-diagrams.md)
 - [UML use-case notation audit and limits](docs/uml-usecase-conformance.md)
+- [Package-diagram guide](docs/package-diagrams.md)
+- [UML package notation audit and limits](docs/uml-package-conformance.md)
 - [UML deployment notation audit and limits](docs/uml-deployment-conformance.md)
 - [UML component notation audit and limits](docs/uml-component-conformance.md)
 - [UML class/object notation audit and limits](docs/uml-class-object-conformance.md)
