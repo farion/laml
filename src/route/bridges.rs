@@ -282,6 +282,7 @@ mod tests {
     fn perpendicular_center_crossing_belongs_to_later_route() {
         let first = Route {
             points: vec![p(0.0, 100.0), p(200.0, 100.0)],
+            qualifiers: vec![],
             bridges: vec![],
             gaps: vec![],
             label: None,
@@ -307,6 +308,7 @@ mod tests {
     fn close_to_endpoint_is_not_silently_bridged() {
         let first = Route {
             points: vec![p(0.0, 100.0), p(200.0, 100.0)],
+            qualifiers: vec![],
             bridges: vec![],
             gaps: vec![],
             label: None,

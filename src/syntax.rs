@@ -157,6 +157,7 @@ pub struct EdgeAppearance {
 pub struct EndAnnotation {
     pub multiplicity: Option<String>,
     pub role: Option<String>,
+    pub qualifier: Option<Vec<String>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

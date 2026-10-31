@@ -96,9 +96,9 @@ pub(super) fn parse_semantic(
         });
         return Ok(());
     }
-    if !matches!(tokens.len(), 3..=5)
-        || !matches!(operator_index, 1 | 2)
-        || !matches!(tokens.len() - operator_index - 1, 1 | 2)
+    if !matches!(tokens.len(), 3..=9)
+        || !(1..=4).contains(&operator_index)
+        || !(1..=4).contains(&(tokens.len() - operator_index - 1))
         || !valid_reference(tokens[0])
         || !valid_reference(tokens[tokens.len() - 1])
     {
@@ -106,20 +106,16 @@ pub(super) fn parse_semantic(
     }
     let (kind, appearance, reversed) =
         graph_operators::parse(tokens[operator_index], diagram.settings.diagram_type, line)?;
-    let first_end = if operator_index == 2 {
-        ends::parse(tokens[1], line, diagram.settings.diagram_type)?
-    } else {
-        Default::default()
-    };
-    let second_end = if tokens.len() - operator_index == 3 {
-        ends::parse(
-            tokens[operator_index + 1],
-            line,
-            diagram.settings.diagram_type,
-        )?
-    } else {
-        Default::default()
-    };
+    let first_end = ends::parse_tokens(
+        &tokens[1..operator_index],
+        line,
+        diagram.settings.diagram_type,
+    )?;
+    let second_end = ends::parse_tokens(
+        &tokens[operator_index + 1..tokens.len() - 1],
+        line,
+        diagram.settings.diagram_type,
+    )?;
     let (from, to, source_end, target_end) = if reversed {
         (tokens[tokens.len() - 1], tokens[0], second_end, first_end)
     } else {

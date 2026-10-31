@@ -11,9 +11,11 @@ mod end_labels;
 mod geometry;
 mod labels;
 mod parallel;
+mod qualifiers;
 mod self_loops;
 use geometry::{center, member_port, port, route_is_clear};
 use labels::{label_along, label_inline, label_near};
+pub use qualifiers::QualifierBox;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Point {
@@ -33,6 +35,7 @@ pub struct Label {
 #[derive(Clone, Debug)]
 pub struct Route {
     pub points: Vec<Point>,
+    pub qualifiers: Vec<QualifierBox>,
     pub bridges: Vec<Bridge>,
     pub gaps: Vec<Gap>,
     pub label: Option<Label>,
@@ -259,7 +262,22 @@ pub fn route(
         let label_line = label_rule.map_or(relation.line, |rule| rule.line);
         let mut choice = None;
         let mut label_error = None;
-        for points in options {
+        for mut points in options {
+            let qualifier_boxes = match qualifiers::attach(
+                relation,
+                &mut points,
+                boxes,
+                from,
+                to,
+                font_size,
+                &routed,
+            ) {
+                Ok(boxes) => boxes,
+                Err(message) => {
+                    label_error = Some(message);
+                    continue;
+                }
+            };
             if !route_is_clear(&points, boxes, &routed) {
                 continue;
             }
@@ -293,6 +311,14 @@ pub fn route(
                     continue;
                 }
             };
+            if label.iter().any(|label| {
+                qualifier_boxes
+                    .iter()
+                    .any(|q| q.overlaps(label.x, label.y, label.width, label.height))
+            }) {
+                label_error = Some("qualifier overlaps relation label".into());
+                continue;
+            }
             if label_gap.as_ref().is_some_and(|gap| {
                 plan.events.iter().any(|(_, bridge, _)| {
                     bridge.segment == gap.segment
@@ -321,14 +347,23 @@ pub fn route(
                     continue;
                 }
             };
-            choice = Some((points, label, end_labels, label_gap, plan));
+            if end_labels.iter().any(|label| {
+                qualifier_boxes
+                    .iter()
+                    .any(|q| q.overlaps(label.x, label.y, label.width, label.height))
+            }) {
+                label_error = Some("qualifier overlaps association-end text".into());
+                continue;
+            }
+            choice = Some((points, qualifier_boxes, label, end_labels, label_gap, plan));
             break;
         }
-        let (points,label,end_labels,label_gap,plan) = choice.ok_or_else(|| RouteError { line: if label_error.is_some() {label_line} else {relation.line},
+        let (points,qualifier_boxes,label,end_labels,label_gap,plan) = choice.ok_or_else(|| RouteError { line: if label_error.is_some() {label_line} else {relation.line},
             message: label_error.unwrap_or_else(|| "bounded router cannot avoid nodes/relations or make a safe bridge for the selected ports".into()) })?;
         let new_bridges = plan.apply(&mut routed);
         routed.push(Route {
             points,
+            qualifiers: qualifier_boxes,
             bridges: new_bridges,
             gaps: label_gap.into_iter().collect(),
             label,

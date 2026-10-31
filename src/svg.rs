@@ -108,6 +108,22 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
         for &point in &route.points {
             include_point(point, &mut bounds);
         }
+        for qualifier in &route.qualifiers {
+            include_point(
+                Point {
+                    x: qualifier.x,
+                    y: qualifier.y,
+                },
+                &mut bounds,
+            );
+            include_point(
+                Point {
+                    x: qualifier.x + qualifier.width,
+                    y: qualifier.y + qualifier.height,
+                },
+                &mut bounds,
+            );
+        }
         for bridge in &route.bridges {
             let pair = &route.points[bridge.segment..=bridge.segment + 1];
             let dx = pair[1].x - pair[0].x;
@@ -354,6 +370,17 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
             }
         }
         svg.push_str("</g>\n");
+    }
+    for route in routes {
+        for qualifier in &route.qualifiers {
+            writeln!(svg,"<rect x=\"{:.2}\" y=\"{:.2}\" width=\"{:.2}\" height=\"{:.2}\" fill=\"white\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
+                qualifier.x, qualifier.y, qualifier.width, qualifier.height, route.color, route.width/2.0).unwrap();
+            for (index, line) in qualifier.lines.iter().enumerate() {
+                writeln!(svg,"<text x=\"{:.2}\" y=\"{:.2}\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\">{}</text>",
+                    qualifier.x+qualifier.width/2.0,qualifier.y+5.0+qualifier.font_size*1.25*(index as f64+0.78),
+                    qualifier.font_size,route.color,escape(line)).unwrap();
+            }
+        }
     }
     svg.push_str("</svg>\n");
     Ok(svg)

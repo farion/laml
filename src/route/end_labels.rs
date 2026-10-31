@@ -89,9 +89,13 @@ fn place_one(
         }
         if context.previous.iter().any(|route| {
             route
-                .label
-                .as_ref()
-                .is_some_and(|label| overlaps(x, y, width, height, label))
+                .qualifiers
+                .iter()
+                .any(|q| q.overlaps(x, y, width, height))
+                || route
+                    .label
+                    .as_ref()
+                    .is_some_and(|label| overlaps(x, y, width, height, label))
                 || route
                     .end_labels
                     .iter()

@@ -44,7 +44,7 @@ pub(super) fn validate_relation(
     let note_end = from.kind == NodeKind::Note || to.kind == NodeKind::Note;
     let end_label = [&relation.source_end, &relation.target_end]
         .iter()
-        .any(|end| end.multiplicity.is_some() || end.role.is_some());
+        .any(|end| end.multiplicity.is_some() || end.role.is_some() || end.qualifier.is_some());
     let unmarked_dotted = relation.appearance.dashed
         && relation.appearance.start == EndSymbol::None
         && relation.appearance.end == EndSymbol::None;

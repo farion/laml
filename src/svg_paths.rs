@@ -100,6 +100,7 @@ mod tests {
     fn sample() -> Route {
         Route {
             points: vec![p(0.0, 0.0), p(200.0, 0.0)],
+            qualifiers: vec![],
             bridges: vec![],
             gaps: vec![],
             label: None,

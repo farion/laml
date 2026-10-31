@@ -276,6 +276,8 @@ fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {
                 || !relation.stereotypes.is_empty()
                 || junction_end.multiplicity.is_some()
                 || junction_end.role.is_some()
+                || relation.source_end.qualifier.is_some()
+                || relation.target_end.qualifier.is_some()
             {
                 return Err(error(
                     relation.line,

@@ -1,7 +1,52 @@
 //! Optional textual adornments at association ends.
 use super::{ParseError, error};
-use crate::lex::{quoted_string, valid_identifier};
+use crate::lex::{quoted_string, split_top_level, valid_identifier, valid_reference};
 use crate::syntax::{DiagramType, EndAnnotation};
+
+pub(super) fn parse_tokens(
+    tokens: &[&str],
+    line: usize,
+    diagram_type: DiagramType,
+) -> Result<EndAnnotation, ParseError> {
+    let mut result = EndAnnotation::default();
+    for token in tokens {
+        if let Some(body) = token
+            .strip_prefix("qualifier(")
+            .and_then(|rest| rest.strip_suffix(')'))
+        {
+            if diagram_type == DiagramType::Object || result.qualifier.is_some() {
+                return Err(error(line, "duplicate or unsupported qualifier"));
+            }
+            let fields: Vec<_> = split_top_level(body, ',')
+                .into_iter()
+                .map(|entry| {
+                    let (name, ty) = entry
+                        .trim()
+                        .split_once(':')
+                        .ok_or_else(|| error(line, "qualifier attribute requires name:Type"))?;
+                    if !valid_identifier(name.trim()) || !valid_reference(ty.trim()) {
+                        return Err(error(line, "invalid qualifier attribute"));
+                    }
+                    Ok(format!("{}: {}", name.trim(), ty.trim()))
+                })
+                .collect::<Result<_, ParseError>>()?;
+            if fields.is_empty() {
+                return Err(error(line, "empty qualifier"));
+            }
+            result.qualifier = Some(fields);
+        } else {
+            let adornment = parse(token, line, diagram_type)?;
+            if (result.multiplicity.is_some() && adornment.multiplicity.is_some())
+                || (result.role.is_some() && adornment.role.is_some())
+            {
+                return Err(error(line, "duplicate association end annotation"));
+            }
+            result.multiplicity = result.multiplicity.or(adornment.multiplicity);
+            result.role = result.role.or(adornment.role);
+        }
+    }
+    Ok(result)
+}
 
 pub(super) fn parse(
     text: &str,
@@ -56,7 +101,11 @@ pub(super) fn parse(
             }
         })
         .transpose()?;
-    Ok(EndAnnotation { multiplicity, role })
+    Ok(EndAnnotation {
+        multiplicity,
+        role,
+        qualifier: None,
+    })
 }
 
 fn valid_multiplicity(text: &str) -> bool {

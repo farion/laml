@@ -214,7 +214,16 @@ pub(super) fn route_is_clear(points: &[Point], boxes: &[BoxNode], previous: &[Ro
             return false;
         }
         for route in previous {
-            if route
+            if route.qualifiers.iter().any(|qualifier| {
+                segment_hits_rect(
+                    pair[0],
+                    pair[1],
+                    qualifier.x,
+                    qualifier.y,
+                    qualifier.width,
+                    qualifier.height,
+                )
+            }) || route
                 .label
                 .iter()
                 .chain(route.end_labels.iter())

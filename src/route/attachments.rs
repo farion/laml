@@ -112,6 +112,7 @@ pub(super) fn route_attachments(
         let bridges = plan.apply(routed);
         routed.push(Route {
             points,
+            qualifiers: Vec::new(),
             bridges,
             gaps: Vec::<Gap>::new(),
             label: None,

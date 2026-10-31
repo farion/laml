@@ -127,9 +127,10 @@ fn label_clear(
         return false;
     }
     if previous.iter().any(|r| {
-        [r.points[0], *r.points.last().unwrap()]
-            .iter()
-            .any(|p| near_marker(x, y, w, h, *p, r.width))
+        r.qualifiers.iter().any(|q| q.overlaps(x, y, w, h))
+            || [r.points[0], *r.points.last().unwrap()]
+                .iter()
+                .any(|p| near_marker(x, y, w, h, *p, r.width))
             || r.label.as_ref().is_some_and(|other| overlaps(label, other))
             || r.end_labels.iter().any(|other| overlaps(label, other))
             || r.points
