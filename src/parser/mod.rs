@@ -61,6 +61,16 @@ enum Section {
 }
 
 pub fn parse(source: &str) -> Result<Diagram, ParseError> {
+    if prescan_type(source) == DiagramType::Communication {
+        return Err(error(
+            1,
+            "communication source requires communication::parse for numbered messages",
+        ));
+    }
+    parse_document(source, false)
+}
+
+pub(crate) fn parse_communication_graph(source: &str) -> Result<Diagram, ParseError> {
     parse_document(source, false)
 }
 
@@ -87,6 +97,7 @@ fn prescan_type(source: &str) -> DiagramType {
                 "activity" => DiagramType::Activity,
                 "usecase" => DiagramType::UseCase,
                 "package" => DiagramType::Package,
+                "communication" => DiagramType::Communication,
                 _ => DiagramType::Generic,
             };
         }
@@ -476,6 +487,7 @@ fn parse_setting(
                 "activity" => DiagramType::Activity,
                 "usecase" => DiagramType::UseCase,
                 "package" => DiagramType::Package,
+                "communication" => DiagramType::Communication,
                 _ => return Err(error(line, "invalid graph diagram type")),
             }
         }

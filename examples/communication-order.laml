@@ -1,0 +1,19 @@
+settings {
+    type: communication
+    interaction: Checkout
+}
+semantics {
+    object Buyer(of=Customer)
+    object Shop(of=Store)
+    object Payment(of=Gateway)
+    Buyer -- Shop
+    Shop -- Payment
+    message 1 Buyer --> Shop : placeOrder()
+    message 1.1 Shop --> Payment : authorize()
+    message 1.2 Payment --> Shop : approved()
+    message 2 Shop --> Buyer : confirmation()
+}
+layout {
+    Buyer < Shop : gap=220; align=center
+    Shop < Payment : gap=220; align=center
+}

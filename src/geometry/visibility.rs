@@ -79,9 +79,13 @@ pub(crate) fn filtered(diagram: &Diagram, sheet: &StyleSheet) -> Result<Diagram,
             });
         }
     }
-    if diagram.settings.diagram_type == DiagramType::Activity {
+    if matches!(
+        diagram.settings.diagram_type,
+        DiagramType::Activity | DiagramType::Communication
+    ) {
         for relation in &diagram.relations {
-            if relation.activity_flow.is_some()
+            if (relation.activity_flow.is_some()
+                || diagram.settings.diagram_type == DiagramType::Communication)
                 && hidden(
                     sheet,
                     &Element::Relation {
@@ -92,7 +96,12 @@ pub(crate) fn filtered(diagram: &Diagram, sheet: &StyleSheet) -> Result<Diagram,
             {
                 return Err((
                     relation.line,
-                    "activity control and object flows must remain visible".into(),
+                    if diagram.settings.diagram_type == DiagramType::Activity {
+                        "activity control and object flows must remain visible"
+                    } else {
+                        "communication links must remain visible"
+                    }
+                    .into(),
                 ));
             }
         }

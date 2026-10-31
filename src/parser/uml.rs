@@ -136,6 +136,27 @@ pub(super) fn validate_relation(
     if diagram.settings.diagram_type == DiagramType::Package {
         return super::package_diagram::relation(diagram, relation, from, to);
     }
+    if diagram.settings.diagram_type == DiagramType::Communication {
+        if from.kind != NodeKind::Object
+            || to.kind != NodeKind::Object
+            || from.id == to.id
+            || relation.from != from.id
+            || relation.to != to.id
+            || relation.label.is_some()
+            || relation.appearance.dashed
+            || relation.appearance.start != EndSymbol::None
+            || relation.appearance.end != EndSymbol::None
+            || !relation.stereotypes.is_empty()
+            || relation.source_end != Default::default()
+            || relation.target_end != Default::default()
+        {
+            return Err(error(
+                relation.line,
+                "communication link requires two distinct lifelines joined by an unmarked -- line",
+            ));
+        }
+        return Ok(());
+    }
     if member_end {
         return Err(error(
             relation.line,

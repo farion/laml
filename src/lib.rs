@@ -6,6 +6,7 @@
 //! semantic relation for routing. Hard layout rules are separate and
 //! must never be discarded this way.
 
+pub mod communication;
 pub mod export;
 mod export_metadata;
 pub mod geometry;
