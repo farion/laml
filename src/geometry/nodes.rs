@@ -214,12 +214,16 @@ pub fn measure_node(
                 "UML template corner and boundary ports need separate collision geometry".into(),
             );
         }
-        let suffix = format!("<{}>", node.templates.join(", "));
+        let signature = node
+            .template_signature
+            .as_deref()
+            .ok_or("missing template signature")?;
+        let suffix = format!("<{signature}>");
         name = name
             .strip_suffix(&suffix)
             .ok_or("template heading does not match parameters")?
             .into();
-        Some(node.templates.join(", "))
+        Some(signature.to_string())
     } else {
         None
     };

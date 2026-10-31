@@ -20,6 +20,7 @@ mod member_notation;
 mod references;
 mod selectors;
 mod stereotypes;
+mod template_formals;
 mod uml;
 use layout::{parse_layout, parse_port_side, parse_relation_end, parse_relation_label};
 use selectors::validate_selector;

@@ -114,6 +114,7 @@ pub(super) fn expand(
             abstract_node: false,
             visibility: None,
             templates: Vec::new(),
+            template_signature: None,
             note_lines: None,
             parts: Vec::new(),
             ports: Vec::new(),

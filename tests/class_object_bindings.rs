@@ -20,6 +20,30 @@ fn template_binding_validates_declared_formals_and_exports_visible_substitution(
 }
 
 #[test]
+fn template_formals_show_optional_kind_and_default_in_the_corner() {
+    let source = SOURCE.replace("Repository<T>", "Repository<T:Class=String, U:DataType>");
+    let diagram = parse(&source).unwrap();
+    assert_eq!(diagram.nodes[0].templates, ["T", "U"]);
+    let styles = StyleSheet::default();
+    let boxes = place(&diagram, &styles).unwrap();
+    let routed = route(&diagram, &boxes, &styles).unwrap();
+    let svg = render(&boxes, &routed).unwrap();
+    assert!(svg.contains("T:Class=String, U:DataType"));
+    assert!(svg.contains("stroke-dasharray=\"4 3\""));
+    assert!(export::png(&svg).is_ok());
+    assert!(export::pdf(&svg).is_ok());
+    for bad in [
+        "Repository<T:>",
+        "Repository<T=>",
+        "Repository<T:Class=??>",
+        "Repository<T,U:DataType,T>",
+    ] {
+        let source = SOURCE.replace("Repository<T>", bad);
+        assert!(parse(&source).is_err(), "{bad}");
+    }
+}
+
+#[test]
 fn binding_rejects_unknown_or_duplicate_formals_and_non_template_targets() {
     for (bad, expected) in [
         (

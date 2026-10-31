@@ -123,36 +123,10 @@ pub(super) fn node(
     if anonymous && (kind != NodeKind::Object || explicit_id.is_none()) {
         return Err(error(line, "anonymous object requires an explicit @id"));
     }
-    let (prepared, templates) = if kind == NodeKind::Class && name.contains('<') {
-        let open = name.find('<').expect("contains checked");
-        let close = name[open + 1..]
-            .find('>')
-            .ok_or_else(|| error(line, "unclosed template parameters"))?
-            + open
-            + 1;
-        let list = &name[open + 1..close];
-        let names: Vec<_> = list.split(',').map(str::trim).collect();
-        if names.is_empty()
-            || names.iter().any(|name| !valid_identifier(name))
-            || names
-                .iter()
-                .enumerate()
-                .any(|(index, name)| names[..index].contains(name))
-        {
-            return Err(error(line, "invalid or duplicate template parameter"));
-        }
-        let suffix = &name[close + 1..];
-        if !suffix.is_empty() && !suffix.starts_with('(') {
-            return Err(error(line, "unexpected text after template parameters"));
-        }
-        let mut prepared = name[..open].to_string();
-        prepared.push_str(suffix);
-        (
-            prepared,
-            names.into_iter().map(str::to_string).collect::<Vec<_>>(),
-        )
+    let (prepared, templates, template_signature) = if kind == NodeKind::Class {
+        super::template_formals::parse(name, line)?
     } else {
-        (name.to_string(), Vec::new())
+        (name.to_string(), Vec::new(), None)
     };
     let (name, attrs) = attributes(&prepared, line)?;
     if name.is_empty() && !anonymous && !matches!(kind, NodeKind::Association | NodeKind::Junction)
@@ -173,6 +147,7 @@ pub(super) fn node(
         abstract_node,
         visibility,
         templates: templates.clone(),
+        template_signature: template_signature.clone(),
         note_lines: if block && kind == NodeKind::Note {
             Some(Vec::new())
         } else {
@@ -214,7 +189,10 @@ pub(super) fn node(
         });
     } else if !templates.is_empty() {
         let shown = result.label.take().unwrap_or(name);
-        result.label = Some(format!("{shown}<{}>", templates.join(", ")));
+        result.label = Some(format!(
+            "{shown}<{}>",
+            template_signature.as_deref().unwrap_or_default()
+        ));
     } else if result.label.is_none() && result.id != name {
         result.label = Some(name);
     }
