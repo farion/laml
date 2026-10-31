@@ -68,6 +68,31 @@ pub(super) fn parse_semantic(
     let Some(operator_index) = operator_index else {
         return Err(error(line, "expected a relationship operator"));
     };
+    if tokens.len() == 3 && tokens[2].starts_with("relation[") {
+        let target = tokens[2]
+            .strip_prefix("relation[")
+            .and_then(|value| value.strip_suffix(']'))
+            .ok_or_else(|| error(line, "invalid relation[id] attachment target"))?;
+        if !valid_identifier(target)
+            || !valid_reference(tokens[0])
+            || tokens[1] != ".."
+            || label.is_some()
+            || !stereotypes.is_empty()
+        {
+            return Err(error(
+                line,
+                "edge attachments require Node .. relation[id] without end adornments or label",
+            ));
+        }
+        diagram.attachments.push(crate::syntax::EdgeAttachment {
+            name,
+            classes: relation_classes,
+            source: tokens[0].into(),
+            target: target.into(),
+            line,
+        });
+        return Ok(());
+    }
     if !matches!(tokens.len(), 3..=5)
         || !matches!(operator_index, 1 | 2)
         || !matches!(tokens.len() - operator_index - 1, 1 | 2)

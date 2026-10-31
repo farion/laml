@@ -113,6 +113,18 @@ pub(super) fn plan(
     to: usize,
     width: f64,
 ) -> Option<BridgePlan> {
+    plan_except(points, boxes, previous, from, to, width, None)
+}
+
+pub(super) fn plan_except(
+    points: &[Point],
+    boxes: &[BoxNode],
+    previous: &[Route],
+    from: usize,
+    to: usize,
+    width: f64,
+    attachment: Option<usize>,
+) -> Option<BridgePlan> {
     let mut events: Vec<(usize, Bridge, Gap)> = Vec::new();
     for (segment, pair) in points.windows(2).enumerate() {
         let new_dir = subtract(pair[1], pair[0]);
@@ -121,6 +133,9 @@ pub(super) fn plan(
             continue;
         }
         for (older_index, route) in previous.iter().enumerate() {
+            if attachment == Some(older_index) {
+                continue;
+            }
             for (old_segment, old) in route.points.windows(2).enumerate() {
                 if !crosses(pair[0], pair[1], old[0], old[1]) {
                     continue;

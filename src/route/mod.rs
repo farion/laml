@@ -5,6 +5,7 @@ use crate::geometry::BoxNode;
 use crate::styles::{Element, StyleSheet, Value};
 use crate::syntax::{Diagram, LabelPlacement, RelationDecl};
 
+mod attachments;
 mod bridges;
 mod end_labels;
 mod geometry;
@@ -342,6 +343,7 @@ pub fn route(
             appearance: relation.appearance,
         });
     }
+    attachments::route_attachments(diagram, boxes, sheet, &mut routed)?;
     Ok(routed)
 }
 

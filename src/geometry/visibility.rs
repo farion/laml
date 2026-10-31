@@ -29,6 +29,43 @@ pub(crate) fn filtered(diagram: &Diagram, sheet: &StyleSheet) -> Result<Diagram,
             },
         )
     });
+    visible.attachments.retain(|attachment| {
+        !hidden(
+            sheet,
+            &Element::Relation {
+                name: attachment.name.as_deref(),
+                classes: &attachment.classes,
+            },
+        )
+    });
+    for attachment in &visible.attachments {
+        if !visible
+            .nodes
+            .iter()
+            .any(|node| node.id == attachment.source)
+        {
+            return Err((
+                attachment.line,
+                format!(
+                    "visible edge attachment targets hidden node '{}'",
+                    attachment.source
+                ),
+            ));
+        }
+        if !visible
+            .relations
+            .iter()
+            .any(|relation| relation.name.as_deref() == Some(attachment.target.as_str()))
+        {
+            return Err((
+                attachment.line,
+                format!(
+                    "visible edge attachment targets hidden relation '{}'",
+                    attachment.target
+                ),
+            ));
+        }
+    }
     for rule in &visible.layout {
         for id in [&rule.first, &rule.second] {
             if !visible.nodes.iter().any(|node| &node.id == id) {

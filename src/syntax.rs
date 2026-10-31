@@ -170,6 +170,15 @@ pub struct RelationDecl {
     pub line: usize,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct EdgeAttachment {
+    pub name: Option<String>,
+    pub classes: Vec<String>,
+    pub source: String,
+    pub target: String,
+    pub line: usize,
+}
+
 impl RelationDecl {
     pub fn display_label(&self) -> Option<String> {
         if self.stereotypes.is_empty() {
@@ -283,6 +292,7 @@ pub struct Diagram {
     pub settings: Settings,
     pub nodes: Vec<NodeDecl>,
     pub relations: Vec<RelationDecl>,
+    pub attachments: Vec<EdgeAttachment>,
     pub layout: Vec<LayoutRule>,
     pub relation_layout: Vec<RelationLabelRule>,
     pub relation_end_layout: Vec<RelationEndRule>,

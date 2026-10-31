@@ -45,6 +45,47 @@ pub(super) fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {
             return Err(error(relation.line, format!("duplicate global ID '{id}'")));
         }
     }
+    for attachment in &diagram.attachments {
+        if let Some(id) = attachment.name.as_deref()
+            && !assigned.insert(id)
+        {
+            return Err(error(
+                attachment.line,
+                format!("duplicate global ID '{id}'"),
+            ));
+        }
+        let node = diagram
+            .nodes
+            .iter()
+            .find(|node| node.id == attachment.source)
+            .ok_or_else(|| {
+                error(
+                    attachment.line,
+                    format!(
+                        "edge attachment source '{}' must be a node",
+                        attachment.source
+                    ),
+                )
+            })?;
+        if diagram.settings.diagram_type != DiagramType::Generic
+            && node.kind != crate::syntax::NodeKind::Note
+        {
+            return Err(error(
+                attachment.line,
+                "UML edge annotation source must be a note",
+            ));
+        }
+        if !diagram
+            .relations
+            .iter()
+            .any(|relation| relation.name.as_deref() == Some(attachment.target.as_str()))
+        {
+            return Err(error(
+                attachment.line,
+                format!("unknown target relation '{}'", attachment.target),
+            ));
+        }
+    }
     for (index, relation) in diagram.relations.iter().enumerate() {
         if let Some(name) = &relation.name {
             if diagram.relations[..index]
