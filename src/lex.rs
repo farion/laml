@@ -122,9 +122,10 @@ pub(crate) fn valid_identifier(value: &str) -> bool {
 }
 
 pub(crate) fn valid_reference(value: &str) -> bool {
+    let path = |text: &str| !text.is_empty() && text.split('.').all(valid_identifier);
     match value.split_once("::") {
-        Some((owner, member)) => valid_identifier(owner) && valid_identifier(member),
-        None => valid_identifier(value),
+        Some((owner, member)) => path(owner) && valid_identifier(member),
+        None => path(value),
     }
 }
 

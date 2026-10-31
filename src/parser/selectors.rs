@@ -9,7 +9,7 @@ pub(super) fn validate_selector(selector: &str, line: usize) -> Result<(), Parse
             || parent
                 .strip_prefix("node[")
                 .and_then(|id| id.strip_suffix(']'))
-                .is_some_and(valid_identifier);
+                .is_some_and(valid_reference);
         let descendant_node = child == "node"
             || child
                 .strip_prefix("node[")
@@ -65,7 +65,7 @@ pub(super) fn validate_selector(selector: &str, line: usize) -> Result<(), Parse
         .or_else(|| selector.strip_prefix("continuation["))
         .or_else(|| selector.strip_prefix("gate["))
     {
-        id.strip_suffix(']').is_some_and(valid_identifier)
+        id.strip_suffix(']').is_some_and(valid_reference)
     } else if let Some(kind) = selector
         .strip_prefix("annotation[")
         .and_then(|s| s.strip_suffix(']'))

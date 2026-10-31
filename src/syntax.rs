@@ -35,6 +35,7 @@ pub enum NodeKind {
     Interface,
     Enumeration,
     DataType,
+    Package,
     Object,
     Note,
 }
@@ -94,6 +95,7 @@ pub struct NodeDecl {
     pub note_lines: Option<Vec<String>>,
     pub parts: Vec<NodePart>,
     pub ports: Vec<PortDecl>,
+    pub parent: Option<String>,
     pub line: usize,
 }
 
@@ -167,6 +169,7 @@ pub struct RelationDecl {
     pub source_end: EndAnnotation,
     pub target_end: EndAnnotation,
     pub label: Option<String>,
+    pub scope: Option<String>,
     pub line: usize,
 }
 
@@ -176,6 +179,7 @@ pub struct EdgeAttachment {
     pub classes: Vec<String>,
     pub source: String,
     pub target: String,
+    pub scope: Option<String>,
     pub line: usize,
 }
 

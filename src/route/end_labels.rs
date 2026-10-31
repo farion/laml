@@ -71,11 +71,13 @@ fn place_one(
                 mid.y - height / 2.0,
             )
         };
-        if context
-            .boxes
-            .iter()
-            .any(|b| x < b.x + b.width && x + width > b.x && y < b.y + b.height && y + height > b.y)
-        {
+        if context.boxes.iter().any(|b| {
+            !b.contains_package_content(x, y, width, height)
+                && x < b.x + b.width
+                && x + width > b.x
+                && y < b.y + b.height
+                && y + height > b.y
+        }) {
             continue;
         }
         if current

@@ -85,6 +85,8 @@ pub(super) fn segment_hits_rect(a: Point, b: Point, x: f64, y: f64, w: f64, h: f
         y,
         width: w,
         height: h,
+        fixed_width: None,
+        fixed_height: None,
         font_size: 0.0,
         padding: 0.0,
         fill: String::new(),
@@ -109,10 +111,13 @@ fn label_clear(
     previous: &[Route],
 ) -> bool {
     let (x, y, w, h) = (label.x, label.y, label.width, label.height);
-    if boxes
-        .iter()
-        .any(|b| x < b.x + b.width && x + w > b.x && y < b.y + b.height && y + h > b.y)
-    {
+    if boxes.iter().any(|b| {
+        !b.contains_package_content(x, y, w, h)
+            && x < b.x + b.width
+            && x + w > b.x
+            && y < b.y + b.height
+            && y + h > b.y
+    }) {
         return false;
     }
     if [points[0], *points.last().unwrap()]

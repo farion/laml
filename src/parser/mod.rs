@@ -121,11 +121,34 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
                 if text == "}" {
                     Section::Top
                 } else if let Some(header) = text.strip_suffix('{') {
-                    bodies::node(header.trim(), line, &mut diagram, true)?;
+                    bodies::node(header.trim(), line, &mut diagram, true, None)?;
                     Section::NodeBody(diagram.nodes.len() - 1)
                 } else {
-                    graph_relations::parse_semantic(text, line, &mut diagram)?;
+                    graph_relations::parse_semantic(text, line, &mut diagram, None)?;
                     Section::Semantics
+                }
+            }
+            Section::NodeBody(index)
+                if diagram.nodes[index].kind == crate::syntax::NodeKind::Package =>
+            {
+                let scope = diagram.nodes[index].id.clone();
+                if text == "}" {
+                    if let Some(parent) = &diagram.nodes[index].parent {
+                        let outer = diagram
+                            .nodes
+                            .iter()
+                            .position(|node| &node.id == parent)
+                            .expect("validated container parent");
+                        Section::NodeBody(outer)
+                    } else {
+                        Section::Semantics
+                    }
+                } else if let Some(header) = text.strip_suffix('{') {
+                    bodies::node(header.trim(), line, &mut diagram, true, Some(&scope))?;
+                    Section::NodeBody(diagram.nodes.len() - 1)
+                } else {
+                    graph_relations::parse_semantic(text, line, &mut diagram, Some(&scope))?;
+                    Section::NodeBody(index)
                 }
             }
             Section::NodeBody(index) => {
@@ -230,7 +253,7 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
     if !stylesheet && !seen[1] {
         return Err(error(1, "missing semantics section"));
     }
-    references::validate_references(&diagram)?;
+    references::resolve_and_validate(&mut diagram)?;
     Ok(diagram)
 }
 

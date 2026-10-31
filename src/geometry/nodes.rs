@@ -35,6 +35,8 @@ pub struct BoxNode {
     pub y: f64,
     pub width: f64,
     pub height: f64,
+    pub fixed_width: Option<f64>,
+    pub fixed_height: Option<f64>,
     pub font_size: f64,
     pub padding: f64,
     pub fill: String,
@@ -46,6 +48,14 @@ pub struct BoxNode {
 }
 
 impl BoxNode {
+    pub fn contains_package_content(&self, x: f64, y: f64, width: f64, height: f64) -> bool {
+        self.kind == NodeKind::Package
+            && x >= self.x + 1.0
+            && x + width <= self.x + self.width - 1.0
+            && y >= self.y + self.padding + self.font_size * 1.25 * self.lines.len() as f64 + 4.0
+            && y + height <= self.y + self.height - 1.0
+    }
+
     pub fn matches_member(&self, part: &NodePart, target: &str) -> bool {
         match part {
             NodePart::Member { id: Some(id), .. } => id == target,
@@ -209,6 +219,9 @@ pub fn measure_node(
             id,
         })
     }).collect();
+    if node.kind == NodeKind::Package && shape != NodeShape::Rectangle {
+        return Err("package container requires a rectangular frame".into());
+    }
     if !ports.is_empty() && shape != NodeShape::Rectangle {
         return Err("ports on nonrectangular nodes need supported contour geometry".into());
     }
@@ -278,6 +291,9 @@ pub fn measure_node(
         .try_fold(0.0_f64, |max, text| -> Result<f64, String> {
             Ok(max.max(measure(text, font_size)?))
         })?;
+    if node.kind == NodeKind::Package {
+        longest += 12.0; // leave room for the folder-tab shoulder
+    }
     for (part, row) in body.iter().zip(&body_styles) {
         if let NodePart::Member { text, .. } = part {
             longest = longest.max(measure(text, row.font_size)?);
@@ -356,6 +372,7 @@ pub fn measure_node(
         return Err("fixed node box cannot fit even one line of text and padding".into());
     }
     if (diagram_type != DiagramType::Generic
+        || node.kind == NodeKind::Package
         || matches!(shape, NodeShape::Diamond | NodeShape::Ellipse))
         && (longest > available_width + 0.01 || natural_height > height + 0.01)
     {
@@ -407,6 +424,8 @@ pub fn measure_node(
         y: 0.0,
         width,
         height,
+        fixed_width,
+        fixed_height,
         font_size,
         padding,
         fill: color(

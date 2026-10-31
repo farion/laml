@@ -32,6 +32,29 @@ fn marker(symbol: EndSymbol, start: bool) -> &'static str {
         (EndSymbol::FilledDiamond, false) => "url(#filled-diamond-end)",
     }
 }
+fn package_background(svg: &mut String, node: &BoxNode) -> Result<(), String> {
+    let step = node.font_size * 1.25;
+    let tab_height = node.padding + step * node.lines.len() as f64 + 4.0;
+    let title_width = node
+        .lines
+        .iter()
+        .try_fold(0.0_f64, |max, line| -> Result<f64, String> {
+            Ok(max.max(measure(line, node.font_size)?))
+        })?;
+    let tab_width = (title_width + node.padding * 2.0 + 12.0).min(node.width - 8.0);
+    writeln!(svg,"<g data-node-id=\"{}\"><title>{}</title><path d=\"M{:.2},{:.2} V{:.2} H{:.2} V{:.2} H{:.2} V{:.2} H{:.2} Z\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
+        escape(&node.id), escape(&node.label), node.x, node.y+tab_height, node.y,
+        node.x+tab_width, node.y+tab_height, node.x+node.width, node.y+node.height, node.x,
+        node.fill, node.border_color, node.border_width).unwrap();
+    for (index, line) in node.lines.iter().enumerate() {
+        writeln!(svg,"<text x=\"{:.2}\" y=\"{:.2}\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\">{}</text>",
+            node.x+tab_width/2.0,node.y+node.padding+step*(index as f64+0.78),node.font_size,node.color,escape(line)).unwrap();
+    }
+    writeln!(svg,"<line x1=\"{:.2}\" y1=\"{:.2}\" x2=\"{:.2}\" y2=\"{:.2}\" stroke=\"{}\" stroke-width=\"{:.2}\" /></g>",
+        node.x,node.y+tab_height,node.x+tab_width,node.y+tab_height,node.border_color,node.border_width).unwrap();
+    Ok(())
+}
+
 fn include_point(point: Point, bounds: &mut (f64, f64, f64, f64)) {
     bounds.0 = bounds.0.min(point.x);
     bounds.1 = bounds.1.min(point.y);
@@ -138,6 +161,9 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
     svg.push_str("<marker id=\"filled-diamond\" markerWidth=\"17\" markerHeight=\"11\" refX=\"1\" refY=\"5.5\" orient=\"auto\" markerUnits=\"userSpaceOnUse\"><path d=\"M1,5.5 L8,1 L16,5.5 L8,10 Z\" fill=\"context-stroke\"/></marker>");
     svg.push_str("<marker id=\"open-diamond-end\" markerWidth=\"17\" markerHeight=\"11\" refX=\"16\" refY=\"5.5\" orient=\"auto\" markerUnits=\"userSpaceOnUse\"><path d=\"M1,5.5 L8,1 L16,5.5 L8,10 Z\" fill=\"white\" stroke=\"context-stroke\" stroke-width=\"1.5\"/></marker>");
     svg.push_str("<marker id=\"filled-diamond-end\" markerWidth=\"17\" markerHeight=\"11\" refX=\"16\" refY=\"5.5\" orient=\"auto\" markerUnits=\"userSpaceOnUse\"><path d=\"M1,5.5 L8,1 L16,5.5 L8,10 Z\" fill=\"context-stroke\"/></marker></defs>\n");
+    for node in boxes.iter().filter(|node| node.kind == NodeKind::Package) {
+        package_background(&mut svg, node)?;
+    }
     for route in routes {
         let start = marker(route.appearance.start, true);
         let end = marker(route.appearance.end, false);
@@ -186,7 +212,7 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
                 cy+route.font_size*1.25*0.28,route.font_size,route.color,rotation,escape(&label.text)).unwrap();
         }
     }
-    for node in boxes {
+    for node in boxes.iter().filter(|node| node.kind != NodeKind::Package) {
         writeln!(
             svg,
             "<g data-node-id=\"{}\"><title>{}</title>",
@@ -213,13 +239,14 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
                 node.x,node.y,node.width,node.height,node.radius,node.fill,node.border_color,node.border_width).unwrap();
         }
         let line_height = node.font_size * 1.25;
-        let first_baseline = if node.body.is_empty() && node.ports.is_empty() {
-            node.y
-                + (node.height - line_height * node.lines.len() as f64) / 2.0
-                + line_height * 0.78
-        } else {
-            node.y + node.padding + node.top_band + line_height * 0.78
-        };
+        let first_baseline =
+            if node.body.is_empty() && node.ports.is_empty() && node.kind != NodeKind::Package {
+                node.y
+                    + (node.height - line_height * node.lines.len() as f64) / 2.0
+                    + line_height * 0.78
+            } else {
+                node.y + node.padding + node.top_band + line_height * 0.78
+            };
         for (i, line) in node.lines.iter().enumerate() {
             writeln!(svg,"<text x=\"{:.2}\" y=\"{:.2}\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\"{}>{}</text>",
                 node.x+node.width/2.0,first_baseline+line_height*i as f64,node.font_size,node.color,

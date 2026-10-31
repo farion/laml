@@ -25,7 +25,7 @@ pub(super) fn parse_layout(text: &str, line: usize) -> Result<LayoutRule, ParseE
             ));
         }
     };
-    if !valid_identifier(first) || !valid_identifier(second) {
+    if !valid_reference(first) || !valid_reference(second) {
         return Err(error(line, "invalid node identifier in layout"));
     }
     let mut rule = LayoutRule {

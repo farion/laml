@@ -5,11 +5,12 @@ pub(super) fn parse_semantic(
     text: &str,
     line: usize,
     diagram: &mut Diagram,
+    scope: Option<&str>,
 ) -> Result<(), ParseError> {
     // Prefixes end at a colon before the arrow; labels begin at a colon after it.
     let arrow_at = find_arrow(text).or_else(|| text.find(" .. ").map(|offset| offset + 1));
     if arrow_at.is_none() {
-        return bodies::node(text, line, diagram, false);
+        return bodies::node(text, line, diagram, false, scope);
     }
     let arrow_at = arrow_at.expect("checked above");
     let (name, attrs, body) = if let Some(prefixed) = text.strip_prefix('@') {
@@ -89,6 +90,7 @@ pub(super) fn parse_semantic(
             classes: relation_classes,
             source: tokens[0].into(),
             target: target.into(),
+            scope: scope.map(str::to_string),
             line,
         });
         return Ok(());
@@ -133,6 +135,7 @@ pub(super) fn parse_semantic(
         source_end,
         target_end,
         label,
+        scope: scope.map(str::to_string),
         line,
     });
     Ok(())

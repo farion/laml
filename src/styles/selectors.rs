@@ -67,7 +67,11 @@ pub enum Selector {
 impl Selector {
     pub(super) fn targets_node(&self) -> bool {
         match self {
-            Self::AllNodes | Self::NodeId(_) | Self::NodeClass(_) => true,
+            Self::AllNodes
+            | Self::NodeId(_)
+            | Self::NodeClass(_)
+            | Self::NodeIdDescendantNode { .. }
+            | Self::NodeClassDescendantNode { .. } => true,
             Self::ScopedId { child, .. } | Self::ScopedClass { child, .. } => child.targets_node(),
             _ => false,
         }
@@ -337,13 +341,20 @@ impl Selector {
             }
             (Self::NodeIdDescendantNode { owner, child }, Element::Node { id, .. }) => {
                 ancestors.iter().any(|ancestor| ancestor == owner)
-                    && child.as_deref().is_none_or(|name| name == *id)
+                    && child.as_deref().is_none_or(|name| {
+                        name == *id
+                            || id
+                                .strip_prefix(&format!("{owner}."))
+                                .is_some_and(|relative| relative == name)
+                    })
             }
             (Self::NodeClassDescendantNode { class, child }, Element::Node { id, .. }) => {
                 ancestors
                     .iter()
                     .any(|ancestor| ancestor.starts_with(&format!(".{class}:")))
-                    && child.as_deref().is_none_or(|name| name == *id)
+                    && child
+                        .as_deref()
+                        .is_none_or(|name| name == *id || id.rsplit('.').next() == Some(name))
             }
             (Self::RelationId(target), Element::Relation { name: Some(id), .. }) => target == id,
             (Self::FragmentOperator(target), Element::Fragment { operator, .. }) => {

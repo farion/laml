@@ -186,10 +186,31 @@ pub(super) fn shared_port_touch(
 }
 pub(super) fn route_is_clear(points: &[Point], boxes: &[BoxNode], previous: &[Route]) -> bool {
     for pair in points.windows(2) {
-        if boxes
-            .iter()
-            .any(|node| intersection(pair[0], pair[1], node))
-        {
+        if boxes.iter().any(|node| {
+            let within = |p: Point| {
+                p.x > node.x
+                    && p.x < node.x + node.width
+                    && p.y > node.y
+                    && p.y < node.y + node.height
+            };
+            let own_container = node.kind == crate::syntax::NodeKind::Package
+                && (within(points[0]) || within(*points.last().unwrap()));
+            if own_container {
+                let title_width = node
+                    .lines
+                    .iter()
+                    .filter_map(|line| crate::text::measure(line, node.font_size).ok())
+                    .fold(0.0_f64, f64::max);
+                let tab_width = (title_width + node.padding * 2.0 + 12.0).min(node.width - 8.0);
+                let tab_height =
+                    node.padding + node.font_size * 1.25 * node.lines.len() as f64 + 4.0;
+                super::labels::segment_hits_rect(
+                    pair[0], pair[1], node.x, node.y, tab_width, tab_height,
+                )
+            } else {
+                intersection(pair[0], pair[1], node)
+            }
+        }) {
             return false;
         }
         for route in previous {

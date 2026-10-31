@@ -11,14 +11,33 @@ fn hidden(sheet: &StyleSheet, element: &Element<'_>) -> bool {
 
 pub(crate) fn filtered(diagram: &Diagram, sheet: &StyleSheet) -> Result<Diagram, (usize, String)> {
     let mut visible = diagram.clone();
+    let hidden_nodes: std::collections::HashSet<_> = diagram
+        .nodes
+        .iter()
+        .filter(|node| {
+            hidden(
+                &super::scoped_styles(diagram, node, sheet),
+                &Element::Node {
+                    id: &node.id,
+                    classes: &node.classes,
+                },
+            )
+        })
+        .map(|node| node.id.as_str())
+        .collect();
     visible.nodes.retain(|node| {
-        !hidden(
-            sheet,
-            &Element::Node {
-                id: &node.id,
-                classes: &node.classes,
-            },
-        )
+        let mut current = Some(node.id.as_str());
+        while let Some(id) = current {
+            if hidden_nodes.contains(id) {
+                return false;
+            }
+            current = diagram
+                .nodes
+                .iter()
+                .find(|candidate| candidate.id == id)
+                .and_then(|parent| parent.parent.as_deref());
+        }
+        true
     });
     visible.relations.retain(|relation| {
         !hidden(

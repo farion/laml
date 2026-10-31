@@ -2,6 +2,7 @@
 //! Collision resolution is bounded. Complex routes may still fail explicitly.
 
 mod constraints;
+mod containers;
 mod nodes;
 mod ports;
 mod visibility;
@@ -11,7 +12,24 @@ pub use nodes::{BoxNode, NodeShape};
 pub(crate) use visibility::filtered as visible_diagram;
 
 use crate::styles::StyleSheet;
-use crate::syntax::Diagram;
+use crate::syntax::{Diagram, NodeDecl};
+
+pub(crate) fn scoped_styles(diagram: &Diagram, node: &NodeDecl, sheet: &StyleSheet) -> StyleSheet {
+    let mut parents = Vec::new();
+    let mut current = node.parent.as_deref();
+    while let Some(id) = current {
+        let Some(parent) = diagram.nodes.iter().find(|candidate| candidate.id == id) else {
+            break;
+        };
+        parents.push(parent);
+        current = parent.parent.as_deref();
+    }
+    let mut scoped = sheet.clone();
+    for parent in parents.into_iter().rev() {
+        scoped = scoped.with_ancestor(&parent.id, &parent.classes);
+    }
+    scoped
+}
 
 pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, GeometryError> {
     let visible = visible_diagram(diagram, styles)
@@ -23,7 +41,7 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
         .map(|node| {
             nodes::measure_node(
                 node,
-                styles,
+                &scoped_styles(diagram, node, styles),
                 diagram.settings.diagram_type,
                 &diagram.port_layout,
             )
@@ -54,7 +72,7 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
             });
         }
     }
-    constraints::place(diagram, &mut boxes, styles)?;
+    containers::place(diagram, &mut boxes, styles)?;
     ports::position(diagram, &mut boxes);
     Ok(boxes)
 }

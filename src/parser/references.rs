@@ -1,8 +1,38 @@
 //! Resolve globally named and scoped graph references before layout.
 use super::{Diagram, ParseError, error, uml};
-use crate::syntax::DiagramType;
+use crate::syntax::{DiagramType, NodeDecl};
 
-pub(super) fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {
+fn resolve(nodes: &[NodeDecl], scope: Option<&str>, raw: &str) -> String {
+    let mut current = scope;
+    while let Some(owner) = current {
+        let candidate = format!("{owner}.{raw}");
+        if nodes.iter().any(|node| node.has_endpoint(&candidate)) {
+            return candidate;
+        }
+        current = nodes
+            .iter()
+            .find(|node| node.id == owner)
+            .and_then(|node| node.parent.as_deref());
+    }
+    raw.into()
+}
+
+pub(super) fn resolve_and_validate(diagram: &mut Diagram) -> Result<(), ParseError> {
+    for relation in &mut diagram.relations {
+        relation.from = resolve(&diagram.nodes, relation.scope.as_deref(), &relation.from);
+        relation.to = resolve(&diagram.nodes, relation.scope.as_deref(), &relation.to);
+    }
+    for attachment in &mut diagram.attachments {
+        attachment.source = resolve(
+            &diagram.nodes,
+            attachment.scope.as_deref(),
+            &attachment.source,
+        );
+    }
+    validate_references(diagram)
+}
+
+fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {
     for (index, node) in diagram.nodes.iter().enumerate() {
         if diagram.nodes[..index]
             .iter()

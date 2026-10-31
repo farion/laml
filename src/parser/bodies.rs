@@ -8,6 +8,7 @@ pub(super) fn node(
     line: usize,
     diagram: &mut Diagram,
     block: bool,
+    parent: Option<&str>,
 ) -> Result<(), ParseError> {
     let mut source = text.trim();
     let explicit_id = if let Some(rest) = source.strip_prefix('@') {
@@ -54,6 +55,8 @@ pub(super) fn node(
     };
     let (kind, name) = if let Some((name, _)) = &note {
         (NodeKind::Note, *name)
+    } else if let Some(name) = source.strip_prefix("package ") {
+        (NodeKind::Package, name)
     } else if let Some(name) = source.strip_prefix("class ") {
         (NodeKind::Class, name)
     } else if let Some(name) = source.strip_prefix("interface ") {
@@ -81,6 +84,9 @@ pub(super) fn node(
             line,
             "element kind is not supported by this UML diagram type",
         ));
+    }
+    if kind == NodeKind::Package && !block {
+        return Err(error(line, "package requires a nested declaration block"));
     }
     if visibility.is_some() && matches!(kind, NodeKind::Object | NodeKind::Note) {
         return Err(error(line, "visibility is not valid on an object or note"));
@@ -124,7 +130,8 @@ pub(super) fn node(
         return Err(error(line, "node name required"));
     }
     let mut result = NodeDecl {
-        id: explicit_id.unwrap_or_else(|| name.clone()),
+        id: explicit_id
+            .unwrap_or_else(|| parent.map_or(name.clone(), |path| format!("{path}.{name}"))),
         label: note.map(|(_, text)| text),
         classes: Vec::new(),
         stereotypes,
@@ -139,6 +146,7 @@ pub(super) fn node(
         },
         parts: Vec::new(),
         ports: Vec::new(),
+        parent: parent.map(str::to_string),
         line,
     };
     let mut classifier = None;
