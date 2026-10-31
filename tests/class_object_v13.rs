@@ -30,7 +30,7 @@ fn class_body_renders_real_compartments_in_all_formats() {
     ));
     let svg = image(source);
     assert!(svg.contains("counter"));
-    assert!(svg.contains("+void bestellen()"));
+    assert!(svg.contains("+bestellen(): void"));
     assert!(svg.matches("<line ").count() >= 2);
     assert!(export::png(&svg).unwrap().starts_with(b"\x89PNG"));
     assert!(export::pdf(&svg).unwrap().starts_with(b"%PDF"));

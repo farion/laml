@@ -9,7 +9,43 @@ fn member_modifiers_are_order_independent_and_deduplicated() {
     let styles = StyleSheet::default();
     let boxes = place(&diagram, &styles).unwrap();
     let image = render(&boxes, &[]).unwrap();
-    assert!(image.contains("int counter"));
+    assert!(image.contains("counter: int"));
+    assert!(image.contains("+start(): void"));
+    let one_parameter = source.replace("+void start()", "+void start(int timeoutms)");
+    let diagram = parse(&one_parameter).unwrap();
+    assert!(
+        matches!(&diagram.nodes[0].parts[2], laml::syntax::NodePart::Member {text,..} if text == "+start(timeoutms: int): void")
+    );
+    let conventional = source.replace("+void start()", "+start(timeoutms: int): void");
+    assert!(parse(&conventional).is_ok());
+    let malformed_field = source.replace("static field int counter", "field int counter extra");
+    assert!(
+        parse(&malformed_field)
+            .unwrap_err()
+            .message
+            .contains("unsupported programming-style UML attribute")
+    );
+    let malformed_type = source.replace("static field int counter", "field counter: ???");
+    assert!(
+        parse(&malformed_type)
+            .unwrap_err()
+            .message
+            .contains("attribute name or type")
+    );
+    let malformed = source.replace("+void start()", "+start(int timeoutms): void");
+    assert!(
+        parse(&malformed)
+            .unwrap_err()
+            .message
+            .contains("parameters require")
+    );
+    let trailing = source.replace("+void start()", "+void start(int x,)");
+    assert!(
+        parse(&trailing)
+            .unwrap_err()
+            .message
+            .contains("empty UML operation parameter")
+    );
     assert!(!image.contains("field int counter"));
     for invalid in [
         "static static field int counter",

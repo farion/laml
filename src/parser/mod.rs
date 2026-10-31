@@ -16,6 +16,7 @@ mod ends;
 mod graph_operators;
 mod graph_relations;
 mod layout;
+mod member_notation;
 mod references;
 mod selectors;
 mod stereotypes;

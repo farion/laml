@@ -441,11 +441,17 @@ pub(super) fn member(
             .filter(|name| valid_identifier(name))
             .map(str::to_string)
     };
+    let shown = literal.unwrap_or_else(|| content.to_string());
+    let shown = if diagram_type == DiagramType::Class {
+        super::member_notation::normalize(&shown, kind, line)?
+    } else {
+        shown
+    };
     node.parts.push(NodePart::Member {
         id,
         default_id,
         classes: member_classes,
-        text: literal.unwrap_or_else(|| content.to_string()),
+        text: shown,
         kind,
         abstract_member,
         static_member,
