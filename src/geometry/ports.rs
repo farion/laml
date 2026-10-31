@@ -1,5 +1,5 @@
 //! Named boundary ports with measured labels and deterministic four-side anchors.
-use super::BoxNode;
+use super::{BoxNode, NodeShape};
 use crate::syntax::{Diagram, PortSide};
 
 #[derive(Clone, Debug)]
@@ -75,7 +75,16 @@ pub(super) fn position(diagram: &Diagram, boxes: &mut [BoxNode]) {
                         .count();
                     let count = sides.iter().filter(|side| **side == port.side).count();
                     (
-                        current.x + current.width * (rank + 1) as f64 / (count + 1) as f64,
+                        current.x
+                            + (current.width
+                                - if current.shape == NodeShape::Note && port.side == PortSide::Top
+                                {
+                                    16.0
+                                } else {
+                                    0.0
+                                })
+                                * (rank + 1) as f64
+                                / (count + 1) as f64,
                         if port.side == PortSide::Top {
                             current.y
                         } else {

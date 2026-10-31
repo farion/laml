@@ -197,7 +197,7 @@ pub fn measure_node(
     if node.kind == NodeKind::Package && shape != NodeShape::Rectangle {
         return Err("package container requires a rectangular frame".into());
     }
-    if !ports.is_empty() && shape != NodeShape::Rectangle {
+    if !ports.is_empty() && matches!(shape, NodeShape::Ellipse | NodeShape::Diamond) {
         return Err("ports on nonrectangular nodes need supported contour geometry".into());
     }
     if matches!(shape, NodeShape::Diamond | NodeShape::Ellipse) && !body.is_empty() {
