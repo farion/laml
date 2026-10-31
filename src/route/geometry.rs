@@ -2,21 +2,17 @@ use super::labels::segment_hits_rect;
 use super::{Point, Route};
 use crate::geometry::{BoxNode, NodeShape};
 
-fn small_junction(node: &BoxNode) -> bool {
-    matches!(
-        node.kind,
-        crate::syntax::NodeKind::Association | crate::syntax::NodeKind::Junction
-    )
+fn compact_radius(node: &BoxNode) -> Option<f64> {
+    match node.kind {
+        crate::syntax::NodeKind::Association | crate::syntax::NodeKind::Junction => Some(12.0),
+        crate::syntax::NodeKind::Lollipop => Some(10.0),
+        _ => None,
+    }
 }
 
 pub(super) fn center(node: &BoxNode) -> Point {
     Point {
-        x: node.x
-            + if small_junction(node) {
-                12.0
-            } else {
-                node.width / 2.0
-            },
+        x: node.x + compact_radius(node).unwrap_or(node.width / 2.0),
         y: node.y + node.height / 2.0,
     }
 }
@@ -53,8 +49,8 @@ pub(super) fn port(node: &BoxNode, towards: Point) -> Point {
     let c = center(node);
     let dx = towards.x - c.x;
     let dy = towards.y - c.y;
-    let (rx, ry) = if small_junction(node) {
-        (12.0, 12.0)
+    let (rx, ry) = if let Some(radius) = compact_radius(node) {
+        (radius, radius)
     } else {
         ((node.width / 2.0).max(1e-9), (node.height / 2.0).max(1e-9))
     };
@@ -71,18 +67,23 @@ pub(super) fn port(node: &BoxNode, towards: Point) -> Point {
 }
 pub(super) fn intersection(a: Point, b: Point, node: &BoxNode) -> bool {
     let c = center(node);
-    let rx = if small_junction(node) {
-        12.0
+    let rx = if let Some(radius) = compact_radius(node) {
+        radius
     } else {
         (node.width / 2.0).max(1e-9)
     };
-    let ry = if small_junction(node) {
-        12.0
+    let ry = if let Some(radius) = compact_radius(node) {
+        radius
     } else {
         (node.height / 2.0).max(1e-9)
     };
     match node.shape {
         NodeShape::Ellipse => {
+            if node.kind == crate::syntax::NodeKind::Lollipop
+                && segment_hits_rect(a, b, node.x + 26.0, node.y, node.width - 26.0, node.height)
+            {
+                return true;
+            }
             let (ax, ay) = ((a.x - c.x) / rx, (a.y - c.y) / ry);
             let (dx, dy) = ((b.x - a.x) / rx, (b.y - a.y) / ry);
             let denominator = dx * dx + dy * dy;
@@ -94,7 +95,7 @@ pub(super) fn intersection(a: Point, b: Point, node: &BoxNode) -> bool {
             return (ax + t * dx).powi(2) + (ay + t * dy).powi(2) < 1.0 - 1e-5;
         }
         NodeShape::Diamond => {
-            if small_junction(node)
+            if compact_radius(node).is_some()
                 && !node.label.is_empty()
                 && segment_hits_rect(a, b, node.x + 30.0, node.y, node.width - 30.0, node.height)
             {

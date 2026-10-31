@@ -70,6 +70,11 @@ SVG defaults to embedded Inter Regular with selectable text. `--svg-text=system`
 | [![A dashed template binding substitutes T with String](docs/images/class-binding.png)](examples/class-binding.laml) | [![Generic nodes with one folder icon and a visibility icon](docs/images/generic-icons.png)](examples/generic-icons.laml) |
 | Checked local substitution. | Optional Phosphor glyphs with conditional export attribution. |
 
+| [Compact provided interfaces](examples/class-lollipops.laml) |
+|---|
+| [![Two classes each realize a separate API lollipop](docs/images/class-lollipops.png)](examples/class-lollipops.laml) |
+| One empty interface, two distinct compact realizations. |
+
 Set `type: sequence` in `settings` to use the sequence grammar. Sequence diagrams use the same SVG/PNG/vector-PDF export commands; their node, message, fragment, annotation, gate and ordering visuals are styled with LSS. Start with the [sequence-diagram guide](docs/sequence-diagrams.md), then use the [syntax reference](docs/language-reference.md#sequence-diagrams) and [UML 2.5.1 notation audit](docs/uml-sequence-conformance.md). The outer UML `sd` interaction frame is intentionally deferred; divergent open executions at fragment joins are rejected rather than implicitly resolved.
 
 Build any example with `cargo run -- build examples/NAME.laml`. The output filename selects the format (`.svg`, `.png`, or `.pdf`). SVG text modes are selected with `--svg-text=embedded|system|paths` after the optional output filename. The README images are generated with `cargo run -- build examples/NAME.laml docs/images/NAME.png`. Source files and matching images are tested together.

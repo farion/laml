@@ -4,6 +4,7 @@
 mod constraints;
 mod containers;
 mod junctions;
+mod lollipop;
 mod members;
 mod nodes;
 mod ports;
@@ -43,7 +44,10 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
         .iter()
         .map(|node| {
             let scoped = scoped_styles(diagram, node, styles);
-            if matches!(node.kind, NodeKind::Association | NodeKind::Junction) {
+            if matches!(
+                node.kind,
+                NodeKind::Association | NodeKind::Junction | NodeKind::Lollipop
+            ) {
                 junctions::measure(node, &scoped)
             } else {
                 nodes::measure_node(

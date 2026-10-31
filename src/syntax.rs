@@ -39,6 +39,8 @@ pub enum NodeKind {
     Association,
     AssociationClass,
     Junction,
+    /// Render-only interface realization ball; never accepted as a source declaration.
+    Lollipop,
     Object,
     Note,
 }

@@ -1,0 +1,19 @@
+// Each realization has its own compact provided-interface symbol.
+settings {
+    type: class
+}
+semantics {
+    class Client
+    class Worker
+    interface API
+    @client Client ..|> API
+    @worker Worker ..|> API
+}
+styling {
+    relation[client] {
+        interface-notation: lollipop
+    }
+    relation[worker] {
+        interface-notation: lollipop
+    }
+}

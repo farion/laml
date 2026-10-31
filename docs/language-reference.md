@@ -64,7 +64,7 @@ Directed relations give source-order *preferences* for automatic placement, not 
 
 ## Class and object diagrams
 
-Set `type: class` or `type: object` in `settings`. Class declarations (`class`, `interface`, `enum`, `datatype`, `association class`), notes, packages, attribute and operation compartments, objects with literal slots, named ports and checked UML operators share graph geometry with generic nodes. Simple author shorthand `int counter` / `+void start(int timeoutms)` renders as UML `counter: int` / `+start(timeoutms: int): void`; unsupported complex signatures fail. The [working class/object guide](class-object-diagrams.md) gives complete buildable sources and the accepted notation. Class associations can specify independent end multiplicities, roles and qualifiers; object links allow end names but reject multiplicities and qualifiers. Unsupported UML combinations are errors rather than generic arrows. Generic graphs can additionally choose `shape: rectangle|ellipse|diamond|note` in LSS; a UML classifier cannot change its meaningful shape through styling.
+Set `type: class` or `type: object` in `settings`. Class declarations (`class`, `interface`, `enum`, `datatype`, `association class`), notes, packages, attribute and operation compartments, objects with literal slots, named ports and checked UML operators share graph geometry with generic nodes. Simple author shorthand `int counter` / `+void start(int timeoutms)` renders as UML `counter: int` / `+start(timeoutms: int): void`; unsupported complex signatures fail. The [working class/object guide](class-object-diagrams.md) gives complete buildable sources and the accepted notation. Class associations can specify independent end multiplicities, roles and qualifiers; object links allow end names but reject multiplicities and qualifiers. For an empty, otherwise unused interface, a named class-to-interface realization can choose `interface-notation: lollipop` on its relation-specific LSS selector: each provider receives its own small circle and solid stalk. Unsupported UML combinations are errors rather than generic arrows. Generic graphs can additionally choose `shape: rectangle|ellipse|diamond|note` in LSS; a UML classifier cannot change its meaningful shape through styling.
 
 ## Layout
 
@@ -123,6 +123,7 @@ Selectors include `*`, `.class`, `node.class`, `relation.class`, `node[ID]`, `re
 | `display` | `none` | Nodes, members, ports and relations (visible references fail) |
 | `shape` | `rectangle`, `ellipse`, `diamond`, `note` | Generic nodes, subject to measured content |
 | `symbol-rendering`, `icon-set`, `icon` | `text|icons`, `phosphor`, allowlisted icon name | Visibility glyphs and optional generic node icons |
+| `interface-notation` | `box`, `lollipop` | Named UML realization relations, with validated compact-interface eligibility |
 
 Colours are `rgb(r,g,b)` with integer channels 0–255, quoted `"#rrggbb"`, or `none`. Numeric values are unadorned pixels, without a `px` suffix. Unknown properties and invalid values are errors, even for unmatched selectors. Default node minimum size is 100 × 50, padding 12, and font size 14. Width and height, when set, are fixed sizes; a conflicting explicit minimum or a box too small for its text and padding fails.
 

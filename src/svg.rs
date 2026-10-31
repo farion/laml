@@ -244,7 +244,11 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
             escape(&node.label)
         )
         .unwrap();
-        if matches!(node.kind, NodeKind::Association | NodeKind::Junction) {
+        if node.kind == NodeKind::Lollipop {
+            let cy = node.y + node.height / 2.0;
+            writeln!(svg,"<circle cx=\"{:.2}\" cy=\"{cy:.2}\" r=\"10\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",node.x+10.0,node.fill,node.border_color,node.border_width).unwrap();
+            writeln!(svg,"<text x=\"{:.2}\" y=\"{:.2}\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\">{}</text>",node.x+28.0,cy+node.font_size*0.28,node.font_size,node.color,escape(&node.label)).unwrap();
+        } else if matches!(node.kind, NodeKind::Association | NodeKind::Junction) {
             let cy = node.y + node.height / 2.0;
             writeln!(svg,"<polygon points=\"{:.2},{:.2} {:.2},{:.2} {:.2},{:.2} {:.2},{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
                 node.x+12.0,cy-12.0,node.x+24.0,cy,node.x+12.0,cy+12.0,node.x,cy,

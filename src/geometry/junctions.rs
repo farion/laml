@@ -40,18 +40,23 @@ pub(super) fn measure(node: &NodeDecl, sheet: &StyleSheet) -> Result<BoxNode, St
     };
     debug_assert!(matches!(
         node.kind,
-        NodeKind::Association | NodeKind::Junction
+        NodeKind::Association | NodeKind::Junction | NodeKind::Lollipop
     ));
     let label = node.label.clone().unwrap_or_default();
-    let width = if label.is_empty() {
-        24.0
+    let base = if node.kind == NodeKind::Lollipop {
+        20.0
     } else {
-        24.0 + 12.0 + text_width(&label, 14.0)?
+        24.0
+    };
+    let width = if label.is_empty() {
+        base
+    } else {
+        base + 12.0 + text_width(&label, 14.0)?
     };
     let height = if label.is_empty() {
-        24.0
+        base
     } else {
-        24.0_f64.max(14.0 * 1.25 + 8.0)
+        base.max(14.0 * 1.25 + 8.0)
     };
     Ok(BoxNode {
         id: node.id.clone(),
@@ -66,7 +71,11 @@ pub(super) fn measure(node: &NodeDecl, sheet: &StyleSheet) -> Result<BoxNode, St
         bottom_band: 0.0,
         abstract_node: false,
         kind: node.kind,
-        shape: NodeShape::Diamond,
+        shape: if node.kind == NodeKind::Lollipop {
+            NodeShape::Ellipse
+        } else {
+            NodeShape::Diamond
+        },
         x: 0.0,
         y: 0.0,
         width,

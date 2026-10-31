@@ -171,5 +171,6 @@ pub(crate) fn filtered(diagram: &Diagram, sheet: &StyleSheet) -> Result<Diagram,
             }
         }
     }
+    super::lollipop::expand(&mut visible, diagram, sheet)?;
     Ok(visible)
 }
