@@ -351,6 +351,13 @@ pub fn route(
             let Some(plan) = bridges::plan(&points, boxes, &routed, from, to, width) else {
                 continue;
             };
+            if qualifier_boxes
+                .iter()
+                .any(|q| !plan.avoids_region(&points, q.x, q.y, q.width, q.height))
+            {
+                label_error = Some("qualifier conflicts with required bridge".into());
+                continue;
+            }
             let labeled = match shown_label.as_deref() {
                 None => Ok((None, None)),
                 Some(text) => match placement {
@@ -402,7 +409,7 @@ pub fn route(
             let end_labels = match end_labels::place(
                 relation,
                 &points,
-                font_size,
+                (font_size, width),
                 boxes,
                 &routed,
                 label.as_ref(),
@@ -420,6 +427,13 @@ pub fn route(
                     .any(|q| q.overlaps(label.x, label.y, label.width, label.height))
             }) {
                 label_error = Some("qualifier overlaps association-end text".into());
+                continue;
+            }
+            if end_labels
+                .iter()
+                .any(|end| !plan.avoids_label(&points, &Some(end.clone())))
+            {
+                label_error = Some("association-end text conflicts with required bridge".into());
                 continue;
             }
             choice = Some((points, qualifier_boxes, label, end_labels, label_gap, plan));

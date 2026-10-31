@@ -112,6 +112,26 @@ fn label_clear(
     boxes: &[BoxNode],
     previous: &[Route],
 ) -> bool {
+    label_clear_with_markers(
+        label,
+        points,
+        own_segment,
+        width,
+        boxes,
+        previous,
+        [true, true],
+    )
+}
+
+pub(super) fn label_clear_with_markers(
+    label: &Label,
+    points: &[Point],
+    own_segment: Option<usize>,
+    width: f64,
+    boxes: &[BoxNode],
+    previous: &[Route],
+    own_markers: [bool; 2],
+) -> bool {
     let (x, y, w, h) = (label.x, label.y, label.width, label.height);
     if boxes.iter().any(|b| {
         !b.contains_package_content(x, y, w, h)
@@ -124,7 +144,8 @@ fn label_clear(
     }
     if [points[0], *points.last().unwrap()]
         .iter()
-        .any(|p| near_marker(x, y, w, h, *p, width))
+        .zip(own_markers)
+        .any(|(p, marked)| marked && near_marker(x, y, w, h, *p, width))
     {
         return false;
     }

@@ -246,6 +246,21 @@ pub(super) fn plan_except(
 }
 
 impl BridgePlan {
+    pub fn avoids_region(&self, points: &[Point], x: f64, y: f64, width: f64, height: f64) -> bool {
+        self.avoids_label(
+            points,
+            &Some(Label {
+                text: String::new(),
+                x,
+                y,
+                width,
+                height,
+                angle: 0.0,
+                placement: crate::syntax::LabelPlacement::Near,
+            }),
+        )
+    }
+
     pub fn avoids_label(&self, points: &[Point], label: &Option<Label>) -> bool {
         let Some(label) = label else {
             return true;
@@ -299,6 +314,8 @@ mod tests {
         let second = vec![p(100.0, 0.0), p(100.0, 200.0)];
         let planned = plan(&second, &[], &[first], 2, 3, 2.0).unwrap();
         assert_eq!(planned.events.len(), 1);
+        assert!(!planned.avoids_region(&second, 95.0, 95.0, 10.0, 10.0));
+        assert!(planned.avoids_region(&second, 150.0, 150.0, 10.0, 10.0));
         assert_eq!(planned.events[0].1.segment, 0);
         assert_eq!(planned.events[0].2.segment, 0);
         assert!((planned.events[0].2.distance - 108.0).abs() < 1e-6);

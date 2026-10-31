@@ -1,8 +1,10 @@
 //! Collision-checked multiplicity and role placement near relation endpoints.
-use super::labels::segment_hits_rect;
+use super::labels::label_clear_with_markers;
 use super::{Label, Point, Route};
 use crate::geometry::BoxNode;
-use crate::syntax::{EndAnnotation, EndSide, LabelPlacement, RelationDecl, RelationEndRule};
+use crate::syntax::{
+    EndAnnotation, EndSide, EndSymbol, LabelPlacement, RelationDecl, RelationEndRule,
+};
 use crate::text::measure;
 
 fn overlaps(x: f64, y: f64, width: f64, height: f64, label: &Label) -> bool {
@@ -14,6 +16,9 @@ fn overlaps(x: f64, y: f64, width: f64, height: f64, label: &Label) -> bool {
 
 struct Context<'a> {
     size: f64,
+    stroke: f64,
+    own_markers: [bool; 2],
+    points: &'a [Point],
     boxes: &'a [BoxNode],
     previous: &'a [Route],
     central: Option<&'a Label>,
@@ -71,43 +76,7 @@ fn place_one(
                 mid.y - height / 2.0,
             )
         };
-        if context.boxes.iter().any(|b| {
-            !b.contains_package_content(x, y, width, height)
-                && x < b.x + b.width
-                && x + width > b.x
-                && y < b.y + b.height
-                && y + height > b.y
-        }) {
-            continue;
-        }
-        if current
-            .iter()
-            .chain(context.central)
-            .any(|label| overlaps(x, y, width, height, label))
-        {
-            continue;
-        }
-        if context.previous.iter().any(|route| {
-            route
-                .qualifiers
-                .iter()
-                .any(|q| q.overlaps(x, y, width, height))
-                || route
-                    .label
-                    .as_ref()
-                    .is_some_and(|label| overlaps(x, y, width, height, label))
-                || route
-                    .end_labels
-                    .iter()
-                    .any(|label| overlaps(x, y, width, height, label))
-                || route
-                    .points
-                    .windows(2)
-                    .any(|segment| segment_hits_rect(segment[0], segment[1], x, y, width, height))
-        }) {
-            continue;
-        }
-        return Ok(Label {
+        let label = Label {
             text: text.to_string(),
             x,
             y,
@@ -115,7 +84,23 @@ fn place_one(
             height,
             angle: 0.0,
             placement: LabelPlacement::Near,
-        });
+        };
+        if !label_clear_with_markers(
+            &label,
+            context.points,
+            None,
+            context.stroke,
+            context.boxes,
+            context.previous,
+            context.own_markers,
+        ) || current
+            .iter()
+            .chain(context.central)
+            .any(|other| overlaps(x, y, width, height, other))
+        {
+            continue;
+        }
+        return Ok(label);
     }
     Err(format!(
         "cannot place association-end text '{text}' without overlap"
@@ -155,7 +140,7 @@ fn place_end(
 pub(super) fn place(
     relation: &RelationDecl,
     points: &[Point],
-    size: f64,
+    font_and_stroke: (f64, f64),
     boxes: &[BoxNode],
     previous: &[Route],
     central: Option<&Label>,
@@ -167,7 +152,13 @@ pub(super) fn place(
         return Ok(Vec::new());
     }
     let context = Context {
-        size,
+        size: font_and_stroke.0,
+        stroke: font_and_stroke.1,
+        own_markers: [
+            relation.appearance.start != EndSymbol::None,
+            relation.appearance.end != EndSymbol::None,
+        ],
+        points,
         boxes,
         previous,
         central,
@@ -189,4 +180,30 @@ pub(super) fn place(
         &mut labels,
     )?;
     Ok(labels)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn end_text_must_avoid_other_segments_of_its_own_route() {
+        let p = |x, y| Point { x, y };
+        let straight = [p(0.0, 0.0), p(200.0, 0.0)];
+        let context = Context {
+            size: 14.0,
+            stroke: 2.0,
+            own_markers: [false, false],
+            points: &straight,
+            boxes: &[],
+            previous: &[],
+            central: None,
+        };
+        assert!(place_one("role", -1.0, None, straight, &context, &[]).is_ok());
+        let detour = [p(0.0, 0.0), p(200.0, 0.0), p(200.0, -18.0), p(0.0, -18.0)];
+        let context = Context {
+            points: &detour,
+            ..context
+        };
+        assert!(place_one("role", -1.0, None, [detour[0], detour[1]], &context, &[]).is_err());
+    }
 }
