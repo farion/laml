@@ -111,7 +111,9 @@ fn every_published_example_checks_and_builds() {
         let actual = resvg::tiny_skia::Pixmap::decode_png(&png(&svg).unwrap()).unwrap();
         assert_eq!(
             (expected.width(), expected.height()),
-            (actual.width(), actual.height())
+            (actual.width(), actual.height()),
+            "{}",
+            path.display()
         );
         // Cross-platform rasterizers can round a few antialiased edge pixels
         // differently; large visible changes must still update the screenshot.

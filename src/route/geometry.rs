@@ -274,7 +274,23 @@ pub(super) fn route_is_clear(points: &[Point], boxes: &[BoxNode], previous: &[Ro
             return false;
         }
         for route in previous {
-            if route.qualifiers.iter().any(|qualifier| {
+            let markers = [
+                (route.points[0], route.appearance.start),
+                (*route.points.last().unwrap(), route.appearance.end),
+            ];
+            if markers.iter().any(|(point, symbol)| {
+                *symbol != crate::syntax::EndSymbol::None && {
+                    let radius = 14.0 + route.width / 2.0;
+                    segment_hits_rect(
+                        pair[0],
+                        pair[1],
+                        point.x - radius,
+                        point.y - radius,
+                        2.0 * radius,
+                        2.0 * radius,
+                    )
+                }
+            }) || route.qualifiers.iter().any(|qualifier| {
                 segment_hits_rect(
                     pair[0],
                     pair[1],
@@ -360,6 +376,29 @@ mod tests {
             height: 8.0,
         });
         assert!(!route_is_clear(&later, &[], &[older]));
+    }
+    #[test]
+    fn new_routes_do_not_clip_existing_arrowheads() {
+        let mut old = Route {
+            points: vec![p(0.0, 100.0), p(200.0, 100.0)],
+            qualifiers: vec![],
+            bridges: vec![],
+            gaps: vec![],
+            label: None,
+            end_labels: vec![],
+            from: 0,
+            to: 1,
+            color: String::new(),
+            width: 2.0,
+            font_size: 14.0,
+            bidirectional: false,
+            marker_end: false,
+            appearance: Default::default(),
+        };
+        let later = [p(190.0, 112.0), p(210.0, 112.0)];
+        assert!(route_is_clear(&later, &[], &[old.clone()]));
+        old.appearance.end = crate::syntax::EndSymbol::Arrow;
+        assert!(!route_is_clear(&later, &[], &[old]));
     }
     #[test]
     fn folded_note_uses_diagonal_stroke_for_ports_and_obstacles() {
