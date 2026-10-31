@@ -211,6 +211,13 @@ pub fn measure_node(
         Some(marker) if visibility_icon.is_none() => format!("{marker}{name}"),
         _ => name,
     };
+    // The bundled regular face need not support italic synthesis in every exporter.
+    // UML permits an explicit abstract annotation as a font-independent fallback.
+    let name = if diagram_type == DiagramType::Class && node.abstract_node {
+        format!("{name} {{abstract}}")
+    } else {
+        name
+    };
     let label = match node.kind {
         NodeKind::Interface => format!("«interface»\n{name}"),
         NodeKind::Enumeration => format!("«enumeration»\n{name}"),

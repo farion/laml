@@ -54,9 +54,11 @@ fn classifier_visibility_is_visible_but_does_not_change_the_node_id() {
     assert_eq!(diagram.nodes[0].visibility, Some('+'));
     assert_eq!(diagram.nodes[1].id, "Intern");
     let svg = image(source);
-    assert!(svg.contains("+Dienst"));
+    assert!(svg.contains("+Dienst {abstract}"));
     assert!(svg.contains("#Intern"));
     assert!(svg.contains("font-style=\"italic\""));
+    assert!(export::png(&svg).is_ok());
+    assert!(export::pdf(&svg).is_ok());
     let bad = "settings {\ntype: object\n}\nsemantics {\n+object Eins\n}\n";
     assert!(parse(bad).unwrap_err().message.contains("visibility"));
 }
