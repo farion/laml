@@ -22,17 +22,45 @@ fn resolve(nodes: &[NodeDecl], scope: Option<&str>, raw: &str) -> String {
     raw.into()
 }
 
+fn resolved_reference(
+    nodes: &[NodeDecl],
+    scope: Option<&str>,
+    raw: &str,
+    line: usize,
+) -> Result<String, ParseError> {
+    let resolved = resolve(nodes, scope, raw);
+    if resolved != raw && nodes.iter().any(|node| {
+        (node.explicit && node.id == raw)
+            || node.ports.iter().any(|port| port.explicit && port.id == raw)
+            || node.parts.iter().any(|part| matches!(part, crate::syntax::NodePart::Member { id: Some(id), .. } if id == raw))
+    }) {
+        return Err(error(line, format!("ambiguous reference '{raw}': local default and global @id both match")));
+    }
+    Ok(resolved)
+}
+
 pub(super) fn resolve_and_validate(diagram: &mut Diagram) -> Result<(), ParseError> {
     for relation in &mut diagram.relations {
-        relation.from = resolve(&diagram.nodes, relation.scope.as_deref(), &relation.from);
-        relation.to = resolve(&diagram.nodes, relation.scope.as_deref(), &relation.to);
+        relation.from = resolved_reference(
+            &diagram.nodes,
+            relation.scope.as_deref(),
+            &relation.from,
+            relation.line,
+        )?;
+        relation.to = resolved_reference(
+            &diagram.nodes,
+            relation.scope.as_deref(),
+            &relation.to,
+            relation.line,
+        )?;
     }
     for attachment in &mut diagram.attachments {
-        attachment.source = resolve(
+        attachment.source = resolved_reference(
             &diagram.nodes,
             attachment.scope.as_deref(),
             &attachment.source,
-        );
+            attachment.line,
+        )?;
     }
     validate_references(diagram)
 }

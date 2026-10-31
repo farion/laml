@@ -89,6 +89,8 @@ pub struct Settings {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NodeDecl {
     pub id: String,
+    /// An explicit @id remains globally addressable across package scopes.
+    pub explicit: bool,
     pub label: Option<String>,
     pub classes: Vec<String>,
     pub stereotypes: Vec<String>,

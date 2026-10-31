@@ -107,6 +107,7 @@ pub(super) fn expand(
         }
         diagram.nodes.push(NodeDecl {
             id: id.clone(),
+            explicit: false,
             label: Some(label),
             classes,
             stereotypes: Vec::new(),

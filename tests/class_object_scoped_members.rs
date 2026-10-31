@@ -15,6 +15,25 @@ fn repeated_member_names_resolve_in_nearest_package_scope() {
 }
 
 #[test]
+fn a_local_default_cannot_silently_shadow_a_global_explicit_id() {
+    for global in [
+        "@target class External",
+        "class External {\n@target id: UUID\n}",
+        "class External {\n@target port Out\n}",
+    ] {
+        let source = format!(
+            "settings {{\ntype: class\n}}\nsemantics {{\n{global}\npackage P {{\nclass target\nnote N \"text\"\nN .. target\n}}\n}}\n"
+        );
+        assert!(
+            parse(&source)
+                .unwrap_err()
+                .message
+                .contains("ambiguous reference 'target'")
+        );
+    }
+}
+
+#[test]
 fn fully_qualified_default_paths_are_not_shadowed_by_local_packages() {
     let source = "settings {\ntype: class\n}\nsemantics {\npackage P {\nclass A {\nid: UUID\n}\n}\npackage Q {\npackage P {\nclass A {\nid: UUID\n}\n}\nnote N \"target root\"\nN .. P.A::id\n}\n}\n";
     let diagram = parse(source).unwrap();

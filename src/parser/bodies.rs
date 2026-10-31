@@ -136,9 +136,11 @@ pub(super) fn node(
     {
         return Err(error(line, "node name required"));
     }
+    let explicit = explicit_id.is_some();
     let mut result = NodeDecl {
         id: explicit_id
             .unwrap_or_else(|| parent.map_or(name.clone(), |path| format!("{path}.{name}"))),
+        explicit,
         label: if matches!(kind, NodeKind::Association | NodeKind::Junction) {
             Some(name.clone())
         } else {
