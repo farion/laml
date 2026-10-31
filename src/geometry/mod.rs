@@ -3,6 +3,7 @@
 
 mod constraints;
 mod containers;
+mod junctions;
 mod nodes;
 mod ports;
 mod visibility;
@@ -12,7 +13,7 @@ pub use nodes::{BoxNode, NodeShape};
 pub(crate) use visibility::filtered as visible_diagram;
 
 use crate::styles::StyleSheet;
-use crate::syntax::{Diagram, NodeDecl};
+use crate::syntax::{Diagram, NodeDecl, NodeKind};
 
 pub(crate) fn scoped_styles(diagram: &Diagram, node: &NodeDecl, sheet: &StyleSheet) -> StyleSheet {
     let mut parents = Vec::new();
@@ -39,12 +40,17 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
         .nodes
         .iter()
         .map(|node| {
-            nodes::measure_node(
-                node,
-                &scoped_styles(diagram, node, styles),
-                diagram.settings.diagram_type,
-                &diagram.port_layout,
-            )
+            let scoped = scoped_styles(diagram, node, styles);
+            if matches!(node.kind, NodeKind::Association | NodeKind::Junction) {
+                junctions::measure(node, &scoped)
+            } else {
+                nodes::measure_node(
+                    node,
+                    &scoped,
+                    diagram.settings.diagram_type,
+                    &diagram.port_layout,
+                )
+            }
             .map_err(|message| GeometryError {
                 line: node.line,
                 message,

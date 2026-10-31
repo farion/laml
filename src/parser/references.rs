@@ -98,11 +98,14 @@ fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {
                 )
             })?;
         if diagram.settings.diagram_type != DiagramType::Generic
-            && node.kind != crate::syntax::NodeKind::Note
+            && !matches!(
+                node.kind,
+                crate::syntax::NodeKind::Note | crate::syntax::NodeKind::AssociationClass
+            )
         {
             return Err(error(
                 attachment.line,
-                "UML edge annotation source must be a note",
+                "UML edge attachment source must be a note or association class",
             ));
         }
         if !diagram
@@ -190,6 +193,103 @@ fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {
             }
         }
         uml::validate_relation(diagram, relation)?;
+    }
+    for node in &diagram.nodes {
+        if node.kind == crate::syntax::NodeKind::AssociationClass {
+            let attachments: Vec<_> = diagram
+                .attachments
+                .iter()
+                .filter(|link| link.source == node.id)
+                .collect();
+            if attachments.len() != 1 {
+                return Err(error(
+                    node.line,
+                    "association class must attach to exactly one named binary association",
+                ));
+            }
+            let target = diagram
+                .relations
+                .iter()
+                .find(|relation| relation.name.as_deref() == Some(attachments[0].target.as_str()))
+                .expect("checked named relation");
+            if target.appearance.dashed
+                || target.appearance.start != crate::syntax::EndSymbol::None
+                || target.appearance.end != crate::syntax::EndSymbol::None
+                || target.from == target.to
+                || ![&target.from, &target.to].iter().all(|id| {
+                    diagram.nodes.iter().any(|other| {
+                        &other.id == *id
+                            && matches!(
+                                other.kind,
+                                crate::syntax::NodeKind::Class
+                                    | crate::syntax::NodeKind::Interface
+                                    | crate::syntax::NodeKind::DataType
+                            )
+                    })
+                })
+            {
+                return Err(error(
+                    attachments[0].line,
+                    "association class requires a plain binary association between classifiers",
+                ));
+            }
+        }
+        if node.kind != crate::syntax::NodeKind::Association {
+            continue;
+        }
+        let mut participants = std::collections::HashSet::new();
+        for relation in &diagram.relations {
+            let (other, junction_end) = if relation.from == node.id {
+                (&relation.to, &relation.source_end)
+            } else if relation.to == node.id {
+                (&relation.from, &relation.target_end)
+            } else {
+                continue;
+            };
+            let other_node = diagram
+                .nodes
+                .iter()
+                .find(|candidate| candidate.id == *other)
+                .ok_or_else(|| {
+                    error(
+                        relation.line,
+                        "association arm must end at a classifier node",
+                    )
+                })?;
+            if other_node.kind == crate::syntax::NodeKind::Note
+                && relation.appearance.dashed
+                && relation.appearance.start == crate::syntax::EndSymbol::None
+                && relation.appearance.end == crate::syntax::EndSymbol::None
+            {
+                continue;
+            }
+            if !matches!(
+                other_node.kind,
+                crate::syntax::NodeKind::Class
+                    | crate::syntax::NodeKind::Interface
+                    | crate::syntax::NodeKind::Enumeration
+                    | crate::syntax::NodeKind::DataType
+            ) || relation.appearance.dashed
+                || relation.appearance.start != crate::syntax::EndSymbol::None
+                || relation.appearance.end != crate::syntax::EndSymbol::None
+                || relation.label.is_some()
+                || !relation.stereotypes.is_empty()
+                || junction_end.multiplicity.is_some()
+                || junction_end.role.is_some()
+            {
+                return Err(error(
+                    relation.line,
+                    "n-ary association arms must be plain, unlabeled links to classifiers",
+                ));
+            }
+            participants.insert(other);
+        }
+        if participants.len() < 3 {
+            return Err(error(
+                node.line,
+                "n-ary association requires at least three distinct classifier arms",
+            ));
+        }
     }
     for rule in &diagram.layout {
         for id in [&rule.first, &rule.second] {

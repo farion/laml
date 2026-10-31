@@ -36,6 +36,9 @@ pub enum NodeKind {
     Enumeration,
     DataType,
     Package,
+    Association,
+    AssociationClass,
+    Junction,
     Object,
     Note,
 }

@@ -55,6 +55,17 @@ pub(super) fn node(
     };
     let (kind, name) = if let Some((name, _)) = &note {
         (NodeKind::Note, *name)
+    } else if let Some(name) = source.strip_prefix("association class ") {
+        (NodeKind::AssociationClass, name)
+    } else if source == "association" {
+        (NodeKind::Association, "")
+    } else if source == "junction" {
+        (NodeKind::Junction, "")
+    } else if source.starts_with("association ") || source.starts_with("junction ") {
+        return Err(error(
+            line,
+            "junction captions are not implemented; give it an explicit @id",
+        ));
     } else if let Some(name) = source.strip_prefix("package ") {
         (NodeKind::Package, name)
     } else if let Some(name) = source.strip_prefix("class ") {
@@ -76,13 +87,32 @@ pub(super) fn node(
             DiagramType::Object => (NodeKind::Object, source),
         }
     };
-    if (diagram.settings.diagram_type == DiagramType::Class && kind == NodeKind::Object)
+    if (diagram.settings.diagram_type == DiagramType::Class
+        && matches!(kind, NodeKind::Object | NodeKind::Junction))
         || (diagram.settings.diagram_type == DiagramType::Object
             && !matches!(kind, NodeKind::Object | NodeKind::Note))
     {
         return Err(error(
             line,
             "element kind is not supported by this UML diagram type",
+        ));
+    }
+    if kind == NodeKind::AssociationClass && diagram.settings.diagram_type != DiagramType::Class {
+        return Err(error(line, "association class requires type: class"));
+    }
+    if kind == NodeKind::Association && diagram.settings.diagram_type != DiagramType::Class {
+        return Err(error(line, "association junction requires type: class"));
+    }
+    if matches!(kind, NodeKind::Association | NodeKind::Junction)
+        && (block
+            || explicit_id.is_none()
+            || abstract_node
+            || visibility.is_some()
+            || !stereotypes.is_empty())
+    {
+        return Err(error(
+            line,
+            "junction needs @id and cannot have a body, visibility or stereotype",
         ));
     }
     if kind == NodeKind::Package && !block {
@@ -126,13 +156,18 @@ pub(super) fn node(
         (name.to_string(), Vec::new())
     };
     let (name, attrs) = attributes(&prepared, line)?;
-    if name.is_empty() && !anonymous {
+    if name.is_empty() && !anonymous && !matches!(kind, NodeKind::Association | NodeKind::Junction)
+    {
         return Err(error(line, "node name required"));
     }
     let mut result = NodeDecl {
         id: explicit_id
             .unwrap_or_else(|| parent.map_or(name.clone(), |path| format!("{path}.{name}"))),
-        label: note.map(|(_, text)| text),
+        label: if matches!(kind, NodeKind::Association | NodeKind::Junction) {
+            Some(String::new())
+        } else {
+            note.map(|(_, text)| text)
+        },
         classes: Vec::new(),
         stereotypes,
         kind,
@@ -193,6 +228,7 @@ pub(super) fn member(
         let node = &mut diagram.nodes[index];
         if diagram_type != DiagramType::Generic {
             if node.kind != NodeKind::Class
+                && node.kind != NodeKind::AssociationClass
                 && node.kind != NodeKind::Interface
                 && node.kind != NodeKind::DataType
             {

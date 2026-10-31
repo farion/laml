@@ -105,7 +105,7 @@ pub(super) fn route_attachments(
         let (points, plan) = chosen.ok_or_else(|| RouteError {
             line: attachment.line,
             message:
-                "cannot attach note to named relation without overlapping a node, label, or bridge"
+                "cannot attach node to named relation without overlapping a node, label, or bridge"
                     .into(),
         })?;
         let target_node = routed[target_index].from;
