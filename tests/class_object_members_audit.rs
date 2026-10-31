@@ -1,6 +1,26 @@
 use laml::{export, geometry::place, parser::parse, route::route, styles::StyleSheet, svg::render};
 
 #[test]
+fn member_modifiers_are_order_independent_and_deduplicated() {
+    let source = "settings {\ntype: class\n}\nsemantics {\nclass C {\nstatic field int counter\n--\nabstract method +void start()\n}\n}\n";
+    let diagram = parse(source).unwrap();
+    assert!(diagram.nodes[0].has_endpoint("C::counter"));
+    assert!(diagram.nodes[0].has_endpoint("C::start"));
+    let styles = StyleSheet::default();
+    let boxes = place(&diagram, &styles).unwrap();
+    let image = render(&boxes, &[]).unwrap();
+    assert!(image.contains("int counter"));
+    assert!(!image.contains("field int counter"));
+    for invalid in [
+        "static static field int counter",
+        "field method int counter",
+        "abstract abstract method +void start()",
+    ] {
+        assert!(parse(&source.replace("static field int counter", invalid)).is_err());
+    }
+}
+
+#[test]
 fn object_links_can_name_ends_but_cannot_assign_multiplicities() {
     let source = "settings {\ntype: object\n}\nsemantics {\na(of=A)\nb(of=B)\n@link a /owner -- /item b\n}\nlayout {\na < b : gap=180\n}\n";
     let diagram = parse(source).unwrap();

@@ -318,22 +318,30 @@ pub(super) fn member(
     } else {
         None
     };
-    let forced = if let Some(rest) = content.strip_prefix("field ") {
-        content = rest;
-        Some(MemberKind::Field)
-    } else if let Some(rest) = content.strip_prefix("method ") {
-        content = rest;
-        Some(MemberKind::Method)
-    } else {
-        None
-    };
+    let mut forced = None;
     let mut abstract_member = false;
     let mut static_member = false;
     loop {
-        if let Some(rest) = content.strip_prefix("abstract ") {
+        if let Some(rest) = content.strip_prefix("field ") {
+            if forced.replace(MemberKind::Field).is_some() {
+                return Err(error(line, "duplicate or conflicting member kind"));
+            }
+            content = rest;
+        } else if let Some(rest) = content.strip_prefix("method ") {
+            if forced.replace(MemberKind::Method).is_some() {
+                return Err(error(line, "duplicate or conflicting member kind"));
+            }
+            content = rest;
+        } else if let Some(rest) = content.strip_prefix("abstract ") {
+            if abstract_member {
+                return Err(error(line, "duplicate abstract member modifier"));
+            }
             abstract_member = true;
             content = rest;
         } else if let Some(rest) = content.strip_prefix("static ") {
+            if static_member {
+                return Err(error(line, "duplicate static member modifier"));
+            }
             static_member = true;
             content = rest;
         } else {
