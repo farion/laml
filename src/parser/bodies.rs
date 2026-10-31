@@ -25,17 +25,7 @@ pub(super) fn node(
     };
     let (source, stereotypes) =
         super::stereotypes::suffix(source, line, diagram.settings.diagram_type)?;
-    let abstract_node = source.starts_with("abstract ");
-    let source = source.strip_prefix("abstract ").unwrap_or(source);
-    let visibility = source
-        .chars()
-        .next()
-        .filter(|ch| matches!(ch, '+' | '-' | '#' | '~'));
-    let source = if visibility.is_some() {
-        source[1..].trim_start()
-    } else {
-        source
-    };
+    let (source, abstract_node, visibility) = super::node_modifiers::take(source, line)?;
     let anonymous = source.starts_with("anonymous ");
     let source = source.strip_prefix("anonymous ").unwrap_or(source);
     let note = if let Some(tail) = source.strip_prefix("note ") {

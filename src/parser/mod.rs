@@ -17,6 +17,7 @@ mod graph_operators;
 mod graph_relations;
 mod layout;
 mod member_notation;
+mod node_modifiers;
 mod references;
 mod selectors;
 mod side_references;

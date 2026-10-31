@@ -59,6 +59,20 @@ fn uml_rejects_relationship_glyphs_that_misstate_the_element_kinds() {
 }
 
 #[test]
+fn classifier_visibility_and_abstract_can_be_written_in_either_order() {
+    for heading in ["+ abstract class A", "abstract +class A"] {
+        let source = format!("settings {{\ntype: class\n}}\nsemantics {{\n{heading}\n}}\n");
+        let diagram = parse(&source).unwrap();
+        assert_eq!(diagram.nodes[0].visibility, Some('+'));
+        assert!(diagram.nodes[0].abstract_node);
+    }
+    for heading in ["abstract abstract class A", "+ #class A"] {
+        let source = format!("settings {{\ntype: class\n}}\nsemantics {{\n{heading}\n}}\n");
+        assert!(parse(&source).unwrap_err().message.contains("duplicate"));
+    }
+}
+
+#[test]
 fn abstract_modifier_applies_to_classifiers_not_instances_notes_or_packages() {
     for source in [
         "settings {\ntype: object\n}\nsemantics {\nabstract object alice(of=Person)\n}\n",
