@@ -55,8 +55,15 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
                     | NodeKind::StateInitial
                     | NodeKind::StateFinal
                     | NodeKind::StateChoice
+                    | NodeKind::ActivityInitial
+                    | NodeKind::ActivityFinal
+                    | NodeKind::ActivityFlowFinal
+                    | NodeKind::ActivityDecision
+                    | NodeKind::ActivityMerge
+                    | NodeKind::ActivityFork
+                    | NodeKind::ActivityJoin
             ) {
-                junctions::measure(node, &scoped)
+                junctions::measure(node, &scoped, diagram.settings.direction)
             } else {
                 nodes::measure_node(
                     node,
@@ -71,6 +78,14 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
             })
         })
         .collect::<Result<_, _>>()?;
+    for (source, drawn) in diagram.nodes.iter().zip(&boxes) {
+        if source.kind == NodeKind::ActivityAction && source.ports.len() != drawn.ports.len() {
+            return Err(GeometryError {
+                line: source.line,
+                message: "activity pins must remain visible".into(),
+            });
+        }
+    }
     for node in &mut boxes {
         if (node.kind == NodeKind::Component
             || node.kind == NodeKind::State

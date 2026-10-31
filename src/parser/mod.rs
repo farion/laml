@@ -10,6 +10,7 @@ use crate::syntax::{
     StyleRule,
 };
 
+mod activity;
 mod bindings;
 mod bodies;
 mod component;
@@ -81,6 +82,7 @@ fn prescan_type(source: &str) -> DiagramType {
                 "component" => DiagramType::Component,
                 "deployment" => DiagramType::Deployment,
                 "state" => DiagramType::State,
+                "activity" => DiagramType::Activity,
                 _ => DiagramType::Generic,
             };
         }
@@ -195,6 +197,16 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
                     Section::NodeBody(index)
                 } else {
                     state::behavior(text, line, &mut diagram.nodes[index])?;
+                    Section::NodeBody(index)
+                }
+            }
+            Section::NodeBody(index)
+                if diagram.nodes[index].kind == crate::syntax::NodeKind::ActivityAction =>
+            {
+                if text == "}" {
+                    Section::Semantics
+                } else {
+                    activity::pin(text, line, &mut diagram.nodes[index])?;
                     Section::NodeBody(index)
                 }
             }
@@ -349,6 +361,7 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
     }
     references::resolve_and_validate(&mut diagram)?;
     state::validate(&diagram)?;
+    activity::validate(&diagram)?;
     Ok(diagram)
 }
 
@@ -451,6 +464,7 @@ fn parse_setting(
                 "component" => DiagramType::Component,
                 "deployment" => DiagramType::Deployment,
                 "state" => DiagramType::State,
+                "activity" => DiagramType::Activity,
                 _ => return Err(error(line, "invalid graph diagram type")),
             }
         }

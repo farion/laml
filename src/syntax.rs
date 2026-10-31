@@ -28,6 +28,7 @@ pub enum DiagramType {
     Component,
     Deployment,
     State,
+    Activity,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -45,6 +46,15 @@ pub enum NodeKind {
     StateInitial,
     StateFinal,
     StateChoice,
+    ActivityAction,
+    ActivityObject,
+    ActivityInitial,
+    ActivityFinal,
+    ActivityFlowFinal,
+    ActivityDecision,
+    ActivityMerge,
+    ActivityFork,
+    ActivityJoin,
     Interface,
     Enumeration,
     DataType,
@@ -99,6 +109,12 @@ pub enum PortContract {
     Requires(String),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ActivityPinDirection {
+    Input,
+    Output,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PortDecl {
     pub id: String,
@@ -106,6 +122,7 @@ pub struct PortDecl {
     pub explicit: bool,
     pub classes: Vec<String>,
     pub contract: Option<PortContract>,
+    pub activity_pin: Option<ActivityPinDirection>,
     pub line: usize,
 }
 
@@ -204,6 +221,12 @@ pub enum ConnectorKind {
     Delegation,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ActivityFlow {
+    Control,
+    Object,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RelationDecl {
     pub name: Option<String>,
@@ -214,6 +237,7 @@ pub struct RelationDecl {
     pub from: String,
     pub to: String,
     pub kind: RelationKind,
+    pub activity_flow: Option<ActivityFlow>,
     pub connector: Option<ConnectorKind>,
     pub appearance: EdgeAppearance,
     pub source_end: EndAnnotation,

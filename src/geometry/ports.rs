@@ -7,6 +7,7 @@ pub struct BoxPort {
     pub id: String,
     pub label: String,
     pub side: PortSide,
+    pub activity_pin: Option<crate::syntax::ActivityPinDirection>,
     pub x: f64,
     pub y: f64,
     pub color: String,
@@ -23,6 +24,12 @@ pub(super) fn position(diagram: &Diagram, boxes: &mut [BoxNode]) {
             .ports
             .iter()
             .map(|port| {
+                if let Some(direction) = port.activity_pin {
+                    return match direction {
+                        crate::syntax::ActivityPinDirection::Input => PortSide::Left,
+                        crate::syntax::ActivityPinDirection::Output => PortSide::Right,
+                    };
+                }
                 diagram
                     .port_layout
                     .iter()

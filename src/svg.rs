@@ -6,6 +6,7 @@ use crate::syntax::{EndSymbol, NodeKind, NodePart};
 use crate::text::{FONT, ITALIC_FONT, measure, measure_italic};
 use base64::Engine;
 use std::fmt::Write;
+mod activity;
 mod compact;
 mod component_container;
 mod deployment;
@@ -240,6 +241,17 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
         .unwrap();
         if matches!(
             node.kind,
+            NodeKind::ActivityInitial
+                | NodeKind::ActivityFinal
+                | NodeKind::ActivityFlowFinal
+                | NodeKind::ActivityDecision
+                | NodeKind::ActivityMerge
+                | NodeKind::ActivityFork
+                | NodeKind::ActivityJoin
+        ) {
+            activity::symbol(&mut svg, node);
+        } else if matches!(
+            node.kind,
             NodeKind::StateInitial | NodeKind::StateFinal | NodeKind::StateChoice
         ) {
             state::symbol(&mut svg, node);
@@ -414,7 +426,9 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
             if node.bottom_band > 0.0 {
                 separators.push(node.y + node.height - node.padding - node.bottom_band);
             }
-            if !matches!(node.shape, NodeShape::Ellipse | NodeShape::Diamond) {
+            if node.kind != NodeKind::ActivityAction
+                && !matches!(node.shape, NodeShape::Ellipse | NodeShape::Diamond)
+            {
                 for separator in separators {
                     writeln!(svg, "<line x1=\"{:.2}\" y1=\"{separator:.2}\" x2=\"{:.2}\" y2=\"{separator:.2}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
                         node.x, node.x + node.width, node.border_color, node.border_width).unwrap();
@@ -474,13 +488,4 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
     }
     svg.push_str("</svg>\n");
     Ok(svg)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn escapes_untrusted_labels() {
-        assert_eq!(escape("<&\"'"), "&lt;&amp;&quot;&apos;");
-    }
 }

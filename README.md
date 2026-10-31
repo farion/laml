@@ -40,7 +40,7 @@ SVG defaults to embedded Inter Regular with selectable text; diagrams with abstr
 
 ## Examples
 
-These four larger showcases cover generic, class, object and sequence diagrams. Focused component, deployment and state examples follow below. Each has a source link. Click an image to inspect it at full size; the examples are executable `.laml` files built by LAML. Each also builds as SVG and vector PDF.
+These four larger showcases cover generic, class, object and sequence diagrams. Focused component, deployment, state and activity examples follow below. Each has a source link. Click an image to inspect it at full size; the examples are executable `.laml` files built by LAML. Each also builds as SVG and vector PDF.
 
 ### Generic node-edge diagram · [source](examples/showcase-generic.laml)
 
@@ -133,6 +133,12 @@ Executions, synchronous and asynchronous messages, replies, a self-call, alterna
 | [![Guarded open transition, exterior ping self-loop and return transition](docs/images/state-loop.png)](examples/state-loop.laml) |
 | Event, guard and effect text with safe exterior routing. See the [state-diagram guide](docs/state-diagrams.md) and [UML notation audit](docs/uml-state-conformance.md). |
 
+### UML activity diagram · [order example](examples/activity-order.laml)
+
+[![Order activity with explicit control and object flows, named action pins, guarded decision, parallel fork/join and distinct final nodes](docs/images/activity-order.png)](examples/activity-order.laml)
+
+Control and object flows are distinct in the source but share UML's directed-arrow notation. Named input/output pins keep object flows attached to the action's data boundary; labels are not executed. See the [activity-diagram guide](docs/activity-diagrams.md) and [notation audit](docs/uml-activity-conformance.md).
+
 Set `type: sequence` in `settings` to use the sequence grammar. Sequence diagrams use the same SVG/PNG/vector-PDF export commands; their node, message, fragment, annotation, gate and ordering visuals are styled with LSS. Start with the [sequence-diagram guide](docs/sequence-diagrams.md), then use the [syntax reference](docs/language-reference.md#sequence-diagrams) and [UML 2.5.1 notation audit](docs/uml-sequence-conformance.md). The outer UML `sd` interaction frame is intentionally deferred; divergent open executions at fragment joins are rejected rather than implicitly resolved.
 
 Build any example with `cargo run -- build examples/NAME.laml`. The output filename selects the format (`.svg`, `.png`, or `.pdf`). SVG text modes are selected with `--svg-text=embedded|system|paths` after the optional output filename. The README images are generated with `cargo run -- build examples/NAME.laml docs/images/NAME.png`. Source files and matching images are tested together.
@@ -149,6 +155,7 @@ Build any example with `cargo run -- build examples/NAME.laml`. The output filen
 - Component diagrams with dependencies, provided/required interfaces, typed ports, contained parts and checked assembly/delegation connectors; no hidden UML model or runtime execution.
 - Deployment diagrams with device/node cubes, execution environments, artifacts, nested deployment targets, solid communication paths and distinct checked `«deploy»`/`«manifest»` arrows.
 - Behavior state diagrams with rounded states, initial/final and choice symbols, guarded transitions, entry/do/exit text and one-region composite states; strings are displayed, never executed.
+- Activity diagrams with visible action pins and object nodes, explicit control/object flows, distinct decision/merge and fork/join, and activity/flow finals; no token execution.
 - Generic node-edge shapes, nested containers, styled members, boundary ports, optional icons, named edge attachments and conditional icon-license metadata.
 - Separate sequence grammar with lifelines, calls and replies, creation/deletion, fragments, interaction uses, annotations, coregions, inline part decompositions and mandatory layout constraints.
 - `check`, `build`, and `update` commands, source-linked diagnostics, and conformance tests for deterministic and mandatory geometry.
@@ -179,6 +186,8 @@ The test suite includes buildable examples, export formats, mandatory geometry, 
 - [Deployment-diagram guide](docs/deployment-diagrams.md)
 - [State-diagram guide](docs/state-diagrams.md)
 - [UML state-machine notation audit and limits](docs/uml-state-conformance.md)
+- [Activity-diagram guide](docs/activity-diagrams.md)
+- [UML activity notation audit and limits](docs/uml-activity-conformance.md)
 - [UML deployment notation audit and limits](docs/uml-deployment-conformance.md)
 - [UML component notation audit and limits](docs/uml-component-conformance.md)
 - [UML class/object notation audit and limits](docs/uml-class-object-conformance.md)

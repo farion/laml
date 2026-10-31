@@ -99,6 +99,12 @@ pub(super) fn validate_relation(
         return Ok(());
     }
     if note_end {
+        if relation.activity_flow.is_some() {
+            return Err(error(
+                relation.line,
+                "a UML note attachment cannot be a control or object flow",
+            ));
+        }
         if !unmarked_dotted
             || from.kind == to.kind
             || end_label
@@ -120,6 +126,9 @@ pub(super) fn validate_relation(
     }
     if diagram.settings.diagram_type == DiagramType::State {
         return super::state::relation(relation, from, to);
+    }
+    if diagram.settings.diagram_type == DiagramType::Activity {
+        return super::activity::relation(relation, from, to);
     }
     if member_end {
         return Err(error(

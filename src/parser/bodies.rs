@@ -57,6 +57,7 @@ pub(super) fn node(
     }
     super::deployment::validate_node(diagram, kind, parent, block, visibility, &stereotypes, line)?;
     super::state::validate_node(diagram, kind, parent, block, visibility, &stereotypes, line)?;
+    super::activity::validate_node(diagram, kind, parent, block, visibility, &stereotypes, line)?;
     if kind == NodeKind::AssociationClass && diagram.settings.diagram_type != DiagramType::Class {
         return Err(error(line, "association class requires type: class"));
     }
@@ -120,7 +121,16 @@ pub(super) fn node(
             Some(name.clone())
         } else if matches!(
             kind,
-            NodeKind::StateInitial | NodeKind::StateFinal | NodeKind::StateChoice
+            NodeKind::StateInitial
+                | NodeKind::StateFinal
+                | NodeKind::StateChoice
+                | NodeKind::ActivityInitial
+                | NodeKind::ActivityFinal
+                | NodeKind::ActivityFlowFinal
+                | NodeKind::ActivityDecision
+                | NodeKind::ActivityMerge
+                | NodeKind::ActivityFork
+                | NodeKind::ActivityJoin
         ) {
             Some(String::new())
         } else {

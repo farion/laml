@@ -45,6 +45,23 @@ pub(super) fn parse_semantic(
         }
         relation_classes = classes(&value, line)?;
     }
+    let (body, activity_flow) =
+        if diagram.settings.diagram_type == crate::syntax::DiagramType::Activity {
+            if let Some(rest) = body.strip_prefix("control ") {
+                (rest, Some(crate::syntax::ActivityFlow::Control))
+            } else if let Some(rest) = body.strip_prefix("object ") {
+                (rest, Some(crate::syntax::ActivityFlow::Object))
+            } else if body.contains(" .. ") {
+                (body, None) // a dotted UML note attachment is neither flow kind
+            } else {
+                return Err(error(
+                    line,
+                    "activity arrow needs explicit control or object flow kind",
+                ));
+            }
+        } else {
+            (body, None)
+        };
     let (endpoints, label) = match split_once_top_level(body, ':') {
         Some((endpoints, label)) => {
             let label = label.trim();
@@ -132,6 +149,7 @@ pub(super) fn parse_semantic(
         from: from.into(),
         to: to.into(),
         kind,
+        activity_flow,
         connector,
         appearance,
         source_end,

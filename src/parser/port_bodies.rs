@@ -67,6 +67,7 @@ pub(super) fn parse(
         explicit: id.is_some(),
         classes: port_classes,
         contract,
+        activity_pin: None,
         line,
     });
     Ok(true)

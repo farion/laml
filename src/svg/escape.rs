@@ -13,3 +13,13 @@ pub(super) fn escape(value: &str) -> String {
     }
     output
 }
+
+#[cfg(test)]
+mod tests {
+    use super::escape;
+
+    #[test]
+    fn escapes_untrusted_labels() {
+        assert_eq!(escape("<&\"'"), "&lt;&amp;&quot;&apos;");
+    }
+}

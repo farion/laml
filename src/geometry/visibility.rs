@@ -79,6 +79,24 @@ pub(crate) fn filtered(diagram: &Diagram, sheet: &StyleSheet) -> Result<Diagram,
             });
         }
     }
+    if diagram.settings.diagram_type == DiagramType::Activity {
+        for relation in &diagram.relations {
+            if relation.activity_flow.is_some()
+                && hidden(
+                    sheet,
+                    &Element::Relation {
+                        name: relation.name.as_deref(),
+                        classes: &relation.classes,
+                    },
+                )
+            {
+                return Err((
+                    relation.line,
+                    "activity control and object flows must remain visible".into(),
+                ));
+            }
+        }
+    }
     visible.relations.retain(|relation| {
         !hidden(
             sheet,

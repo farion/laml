@@ -6,8 +6,15 @@ fn compact_radius(node: &BoxNode) -> Option<f64> {
     match node.kind {
         crate::syntax::NodeKind::Association | crate::syntax::NodeKind::Junction => Some(12.0),
         crate::syntax::NodeKind::Lollipop | crate::syntax::NodeKind::Socket => Some(10.0),
-        crate::syntax::NodeKind::StateInitial => Some(9.0),
-        crate::syntax::NodeKind::StateFinal | crate::syntax::NodeKind::StateChoice => Some(12.0),
+        crate::syntax::NodeKind::StateInitial | crate::syntax::NodeKind::ActivityInitial => {
+            Some(9.0)
+        }
+        crate::syntax::NodeKind::StateFinal
+        | crate::syntax::NodeKind::StateChoice
+        | crate::syntax::NodeKind::ActivityFinal
+        | crate::syntax::NodeKind::ActivityFlowFinal
+        | crate::syntax::NodeKind::ActivityDecision
+        | crate::syntax::NodeKind::ActivityMerge => Some(12.0),
         _ => None,
     }
 }

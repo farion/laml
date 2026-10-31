@@ -202,6 +202,7 @@ pub fn measure_node(
             side: port_rules.iter().find(|rule| rule.id == id).map_or(PortSide::Right, |rule| rule.side),
             x: 0.0,
             y: 0.0,
+            activity_pin: port.activity_pin,
             color: color(&scoped, &element, "color", &text_color),
             fill: color(&scoped, &element, "fill", "#eff4fa"),
             border_color: color(&scoped, &element, "border-color", "#395373"),

@@ -1,0 +1,48 @@
+settings {
+    type: activity
+}
+semantics {
+    initial Start
+    objectNode Order
+    action Inspect {
+        input order
+    }
+    decision Valid
+    action Reject
+    flowFinal Rejected
+    fork Parallel
+    action Reserve {
+        output reservation
+    }
+    action Authorize {
+        output approval
+    }
+    objectNode Reservation
+    objectNode Approval
+    join Together
+    action Dispatch {
+        input reservation
+        input approval
+    }
+    activityFinal Done
+
+    object Order --> Inspect::order
+    control Start --> Inspect
+    control Inspect --> Valid
+    control Valid --> Reject : [invalid]
+    control Reject --> Rejected
+    @approved control Valid --> Parallel : [else]
+    control Parallel --> Reserve
+    control Parallel --> Authorize
+    control Reserve --> Together
+    control Authorize --> Together
+    object Reserve::reservation --> Reservation
+    object Reservation --> Dispatch::reservation
+    object Authorize::approval --> Approval
+    object Approval --> Dispatch::approval
+    control Together --> Dispatch
+    control Dispatch --> Done
+}
+layout {
+    relation[approved] : label=along
+}
