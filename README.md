@@ -114,3 +114,4 @@ The test suite includes buildable examples, export formats, mandatory geometry, 
 - [Language contract](docs/language-definition.md)
 - [Sequence-diagram guide](docs/sequence-diagrams.md)
 - [Class and object diagram guide](docs/class-object-diagrams.md)
+- [UML class/object notation audit and limits](docs/uml-class-object-conformance.md)
