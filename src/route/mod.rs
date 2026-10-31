@@ -3,7 +3,7 @@
 
 use crate::geometry::BoxNode;
 use crate::styles::{Element, StyleSheet, Value};
-use crate::syntax::{Diagram, LabelPlacement, RelationDecl};
+use crate::syntax::{Diagram, EndPosition, LabelPlacement, PortSide, RelationDecl};
 
 mod attachments;
 mod bridges;
@@ -68,6 +68,29 @@ pub struct RouteError {
     pub message: String,
 }
 
+fn forced_port(node: &BoxNode, side: PortSide) -> Point {
+    let c = center(node);
+    let towards = match side {
+        PortSide::Left => Point {
+            x: c.x - 1000.0,
+            y: c.y,
+        },
+        PortSide::Right => Point {
+            x: c.x + 1000.0,
+            y: c.y,
+        },
+        PortSide::Top => Point {
+            x: c.x,
+            y: c.y - 1000.0,
+        },
+        PortSide::Bottom => Point {
+            x: c.x,
+            y: c.y + 1000.0,
+        },
+    };
+    port(node, towards)
+}
+
 fn candidates(
     diagram: &Diagram,
     index: usize,
@@ -89,6 +112,21 @@ fn candidates(
         .and_then(|relation| (relation.to != b.id).then_some(relation.to.as_str()));
     let ca = center(a);
     let cb = center(b);
+    let selected_side = |end| {
+        diagram
+            .relations
+            .get(index)
+            .and_then(|relation| relation.name.as_deref())
+            .and_then(|name| {
+                diagram
+                    .relation_end_layout
+                    .iter()
+                    .find(|rule| rule.name == name && rule.end == end)
+                    .and_then(|rule| rule.side)
+            })
+    };
+    let source_side = selected_side(EndPosition::Source);
+    let target_side = selected_side(EndPosition::Target);
     let mut results = vec![vec![port(a, cb), port(b, ca)]];
     for bend in [Point { x: cb.x, y: ca.y }, Point { x: ca.x, y: cb.y }] {
         results.push(vec![port(a, bend), bend, port(b, bend)]);
@@ -115,11 +153,43 @@ fn candidates(
         let wb = Point { x: cb.x, y };
         results.push(vec![port(a, wa), wa, wb, port(b, wb)]);
     }
+    if source_side == Some(PortSide::Top) && target_side == Some(PortSide::Bottom) {
+        for x in [min_x, max_x] {
+            results.push(vec![
+                forced_port(a, PortSide::Top),
+                Point { x: ca.x, y: min_y },
+                Point { x, y: min_y },
+                Point { x, y: max_y },
+                Point { x: cb.x, y: max_y },
+                forced_port(b, PortSide::Bottom),
+            ]);
+        }
+    }
+    if source_side.is_some() || target_side.is_some() {
+        for y in [min_y, max_y] {
+            for (sx, tx) in [(min_x, max_x), (max_x, min_x)] {
+                results.push(vec![
+                    port(a, Point { x: sx, y: ca.y }),
+                    Point { x: sx, y: ca.y },
+                    Point { x: sx, y },
+                    Point { x: tx, y },
+                    Point { x: tx, y: cb.y },
+                    port(b, Point { x: tx, y: cb.y }),
+                ]);
+            }
+        }
+    }
     results
         .into_iter()
         .filter_map(|mut points| {
-            let first_horizontal = (points[0].y - points[1].y).abs() < 1e-6;
             let last = points.len() - 1;
+            if let Some(side) = source_side {
+                points[0] = forced_port(a, side);
+            }
+            if let Some(side) = target_side {
+                points[last] = forced_port(b, side);
+            }
+            let first_horizontal = (points[0].y - points[1].y).abs() < 1e-6;
             let last_horizontal = (points[last - 1].y - points[last].y).abs() < 1e-6;
             let start_offset = if source_member.is_none()
                 && parallel::has_competing_port(diagram, index, boxes, from, points[0], previous)

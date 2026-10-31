@@ -298,6 +298,7 @@ pub struct PortLayoutRule {
 pub struct RelationEndRule {
     pub name: String,
     pub end: EndPosition,
+    pub side: Option<PortSide>,
     pub multiplicity: Option<EndSide>,
     pub role: Option<EndSide>,
     pub line: usize,

@@ -141,6 +141,7 @@ pub(super) fn parse_relation_end(text: &str, line: usize) -> Result<RelationEndR
     let mut rule = RelationEndRule {
         name: name.into(),
         end,
+        side: None,
         multiplicity: None,
         role: None,
         line,
@@ -148,6 +149,24 @@ pub(super) fn parse_relation_end(text: &str, line: usize) -> Result<RelationEndR
     for piece in split_top_level(attrs.trim(), ';') {
         let (key, value) = split_once_top_level(piece.trim(), '=')
             .ok_or_else(|| error(line, "expected association-end attribute=value"))?;
+        if key.trim() == "side" {
+            let side = match value.trim() {
+                "left" => PortSide::Left,
+                "right" => PortSide::Right,
+                "top" => PortSide::Top,
+                "bottom" => PortSide::Bottom,
+                _ => {
+                    return Err(error(
+                        line,
+                        "relation end side must be left, right, top or bottom",
+                    ));
+                }
+            };
+            if rule.side.replace(side).is_some() {
+                return Err(error(line, "duplicate relation end side"));
+            }
+            continue;
+        }
         let side = match value.trim() {
             "above" => EndSide::Above,
             "below" => EndSide::Below,
@@ -164,10 +183,10 @@ pub(super) fn parse_relation_end(text: &str, line: usize) -> Result<RelationEndR
             return Err(error(line, "duplicate association-end layout attribute"));
         }
     }
-    if rule.multiplicity.is_none() && rule.role.is_none() {
+    if rule.multiplicity.is_none() && rule.role.is_none() && rule.side.is_none() {
         return Err(error(
             line,
-            "association-end rule requires multiplicity or role",
+            "association-end rule requires side, multiplicity or role",
         ));
     }
     Ok(rule)
