@@ -111,7 +111,7 @@ styling {
 }
 ```
 
-Selectors include `*`, `.class`, `node.class`, `relation.class`, `node[ID]`, `relation[ID]`, `node`, `relation`, `member`, `member[kind=field|method]`, `member[ID]`, `port`, and scoped descendants such as `node[Package] node[Child]`. An unmatched selector is allowed. The cascade resolves each property independently: object-specific > typed class > unqualified class > type-wide; later declarations win at equal specificity. The order of names in an object's `style-classes` list does not affect precedence. A known property that does not apply to a matched object has no effect there.
+Selectors include `*`, `.class`, `node.class`, `relation.class`, `node[ID]`, `relation[ID]`, `node`, `relation`, `member`, `member[kind=field|method]`, `member[ID]`, `port`, `compartment[attributes|operations|literals]`, and scoped descendants such as `node[Package] node[Child]` or `node[Class] compartment[attributes]`. An unmatched selector is allowed. The cascade resolves each property independently: object-specific > typed class > unqualified class > type-wide; later declarations win at equal specificity. The order of names in an object's `style-classes` list does not affect precedence. A known property that does not apply to a matched object has no effect there.
 
 | Property | Value | Applies to |
 |---|---|---|

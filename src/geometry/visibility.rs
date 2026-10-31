@@ -1,6 +1,6 @@
 //! Compute one consistent visible graph before measurement and routing.
 use crate::styles::{Element, StyleSheet, Value};
-use crate::syntax::Diagram;
+use crate::syntax::{Diagram, DiagramType, MemberKind, NodeKind, NodePart};
 
 fn hidden(sheet: &StyleSheet, element: &Element<'_>) -> bool {
     matches!(
@@ -39,6 +39,42 @@ pub(crate) fn filtered(diagram: &Diagram, sheet: &StyleSheet) -> Result<Diagram,
         }
         true
     });
+    if diagram.settings.diagram_type == DiagramType::Class {
+        for node in &mut visible.nodes {
+            let scoped =
+                super::scoped_styles(diagram, node, sheet).with_ancestor(&node.id, &node.classes);
+            let hide = |kind| hidden(&scoped, &Element::Compartment { kind });
+            let (attributes, operations, literals) =
+                (hide("attributes"), hide("operations"), hide("literals"));
+            if !attributes && !operations && !literals {
+                continue;
+            }
+            let classifier = matches!(
+                node.kind,
+                NodeKind::Class
+                    | NodeKind::Interface
+                    | NodeKind::DataType
+                    | NodeKind::AssociationClass
+            );
+            let enumeration = node.kind == NodeKind::Enumeration;
+            node.parts.retain(|part| match part {
+                NodePart::Member {
+                    kind: MemberKind::Field,
+                    ..
+                } if classifier => !attributes,
+                NodePart::Member {
+                    kind: MemberKind::Method,
+                    ..
+                } if classifier => !operations,
+                NodePart::Member {
+                    kind: MemberKind::Literal,
+                    ..
+                } if enumeration => !literals,
+                NodePart::Separator if classifier && (attributes || operations) => false,
+                _ => true,
+            });
+        }
+    }
     visible.relations.retain(|relation| {
         !hidden(
             sheet,

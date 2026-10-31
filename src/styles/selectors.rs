@@ -8,6 +8,7 @@ pub enum Selector {
     AllRelations,
     AllMembers,
     AllPorts,
+    CompartmentKind(String),
     AllLifelines,
     AllActivations,
     AllFragments,
@@ -91,6 +92,16 @@ impl Selector {
         match self {
             Self::AllPorts | Self::PortId(_) | Self::PortClass(_) => true,
             Self::ScopedId { child, .. } | Self::ScopedClass { child, .. } => child.targets_port(),
+            _ => false,
+        }
+    }
+
+    pub(super) fn targets_compartment(&self) -> bool {
+        match self {
+            Self::CompartmentKind(_) => true,
+            Self::ScopedId { child, .. } | Self::ScopedClass { child, .. } => {
+                child.targets_compartment()
+            }
             _ => false,
         }
     }
@@ -179,6 +190,8 @@ impl Selector {
             Self::NodeId(id.trim_end_matches(']').into())
         } else if let Some(id) = text.strip_prefix("relation[") {
             Self::RelationId(id.trim_end_matches(']').into())
+        } else if let Some(kind) = text.strip_prefix("compartment[") {
+            Self::CompartmentKind(kind.trim_end_matches(']').into())
         } else if let Some(kind) = text.strip_prefix("member[kind=") {
             Self::MemberKind(match kind.trim_end_matches(']') {
                 "field" => MemberKind::Field,
@@ -269,6 +282,7 @@ impl Selector {
             | Self::MemberClass(_)
             | Self::PortClass(_)
             | Self::MemberKind(_)
+            | Self::CompartmentKind(_)
             | Self::NodeClassLifeline(_)
             | Self::NodeClassActivation(_)
             | Self::NodeClassCoregion(_)
@@ -329,6 +343,7 @@ impl Selector {
             (Self::MemberId(target), Element::Member { id: Some(id), .. }) => target == id,
             (Self::PortId(target), Element::Port { id, .. }) => target == id,
             (Self::MemberKind(target), Element::Member { kind, .. }) => target == kind,
+            (Self::CompartmentKind(target), Element::Compartment { kind }) => target == kind,
             (Self::ScopedId { owner, child }, _) => {
                 ancestors.iter().any(|ancestor| ancestor == owner)
                     && child.matches(element, ancestors)
@@ -402,6 +417,9 @@ pub enum Element<'a> {
     Relation {
         name: Option<&'a str>,
         classes: &'a [String],
+    },
+    Compartment {
+        kind: &'a str,
     },
     Member {
         id: Option<&'a str>,

@@ -36,6 +36,11 @@ pub(super) fn validate_selector(selector: &str, line: usize) -> Result<(), Parse
     let valid = if selector == "*" {
         true
     } else if let Some(kind) = selector
+        .strip_prefix("compartment[")
+        .and_then(|s| s.strip_suffix(']'))
+    {
+        matches!(kind, "attributes" | "operations" | "literals")
+    } else if let Some(kind) = selector
         .strip_prefix("member[kind=")
         .and_then(|s| s.strip_suffix(']'))
     {
