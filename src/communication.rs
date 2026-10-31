@@ -175,7 +175,7 @@ pub fn parse(source: &str) -> Result<Document, ParseError> {
         stripped.push_str(raw);
         stripped.push('\n');
     }
-    let graph = parser::parse_communication_graph(&stripped)?;
+    let graph = parser::parse_interaction_graph(&stripped)?;
     if graph.settings.diagram_type != DiagramType::Communication {
         return Err(error(
             1,

@@ -47,6 +47,8 @@ pub(super) fn classify<'a>(
         (NodeKind::UseCase, name)
     } else if let Some(name) = source.strip_prefix("system ") {
         (NodeKind::UseCaseSystem, name)
+    } else if let Some(name) = source.strip_prefix("interaction-use ") {
+        (NodeKind::InteractionUse, name)
     } else if let Some(name) = source.strip_prefix("action ") {
         (NodeKind::ActivityAction, name)
     } else if let Some(name) = source.strip_prefix("objectNode ") {
@@ -63,14 +65,22 @@ pub(super) fn classify<'a>(
         (NodeKind::ActivityFork, name)
     } else if let Some(name) = source.strip_prefix("join ") {
         (NodeKind::ActivityJoin, name)
-    } else if diagram_type == DiagramType::Activity && source.starts_with("initial ") {
+    } else if matches!(
+        diagram_type,
+        DiagramType::Activity | DiagramType::InteractionOverview
+    ) && source.starts_with("initial ")
+    {
         (NodeKind::ActivityInitial, &source["initial ".len()..])
     } else if let Some(name) = source.strip_prefix("state ") {
         (NodeKind::State, name)
     } else if let Some(name) = source.strip_prefix("initial ") {
         (NodeKind::StateInitial, name)
     } else if let Some(name) = source.strip_prefix("final ") {
-        (NodeKind::StateFinal, name)
+        if diagram_type == DiagramType::InteractionOverview {
+            (NodeKind::ActivityFinal, name)
+        } else {
+            (NodeKind::StateFinal, name)
+        }
     } else if let Some(name) = source.strip_prefix("choice ") {
         (NodeKind::StateChoice, name)
     } else if anonymous && source.starts_with("object(") {
@@ -88,7 +98,8 @@ pub(super) fn classify<'a>(
             | DiagramType::Activity
             | DiagramType::UseCase
             | DiagramType::Package
-            | DiagramType::Communication => (NodeKind::Generic, source),
+            | DiagramType::Communication
+            | DiagramType::InteractionOverview => (NodeKind::Generic, source),
         }
     }
 }
@@ -123,6 +134,16 @@ pub(super) fn allowed(kind: NodeKind, ty: DiagramType) -> bool {
     );
     match ty {
         DiagramType::Activity => activity || kind == NodeKind::Note,
+        DiagramType::InteractionOverview => matches!(
+            kind,
+            NodeKind::InteractionUse
+                | NodeKind::ActivityInitial
+                | NodeKind::ActivityFinal
+                | NodeKind::ActivityDecision
+                | NodeKind::ActivityMerge
+                | NodeKind::ActivityFork
+                | NodeKind::ActivityJoin
+        ),
         DiagramType::UseCase => usecase || kind == NodeKind::Note,
         DiagramType::Package => matches!(kind, NodeKind::Package | NodeKind::Note),
         DiagramType::Communication => matches!(kind, NodeKind::Object | NodeKind::Note),
@@ -150,14 +171,17 @@ pub(super) fn allowed(kind: NodeKind, ty: DiagramType) -> bool {
                     | NodeKind::Junction
                     | NodeKind::Component
                     | NodeKind::ComponentPart
+                    | NodeKind::InteractionUse
             ) && !deployment
                 && !state
                 && !activity
                 && !usecase
         }
         DiagramType::Generic => {
-            !matches!(kind, NodeKind::Component | NodeKind::ComponentPart)
-                && !deployment
+            !matches!(
+                kind,
+                NodeKind::Component | NodeKind::ComponentPart | NodeKind::InteractionUse
+            ) && !deployment
                 && !state
                 && !activity
                 && !usecase

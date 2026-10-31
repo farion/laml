@@ -11,6 +11,7 @@ mod compact;
 mod component_container;
 mod deployment;
 mod escape;
+mod interaction_use;
 mod markers;
 mod package;
 mod state;
@@ -287,6 +288,9 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
         } else {
             writeln!(svg,"<rect x=\"{:.2}\" y=\"{:.2}\" width=\"{:.2}\" height=\"{:.2}\" rx=\"{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
                 node.x,node.y,node.width,node.height,node.radius,node.fill,node.border_color,node.border_width).unwrap();
+        }
+        if node.kind == NodeKind::InteractionUse {
+            interaction_use::tab(&mut svg, node);
         }
         if node.kind == NodeKind::Component && node.top_band == 0.0 {
             component_container::icon(&mut svg, node);

@@ -32,6 +32,7 @@ pub enum DiagramType {
     UseCase,
     Package,
     Communication,
+    InteractionOverview,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -50,6 +51,7 @@ pub enum NodeKind {
     StateFinal,
     StateChoice,
     ActivityAction,
+    InteractionUse,
     ActivityObject,
     ActivityInitial,
     ActivityFinal,

@@ -59,6 +59,52 @@ fn every_published_example_checks_and_builds() {
             continue;
         }
         let source = fs::read_to_string(&path).unwrap();
+        if laml::interaction_overview::is_overview_source(&source) {
+            let doc = laml::interaction_overview::parse(&source).unwrap();
+            let styles = load(&doc.graph, &path).unwrap();
+            validate_ordering(&doc.graph).unwrap();
+            let boxes = place(&doc.graph, &styles).unwrap();
+            let routes = route(&doc.graph, &boxes, &styles).unwrap();
+            let svg = laml::interaction_overview::render(
+                &doc,
+                &boxes,
+                &routes,
+                laml::svg::TextMode::Embedded,
+            )
+            .unwrap();
+            let name = path.file_stem().unwrap().to_str().unwrap();
+            let preview = root.join("docs/images").join(format!("{name}.png"));
+            let expected =
+                resvg::tiny_skia::Pixmap::decode_png(&fs::read(&preview).unwrap()).unwrap();
+            let actual = resvg::tiny_skia::Pixmap::decode_png(&png(&svg).unwrap()).unwrap();
+            assert_eq!(
+                (expected.width(), expected.height()),
+                (actual.width(), actual.height())
+            );
+            let changed = expected
+                .pixels()
+                .iter()
+                .zip(actual.pixels())
+                .filter(|(a, b)| {
+                    [
+                        a.red().abs_diff(b.red()),
+                        a.green().abs_diff(b.green()),
+                        a.blue().abs_diff(b.blue()),
+                        a.alpha().abs_diff(b.alpha()),
+                    ]
+                    .into_iter()
+                    .any(|d| d > 16)
+                })
+                .count();
+            assert!(
+                changed * 1000 <= expected.pixels().len() * 3,
+                "{} is out of sync",
+                preview.display()
+            );
+            assert!(readme.contains(&format!("examples/{name}.laml")));
+            assert!(readme.contains(&format!("docs/images/{name}.png")));
+            continue;
+        }
         if laml::communication::is_communication_source(&source) {
             let document = laml::communication::parse(&source)
                 .unwrap_or_else(|e| panic!("{}: {e:?}", path.display()));
@@ -340,6 +386,29 @@ fn package_guide_example_builds_all_formats() {
     let boxes = place(&diagram, &sheet).unwrap();
     let routes = route(&diagram, &boxes, &sheet).unwrap();
     let svg = render(&boxes, &routes).unwrap();
+    assert!(png(&svg).unwrap().starts_with(b"\x89PNG"));
+    assert!(laml::export::pdf(&svg).unwrap().starts_with(b"%PDF-"));
+}
+
+#[test]
+fn interaction_overview_guide_example_builds_all_formats() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let guide = fs::read_to_string(root.join("docs/interaction-overview-diagrams.md")).unwrap();
+    let source = text_blocks(&guide)
+        .into_iter()
+        .next()
+        .expect("missing overview guide example");
+    let doc = laml::interaction_overview::parse(&source).unwrap();
+    let sheet = load(
+        &doc.graph,
+        &root.join("examples/interaction-overview-purchase.laml"),
+    )
+    .unwrap();
+    let boxes = place(&doc.graph, &sheet).unwrap();
+    let routes = route(&doc.graph, &boxes, &sheet).unwrap();
+    let svg =
+        laml::interaction_overview::render(&doc, &boxes, &routes, laml::svg::TextMode::Embedded)
+            .unwrap();
     assert!(png(&svg).unwrap().starts_with(b"\x89PNG"));
     assert!(laml::export::pdf(&svg).unwrap().starts_with(b"%PDF-"));
 }

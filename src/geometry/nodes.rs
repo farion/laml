@@ -1,10 +1,10 @@
+pub(super) use super::node_notation::color;
 use super::ports::BoxPort;
 use crate::styles::{Element, StyleSheet, Value};
 use crate::syntax::{
     DiagramType, NodeDecl, NodeKind, NodePart, PortContract, PortLayoutRule, PortSide,
 };
 use crate::text::{ellipsize, measure, measure_italic};
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NodeShape {
     Rectangle,
@@ -105,21 +105,6 @@ pub(super) fn number(
     }
 }
 
-pub(super) fn color(
-    sheet: &StyleSheet,
-    element: &Element<'_>,
-    property: &str,
-    default: &str,
-) -> String {
-    match sheet
-        .get(element, property)
-        .map(|declaration| &declaration.value)
-    {
-        Some(Value::Color(color)) => color.clone(),
-        _ => default.into(),
-    }
-}
-
 pub fn measure_node(
     node: &NodeDecl,
     styles: &StyleSheet,
@@ -151,6 +136,7 @@ pub fn measure_node(
         return Err("UML node form cannot be replaced by an LSS shape".into());
     }
     let font_size = number(styles, &element, "font-size", 14.0);
+    super::node_notation::validate_ref_font(node.kind, font_size)?;
     let text_color = color(styles, &element, "color", "#17212e");
     let icons_requested = matches!(styles.get(&element, "symbol-rendering").map(|d| &d.value),
         Some(Value::Keyword(mode)) if mode == "icons");
@@ -367,6 +353,7 @@ pub fn measure_node(
             .unwrap_or(100.0)
             .max((longest + padding * 2.0) * width_factor)
     });
+    super::node_notation::validate_ref_width(node.kind, width)?;
     let body_height: f64 = body
         .iter()
         .zip(&body_styles)
@@ -392,8 +379,10 @@ pub fn measure_node(
             4.0 + side_port_count as f64 * line_height
         }
         + padding * 2.0;
+    let required_height = super::node_notation::ref_height(node.kind, natural_height);
     let height =
-        fixed_height.unwrap_or_else(|| explicit_min_height.unwrap_or(50.0).max(natural_height));
+        fixed_height.unwrap_or_else(|| explicit_min_height.unwrap_or(50.0).max(required_height));
+    super::node_notation::validate_ref_height(node.kind, height, required_height)?;
     let available_width = width / width_factor - padding * 2.0;
     let available_height = height - padding * 2.0;
     if available_width < 0.0 || available_height < line_height {

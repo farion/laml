@@ -25,6 +25,10 @@ pub(crate) fn filtered(diagram: &Diagram, sheet: &StyleSheet) -> Result<Diagram,
         })
         .map(|node| node.id.as_str())
         .collect();
+    if diagram.settings.diagram_type == DiagramType::InteractionOverview && !hidden_nodes.is_empty()
+    {
+        return Err((1, "interaction overview nodes must remain visible".into()));
+    }
     visible.nodes.retain(|node| {
         let mut current = Some(node.id.as_str());
         while let Some(id) = current {
@@ -81,11 +85,14 @@ pub(crate) fn filtered(diagram: &Diagram, sheet: &StyleSheet) -> Result<Diagram,
     }
     if matches!(
         diagram.settings.diagram_type,
-        DiagramType::Activity | DiagramType::Communication
+        DiagramType::Activity | DiagramType::Communication | DiagramType::InteractionOverview
     ) {
         for relation in &diagram.relations {
             if (relation.activity_flow.is_some()
-                || diagram.settings.diagram_type == DiagramType::Communication)
+                || matches!(
+                    diagram.settings.diagram_type,
+                    DiagramType::Communication | DiagramType::InteractionOverview
+                ))
                 && hidden(
                     sheet,
                     &Element::Relation {
@@ -98,6 +105,8 @@ pub(crate) fn filtered(diagram: &Diagram, sheet: &StyleSheet) -> Result<Diagram,
                     relation.line,
                     if diagram.settings.diagram_type == DiagramType::Activity {
                         "activity control and object flows must remain visible"
+                    } else if diagram.settings.diagram_type == DiagramType::InteractionOverview {
+                        "interaction overview flows must remain visible"
                     } else {
                         "communication links must remain visible"
                     }

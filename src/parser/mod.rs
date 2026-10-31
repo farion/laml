@@ -16,6 +16,8 @@ mod bodies;
 mod component;
 mod component_connectors;
 mod deployment;
+mod diagram_type;
+use diagram_type::prescan_type;
 mod ends;
 mod graph_operators;
 mod graph_relations;
@@ -61,48 +63,31 @@ enum Section {
 }
 
 pub fn parse(source: &str) -> Result<Diagram, ParseError> {
-    if prescan_type(source) == DiagramType::Communication {
-        return Err(error(
-            1,
-            "communication source requires communication::parse for numbered messages",
-        ));
+    match prescan_type(source) {
+        DiagramType::Communication => {
+            return Err(error(
+                1,
+                "communication source requires communication::parse for numbered messages",
+            ));
+        }
+        DiagramType::InteractionOverview => {
+            return Err(error(
+                1,
+                "interaction-overview source requires specialized parser interaction_overview::parse",
+            ));
+        }
+        _ => {}
     }
     parse_document(source, false)
 }
 
-pub(crate) fn parse_communication_graph(source: &str) -> Result<Diagram, ParseError> {
+pub(crate) fn parse_interaction_graph(source: &str) -> Result<Diagram, ParseError> {
     parse_document(source, false)
 }
 
 /// Parse a standalone LSS file containing only one `styling { ... }` section.
 pub fn parse_stylesheet(source: &str) -> Result<Vec<StyleEntry>, ParseError> {
     Ok(parse_document(source, true)?.styling)
-}
-
-fn prescan_type(source: &str) -> DiagramType {
-    let mut settings = false;
-    for raw in source.lines() {
-        let text = without_comment(raw).trim();
-        if !settings {
-            settings = text == "settings {";
-        } else if text == "}" {
-            settings = false;
-        } else if let Some(value) = text.strip_prefix("type:") {
-            return match value.trim() {
-                "class" => DiagramType::Class,
-                "object" => DiagramType::Object,
-                "component" => DiagramType::Component,
-                "deployment" => DiagramType::Deployment,
-                "state" => DiagramType::State,
-                "activity" => DiagramType::Activity,
-                "usecase" => DiagramType::UseCase,
-                "package" => DiagramType::Package,
-                "communication" => DiagramType::Communication,
-                _ => DiagramType::Generic,
-            };
-        }
-    }
-    DiagramType::Generic
 }
 
 fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError> {
@@ -488,6 +473,7 @@ fn parse_setting(
                 "usecase" => DiagramType::UseCase,
                 "package" => DiagramType::Package,
                 "communication" => DiagramType::Communication,
+                "interaction-overview" => DiagramType::InteractionOverview,
                 _ => return Err(error(line, "invalid graph diagram type")),
             }
         }

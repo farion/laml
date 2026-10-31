@@ -1,6 +1,54 @@
 //! Measured classifier headings; semantic UML keywords are not decorative icons.
-use crate::styles::{Element, StyleSheet};
+use crate::styles::{Element, StyleSheet, Value};
 use crate::syntax::{DiagramType, NodeDecl, NodeKind};
+
+pub(super) fn color(
+    sheet: &StyleSheet,
+    element: &Element<'_>,
+    property: &str,
+    default: &str,
+) -> String {
+    match sheet
+        .get(element, property)
+        .map(|declaration| &declaration.value)
+    {
+        Some(Value::Color(color)) => color.clone(),
+        _ => default.into(),
+    }
+}
+
+pub(super) fn validate_ref_font(kind: NodeKind, size: f64) -> Result<(), String> {
+    if kind == NodeKind::InteractionUse && size > 22.0 {
+        return Err("interaction-use text cannot overlap its ref header".into());
+    }
+    Ok(())
+}
+
+pub(super) fn validate_ref_width(kind: NodeKind, width: f64) -> Result<(), String> {
+    if kind == NodeKind::InteractionUse && width < 60.0 {
+        return Err("interaction-use ref tab requires at least 60 units of width".into());
+    }
+    Ok(())
+}
+
+pub(super) fn ref_height(kind: NodeKind, natural: f64) -> f64 {
+    if kind == NodeKind::InteractionUse {
+        natural.max(66.0)
+    } else {
+        natural
+    }
+}
+
+pub(super) fn validate_ref_height(
+    kind: NodeKind,
+    height: f64,
+    required: f64,
+) -> Result<(), String> {
+    if kind == NodeKind::InteractionUse && height < required {
+        return Err("interaction-use frame must fit its ref tab and text".into());
+    }
+    Ok(())
+}
 
 pub(super) fn corner_radius(
     kind: NodeKind,
@@ -20,6 +68,9 @@ pub(super) fn corner_radius(
     if matches!(kind, NodeKind::State | NodeKind::ActivityAction) && !(8.0..=24.0).contains(&radius)
     {
         return Err("UML state/action requires visibly rounded corners (radius 8..24)".into());
+    }
+    if kind == NodeKind::InteractionUse && radius != 0.0 {
+        return Err("UML ref frame must have square corners".into());
     }
     if kind == NodeKind::ActivityObject && radius != 0.0 {
         return Err("UML object node must remain rectangular".into());

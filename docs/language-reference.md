@@ -31,7 +31,7 @@ Unqualified identifiers match `[A-Za-z_][A-Za-z0-9_]*`; nested package paths use
 
 | Name | Values | Default |
 |---|---|---|
-| `type` | `class`, `object`, `component`, `deployment`, `state`, `activity`, `usecase`, `package`, `communication`, `sequence` (omitted for generic node-edge) | Generic graph |
+| `type` | `class`, `object`, `component`, `deployment`, `state`, `activity`, `usecase`, `package`, `communication`, `interaction-overview`, `sequence` (omitted for generic node-edge) | Generic graph |
 | `direction` | `left-to-right`, `right-to-left`, `top-to-bottom`, `bottom-to-top` | `left-to-right` |
 | `naming-convention` | `uppercase-nodes-lowercase-relations` | Off |
 | `relation-label` | `near`, `along`, `inline` | `near` |
@@ -93,6 +93,10 @@ Set `type: package`. A `package Name` is a leaf folder; `package Name { ... }` s
 ## Communication diagrams
 
 Set `type: communication` and `interaction: Name` in `settings`. Declare typed lifeline heads with `object Instance(of=Type)` and undirected links `A -- B`. Each `message 1.1 A --> B : name()` is numbered explicitly and uses an existing link; multiple messages may share a link in either direction. This source form is distinct from the sequence-diagram grammar. See the [communication guide](communication-diagrams.md) and [UML notation audit](uml-communication-conformance.md) for frame, label and numbering validation.
+
+## Interaction-overview diagrams
+
+Set `type: interaction-overview` and `interaction: Name` in `settings`. Declare `interaction-use Call(ref=Interaction)` as a `ref` frame. Add initial/final and optionally decision/merge or fork/join control vertices; join corresponding branches with `-->` control flows. Decision exits have `[guard]` or `[else]` labels. The graph must be connected, acyclic and properly nested. Ordinary activity actions and object flows are not valid substitutes for interaction uses. See the [guide](interaction-overview-diagrams.md) and [UML notation audit](uml-interaction-overview-conformance.md).
 
 ## Layout
 

@@ -1,0 +1,39 @@
+settings {
+    type: interaction-overview
+    interaction: Purchase
+    direction: top-to-bottom
+}
+semantics {
+    initial Start
+    interaction-use SignIn(ref=EstablishAccess)
+    decision Authorized
+    interaction-use Order(ref=PlaceOrder)
+    interaction-use Reject(ref=ShowRejection)
+    merge Outcome
+    final Done
+
+    Start --> SignIn
+    SignIn --> Authorized
+    @approved Authorized --> Order : [approved]
+    @otherwise Authorized --> Reject : [else]
+    Order --> Outcome
+    @finish Outcome --> Done
+    @rejoin Reject --> Outcome
+}
+layout {
+    Start above SignIn : gap=100
+    SignIn above Authorized : gap=100
+    Authorized above Order : gap=130
+    Authorized above Reject : gap=130
+    Order < Reject : gap=180; align=center
+    Order above Outcome : gap=130
+    Reject above Outcome : gap=130
+    Order < Outcome : gap=100
+    Outcome < Reject : gap=100
+    Outcome above Done : gap=130; align=center
+    relation[approved] : label=along
+    relation[otherwise] : label=along
+    relation[rejoin].target : side=right
+    relation[finish].source : side=bottom
+    relation[finish].target : side=top
+}

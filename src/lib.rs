@@ -10,6 +10,7 @@ pub mod communication;
 pub mod export;
 mod export_metadata;
 pub mod geometry;
+pub mod interaction_overview;
 pub mod layout;
 mod lex;
 pub mod parser;

@@ -137,8 +137,20 @@ fn run() -> Result<(), String> {
             .map_err(|e| format!("{}: sequence rendering failed: {e}", path.display()))?;
         return write_image(&svg, &output, format);
     }
-    let diagram =
-        parse(&text).map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?;
+    let overview = if laml::interaction_overview::is_overview_source(&text) {
+        Some(
+            laml::interaction_overview::parse(&text)
+                .map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?,
+        )
+    } else {
+        None
+    };
+    let diagram = match &overview {
+        Some(doc) => doc.graph.clone(),
+        None => {
+            parse(&text).map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?
+        }
+    };
     let styles = load(&diagram, path)
         .map_err(|e| format!("{}:{}: {}", e.path.display(), e.line, e.message))?;
     validate_ordering(&diagram)
@@ -173,8 +185,12 @@ fn run() -> Result<(), String> {
         .map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?;
     let routes = route(&diagram, &boxes, &styles)
         .map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?;
-    let svg = render_with_mode(&boxes, &routes, mode)
-        .map_err(|e| format!("{}: SVG rendering failed: {e}", path.display()))?;
+    let svg = if let Some(doc) = &overview {
+        laml::interaction_overview::render(doc, &boxes, &routes, mode)
+    } else {
+        render_with_mode(&boxes, &routes, mode)
+    }
+    .map_err(|e| format!("{}: SVG rendering failed: {e}", path.display()))?;
     write_image(&svg, &output, format)
 }
 

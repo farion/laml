@@ -1,0 +1,37 @@
+settings {
+    type: interaction-overview
+    interaction: Fulfillment
+    direction: top-to-bottom
+}
+semantics {
+    initial Start
+    interaction-use Receive(ref=ReceiveOrder)
+    fork Parallel
+    interaction-use Reserve(ref=ReserveStock)
+    interaction-use Charge(ref=ChargeAccount)
+    join Complete
+    interaction-use Dispatch(ref=DispatchOrder)
+    final Done
+
+    Start --> Receive
+    Receive --> Parallel
+    Parallel --> Reserve
+    Parallel --> Charge
+    Reserve --> Complete
+    Charge --> Complete
+    Complete --> Dispatch
+    Dispatch --> Done
+}
+layout {
+    Start above Receive : gap=90
+    Receive above Parallel : gap=90
+    Parallel above Reserve : gap=120
+    Parallel above Charge : gap=120
+    Reserve < Charge : gap=170; align=center
+    Reserve above Complete : gap=140
+    Charge above Complete : gap=140
+    Reserve < Complete : gap=95
+    Complete < Charge : gap=95
+    Complete above Dispatch : gap=95; align=center
+    Dispatch above Done : gap=95; align=center
+}

@@ -58,6 +58,15 @@ pub(super) fn node(
     super::deployment::validate_node(diagram, kind, parent, block, visibility, &stereotypes, line)?;
     super::state::validate_node(diagram, kind, parent, block, visibility, &stereotypes, line)?;
     super::activity::validate_node(diagram, kind, parent, block, visibility, &stereotypes, line)?;
+    crate::interaction_overview::validate_node(
+        diagram,
+        kind,
+        parent,
+        block,
+        visibility,
+        &stereotypes,
+        line,
+    )?;
     super::usecase::node(diagram, kind, parent, block, visibility, &stereotypes, line)?;
     super::package_diagram::node(diagram, kind, parent, visibility, &stereotypes, line)?;
     if kind == NodeKind::AssociationClass && diagram.settings.diagram_type != DiagramType::Class {
@@ -164,6 +173,12 @@ pub(super) fn node(
                 result.label = Some(quoted_string(&value).map_err(|msg| error(line, msg))?)
             }
             "style-classes" => result.classes = classes(&value, line)?,
+            "ref" if kind == NodeKind::InteractionUse && valid_identifier(value.trim()) => {
+                if result.label.is_some() {
+                    return Err(error(line, "interaction-use ref cannot also have a label"));
+                }
+                result.label = Some(value.trim().into());
+            }
             "of" if kind == NodeKind::ComponentPart && valid_reference(value.trim()) => {
                 result.part_type = Some(value.trim().into());
             }
@@ -178,6 +193,9 @@ pub(super) fn node(
             }
             _ => return Err(error(line, format!("unknown node attribute '{key}'"))),
         }
+    }
+    if kind == NodeKind::InteractionUse && result.label.is_none() {
+        return Err(error(line, "interaction-use requires ref=InteractionName"));
     }
     if kind == NodeKind::ComponentPart && result.part_type.is_none() {
         return Err(error(line, "part requires of=Component"));

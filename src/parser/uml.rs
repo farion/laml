@@ -127,6 +127,9 @@ pub(super) fn validate_relation(
     if diagram.settings.diagram_type == DiagramType::State {
         return super::state::relation(relation, from, to);
     }
+    if diagram.settings.diagram_type == DiagramType::InteractionOverview {
+        return crate::interaction_overview::validate_relation(relation, from, to);
+    }
     if diagram.settings.diagram_type == DiagramType::Activity {
         return super::activity::relation(relation, from, to);
     }
