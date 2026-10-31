@@ -80,6 +80,24 @@ pub(super) fn validate_relation(
     let unmarked_dotted = relation.appearance.dashed
         && relation.appearance.start == EndSymbol::None
         && relation.appearance.end == EndSymbol::None;
+    let association_class_to_diamond = matches!(
+        (from.kind, to.kind),
+        (NodeKind::AssociationClass, NodeKind::Association)
+            | (NodeKind::Association, NodeKind::AssociationClass)
+    );
+    if association_class_to_diamond {
+        if !unmarked_dotted
+            || end_label
+            || relation.label.is_some()
+            || !relation.stereotypes.is_empty()
+        {
+            return Err(error(
+                relation.line,
+                "association class attaches to a n-ary diamond by one unadorned dotted line",
+            ));
+        }
+        return Ok(());
+    }
     if note_end {
         if !unmarked_dotted || from.kind == to.kind || end_label {
             return Err(error(

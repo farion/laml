@@ -142,6 +142,18 @@ fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {
                     .iter()
                     .any(|node| node.id == **id && node.kind == crate::syntax::NodeKind::Note)
             })
+            && ![
+                (&relation.from, &relation.to),
+                (&relation.to, &relation.from),
+            ]
+            .iter()
+            .any(|(class, junction)| {
+                diagram.nodes.iter().any(|node| {
+                    node.id == **class && node.kind == crate::syntax::NodeKind::AssociationClass
+                }) && diagram.nodes.iter().any(|node| {
+                    node.id == **junction && node.kind == crate::syntax::NodeKind::Association
+                })
+            })
         {
             return Err(error(
                 relation.line,
@@ -195,6 +207,7 @@ fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {
         uml::validate_relation(diagram, relation)?;
     }
     uml::validate_generalization_cycles(diagram)?;
+    let mut association_class_targets = std::collections::HashSet::new();
     for node in &diagram.nodes {
         if node.kind == crate::syntax::NodeKind::AssociationClass {
             let attachments: Vec<_> = diagram
@@ -202,17 +215,65 @@ fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {
                 .iter()
                 .filter(|link| link.source == node.id)
                 .collect();
-            if attachments.len() != 1 {
+            let diamond_links: Vec<_> = diagram
+                .relations
+                .iter()
+                .filter(|relation| {
+                    (relation.from == node.id
+                        && diagram.nodes.iter().any(|n| {
+                            n.id == relation.to && n.kind == crate::syntax::NodeKind::Association
+                        }))
+                        || (relation.to == node.id
+                            && diagram.nodes.iter().any(|n| {
+                                n.id == relation.from
+                                    && n.kind == crate::syntax::NodeKind::Association
+                            }))
+                })
+                .collect();
+            if attachments.len() + diamond_links.len() != 1 {
                 return Err(error(
                     node.line,
-                    "association class must attach to exactly one named binary association",
+                    "association class must attach to exactly one named binary association or n-ary diamond",
                 ));
+            }
+            if let Some(link) = diamond_links.first() {
+                let other = if link.from == node.id {
+                    &link.to
+                } else {
+                    &link.from
+                };
+                if !association_class_targets.insert(other.as_str()) {
+                    return Err(error(
+                        link.line,
+                        "one association cannot own multiple association classes",
+                    ));
+                }
+                let diamond = diagram
+                    .nodes
+                    .iter()
+                    .find(|n| n.id == *other)
+                    .expect("validated diamond");
+                if !diamond.label.as_deref().unwrap_or_default().is_empty()
+                    && diamond.label.as_deref() != Some(node.label.as_deref().unwrap_or(&node.id))
+                {
+                    return Err(error(
+                        link.line,
+                        "association class and n-ary diamond must have the same visible name",
+                    ));
+                }
+                continue;
             }
             let target = diagram
                 .relations
                 .iter()
                 .find(|relation| relation.name.as_deref() == Some(attachments[0].target.as_str()))
                 .expect("checked named relation");
+            if !association_class_targets.insert(attachments[0].target.as_str()) {
+                return Err(error(
+                    attachments[0].line,
+                    "one association cannot own multiple association classes",
+                ));
+            }
             if target
                 .label
                 .as_deref()
@@ -267,6 +328,13 @@ fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {
                         "association arm must end at a classifier node",
                     )
                 })?;
+            if other_node.kind == crate::syntax::NodeKind::AssociationClass
+                && relation.appearance.dashed
+                && relation.appearance.start == crate::syntax::EndSymbol::None
+                && relation.appearance.end == crate::syntax::EndSymbol::None
+            {
+                continue;
+            }
             if other_node.kind == crate::syntax::NodeKind::Note
                 && relation.appearance.dashed
                 && relation.appearance.start == crate::syntax::EndSymbol::None

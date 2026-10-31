@@ -52,11 +52,58 @@ fn association_class_attaches_its_class_box_to_one_plain_binary_association() {
             .message
             .contains("plain binary")
     );
+    let second_class = source.replace(
+        "Auftrag .. relation[orders]",
+        "Auftrag .. relation[orders]\n@two association class Auftrag\ntwo .. relation[orders]",
+    );
+    assert!(
+        parse(&second_class)
+            .unwrap_err()
+            .message
+            .contains("multiple association classes")
+    );
     let twice = source.replace(
         "Auftrag .. relation[orders]",
         "Auftrag .. relation[orders]\nAuftrag .. relation[orders]",
     );
     assert!(parse(&twice).unwrap_err().message.contains("exactly one"));
+}
+
+#[test]
+fn association_class_can_attach_to_a_named_nary_diamond() {
+    let source = "settings {\ntype: class\n}\nsemantics {\nclass Arzt\nclass Patient\nclass Medikament\nassociation Verordnet\n@facts association class Verordnet {\nzeit: Date\n}\nArzt -- Verordnet\nPatient -- Verordnet\nMedikament -- Verordnet\nfacts .. Verordnet\n}\nlayout {\nfacts above Arzt : gap=65\n}\n";
+    let diagram = parse(source).unwrap();
+    let styles = StyleSheet::default();
+    let boxes = place(&diagram, &styles).unwrap();
+    let routes = route(&diagram, &boxes, &styles).unwrap();
+    let svg = render(&boxes, &routes).unwrap();
+    assert_eq!(routes.len(), 4);
+    assert!(svg.contains("zeit: Date"));
+    assert!(svg.contains("stroke-dasharray=\"6 4\""));
+    assert!(export::png(&svg).is_ok());
+    assert!(export::pdf(&svg).is_ok());
+    let wrong = source.replace("association class Verordnet", "association class Andere");
+    assert!(
+        parse(&wrong)
+            .unwrap_err()
+            .message
+            .contains("same visible name")
+    );
+    let two_classes = source.replace(
+        "facts .. Verordnet",
+        "facts .. Verordnet\n@other association class Verordnet\nother .. Verordnet",
+    );
+    assert!(
+        parse(&two_classes)
+            .unwrap_err()
+            .message
+            .contains("multiple association classes")
+    );
+    let extra = source.replace(
+        "facts .. Verordnet",
+        "facts .. Verordnet\nfacts .. Verordnet",
+    );
+    assert!(parse(&extra).unwrap_err().message.contains("exactly one"));
 }
 
 #[test]
