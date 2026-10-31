@@ -194,6 +194,7 @@ fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {
         }
         uml::validate_relation(diagram, relation)?;
     }
+    uml::validate_generalization_cycles(diagram)?;
     for node in &diagram.nodes {
         if node.kind == crate::syntax::NodeKind::AssociationClass {
             let attachments: Vec<_> = diagram

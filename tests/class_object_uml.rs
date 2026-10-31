@@ -52,6 +52,26 @@ fn uml_rejects_relationship_glyphs_that_misstate_the_element_kinds() {
 }
 
 #[test]
+fn generalization_requires_acyclic_hierarchy() {
+    let base = "settings {\ntype: class\n}\nsemantics {\nclass A\nclass B\nclass C\nA --|> B\nB --|> C\n}\n";
+    parse(base).unwrap();
+    let cycle = base.replace("B --|> C", "B --|> C\nC --|> A");
+    assert!(
+        parse(&cycle)
+            .unwrap_err()
+            .message
+            .contains("hierarchy contains a cycle")
+    );
+    let inverse = base.replace("B --|> C", "B --|> C\nA <|-- C");
+    assert!(
+        parse(&inverse)
+            .unwrap_err()
+            .message
+            .contains("hierarchy contains a cycle")
+    );
+}
+
+#[test]
 fn uml_rejects_unvalidated_package_relations_and_nonclass_wholes() {
     for (source, reason) in [
         (

@@ -2,6 +2,38 @@
 use super::{ParseError, error};
 use crate::syntax::{Diagram, DiagramType, EndSymbol, NodeKind, RelationDecl};
 
+pub(super) fn validate_generalization_cycles(diagram: &Diagram) -> Result<(), ParseError> {
+    if diagram.settings.diagram_type != DiagramType::Class {
+        return Ok(());
+    }
+    let mut parents: std::collections::HashMap<&str, Vec<&str>> = std::collections::HashMap::new();
+    for relation in &diagram.relations {
+        if relation.appearance.dashed || relation.appearance.end != EndSymbol::Triangle {
+            continue;
+        }
+        let mut frontier = vec![relation.to.as_str()];
+        let mut visited = std::collections::HashSet::new();
+        while let Some(candidate) = frontier.pop() {
+            if candidate == relation.from {
+                return Err(error(
+                    relation.line,
+                    "UML generalization hierarchy contains a cycle",
+                ));
+            }
+            if visited.insert(candidate)
+                && let Some(next) = parents.get(candidate)
+            {
+                frontier.extend(next.iter().copied());
+            }
+        }
+        parents
+            .entry(&relation.from)
+            .or_default()
+            .push(&relation.to);
+    }
+    Ok(())
+}
+
 pub(super) fn validate_relation(
     diagram: &Diagram,
     relation: &RelationDecl,
