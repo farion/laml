@@ -45,6 +45,10 @@ pub(super) fn member_port(node: &BoxNode, member: &str, towards: Point) -> Optio
     }
     None
 }
+fn note_fold(node: &BoxNode) -> f64 {
+    12.0_f64.min(node.width / 4.0).min(node.height / 4.0)
+}
+
 pub(super) fn port(node: &BoxNode, towards: Point) -> Point {
     let c = center(node);
     let dx = towards.x - c.x;
@@ -60,9 +64,17 @@ pub(super) fn port(node: &BoxNode, towards: Point) -> Point {
         NodeShape::Diamond => dx.abs() / rx + dy.abs() / ry,
     }
     .max(1e-9);
+    let mut t = 1.0 / scale;
+    if node.shape == NodeShape::Note && dx - dy > 1e-9 {
+        let boundary = node.x + node.width - note_fold(node) - node.y;
+        let diagonal = (boundary - c.x + c.y) / (dx - dy);
+        if diagonal > 0.0 {
+            t = t.min(diagonal);
+        }
+    }
     Point {
-        x: c.x + dx / scale,
-        y: c.y + dy / scale,
+        x: c.x + dx * t,
+        y: c.y + dy * t,
     }
 }
 pub(super) fn intersection(a: Point, b: Point, node: &BoxNode) -> bool {
@@ -138,6 +150,23 @@ pub(super) fn intersection(a: Point, b: Point, node: &BoxNode) -> bool {
             let t2 = (max - start) / delta;
             low = low.max(t1.min(t2));
             high = high.min(t1.max(t2));
+        }
+    }
+    if node.shape == NodeShape::Note {
+        let boundary = node.x + node.width - note_fold(node) - node.y;
+        let start = a.x - a.y - boundary;
+        let delta = b.x - a.x - b.y + a.y;
+        if delta.abs() < 1e-9 {
+            if start >= -1e-5 {
+                return false;
+            }
+        } else {
+            let limit = (-1e-5 - start) / delta;
+            if delta > 0.0 {
+                high = high.min(limit);
+            } else {
+                low = low.max(limit);
+            }
         }
     }
     low < high - 1e-8 && high > 1e-8 && low < 1.0 - 1e-8
@@ -286,6 +315,33 @@ mod tests {
     #[test]
     fn t_junction_is_a_forbidden_unbridged_intersection() {
         assert!(crosses(p(0.0, 5.0), p(10.0, 5.0), p(5.0, 0.0), p(5.0, 5.0)));
+    }
+    #[test]
+    fn folded_note_uses_diagonal_stroke_for_ports_and_obstacles() {
+        let diagram = crate::parser::parse(
+            "semantics {\nMemo\n}\nstyling {\nnode[Memo] {\nshape: note\n}\n}\n",
+        )
+        .unwrap();
+        let styles =
+            crate::styles::load(&diagram, std::path::Path::new("examples/architecture.laml"))
+                .unwrap();
+        let boxes = crate::geometry::place(&diagram, &styles).unwrap();
+        let note = &boxes[0];
+        let (x, y, w, h) = (note.x, note.y, note.width, note.height);
+        let fold = note_fold(note);
+        let hit = port(note, p(x + w, y));
+        assert!((hit.x - hit.y - (x + w - fold - y)).abs() < 1e-6);
+        assert!(hit.x > x + w - fold && hit.y > y);
+        assert!(!intersection(
+            p(x + w - fold * 0.1, y + fold * 0.1),
+            p(x + w - fold * 0.1, y + fold * 0.4),
+            note
+        ));
+        assert!(intersection(
+            p(x + w / 2.0, y + h / 2.0),
+            p(x + w + 10.0, y - 10.0),
+            note
+        ));
     }
     #[test]
     fn collinear_overdraw_is_rejected() {
