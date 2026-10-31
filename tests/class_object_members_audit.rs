@@ -12,6 +12,13 @@ fn object_links_can_name_ends_but_cannot_assign_multiplicities() {
     assert!(svg.contains("item"));
     assert!(export::png(&svg).is_ok());
     assert!(export::pdf(&svg).is_ok());
+    let invalid_classifier = source.replace("of=A", "of=???");
+    assert!(
+        parse(&invalid_classifier)
+            .unwrap_err()
+            .message
+            .contains("classifier must")
+    );
     let bad = source.replace("a /owner", "a \"1\"/owner");
     assert!(
         parse(&bad)

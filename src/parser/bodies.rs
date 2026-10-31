@@ -1,6 +1,6 @@
 //! Graph node declarations and source-ordered compartments.
 use super::{ParseError, attributes, classes, error};
-use crate::lex::{quoted_string, valid_identifier};
+use crate::lex::{quoted_string, valid_identifier, valid_reference};
 use crate::syntax::{Diagram, DiagramType, MemberKind, NodeDecl, NodeKind, NodePart, PortDecl};
 
 pub(super) fn node(
@@ -190,8 +190,14 @@ pub(super) fn node(
                 result.label = Some(quoted_string(&value).map_err(|msg| error(line, msg))?)
             }
             "style-classes" => result.classes = classes(&value, line)?,
-            "of" if kind == NodeKind::Object && !value.trim().is_empty() => {
+            "of" if kind == NodeKind::Object && valid_reference(value.trim()) => {
                 classifier = Some(value.trim().to_string());
+            }
+            "of" if kind == NodeKind::Object => {
+                return Err(error(
+                    line,
+                    "object classifier must be a valid qualified name",
+                ));
             }
             _ => return Err(error(line, format!("unknown node attribute '{key}'"))),
         }
