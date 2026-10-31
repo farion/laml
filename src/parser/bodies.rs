@@ -358,7 +358,35 @@ pub(super) fn member(
             }
         })
     };
+    if diagram_type == DiagramType::Object
+        && (kind != MemberKind::Slot || abstract_member || static_member || forced.is_some())
+    {
+        return Err(error(line, "object body accepts only name = value slots"));
+    }
     if diagram_type == DiagramType::Class {
+        if node.kind == NodeKind::Enumeration
+            && (abstract_member || static_member || forced.is_some())
+        {
+            return Err(error(
+                line,
+                "enumeration literals cannot be abstract, static, field or method",
+            ));
+        }
+        if kind == MemberKind::Field && abstract_member {
+            return Err(error(
+                line,
+                "UML attributes cannot be abstract; mark the classifier or an operation abstract",
+            ));
+        }
+        if kind == MemberKind::Field && (content.contains('(') || content.contains(')')) {
+            return Err(error(
+                line,
+                "UML attribute cannot use operation parentheses",
+            ));
+        }
+        if kind == MemberKind::Method && (!content.contains('(') || !content.contains(')')) {
+            return Err(error(line, "UML operation requires parentheses"));
+        }
         let separated = node
             .parts
             .iter()
