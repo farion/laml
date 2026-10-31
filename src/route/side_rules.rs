@@ -3,6 +3,11 @@ use super::Point;
 use crate::geometry::BoxNode;
 use crate::syntax::{Diagram, EndPosition, PortSide};
 
+pub(super) fn label_clearance(relation: &crate::syntax::RelationDecl, width: f64) -> [f64; 2] {
+    [relation.appearance.start, relation.appearance.end]
+        .map(|symbol| super::geometry::marker_radius(symbol, width).max(14.0 + width / 2.0))
+}
+
 pub(super) fn member_towards(node: &BoxNode, side: Option<PortSide>, otherwise: Point) -> Point {
     match side {
         Some(PortSide::Left) => Point {

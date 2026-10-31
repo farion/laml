@@ -8,7 +8,7 @@ pub(super) fn label_near(
     points: &[Point],
     text: &str,
     size: f64,
-    stroke_width: f64,
+    own_markers: [f64; 2],
     boxes: &[BoxNode],
     previous: &[Route],
 ) -> Result<Option<Label>, String> {
@@ -49,7 +49,7 @@ pub(super) fn label_near(
                     angle: 0.0,
                     placement: LabelPlacement::Near,
                 };
-                if !label_clear(&label, points, None, stroke_width, boxes, previous) {
+                if !label_clear_with_markers(&label, points, None, boxes, previous, own_markers) {
                     continue;
                 }
                 return Ok(Some(label));
@@ -60,8 +60,7 @@ pub(super) fn label_near(
         "cannot place relation label '{text}' without an overlap"
     ))
 }
-fn near_marker(x: f64, y: f64, w: f64, h: f64, point: Point, stroke_width: f64) -> bool {
-    let radius = 14.0 + stroke_width / 2.0; // SVG markers use fixed user-space units
+fn near_marker(x: f64, y: f64, w: f64, h: f64, point: Point, radius: f64) -> bool {
     x < point.x + radius
         && x + w > point.x - radius
         && y < point.y + radius
@@ -104,33 +103,13 @@ pub(super) fn segment_hits_rect(a: Point, b: Point, x: f64, y: f64, w: f64, h: f
 fn overlaps(a: &Label, b: &Label) -> bool {
     a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
 }
-fn label_clear(
-    label: &Label,
-    points: &[Point],
-    own_segment: Option<usize>,
-    width: f64,
-    boxes: &[BoxNode],
-    previous: &[Route],
-) -> bool {
-    label_clear_with_markers(
-        label,
-        points,
-        own_segment,
-        width,
-        boxes,
-        previous,
-        [true, true],
-    )
-}
-
 pub(super) fn label_clear_with_markers(
     label: &Label,
     points: &[Point],
     own_segment: Option<usize>,
-    width: f64,
     boxes: &[BoxNode],
     previous: &[Route],
-    own_markers: [bool; 2],
+    own_markers: [f64; 2],
 ) -> bool {
     let (x, y, w, h) = (label.x, label.y, label.width, label.height);
     if boxes.iter().any(|b| {
@@ -145,15 +124,28 @@ pub(super) fn label_clear_with_markers(
     if [points[0], *points.last().unwrap()]
         .iter()
         .zip(own_markers)
-        .any(|(p, marked)| marked && near_marker(x, y, w, h, *p, width))
+        .any(|(p, radius)| radius > 0.0 && near_marker(x, y, w, h, *p, radius))
     {
         return false;
     }
     if previous.iter().any(|r| {
         r.qualifiers.iter().any(|q| q.overlaps(x, y, w, h))
-            || [r.points[0], *r.points.last().unwrap()]
-                .iter()
-                .any(|p| near_marker(x, y, w, h, *p, r.width))
+            || [
+                (r.points[0], r.appearance.start),
+                (*r.points.last().unwrap(), r.appearance.end),
+            ]
+            .iter()
+            .any(|(p, symbol)| {
+                *symbol != crate::syntax::EndSymbol::None
+                    && near_marker(
+                        x,
+                        y,
+                        w,
+                        h,
+                        *p,
+                        super::geometry::marker_radius(*symbol, r.width),
+                    )
+            })
             || r.label.as_ref().is_some_and(|other| overlaps(label, other))
             || r.end_labels.iter().any(|other| overlaps(label, other))
             || r.points
@@ -184,7 +176,7 @@ pub(super) fn label_along(
     points: &[Point],
     text: &str,
     size: f64,
-    stroke: f64,
+    own_markers: [f64; 2],
     boxes: &[BoxNode],
     previous: &[Route],
 ) -> Result<Option<Label>, String> {
@@ -235,7 +227,14 @@ pub(super) fn label_along(
                     angle,
                     placement: LabelPlacement::Along,
                 };
-                if label_clear(&label, points, Some(index), stroke, boxes, previous) {
+                if label_clear_with_markers(
+                    &label,
+                    points,
+                    Some(index),
+                    boxes,
+                    previous,
+                    own_markers,
+                ) {
                     return Ok(Some(label));
                 }
             }
@@ -252,6 +251,7 @@ pub(super) fn label_inline(
     text: &str,
     size: f64,
     stroke: f64,
+    own_markers: [f64; 2],
     boxes: &[BoxNode],
     previous: &[Route],
 ) -> Result<Option<(Label, Gap)>, String> {
@@ -290,7 +290,7 @@ pub(super) fn label_inline(
                 angle: 0.0,
                 placement: LabelPlacement::Inline,
             };
-            if label_clear(&label, points, Some(index), stroke, boxes, previous) {
+            if label_clear_with_markers(&label, points, Some(index), boxes, previous, own_markers) {
                 return Ok(Some((
                     label,
                     Gap {

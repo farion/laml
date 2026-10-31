@@ -358,24 +358,25 @@ pub fn route(
                 label_error = Some("qualifier conflicts with required bridge".into());
                 continue;
             }
+            let own_markers = side_rules::label_clearance(relation, width);
             let labeled = match shown_label.as_deref() {
                 None => Ok((None, None)),
                 Some(text) => match placement {
                     LabelPlacement::Near => {
-                        label_near(&points, text, font_size, width, boxes, &routed)
+                        label_near(&points, text, font_size, own_markers, boxes, &routed)
                             .map(|label| (label, None))
                     }
                     LabelPlacement::Along => {
-                        label_along(&points, text, font_size, width, boxes, &routed)
+                        label_along(&points, text, font_size, own_markers, boxes, &routed)
                             .map(|label| (label, None))
                     }
-                    LabelPlacement::Inline => label_inline(
-                        &points, text, font_size, width, boxes, &routed,
-                    )
-                    .map(|result| match result {
-                        Some((label, gap)) => (Some(label), Some(gap)),
-                        None => (None, None),
-                    }),
+                    LabelPlacement::Inline => {
+                        label_inline(&points, text, font_size, width, own_markers, boxes, &routed)
+                            .map(|result| match result {
+                                Some((label, gap)) => (Some(label), Some(gap)),
+                                None => (None, None),
+                            })
+                    }
                 },
             };
             let (label, label_gap) = match labeled {

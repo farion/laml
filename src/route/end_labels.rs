@@ -2,9 +2,7 @@
 use super::labels::label_clear_with_markers;
 use super::{Label, Point, Route};
 use crate::geometry::BoxNode;
-use crate::syntax::{
-    EndAnnotation, EndSide, EndSymbol, LabelPlacement, RelationDecl, RelationEndRule,
-};
+use crate::syntax::{EndAnnotation, EndSide, LabelPlacement, RelationDecl, RelationEndRule};
 use crate::text::measure;
 
 fn overlaps(x: f64, y: f64, width: f64, height: f64, label: &Label) -> bool {
@@ -16,8 +14,7 @@ fn overlaps(x: f64, y: f64, width: f64, height: f64, label: &Label) -> bool {
 
 struct Context<'a> {
     size: f64,
-    stroke: f64,
-    own_markers: [bool; 2],
+    own_markers: [f64; 2],
     points: &'a [Point],
     boxes: &'a [BoxNode],
     previous: &'a [Route],
@@ -89,7 +86,6 @@ fn place_one(
             &label,
             context.points,
             None,
-            context.stroke,
             context.boxes,
             context.previous,
             context.own_markers,
@@ -153,10 +149,9 @@ pub(super) fn place(
     }
     let context = Context {
         size: font_and_stroke.0,
-        stroke: font_and_stroke.1,
         own_markers: [
-            relation.appearance.start != EndSymbol::None,
-            relation.appearance.end != EndSymbol::None,
+            super::geometry::marker_radius(relation.appearance.start, font_and_stroke.1),
+            super::geometry::marker_radius(relation.appearance.end, font_and_stroke.1),
         ],
         points,
         boxes,
@@ -191,8 +186,7 @@ mod tests {
         let straight = [p(0.0, 0.0), p(200.0, 0.0)];
         let context = Context {
             size: 14.0,
-            stroke: 2.0,
-            own_markers: [false, false],
+            own_markers: [0.0, 0.0],
             points: &straight,
             boxes: &[],
             previous: &[],

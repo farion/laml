@@ -197,6 +197,15 @@ pub(super) fn crosses(a: Point, b: Point, c: Point, d: Point) -> bool {
         && a.y.min(b.y) <= c.y.max(d.y) + 1e-7
         && c.y.min(d.y) <= a.y.max(b.y) + 1e-7
 }
+pub(super) fn marker_radius(symbol: crate::syntax::EndSymbol, stroke: f64) -> f64 {
+    use crate::syntax::EndSymbol;
+    (match symbol {
+        EndSymbol::None => return 0.0,
+        EndSymbol::Arrow => 12.0,
+        EndSymbol::Triangle => 14.0,
+        EndSymbol::OpenDiamond | EndSymbol::FilledDiamond => 18.0,
+    }) + stroke / 2.0
+}
 fn same(a: Point, b: Point) -> bool {
     (a.x - b.x).abs() < 1e-6 && (a.y - b.y).abs() < 1e-6
 }
@@ -280,7 +289,7 @@ pub(super) fn route_is_clear(points: &[Point], boxes: &[BoxNode], previous: &[Ro
             ];
             if markers.iter().any(|(point, symbol)| {
                 *symbol != crate::syntax::EndSymbol::None && {
-                    let radius = 14.0 + route.width / 2.0;
+                    let radius = marker_radius(*symbol, route.width);
                     segment_hits_rect(
                         pair[0],
                         pair[1],
@@ -376,6 +385,15 @@ mod tests {
             height: 8.0,
         });
         assert!(!route_is_clear(&later, &[], &[older]));
+    }
+    #[test]
+    fn marker_clearance_covers_the_largest_visible_diamond() {
+        use crate::syntax::EndSymbol;
+        assert!(
+            marker_radius(EndSymbol::FilledDiamond, 2.0) > marker_radius(EndSymbol::Triangle, 2.0)
+        );
+        assert!(marker_radius(EndSymbol::Triangle, 2.0) > marker_radius(EndSymbol::Arrow, 2.0));
+        assert_eq!(marker_radius(EndSymbol::None, 0.0), 0.0);
     }
     #[test]
     fn new_routes_do_not_clip_existing_arrowheads() {
