@@ -204,6 +204,15 @@ pub(super) fn plan_except(
                     r.label
                         .as_ref()
                         .is_some_and(|l| overlaps_region(l, center, region))
+                        || r.end_labels
+                            .iter()
+                            .any(|l| overlaps_region(l, center, region))
+                        || r.qualifiers.iter().any(|q| {
+                            center.x + region > q.x
+                                && center.x - region < q.x + q.width
+                                && center.y + region > q.y
+                                && center.y - region < q.y + q.height
+                        })
                 }) {
                     return None;
                 }
@@ -320,6 +329,47 @@ mod tests {
         assert_eq!(planned.events[0].2.segment, 0);
         assert!((planned.events[0].2.distance - 108.0).abs() < 1e-6);
         assert!(planned.events[0].2.half <= 15.0);
+    }
+    #[test]
+    fn bridge_arcs_do_not_cover_existing_end_text_or_qualifiers() {
+        let mut first = Route {
+            points: vec![p(0.0, 100.0), p(200.0, 100.0)],
+            qualifiers: vec![],
+            bridges: vec![],
+            gaps: vec![],
+            label: None,
+            end_labels: vec![],
+            from: 0,
+            to: 1,
+            color: String::new(),
+            width: 2.0,
+            font_size: 14.0,
+            bidirectional: false,
+            marker_end: false,
+            appearance: Default::default(),
+        };
+        let second = [p(100.0, 0.0), p(100.0, 200.0)];
+        assert!(plan(&second, &[], &[first.clone()], 2, 3, 2.0).is_some());
+        first.end_labels.push(Label {
+            text: "1".into(),
+            x: 110.0,
+            y: 110.0,
+            width: 8.0,
+            height: 15.0,
+            angle: 0.0,
+            placement: crate::syntax::LabelPlacement::Near,
+        });
+        assert!(plan(&second, &[], &[first.clone()], 2, 3, 2.0).is_none());
+        first.end_labels.clear();
+        first.qualifiers.push(super::super::QualifierBox {
+            x: 110.0,
+            y: 110.0,
+            width: 12.0,
+            height: 16.0,
+            lines: vec!["id".into()],
+            font_size: 14.0,
+        });
+        assert!(plan(&second, &[], &[first], 2, 3, 2.0).is_none());
     }
     #[test]
     fn close_to_endpoint_is_not_silently_bridged() {
