@@ -15,21 +15,18 @@ fn repeated_member_names_resolve_in_nearest_package_scope() {
 }
 
 #[test]
-fn a_local_default_cannot_silently_shadow_a_global_explicit_id() {
+fn a_global_explicit_id_remains_addressable_beside_a_local_default() {
     for global in [
         "@target class External",
         "class External {\n@target id: UUID\n}",
         "class External {\n@target port Out\n}",
     ] {
         let source = format!(
-            "settings {{\ntype: class\n}}\nsemantics {{\n{global}\npackage P {{\nclass target\nnote N \"text\"\nN .. target\n}}\n}}\n"
+            "settings {{\ntype: class\n}}\nsemantics {{\n{global}\npackage P {{\nclass target\nnote N \"text\"\nN .. target\nN .. P.target\n}}\n}}\n"
         );
-        assert!(
-            parse(&source)
-                .unwrap_err()
-                .message
-                .contains("ambiguous reference 'target'")
-        );
+        let diagram = parse(&source).unwrap();
+        assert_eq!(diagram.relations[0].to, "target");
+        assert_eq!(diagram.relations[1].to, "P.target");
     }
 }
 
