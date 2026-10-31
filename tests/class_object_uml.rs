@@ -59,6 +59,23 @@ fn uml_rejects_relationship_glyphs_that_misstate_the_element_kinds() {
 }
 
 #[test]
+fn abstract_modifier_applies_to_classifiers_not_instances_notes_or_packages() {
+    for source in [
+        "settings {\ntype: object\n}\nsemantics {\nabstract object alice(of=Person)\n}\n",
+        "settings {\ntype: class\n}\nsemantics {\nabstract note N \"text\"\n}\n",
+        "settings {\ntype: class\n}\nsemantics {\nabstract package P {\nclass A\n}\n}\n",
+    ] {
+        assert!(
+            parse(source)
+                .unwrap_err()
+                .message
+                .contains("only on a UML classifier")
+        );
+    }
+    parse("settings {\ntype: class\n}\nsemantics {\nabstract class A\n}\n").unwrap();
+}
+
+#[test]
 fn generalization_requires_acyclic_hierarchy() {
     let base = "settings {\ntype: class\n}\nsemantics {\nclass A\nclass B\nclass C\nA --|> B\nB --|> C\n}\n";
     parse(base).unwrap();

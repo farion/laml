@@ -120,6 +120,19 @@ pub(super) fn node(
     if visibility.is_some() && matches!(kind, NodeKind::Object | NodeKind::Note) {
         return Err(error(line, "visibility is not valid on an object or note"));
     }
+    if diagram.settings.diagram_type != DiagramType::Generic
+        && abstract_node
+        && !matches!(
+            kind,
+            NodeKind::Class
+                | NodeKind::AssociationClass
+                | NodeKind::Interface
+                | NodeKind::Enumeration
+                | NodeKind::DataType
+        )
+    {
+        return Err(error(line, "abstract is valid only on a UML classifier"));
+    }
     if anonymous && (kind != NodeKind::Object || explicit_id.is_none()) {
         return Err(error(line, "anonymous object requires an explicit @id"));
     }
