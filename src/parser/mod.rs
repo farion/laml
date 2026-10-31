@@ -161,7 +161,16 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
                         &mut diagram.nodes[index],
                         diagram.settings.diagram_type,
                     )?;
-                    Section::Semantics
+                    if let Some(parent) = &diagram.nodes[index].parent {
+                        let owner = diagram
+                            .nodes
+                            .iter()
+                            .position(|node| &node.id == parent)
+                            .expect("validated container parent");
+                        Section::NodeBody(owner)
+                    } else {
+                        Section::Semantics
+                    }
                 } else if diagram.nodes[index].note_lines.is_some() {
                     bodies::note_line(
                         if text == "\\}" { "}" } else { text },
