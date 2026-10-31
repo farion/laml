@@ -4,7 +4,7 @@ use crate::lex::without_comment;
 use crate::parser::{ParseError, parse_stylesheet};
 use crate::syntax::StyleEntry;
 
-pub(super) fn extract(source: &str) -> Result<(String, Vec<StyleEntry>), ParseError> {
+pub(crate) fn extract(source: &str) -> Result<(String, Vec<StyleEntry>), ParseError> {
     let mut body = String::new();
     let mut stylesheet = String::new();
     let mut found = false;

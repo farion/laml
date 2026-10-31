@@ -31,7 +31,7 @@ Unqualified identifiers match `[A-Za-z_][A-Za-z0-9_]*`; nested package paths use
 
 | Name | Values | Default |
 |---|---|---|
-| `type` | `class`, `object`, `component`, `deployment`, `state`, `activity`, `usecase`, `package`, `communication`, `interaction-overview`, `sequence` (omitted for generic node-edge) | Generic graph |
+| `type` | `class`, `object`, `component`, `deployment`, `state`, `activity`, `usecase`, `package`, `communication`, `interaction-overview`, `timing`, `sequence` (omitted for generic node-edge) | Generic graph |
 | `direction` | `left-to-right`, `right-to-left`, `top-to-bottom`, `bottom-to-top` | `left-to-right` |
 | `naming-convention` | `uppercase-nodes-lowercase-relations` | Off |
 | `relation-label` | `near`, `along`, `inline` | `near` |
@@ -97,6 +97,10 @@ Set `type: communication` and `interaction: Name` in `settings`. Declare typed l
 ## Interaction-overview diagrams
 
 Set `type: interaction-overview` and `interaction: Name` in `settings`. Declare `interaction-use Call(ref=Interaction)` as a `ref` frame. Add initial/final and optionally decision/merge or fork/join control vertices; join corresponding branches with `-->` control flows. Decision exits have `[guard]` or `[else]` labels. The graph must be connected, acyclic and properly nested. Ordinary activity actions and object flows are not valid substitutes for interaction uses. See the [guide](interaction-overview-diagrams.md) and [UML notation audit](uml-interaction-overview-conformance.md).
+
+## Timing diagrams
+
+Set `type: timing` and `interaction: Name` in `settings`. `lifeline User(of=Customer) : Idle` sets an initial discrete state; `state User at 2 : WaitCard` changes it at an explicit decimal time. `event User at 2 : Code` optionally labels that transition, not a message. The `layout` section sets `scale: 105`, `lane-gap: 62`, `end: 11`, and ruler marks such as `tick 0` and `tick 2`. All lifelines share the same time coordinates; close changes or overlapping text fail instead of retiming the source. See the [timing guide](timing-diagrams.md) and [UML notation audit](uml-timing-conformance.md).
 
 ## Layout
 

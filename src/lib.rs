@@ -22,6 +22,7 @@ mod svg_icons;
 mod svg_paths;
 pub mod syntax;
 pub mod text;
+pub mod timing;
 pub mod update;
 
 #[derive(Clone, Debug, PartialEq, Eq)]

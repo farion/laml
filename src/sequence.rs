@@ -19,7 +19,7 @@ mod layout_scoped;
 mod messages;
 mod notes;
 pub mod render;
-mod styling;
+pub(crate) mod styling;
 pub use styling::is_sequence_source;
 
 pub use annotations::{

@@ -1,0 +1,33 @@
+settings {
+    type: timing
+    interaction: Access
+    time-unit: ms
+}
+semantics {
+    lifeline User(of=Customer) : Idle
+    state User at 2 : WaitCard
+    state User at 5 : WaitAccess
+    state User at 8 : Idle
+    event User at 2 : Code
+    event User at 5 : CardOut
+    event User at 8 : OK
+
+    lifeline System(of=AccessService) : NoCard
+    state System at 3 : HasCard
+    state System at 6 : Checking
+    state System at 8 : Ready
+    event System at 3 : CardInserted
+    event System at 8 : AccessGranted
+}
+layout {
+    scale: 105
+    lane-gap: 62
+    end: 11
+    tick 0
+    tick 2
+    tick 3
+    tick 5
+    tick 6
+    tick 8
+    tick 10
+}

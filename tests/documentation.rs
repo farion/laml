@@ -14,6 +14,39 @@ fn text_blocks(guide: &str) -> Vec<String> {
         .collect()
 }
 
+fn assert_preview_matches(root: &Path, readme: &str, path: &Path, svg: &str) {
+    let name = path.file_stem().unwrap().to_str().unwrap();
+    let preview = root.join("docs/images").join(format!("{name}.png"));
+    let expected = resvg::tiny_skia::Pixmap::decode_png(&fs::read(&preview).unwrap()).unwrap();
+    let actual = resvg::tiny_skia::Pixmap::decode_png(&png(svg).unwrap()).unwrap();
+    assert_eq!(
+        (expected.width(), expected.height()),
+        (actual.width(), actual.height())
+    );
+    let changed = expected
+        .pixels()
+        .iter()
+        .zip(actual.pixels())
+        .filter(|(a, b)| {
+            [
+                a.red().abs_diff(b.red()),
+                a.green().abs_diff(b.green()),
+                a.blue().abs_diff(b.blue()),
+                a.alpha().abs_diff(b.alpha()),
+            ]
+            .into_iter()
+            .any(|d| d > 16)
+        })
+        .count();
+    assert!(
+        changed * 1000 <= expected.pixels().len() * 3,
+        "{} is out of sync",
+        preview.display()
+    );
+    assert!(readme.contains(&format!("examples/{name}.laml")));
+    assert!(readme.contains(&format!("docs/images/{name}.png")));
+}
+
 #[test]
 fn guide_examples_are_extracted_from_lf_and_crlf_files() {
     let source = "intro\n```text\nsemantics {\nA\n}\n```\n";
@@ -72,37 +105,7 @@ fn every_published_example_checks_and_builds() {
                 laml::svg::TextMode::Embedded,
             )
             .unwrap();
-            let name = path.file_stem().unwrap().to_str().unwrap();
-            let preview = root.join("docs/images").join(format!("{name}.png"));
-            let expected =
-                resvg::tiny_skia::Pixmap::decode_png(&fs::read(&preview).unwrap()).unwrap();
-            let actual = resvg::tiny_skia::Pixmap::decode_png(&png(&svg).unwrap()).unwrap();
-            assert_eq!(
-                (expected.width(), expected.height()),
-                (actual.width(), actual.height())
-            );
-            let changed = expected
-                .pixels()
-                .iter()
-                .zip(actual.pixels())
-                .filter(|(a, b)| {
-                    [
-                        a.red().abs_diff(b.red()),
-                        a.green().abs_diff(b.green()),
-                        a.blue().abs_diff(b.blue()),
-                        a.alpha().abs_diff(b.alpha()),
-                    ]
-                    .into_iter()
-                    .any(|d| d > 16)
-                })
-                .count();
-            assert!(
-                changed * 1000 <= expected.pixels().len() * 3,
-                "{} is out of sync",
-                preview.display()
-            );
-            assert!(readme.contains(&format!("examples/{name}.laml")));
-            assert!(readme.contains(&format!("docs/images/{name}.png")));
+            assert_preview_matches(root, &readme, &path, &svg);
             continue;
         }
         if laml::communication::is_communication_source(&source) {
@@ -119,37 +122,18 @@ fn every_published_example_checks_and_builds() {
                 laml::svg::TextMode::Embedded,
             )
             .unwrap();
-            let name = path.file_stem().unwrap().to_str().unwrap();
-            let preview = root.join("docs/images").join(format!("{name}.png"));
-            let expected =
-                resvg::tiny_skia::Pixmap::decode_png(&fs::read(&preview).unwrap()).unwrap();
-            let actual = resvg::tiny_skia::Pixmap::decode_png(&png(&svg).unwrap()).unwrap();
-            assert_eq!(
-                (expected.width(), expected.height()),
-                (actual.width(), actual.height())
-            );
-            let changed = expected
-                .pixels()
-                .iter()
-                .zip(actual.pixels())
-                .filter(|(a, b)| {
-                    [
-                        a.red().abs_diff(b.red()),
-                        a.green().abs_diff(b.green()),
-                        a.blue().abs_diff(b.blue()),
-                        a.alpha().abs_diff(b.alpha()),
-                    ]
-                    .into_iter()
-                    .any(|d| d > 16)
-                })
-                .count();
-            assert!(
-                changed * 1000 <= expected.pixels().len() * 3,
-                "{} image differs from source",
-                preview.display()
-            );
-            assert!(readme.contains(&format!("examples/{name}.laml")));
-            assert!(readme.contains(&format!("docs/images/{name}.png")));
+            assert_preview_matches(root, &readme, &path, &svg);
+            continue;
+        }
+        if laml::timing::is_timing_source(&source) {
+            let doc = laml::timing::parse(&source).unwrap();
+            let input = laml::syntax::Diagram {
+                styling: doc.styling.clone(),
+                ..Default::default()
+            };
+            let sheet = load(&input, &path).unwrap();
+            let svg = laml::timing::render(&doc, &sheet, laml::svg::TextMode::Embedded).unwrap();
+            assert_preview_matches(root, &readme, &path, &svg);
             continue;
         }
         if laml::sequence::is_sequence_source(&source) {
@@ -386,6 +370,25 @@ fn package_guide_example_builds_all_formats() {
     let boxes = place(&diagram, &sheet).unwrap();
     let routes = route(&diagram, &boxes, &sheet).unwrap();
     let svg = render(&boxes, &routes).unwrap();
+    assert!(png(&svg).unwrap().starts_with(b"\x89PNG"));
+    assert!(laml::export::pdf(&svg).unwrap().starts_with(b"%PDF-"));
+}
+
+#[test]
+fn timing_guide_example_builds_all_formats() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let guide = fs::read_to_string(root.join("docs/timing-diagrams.md")).unwrap();
+    let source = text_blocks(&guide)
+        .into_iter()
+        .next()
+        .expect("missing timing guide example");
+    let doc = laml::timing::parse(&source).unwrap();
+    let input = laml::syntax::Diagram {
+        styling: doc.styling.clone(),
+        ..Default::default()
+    };
+    let sheet = load(&input, &root.join("examples/timing-access.laml")).unwrap();
+    let svg = laml::timing::render(&doc, &sheet, laml::svg::TextMode::Embedded).unwrap();
     assert!(png(&svg).unwrap().starts_with(b"\x89PNG"));
     assert!(laml::export::pdf(&svg).unwrap().starts_with(b"%PDF-"));
 }

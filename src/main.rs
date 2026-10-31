@@ -100,6 +100,48 @@ fn run() -> Result<(), String> {
             .map_err(|e| format!("{}: communication rendering failed: {e}", path.display()))?;
         return write_image(&svg, &output, format);
     }
+    if laml::timing::is_timing_source(&text) {
+        let timing = laml::timing::parse(&text)
+            .map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?;
+        let style_input = laml::syntax::Diagram {
+            styling: timing.styling.clone(),
+            ..Default::default()
+        };
+        let styles = load(&style_input, path)
+            .map_err(|e| format!("{}:{}: {}", e.path.display(), e.line, e.message))?;
+        if args[0] == "check" {
+            // Geometry and LSS visibility are checked at render time, as for other image types.
+            println!(
+                "parsed timing: {} lifelines, {} state changes; full geometry not checked",
+                timing.lifelines.len(),
+                timing
+                    .lifelines
+                    .iter()
+                    .map(|p| p.changes.len())
+                    .sum::<usize>()
+            );
+            return Ok(());
+        }
+        if path.extension().and_then(|e| e.to_str()) != Some("laml") {
+            return Err("build input must have a .laml extension".into());
+        }
+        let output = output_arg
+            .map(PathBuf::from)
+            .unwrap_or_else(|| path.with_extension("svg"));
+        let format = output
+            .extension()
+            .and_then(|e| e.to_str())
+            .ok_or("build output must end in .svg, .png or .pdf")?;
+        if !matches!(format, "svg" | "png" | "pdf") {
+            return Err("build output must end in .svg, .png or .pdf".into());
+        }
+        if text_arg.is_some() && format != "svg" {
+            return Err("--svg-text is only available for SVG output".into());
+        }
+        let svg = laml::timing::render(&timing, &styles, mode)
+            .map_err(|e| format!("{}: timing rendering failed: {e}", path.display()))?;
+        return write_image(&svg, &output, format);
+    }
     if laml::sequence::is_sequence_source(&text) {
         let sequence = laml::sequence::parse(&text)
             .map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?;
