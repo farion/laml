@@ -3,6 +3,20 @@ use super::Point;
 use crate::geometry::BoxNode;
 use crate::syntax::{Diagram, EndPosition, PortSide};
 
+pub(super) fn member_towards(node: &BoxNode, side: Option<PortSide>, otherwise: Point) -> Point {
+    match side {
+        Some(PortSide::Left) => Point {
+            x: node.x - 1000.0,
+            y: otherwise.y,
+        },
+        Some(PortSide::Right) => Point {
+            x: node.x + node.width + 1000.0,
+            y: otherwise.y,
+        },
+        _ => otherwise,
+    }
+}
+
 pub(super) fn requested(diagram: &Diagram, index: usize, end: EndPosition) -> Option<PortSide> {
     diagram
         .relations

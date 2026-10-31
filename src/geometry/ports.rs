@@ -29,6 +29,23 @@ pub(super) fn position(diagram: &Diagram, boxes: &mut [BoxNode]) {
                     .find(|rule| rule.id == port.id)
                     .map(|rule| rule.side)
                     .unwrap_or_else(|| {
+                        if let Some(side) = diagram.relations.iter().find_map(|relation| {
+                            let end = if relation.from == port.id {
+                                crate::syntax::EndPosition::Source
+                            } else if relation.to == port.id {
+                                crate::syntax::EndPosition::Target
+                            } else {
+                                return None;
+                            };
+                            let name = relation.name.as_deref()?;
+                            diagram
+                                .relation_end_layout
+                                .iter()
+                                .find(|rule| rule.name == name && rule.end == end)
+                                .and_then(|rule| rule.side)
+                        }) {
+                            return side;
+                        }
                         let other = diagram.relations.iter().find_map(|relation| {
                             let opposite = if relation.from == port.id {
                                 &relation.to

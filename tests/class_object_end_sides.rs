@@ -18,7 +18,7 @@ fn named_relation_ends_obey_mandatory_boundary_sides() {
 }
 
 #[test]
-fn relation_side_rules_reject_invalid_and_indirect_endpoints() {
+fn relation_side_rules_validate_and_route_named_ports_and_member_rows() {
     let invalid = SOURCE.replace("side=top", "side=above");
     assert!(parse(&invalid).unwrap_err().message.contains("end side"));
     let repeated = SOURCE.replace("side=top", "side=top; side=left");
@@ -27,12 +27,39 @@ fn relation_side_rules_reject_invalid_and_indirect_endpoints() {
         .replace("settings {\ntype: class\n}\n", "")
         .replace("class A", "class A {\n@p port out\n}")
         .replace("@r A --> B", "@r p --> B");
+    let diagram = parse(&indirect).unwrap();
+    let sheet = StyleSheet::default();
+    let boxes = place(&diagram, &sheet).unwrap();
+    assert_eq!(boxes[0].ports[0].side, laml::syntax::PortSide::Top);
+    let routed = route(&diagram, &boxes, &sheet).unwrap();
+    assert!((routed[0].points[0].y - boxes[0].y).abs() < 1e-6);
+    let conflict = indirect.replace(
+        "relation[r].source : side=top",
+        "port[p] : side=left\nrelation[r].source : side=top",
+    );
+    assert!(parse(&conflict).unwrap_err().message.contains("conflicts"));
+    let competing = indirect
+        .replace("@r p --> B", "@r p --> B\n@s p --> B")
+        .replace(
+            "relation[r].source : side=top",
+            "relation[r].source : side=top\nrelation[s].source : side=bottom",
+        );
     assert!(
-        parse(&indirect)
+        parse(&competing)
             .unwrap_err()
             .message
-            .contains("direct node endpoint")
+            .contains("conflicting relation sides")
     );
+    let member = indirect
+        .replace("@p port out", "@p id: UUID")
+        .replace("A < B : gap=150", "A > B : gap=150")
+        .replace("side=top", "side=left");
+    let diagram = parse(&member).unwrap();
+    let boxes = place(&diagram, &sheet).unwrap();
+    let routed = route(&diagram, &boxes, &sheet).unwrap();
+    assert!((routed[0].points[0].x - boxes[0].x).abs() < 1e-6);
+    let bad = member.replace("side=left", "side=top");
+    assert!(parse(&bad).unwrap_err().message.contains("member-row"));
 }
 
 #[test]

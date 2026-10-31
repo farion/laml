@@ -194,12 +194,16 @@ fn candidates(
                 0.0
             };
             let start = if let Some(id) = source_member {
-                member_port(a, id, points[1])?
+                member_port(a, id, side_rules::member_towards(a, source_side, points[1]))?
             } else {
                 parallel::shift_port(a, points[0], start_offset)?
             };
             let end = if let Some(id) = target_member {
-                member_port(b, id, points[last - 1])?
+                member_port(
+                    b,
+                    id,
+                    side_rules::member_towards(b, target_side, points[last - 1]),
+                )?
             } else {
                 parallel::shift_port(b, points[last], end_offset)?
             };

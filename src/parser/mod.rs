@@ -19,6 +19,7 @@ mod layout;
 mod member_notation;
 mod references;
 mod selectors;
+mod side_references;
 mod stereotypes;
 mod template_formals;
 mod uml;

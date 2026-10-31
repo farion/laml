@@ -415,18 +415,7 @@ fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {
             crate::syntax::EndPosition::Source => &target.source_end,
             crate::syntax::EndPosition::Target => &target.target_end,
         };
-        if rule.side.is_some() {
-            let endpoint = match rule.end {
-                crate::syntax::EndPosition::Source => &target.from,
-                crate::syntax::EndPosition::Target => &target.to,
-            };
-            if !diagram.nodes.iter().any(|node| &node.id == endpoint) {
-                return Err(error(
-                    rule.line,
-                    "mandatory relation side requires a direct node endpoint",
-                ));
-            }
-        }
+        super::side_references::validate(diagram, rule, target, index)?;
         if (rule.multiplicity.is_some() && end.multiplicity.is_none())
             || (rule.role.is_some() && end.role.is_none())
         {
