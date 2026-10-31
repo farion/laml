@@ -1,0 +1,58 @@
+# Class and object diagrams
+
+Use `settings { type: class }` for class notation or `settings { type: object }` for instance notation. The existing generic node-edge mode has no `type` setting. All three modes share `semantics`, mandatory `layout`, and LSS `styling`; the compiler exports the same measured diagram as SVG, PNG or vector PDF. A rejected construct does not become a different UML relationship automatically.
+
+## A class diagram
+
+The source of [the class example](../examples/class-basic.laml) shows two classifier compartments, typed attributes, operations, association-end multiplicities and roles, and a multiline note attached to an association:
+
+```text
+settings {
+    type: class
+}
+semantics {
+    class Kunde {
+        @kundenId id: UUID
+        name: String
+        --
+        +void bestellen()
+    }
+    class Bestellung {
+        nummer: String
+        --
+        +void abschliessen()
+    }
+    @orders Kunde "1"/kunde -- "0..*"/+bestellungen Bestellung : bestellt
+    note Regel {
+        Eine Bestellung gehört
+        zu genau einem Kunden.
+    }
+    Regel .. relation[orders]
+}
+layout {
+    Kunde < Bestellung : align=center; gap=270
+    Regel above Kunde : gap=105
+}
+```
+
+`--` inside a class separates its attribute and operation compartments. `--` between two classifiers declares an association with unspecified navigability. `-->` draws a navigable association with an open arrow; `..>` a dashed dependency; `--|>` a generalization with a hollow triangle; `..|>` a dashed realization. `*--` and `o--` put a composition or aggregation diamond at the whole end. End multiplicities (`"1"`, `"0..*"`), roles (`/kunde`, `/+bestellungen`) and qualifiers (`qualifier(id:UUID)`) are separate association-end annotations. A link in an object diagram has none of these association-end multiplicities.
+
+A named relation can be styled using `relation[orders]`, have end-label sides fixed using `relation[orders].source : multiplicity=above; role=below` in `layout`, or be the target of a dotted note attachment. A member explicitly named with `@kundenId` can be targeted by an edge. An unaliased member can be targeted as `Kunde::name`; ambiguous overloads fail. An `@id` replaces a default ID and is unique across explicitly named graph elements.
+
+`interface`, `enum`, `datatype`, and `association class` have checked classifier notation. An association class attaches with `AssociationClass .. relation[relationId]` to one named, plain binary association. A n-ary association uses one small diamond (`association Verordnet`) and at least three distinct plain arms; its visible name stays beside, not inside, the diamond. See [the n-ary example](../examples/class-nary.laml). `class Repository<T>` displays a compact template heading; `StringRepository ..> Repository <<bind(T->String)>>` checks a locally declared parameter and draws its substitution. See [the binding example](../examples/class-binding.laml). The inline heading is LAML's compact notation rather than the full UML template corner box.
+
+Package blocks create containing frames and scoped IDs. Inside `package Vertrieb { ... }`, class `Kunde` has default ID `Vertrieb.Kunde`; nested members can be addressed as `Vertrieb.Kunde::name`. A top-level layout rule can use the qualified path, and cross-scope placement separates enclosing packages when necessary. See [nested packages](../examples/class-packages.laml). Fixed-size containers that cannot contain their children fail rather than clipping them.
+
+## Objects
+
+[The object example](../examples/object-basic.laml) declares `kunde1(of=Kunde)` with a slot `name = "Ada"`; its underlined heading reads `kunde1:Kunde`. `@gast anonymous object(of=Kunde)` displays `:Kunde` while retaining a stable explicit address. An object link (`kunde1 -- bestellung1`) is not a class association; its slots are literal text, not evaluated expressions.
+
+## Shared layout and styling
+
+Generic graphs allow arbitrary member rows, `shape: rectangle|ellipse|diamond|note`, and optional node icons. UML classifier shapes cannot be replaced by a styling rule that changes their notation. Class and generic nodes can declare named boundary ports; `port[id] : side=left|right|top|bottom` fixes an addressable port's side. A contour and content combination with no safe measured port placement fails. For compartments, explicit `width`/`height` must contain UML text rather than ellipsizing it; generic text can ellipsize.
+
+LSS selects nodes, relations, `member`, `member[kind=field|method]`, `member[ID]`, `port`, and styling classes such as `.domain`. `*` is the lowest-precedence selector. `display: none` removes an element only when no visible edge or mandatory rule still references it. `style-classes=domain` affects style selection, while `<<stereotype>>` is visible text and has no implicit styling meaning. `//` starts a source comment at a token boundary; `#` is UML protected visibility.
+
+The [generic icon example](../examples/generic-icons.laml) uses `symbol-rendering: icons` with `icon-set: phosphor` and an optional `icon: "folder"`. Phosphor's MIT notice is stored as nonvisible metadata only in SVG, PNG and PDF exports actually using a Phosphor icon; its original notice and provenance are in [assets/phosphor](../assets/phosphor/). A non-icon export contains no Phosphor notice. The font license is separate.
+
+Run `laml check examples/class-basic.laml` for syntax, references and mandatory direction cycles; `laml build examples/class-basic.laml output.svg` additionally checks measured placement and routing. Rendering failures leave an existing output image untouched. See the [syntax reference](language-reference.md) for the shared sections and [language contract](language-definition.md) for deterministic placement and failure behavior.

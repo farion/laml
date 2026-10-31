@@ -1,0 +1,27 @@
+// Classifiers, addressable attributes, association ends and a note to a named relation.
+settings {
+    type: class
+}
+semantics {
+    class Kunde {
+        @kundenId id: UUID
+        name: String
+        --
+        +void bestellen()
+    }
+    class Bestellung {
+        nummer: String
+        --
+        +void abschliessen()
+    }
+    @orders Kunde "1"/kunde -- "0..*"/+bestellungen Bestellung : bestellt
+    note Regel {
+        Eine Bestellung gehört
+        zu genau einem Kunden.
+    }
+    Regel .. relation[orders]
+}
+layout {
+    Kunde < Bestellung : align=center; gap=270
+    Regel above Kunde : gap=105
+}

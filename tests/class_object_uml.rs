@@ -50,3 +50,24 @@ fn uml_rejects_relationship_glyphs_that_misstate_the_element_kinds() {
     let generic_realization = "settings {\ntype: class\n}\nsemantics {\nA\nB\nA ..|> B\n}\n";
     assert!(image(generic_realization).contains("marker-end=\"url(#triangle)\""));
 }
+
+#[test]
+fn uml_rejects_unvalidated_package_relations_and_nonclass_wholes() {
+    for (source, reason) in [
+        (
+            "settings {\ntype: class\n}\nsemantics {\npackage P {\nclass A\n}\nP --> P.A\n}\n",
+            "package relationships",
+        ),
+        (
+            "settings {\ntype: class\n}\nsemantics {\ninterface API\nclass A\nAPI *-- A\n}\n",
+            "class at the whole end",
+        ),
+        (
+            "settings {\ntype: class\n}\nsemantics {\nclass A\ninterface API\nA --* API\n}\n",
+            "class at the whole end",
+        ),
+    ] {
+        let err = parse(source).unwrap_err();
+        assert!(err.message.contains(reason), "{err:?}");
+    }
+}

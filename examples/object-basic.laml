@@ -1,0 +1,16 @@
+// Objects have underlined instance headers; links do not carry multiplicities.
+settings {
+    type: object
+}
+semantics {
+    kunde1(of=Kunde) {
+        name = "Ada"
+    }
+    bestellung1(of=Bestellung) {
+        nummer = "B-17"
+    }
+    kunde1 -- bestellung1 : erfasst
+}
+layout {
+    kunde1 < bestellung1 : gap=130
+}

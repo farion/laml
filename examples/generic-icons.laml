@@ -1,0 +1,21 @@
+// Icons are optional. An icon used in the image adds its license to export metadata.
+semantics {
+    Service {
+        +run()
+        -id: Int
+    }
+    Client
+    Service --> Client
+}
+styling {
+    * {
+        symbol-rendering: icons
+        icon-set: phosphor
+    }
+    node[Service] {
+        icon: "folder"
+    }
+    member[Service::id] {
+        symbol-rendering: text
+    }
+}

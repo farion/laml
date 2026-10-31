@@ -33,6 +33,13 @@ pub(super) fn parse_tokens(
             if fields.is_empty() {
                 return Err(error(line, "empty qualifier"));
             }
+            let mut names = std::collections::HashSet::new();
+            if fields
+                .iter()
+                .any(|field| !names.insert(field.split(':').next().unwrap_or_default()))
+            {
+                return Err(error(line, "duplicate qualifier attribute"));
+            }
             result.qualifier = Some(fields);
         } else {
             let adornment = parse(token, line, diagram_type)?;

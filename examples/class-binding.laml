@@ -1,0 +1,9 @@
+// A checked binding substitutes the template's declared parameter.
+settings {
+    type: class
+}
+semantics {
+    class Repository<T>
+    class StringRepository
+    @bind StringRepository ..> Repository <<bind(T->String)>>
+}

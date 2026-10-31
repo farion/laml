@@ -63,6 +63,12 @@ pub(super) fn validate_relation(
             "UML relationship cannot target a member except as a note attachment",
         ));
     }
+    if from.kind == NodeKind::Package || to.kind == NodeKind::Package {
+        return Err(error(
+            relation.line,
+            "UML package relationships require a separately validated notation",
+        ));
+    }
     if diagram.settings.diagram_type == DiagramType::Object {
         if relation.appearance.dashed
             || relation.appearance.start != EndSymbol::None
@@ -74,6 +80,26 @@ pub(super) fn validate_relation(
             ));
         }
         return Ok(());
+    }
+    let whole = if matches!(
+        relation.appearance.start,
+        EndSymbol::OpenDiamond | EndSymbol::FilledDiamond
+    ) {
+        Some(from)
+    } else if matches!(
+        relation.appearance.end,
+        EndSymbol::OpenDiamond | EndSymbol::FilledDiamond
+    ) {
+        Some(to)
+    } else {
+        None
+    };
+    if whole.is_some_and(|node| !matches!(node.kind, NodeKind::Class | NodeKind::AssociationClass))
+    {
+        return Err(error(
+            relation.line,
+            "aggregation or composition requires a class at the whole end",
+        ));
     }
     if end_label
         && (relation.appearance.dashed

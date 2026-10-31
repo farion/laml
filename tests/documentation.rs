@@ -152,6 +152,26 @@ fn sequence_guide_complete_examples_build() {
 }
 
 #[test]
+fn class_guide_complete_example_builds_all_formats() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let guide = fs::read_to_string(root.join("docs/class-object-diagrams.md")).unwrap();
+    let source = guide
+        .split("```text\n")
+        .nth(1)
+        .unwrap()
+        .split("```")
+        .next()
+        .unwrap();
+    let diagram = parse(source).unwrap();
+    let styles = load(&diagram, &root.join("examples/class-basic.laml")).unwrap();
+    let nodes = place(&diagram, &styles).unwrap();
+    let routes = route(&diagram, &nodes, &styles).unwrap();
+    let image = render(&nodes, &routes).unwrap();
+    assert!(png(&image).unwrap().starts_with(b"\x89PNG"));
+    assert!(laml::export::pdf(&image).unwrap().starts_with(b"%PDF-"));
+}
+
+#[test]
 fn user_documentation_contains_no_speculative_status_notes() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     for file in [

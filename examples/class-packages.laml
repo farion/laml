@@ -1,0 +1,15 @@
+// Nested packages scope class identities and enclose their diagram contents.
+settings {
+    type: class
+}
+semantics {
+    package Vertrieb {
+        class Kunde
+        package Lager {
+            class Produkt
+        }
+        Kunde --> Lager.Produkt
+    }
+    class Bericht
+    Vertrieb.Kunde --> Bericht
+}

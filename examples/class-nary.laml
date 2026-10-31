@@ -1,0 +1,13 @@
+// A named n-ary association is one small diamond with three classifier arms.
+settings {
+    type: class
+}
+semantics {
+    class Arzt
+    class Patient
+    class Medikament
+    association Verordnet
+    Arzt -- Verordnet
+    Patient -- Verordnet
+    Medikament -- Verordnet
+}

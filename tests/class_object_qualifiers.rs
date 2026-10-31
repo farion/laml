@@ -46,6 +46,13 @@ fn qualifiers_fail_if_they_misrepresent_a_dependency_or_object_link() {
             .message
             .contains("unsupported qualifier")
     );
+    let repeated = base.replace("id:UUID", "id:UUID,id:Int");
+    assert!(
+        parse(&repeated)
+            .unwrap_err()
+            .message
+            .contains("duplicate qualifier attribute")
+    );
     let invalid = base.replace("id:UUID", "id:");
     assert!(
         parse(&invalid)

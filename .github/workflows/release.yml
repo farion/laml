@@ -99,6 +99,8 @@ jobs:
           name="laml-${GITHUB_REF_NAME}-${TARGET}"
           mkdir -p "stage/${name}" dist
           cp target/release/laml README.md LICENSE assets/INTER-LICENSE.txt "stage/${name}/"
+          cp assets/phosphor/LICENSE "stage/${name}/PHOSPHOR-LICENSE.txt"
+          cp assets/phosphor/README.md "stage/${name}/PHOSPHOR-README.md"
           cp -R docs examples scripts "stage/${name}/"
           tar -czf "dist/${name}.tar.gz" -C stage "${name}"
       - name: Package (Windows)
@@ -112,6 +114,8 @@ jobs:
           $folder = "stage/$name"
           New-Item -ItemType Directory -Path $folder, 'dist' -Force | Out-Null
           Copy-Item target/release/laml.exe, README.md, LICENSE, assets/INTER-LICENSE.txt -Destination $folder
+          Copy-Item assets/phosphor/LICENSE -Destination "$folder/PHOSPHOR-LICENSE.txt"
+          Copy-Item assets/phosphor/README.md -Destination "$folder/PHOSPHOR-README.md"
           Copy-Item docs, examples, scripts -Destination $folder -Recurse
           Compress-Archive -Path $folder -DestinationPath "dist/$name.zip"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
