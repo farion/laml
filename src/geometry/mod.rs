@@ -3,6 +3,7 @@
 
 mod constraints;
 mod nodes;
+mod ports;
 mod visibility;
 
 pub use constraints::GeometryError;
@@ -38,6 +39,18 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
             }
         }
     }
+    for rule in &diagram.port_layout {
+        if !boxes
+            .iter()
+            .any(|node| node.ports.iter().any(|port| port.id == rule.id))
+        {
+            return Err(GeometryError {
+                line: rule.line,
+                message: format!("mandatory port layout targets hidden port '{}'", rule.id),
+            });
+        }
+    }
     constraints::place(diagram, &mut boxes, styles)?;
+    ports::position(diagram, &mut boxes);
     Ok(boxes)
 }

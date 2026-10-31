@@ -1,7 +1,7 @@
 //! Graph node declarations and source-ordered compartments.
 use super::{ParseError, attributes, classes, error};
 use crate::lex::{quoted_string, valid_identifier};
-use crate::syntax::{Diagram, DiagramType, MemberKind, NodeDecl, NodeKind, NodePart};
+use crate::syntax::{Diagram, DiagramType, MemberKind, NodeDecl, NodeKind, NodePart, PortDecl};
 
 pub(super) fn node(
     text: &str,
@@ -138,6 +138,7 @@ pub(super) fn node(
             None
         },
         parts: Vec::new(),
+        ports: Vec::new(),
         line,
     };
     let mut classifier = None;
@@ -223,6 +224,36 @@ pub(super) fn member(
     } else {
         (None, Vec::new(), text)
     };
+    if let Some(port) = content.strip_prefix("port ") {
+        if !matches!(
+            diagram.nodes[index].kind,
+            NodeKind::Generic | NodeKind::Class
+        ) {
+            return Err(error(
+                line,
+                "ports are supported only on generic or class nodes",
+            ));
+        }
+        let (name, attrs) = attributes(port.trim(), line)?;
+        if name.is_empty() {
+            return Err(error(line, "port name required"));
+        }
+        let mut port_classes = member_classes;
+        for (key, value) in attrs {
+            if key != "style-classes" {
+                return Err(error(line, format!("unknown port attribute '{key}'")));
+            }
+            port_classes = classes(&value, line)?;
+        }
+        diagram.nodes[index].ports.push(PortDecl {
+            id: id.clone().unwrap_or_else(|| name.clone()),
+            label: name,
+            explicit: id.is_some(),
+            classes: port_classes,
+            line,
+        });
+        return Ok(());
+    }
     if let Some(id) = &id
         && diagram.nodes.iter().any(|other| {
             other.parts.iter().any(|part| {

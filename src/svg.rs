@@ -213,7 +213,7 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
                 node.x,node.y,node.width,node.height,node.radius,node.fill,node.border_color,node.border_width).unwrap();
         }
         let line_height = node.font_size * 1.25;
-        let first_baseline = if node.body.is_empty() {
+        let first_baseline = if node.body.is_empty() && node.ports.is_empty() {
             node.y
                 + (node.height - line_height * node.lines.len() as f64) / 2.0
                 + line_height * 0.78
@@ -272,6 +272,21 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
                         y += row.font_size * 1.25;
                     }
                 }
+            }
+        }
+        if !node.ports.is_empty() {
+            let separator = node.y + node.port_start - 4.0;
+            writeln!(svg, "<line x1=\"{:.2}\" y1=\"{separator:.2}\" x2=\"{:.2}\" y2=\"{separator:.2}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
+                node.x, node.x + node.width, node.border_color, node.border_width).unwrap();
+            for port in &node.ports {
+                writeln!(svg, "<rect data-port-id=\"{}\" x=\"{:.2}\" y=\"{:.2}\" width=\"10\" height=\"10\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
+                    escape(&port.id), port.x-5.0, port.y-5.0, port.fill, port.border_color, node.border_width).unwrap();
+                let (x, anchor) = match port.side {
+                    crate::syntax::PortSide::Left => (node.x + node.padding, "start"),
+                    crate::syntax::PortSide::Right => (node.x + node.width - node.padding, "end"),
+                };
+                writeln!(svg,"<text x=\"{x:.2}\" y=\"{:.2}\" text-anchor=\"{anchor}\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\">{}</text>",
+                    port.y+node.font_size*0.28,node.font_size,port.color,escape(&port.label)).unwrap();
             }
         }
         svg.push_str("</g>\n");

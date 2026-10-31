@@ -19,7 +19,7 @@ mod references;
 mod selectors;
 mod stereotypes;
 mod uml;
-use layout::{parse_layout, parse_relation_end, parse_relation_label};
+use layout::{parse_layout, parse_port_side, parse_relation_end, parse_relation_label};
 use selectors::validate_selector;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -151,7 +151,9 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
                 if text == "}" {
                     Section::Top
                 } else {
-                    if text.starts_with("relation[") {
+                    if text.starts_with("port[") {
+                        diagram.port_layout.push(parse_port_side(text, line)?);
+                    } else if text.starts_with("relation[") {
                         if text.contains("].source") || text.contains("].target") {
                             diagram
                                 .relation_end_layout

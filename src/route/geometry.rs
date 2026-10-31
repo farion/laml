@@ -9,6 +9,12 @@ pub(super) fn center(node: &BoxNode) -> Point {
     }
 }
 pub(super) fn member_port(node: &BoxNode, member: &str, towards: Point) -> Option<Point> {
+    if let Some(port) = node.ports.iter().find(|port| port.id == member) {
+        return Some(Point {
+            x: port.x,
+            y: port.y,
+        });
+    }
     let line_height = node.font_size * 1.25;
     let mut y = node.y + node.padding + line_height * node.lines.len() as f64 + 4.0;
     for (part, row) in node.body.iter().zip(&node.body_styles) {

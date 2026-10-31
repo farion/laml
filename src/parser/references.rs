@@ -20,6 +20,14 @@ pub(super) fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {
         assigned.insert(node.id.as_str());
     }
     for node in &diagram.nodes {
+        for port in &node.ports {
+            if port.explicit && !assigned.insert(port.id.as_str()) {
+                return Err(error(
+                    port.line,
+                    format!("duplicate global ID '{}'", port.id),
+                ));
+            }
+        }
         for part in &node.parts {
             if let crate::syntax::NodePart::Member {
                 id: Some(id), line, ..
@@ -73,6 +81,11 @@ pub(super) fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {
                 .map(|node| {
                     usize::from(node.id == *endpoint)
                         + node
+                            .ports
+                            .iter()
+                            .filter(|port| node.matches_port(port, endpoint))
+                            .count()
+                        + node
                             .parts
                             .iter()
                             .filter(|part| match part {
@@ -112,6 +125,32 @@ pub(super) fn validate_references(diagram: &Diagram) -> Result<(), ParseError> {
             if !diagram.nodes.iter().any(|node| &node.id == id) {
                 return Err(error(rule.line, format!("unknown node '{id}'")));
             }
+        }
+    }
+    for (index, rule) in diagram.port_layout.iter().enumerate() {
+        let targets = diagram
+            .nodes
+            .iter()
+            .flat_map(|node| {
+                node.ports
+                    .iter()
+                    .filter(move |port| node.matches_port(port, &rule.id))
+            })
+            .count();
+        if targets != 1 {
+            return Err(error(
+                rule.line,
+                format!("unknown or ambiguous port '{}'", rule.id),
+            ));
+        }
+        if diagram.port_layout[..index]
+            .iter()
+            .any(|prior| prior.id == rule.id)
+        {
+            return Err(error(
+                rule.line,
+                format!("duplicate port layout for '{}'", rule.id),
+            ));
         }
     }
     for (index, rule) in diagram.relation_end_layout.iter().enumerate() {

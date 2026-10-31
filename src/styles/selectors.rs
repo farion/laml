@@ -7,6 +7,7 @@ pub enum Selector {
     AllNodes,
     AllRelations,
     AllMembers,
+    AllPorts,
     AllLifelines,
     AllActivations,
     AllFragments,
@@ -20,9 +21,11 @@ pub enum Selector {
     NodeClass(String),
     RelationClass(String),
     MemberClass(String),
+    PortClass(String),
     MemberKind(MemberKind),
     NodeId(String),
     MemberId(String),
+    PortId(String),
     RelationId(String),
     LifelineId(String),
     ActivationId(String),
@@ -76,6 +79,14 @@ impl Selector {
             Self::ScopedId { child, .. } | Self::ScopedClass { child, .. } => {
                 child.targets_relation()
             }
+            _ => false,
+        }
+    }
+
+    pub(super) fn targets_port(&self) -> bool {
+        match self {
+            Self::AllPorts | Self::PortId(_) | Self::PortClass(_) => true,
+            Self::ScopedId { child, .. } | Self::ScopedClass { child, .. } => child.targets_port(),
             _ => false,
         }
     }
@@ -156,6 +167,8 @@ impl Selector {
             Self::RelationClass(class.into())
         } else if let Some(class) = text.strip_prefix("member.") {
             Self::MemberClass(class.into())
+        } else if let Some(class) = text.strip_prefix("port.") {
+            Self::PortClass(class.into())
         } else if let Some(class) = text.strip_prefix('.') {
             Self::Class(class.into())
         } else if let Some(id) = text.strip_prefix("node[") {
@@ -172,6 +185,8 @@ impl Selector {
             })
         } else if let Some(id) = text.strip_prefix("member[") {
             Self::MemberId(id.trim_end_matches(']').into())
+        } else if let Some(id) = text.strip_prefix("port[") {
+            Self::PortId(id.trim_end_matches(']').into())
         } else if let Some(id) = text.strip_prefix("lifeline[") {
             Self::LifelineId(id.trim_end_matches(']').into())
         } else if let Some(id) = text.strip_prefix("activation[") {
@@ -213,6 +228,7 @@ impl Selector {
                 "node" => Self::AllNodes,
                 "relation" => Self::AllRelations,
                 "member" => Self::AllMembers,
+                "port" => Self::AllPorts,
                 "lifeline" => Self::AllLifelines,
                 "activation" => Self::AllActivations,
                 "fragment" => Self::AllFragments,
@@ -233,6 +249,7 @@ impl Selector {
             | Self::AllNodes
             | Self::AllRelations
             | Self::AllMembers
+            | Self::AllPorts
             | Self::AllLifelines
             | Self::AllActivations
             | Self::AllFragments
@@ -246,6 +263,7 @@ impl Selector {
             Self::NodeClass(_)
             | Self::RelationClass(_)
             | Self::MemberClass(_)
+            | Self::PortClass(_)
             | Self::MemberKind(_)
             | Self::NodeClassLifeline(_)
             | Self::NodeClassActivation(_)
@@ -256,6 +274,7 @@ impl Selector {
             Self::NodeId(_)
             | Self::RelationId(_)
             | Self::MemberId(_)
+            | Self::PortId(_)
             | Self::LifelineId(_)
             | Self::ActivationId(_)
             | Self::FragmentId(_)
@@ -282,6 +301,7 @@ impl Selector {
             (Self::AllNodes, Element::Node { .. })
             | (Self::AllRelations, Element::Relation { .. })
             | (Self::AllMembers, Element::Member { .. })
+            | (Self::AllPorts, Element::Port { .. })
             | (Self::AllLifelines, Element::Lifeline { .. })
             | (Self::AllActivations, Element::Activation { .. })
             | (Self::AllFragments, Element::Fragment { .. })
@@ -297,11 +317,13 @@ impl Selector {
             ) => classes.iter().any(|c| c == class),
             (Self::NodeClass(class), Element::Node { classes, .. })
             | (Self::RelationClass(class), Element::Relation { classes, .. })
-            | (Self::MemberClass(class), Element::Member { classes, .. }) => {
+            | (Self::MemberClass(class), Element::Member { classes, .. })
+            | (Self::PortClass(class), Element::Port { classes, .. }) => {
                 classes.iter().any(|c| c == class)
             }
             (Self::NodeId(target), Element::Node { id, .. }) => target == id,
             (Self::MemberId(target), Element::Member { id: Some(id), .. }) => target == id,
+            (Self::PortId(target), Element::Port { id, .. }) => target == id,
             (Self::MemberKind(target), Element::Member { kind, .. }) => target == kind,
             (Self::ScopedId { owner, child }, _) => {
                 ancestors.iter().any(|ancestor| ancestor == owner)
@@ -374,6 +396,10 @@ pub enum Element<'a> {
         id: Option<&'a str>,
         classes: &'a [String],
         kind: MemberKind,
+    },
+    Port {
+        id: &'a str,
+        classes: &'a [String],
     },
     Lifeline {
         id: &'a str,

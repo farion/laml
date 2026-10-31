@@ -1,3 +1,4 @@
+use super::ports::BoxPort;
 use crate::styles::{Element, StyleSheet, Value};
 use crate::syntax::{DiagramType, NodeDecl, NodeKind, NodePart};
 use crate::text::{ellipsize, measure};
@@ -23,6 +24,8 @@ pub struct BoxNode {
     pub lines: Vec<String>,
     pub body: Vec<NodePart>,
     pub body_styles: Vec<RowStyle>,
+    pub ports: Vec<BoxPort>,
+    pub port_start: f64,
     pub abstract_node: bool,
     pub kind: NodeKind,
     pub shape: NodeShape,
@@ -59,6 +62,7 @@ impl BoxNode {
                 .body
                 .iter()
                 .any(|part| self.matches_member(part, target))
+            || self.ports.iter().any(|port| port.id == target)
     }
 }
 
@@ -184,6 +188,27 @@ pub fn measure_node(
     let font_size = number(styles, &element, "font-size", 14.0);
     let text_color = color(styles, &element, "color", "#17212e");
     let (mut body, body_styles) = visible_body(node, styles, font_size, &text_color);
+    let scoped = styles.with_ancestor(&node.id, &node.classes);
+    let ports: Vec<_> = node.ports.iter().filter_map(|port| {
+        let id = if port.explicit { port.id.clone() } else { format!("{}::{}", node.id, port.id) };
+        let element = Element::Port { id: &id, classes: &port.classes };
+        if matches!(scoped.get(&element, "display").map(|d| &d.value), Some(Value::Keyword(mode)) if mode == "none") {
+            return None;
+        }
+        Some(BoxPort {
+            label: port.label.clone(),
+            side: crate::syntax::PortSide::Right,
+            x: 0.0,
+            y: 0.0,
+            color: color(&scoped, &element, "color", &text_color),
+            fill: color(&scoped, &element, "fill", "#eff4fa"),
+            border_color: color(&scoped, &element, "border-color", "#395373"),
+            id,
+        })
+    }).collect();
+    if !ports.is_empty() && shape != NodeShape::Rectangle {
+        return Err("ports on nonrectangular nodes need supported contour geometry".into());
+    }
     if matches!(shape, NodeShape::Diamond | NodeShape::Ellipse) && !body.is_empty() {
         return Err(
             "nonrectangular GNE node with compartments needs supported inset geometry".into(),
@@ -255,6 +280,9 @@ pub fn measure_node(
             longest = longest.max(measure(text, row.font_size)?);
         }
     }
+    for port in &ports {
+        longest = longest.max(measure(&port.label, font_size)? + 16.0);
+    }
     let width_factor = match shape {
         NodeShape::Rectangle | NodeShape::Note => 1.0,
         NodeShape::Ellipse => 1.6,
@@ -282,6 +310,11 @@ pub fn measure_node(
         }
         + body_height
         + if body.is_empty() { 0.0 } else { 4.0 }
+        + if ports.is_empty() {
+            0.0
+        } else {
+            4.0 + ports.len() as f64 * line_height
+        }
         + padding * 2.0;
     let height =
         fixed_height.unwrap_or_else(|| explicit_min_height.unwrap_or(50.0).max(natural_height));
@@ -300,6 +333,9 @@ pub fn measure_node(
     if !body.is_empty() && natural_height > height + 0.01 {
         return Err("fixed node box cannot fit its member rows".into());
     }
+    if !ports.is_empty() && (natural_height > height + 0.01 || longest > available_width + 0.01) {
+        return Err("fixed node box cannot fit its visible ports and labels".into());
+    }
     let visible = original
         .len()
         .min((available_height / line_height).floor() as usize);
@@ -316,12 +352,19 @@ pub fn measure_node(
             }
         }
     }
+    let port_start = padding
+        + line_height * original.len() as f64
+        + body_height
+        + if body.is_empty() { 0.0 } else { 4.0 }
+        + 4.0;
     Ok(BoxNode {
         id: node.id.clone(),
         label,
         lines,
         body,
         body_styles,
+        port_start,
+        ports,
         abstract_node: node.abstract_node,
         kind: node.kind,
         shape,

@@ -155,13 +155,14 @@ fn expand(
                 for property in &rule.properties {
                     if property.name == "display"
                         && !(selector.targets_member()
+                            || selector.targets_port()
                             || selector.targets_node()
                             || selector.targets_relation())
                     {
                         return Err(err(
                             current,
                             property.line,
-                            "display is supported only for graph nodes, relations and members",
+                            "display is supported only for graph nodes, relations, ports and members",
                         ));
                     }
                     declarations.push(Declaration {
@@ -242,6 +243,7 @@ fn applicable(property: &str, element: &Element<'_>) -> bool {
     match element {
         Element::Node { .. } => true,
         Element::Member { .. } => matches!(property, "color" | "font-size" | "display"),
+        Element::Port { .. } => matches!(property, "color" | "fill" | "border-color" | "display"),
         Element::Continuation { .. } | Element::Note { .. } => matches!(
             property,
             "fill" | "color" | "border-color" | "border-width" | "font-size"

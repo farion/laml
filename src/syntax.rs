@@ -63,6 +63,15 @@ pub enum NodePart {
     },
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PortDecl {
+    pub id: String,
+    pub label: String,
+    pub explicit: bool,
+    pub classes: Vec<String>,
+    pub line: usize,
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Settings {
     pub direction: FlowDirection,
@@ -84,10 +93,19 @@ pub struct NodeDecl {
     /// Raw lines for a note block; finalized into `label` when its block closes.
     pub note_lines: Option<Vec<String>>,
     pub parts: Vec<NodePart>,
+    pub ports: Vec<PortDecl>,
     pub line: usize,
 }
 
 impl NodeDecl {
+    pub fn matches_port(&self, port: &PortDecl, target: &str) -> bool {
+        if port.explicit {
+            port.id == target
+        } else {
+            target.strip_prefix(&format!("{}::", self.id)) == Some(port.id.as_str())
+        }
+    }
+
     pub fn matches_member(&self, part: &NodePart, target: &str) -> bool {
         match part {
             NodePart::Member { id: Some(id), .. } => id == target,
@@ -106,6 +124,10 @@ impl NodeDecl {
                 .parts
                 .iter()
                 .any(|part| self.matches_member(part, target))
+            || self
+                .ports
+                .iter()
+                .any(|port| self.matches_port(port, target))
     }
 }
 
@@ -214,6 +236,19 @@ pub enum EndPosition {
     Target,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PortSide {
+    Left,
+    Right,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PortLayoutRule {
+    pub id: String,
+    pub side: PortSide,
+    pub line: usize,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RelationEndRule {
     pub name: String,
@@ -251,6 +286,7 @@ pub struct Diagram {
     pub layout: Vec<LayoutRule>,
     pub relation_layout: Vec<RelationLabelRule>,
     pub relation_end_layout: Vec<RelationEndRule>,
+    pub port_layout: Vec<PortLayoutRule>,
     /// Source order is preserved so later matching style rules can override earlier ones.
     /// Imports are parsed but not resolved by this parser.
     pub styling: Vec<StyleEntry>,

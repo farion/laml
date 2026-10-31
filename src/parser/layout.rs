@@ -1,8 +1,8 @@
 use super::{ParseError, error};
-use crate::lex::{split_once_top_level, split_top_level, valid_identifier};
+use crate::lex::{split_once_top_level, split_top_level, valid_identifier, valid_reference};
 use crate::syntax::{
-    Alignment, EndPosition, EndSide, LabelPlacement, LayoutRule, Placement, RelationEndRule,
-    RelationLabelRule,
+    Alignment, EndPosition, EndSide, LabelPlacement, LayoutRule, Placement, PortLayoutRule,
+    PortSide, RelationEndRule, RelationLabelRule,
 };
 
 pub(super) fn parse_layout(text: &str, line: usize) -> Result<LayoutRule, ParseError> {
@@ -85,6 +85,39 @@ pub(super) fn parse_layout(text: &str, line: usize) -> Result<LayoutRule, ParseE
         }
     }
     Ok(rule)
+}
+
+pub(super) fn parse_port_side(text: &str, line: usize) -> Result<PortLayoutRule, ParseError> {
+    let (target, attribute) = split_once_top_level(text, ':')
+        .ok_or_else(|| error(line, "expected port[id] : side=left|right"))?;
+    let id = target
+        .trim()
+        .strip_prefix("port[")
+        .and_then(|s| s.strip_suffix(']'))
+        .ok_or_else(|| error(line, "invalid port layout target"))?;
+    if !valid_reference(id) {
+        return Err(error(line, "invalid port ID in layout"));
+    }
+    let (key, value) = split_once_top_level(attribute.trim(), '=')
+        .ok_or_else(|| error(line, "expected port side=left|right"))?;
+    if key.trim() != "side" {
+        return Err(error(line, "unknown port layout attribute"));
+    }
+    let side = match value.trim() {
+        "left" => PortSide::Left,
+        "right" => PortSide::Right,
+        _ => {
+            return Err(error(
+                line,
+                "only left/right port sides are currently implemented",
+            ));
+        }
+    };
+    Ok(PortLayoutRule {
+        id: id.into(),
+        side,
+        line,
+    })
 }
 
 /// Mandatory per-association-end text side, kept separate from style and arrow direction.
