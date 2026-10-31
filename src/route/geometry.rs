@@ -283,6 +283,23 @@ pub(super) fn route_is_clear(points: &[Point], boxes: &[BoxNode], previous: &[Ro
                     qualifier.width,
                     qualifier.height,
                 )
+            }) || route.bridges.iter().any(|bridge| {
+                let segment = &route.points[bridge.segment..=bridge.segment + 1];
+                let length = (segment[1].x - segment[0].x).hypot(segment[1].y - segment[0].y);
+                let t = bridge.distance / length;
+                let center = Point {
+                    x: segment[0].x + t * (segment[1].x - segment[0].x),
+                    y: segment[0].y + t * (segment[1].y - segment[0].y),
+                };
+                let reach = bridge.radius + bridge.height + route.width;
+                segment_hits_rect(
+                    pair[0],
+                    pair[1],
+                    center.x - reach,
+                    center.y - reach,
+                    2.0 * reach,
+                    2.0 * reach,
+                )
             }) || route
                 .label
                 .iter()
@@ -315,6 +332,34 @@ mod tests {
     #[test]
     fn t_junction_is_a_forbidden_unbridged_intersection() {
         assert!(crosses(p(0.0, 5.0), p(10.0, 5.0), p(5.0, 0.0), p(5.0, 5.0)));
+    }
+    #[test]
+    fn a_later_route_cannot_pass_through_an_existing_bridge_hump() {
+        let mut older = Route {
+            points: vec![p(0.0, 100.0), p(200.0, 100.0)],
+            qualifiers: vec![],
+            bridges: vec![],
+            gaps: vec![],
+            label: None,
+            end_labels: vec![],
+            from: 0,
+            to: 1,
+            color: String::new(),
+            width: 2.0,
+            font_size: 14.0,
+            bidirectional: false,
+            marker_end: false,
+            appearance: Default::default(),
+        };
+        let later = [p(70.0, 116.0), p(130.0, 116.0)];
+        assert!(route_is_clear(&later, &[], &[older.clone()]));
+        older.bridges.push(super::super::Bridge {
+            segment: 0,
+            distance: 100.0,
+            radius: 8.0,
+            height: 8.0,
+        });
+        assert!(!route_is_clear(&later, &[], &[older]));
     }
     #[test]
     fn folded_note_uses_diagonal_stroke_for_ports_and_obstacles() {
