@@ -1,6 +1,8 @@
 use super::ports::BoxPort;
 use crate::styles::{Element, StyleSheet, Value};
-use crate::syntax::{DiagramType, NodeDecl, NodeKind, NodePart, PortLayoutRule, PortSide};
+use crate::syntax::{
+    DiagramType, NodeDecl, NodeKind, NodePart, PortContract, PortLayoutRule, PortSide,
+};
 use crate::text::{ellipsize, measure, measure_italic};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -33,6 +35,7 @@ pub struct BoxNode {
     pub bottom_band: f64,
     pub abstract_node: bool,
     pub kind: NodeKind,
+    pub is_container: bool,
     pub shape: NodeShape,
     pub x: f64,
     pub y: f64,
@@ -52,10 +55,15 @@ pub struct BoxNode {
 
 impl BoxNode {
     pub fn contains_package_content(&self, x: f64, y: f64, width: f64, height: f64) -> bool {
-        self.kind == NodeKind::Package
+        self.is_container
             && x >= self.x + 1.0
             && x + width <= self.x + self.width - 1.0
-            && y >= self.y + self.padding + self.font_size * 1.25 * self.lines.len() as f64 + 4.0
+            && y >= self.y
+                + if self.kind == NodeKind::Component {
+                    self.port_start
+                } else {
+                    self.padding + self.font_size * 1.25 * self.lines.len() as f64 + 4.0
+                }
             && y + height <= self.y + self.height - 1.0
     }
 
@@ -185,7 +193,11 @@ pub fn measure_node(
             return None;
         }
         Some(BoxPort {
-            label: port.label.clone(),
+            label: match &port.contract {
+                Some(PortContract::Provides(interface)) => format!("{} : provides {}", port.label, interface),
+                Some(PortContract::Requires(interface)) => format!("{} : requires {}", port.label, interface),
+                None => port.label.clone(),
+            },
             side: port_rules.iter().find(|rule| rule.id == id).map_or(PortSide::Right, |rule| rule.side),
             x: 0.0,
             y: 0.0,
@@ -231,31 +243,7 @@ pub fn measure_node(
         Some(marker) if visibility_icon.is_none() => format!("{marker}{name}"),
         _ => name,
     };
-    // The bundled regular face need not support italic synthesis in every exporter.
-    // UML permits an explicit abstract annotation as a font-independent fallback.
-    let name = if diagram_type == DiagramType::Class && node.abstract_node {
-        format!("{name} {{abstract}}")
-    } else {
-        name
-    };
-    let label = match node.kind {
-        NodeKind::Interface => format!("«interface»\n{name}"),
-        NodeKind::Enumeration => format!("«enumeration»\n{name}"),
-        NodeKind::DataType => format!("«dataType»\n{name}"),
-        _ => name,
-    };
-    let label = if node.stereotypes.is_empty() {
-        label
-    } else {
-        format!(
-            "{}\n{label}",
-            node.stereotypes
-                .iter()
-                .map(|name| format!("«{name}»"))
-                .collect::<Vec<_>>()
-                .join(" ")
-        )
-    };
+    let label = super::node_notation::header(node, name, diagram_type);
     let original: Vec<&str> = label.split('\n').collect();
     let line_height = font_size * 1.25;
     let fixed_width = styles.get(&element, "width").and_then(|d| match d.value {
@@ -303,6 +291,9 @@ pub fn measure_node(
     }
     if node.kind == NodeKind::Package {
         longest += 12.0; // leave room for the folder-tab shoulder
+    }
+    if node.kind == NodeKind::Component && !ports.iter().any(|port| port.side == PortSide::Top) {
+        longest += 52.0; // reserve the UML corner glyph beside the measured heading
     }
     for (part, row) in body.iter().zip(&body_styles) {
         if let NodePart::Member {
@@ -471,6 +462,7 @@ pub fn measure_node(
         ports,
         abstract_node: node.abstract_node,
         kind: node.kind,
+        is_container: node.kind == NodeKind::Package,
         shape,
         x: 0.0,
         y: 0.0,

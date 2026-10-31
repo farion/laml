@@ -40,7 +40,7 @@ SVG defaults to embedded Inter Regular with selectable text; diagrams with abstr
 
 ## Examples
 
-These four larger examples show the supported diagram families together with their source. Click an image to inspect it at full size; the examples are executable `.laml` files built by LAML. Each also builds as SVG and vector PDF.
+These four larger showcases cover generic, class, object and sequence diagrams. Focused component examples follow below. Each has a source link. Click an image to inspect it at full size; the examples are executable `.laml` files built by LAML. Each also builds as SVG and vector PDF.
 
 ### Generic node-edge diagram · [source](examples/showcase-generic.laml)
 
@@ -103,6 +103,16 @@ Executions, synchronous and asynchronous messages, replies, a self-call, alterna
 | [![Two classes each realize a separate API lollipop](docs/images/class-lollipops.png)](examples/class-lollipops.laml) |
 | One empty interface, two distinct compact realizations. |
 
+| [Component overview](examples/component-basic.laml) | [Component interfaces](examples/component-interfaces.laml) |
+|---|---|
+| [![Component dependencies and a provided interface](docs/images/component-basic.png)](examples/component-basic.laml) | [![A component with compact provided and required interfaces](docs/images/component-interfaces.png)](examples/component-interfaces.laml) |
+| Dependencies and box-form/compact interfaces. | Explicit typed ports, lollipop and socket. |
+
+| [Component internal wiring](examples/component-internal.laml) |
+|---|
+| [![Composite component with two typed parts, assembly and delegation connectors](docs/images/component-internal.png)](examples/component-internal.laml) |
+| Simple ports on contained parts with distinct assembly and delegation notation. See the [component-diagram guide](docs/component-diagrams.md) and [UML notation audit](docs/uml-component-conformance.md). |
+
 Set `type: sequence` in `settings` to use the sequence grammar. Sequence diagrams use the same SVG/PNG/vector-PDF export commands; their node, message, fragment, annotation, gate and ordering visuals are styled with LSS. Start with the [sequence-diagram guide](docs/sequence-diagrams.md), then use the [syntax reference](docs/language-reference.md#sequence-diagrams) and [UML 2.5.1 notation audit](docs/uml-sequence-conformance.md). The outer UML `sd` interaction frame is intentionally deferred; divergent open executions at fragment joins are rejected rather than implicitly resolved.
 
 Build any example with `cargo run -- build examples/NAME.laml`. The output filename selects the format (`.svg`, `.png`, or `.pdf`). SVG text modes are selected with `--svg-text=embedded|system|paths` after the optional output filename. The README images are generated with `cargo run -- build examples/NAME.laml docs/images/NAME.png`. Source files and matching images are tested together.
@@ -116,6 +126,7 @@ Build any example with `cargo run -- build examples/NAME.laml`. The output filen
 - LSS styling and local recursive imports with a deterministic per-property cascade.
 - SVG in embedded-font, system-font, or glyph-path text mode; PNG and vector PDF exports.
 - Class and object diagram grammars with checked UML relationship notation, member compartments, instances and slots, associations, packages, qualifiers, notes, templates and addressable ports; unsupported combinations fail rather than silently drawing a different notation.
+- Component diagrams with dependencies, provided/required interfaces, typed ports, contained parts and checked assembly/delegation connectors; no hidden UML model or runtime execution.
 - Generic node-edge shapes, nested containers, styled members, boundary ports, optional icons, named edge attachments and conditional icon-license metadata.
 - Separate sequence grammar with lifelines, calls and replies, creation/deletion, fragments, interaction uses, annotations, coregions, inline part decompositions and mandatory layout constraints.
 - `check`, `build`, and `update` commands, source-linked diagnostics, and conformance tests for deterministic and mandatory geometry.
@@ -142,4 +153,6 @@ The test suite includes buildable examples, export formats, mandatory geometry, 
 - [Language contract](docs/language-definition.md)
 - [Sequence-diagram guide](docs/sequence-diagrams.md)
 - [Class and object diagram guide](docs/class-object-diagrams.md)
+- [Component-diagram guide](docs/component-diagrams.md)
+- [UML component notation audit and limits](docs/uml-component-conformance.md)
 - [UML class/object notation audit and limits](docs/uml-class-object-conformance.md)

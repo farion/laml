@@ -1,0 +1,18 @@
+// Component overview: dependency, required interface, compact provided interface.
+settings {
+    type: component
+}
+semantics {
+    component Gateway
+    component Orders
+    interface OrderAPI
+    interface HealthAPI
+    @calls Gateway ..> Orders : place order
+    @requires Gateway ..> OrderAPI
+    @provides Orders ..|> HealthAPI
+}
+styling {
+    relation[provides] {
+        interface-notation: lollipop
+    }
+}

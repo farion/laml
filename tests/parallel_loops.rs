@@ -78,11 +78,12 @@ fn self_loop_uses_another_quadrant_when_preferred_one_is_blocked() {
 #[test]
 fn fifth_self_relation_fails_with_explicit_limit() {
     let mut source = "semantics {\nA\n".to_string();
-    source.push_str(&"A -> A\n".repeat(5));
-    source.push_str("}\n");
+    source.push_str(&"A -> A\n".repeat(4));
+    source.push_str("@fifth A -> A\n}\n");
     let diagram = parse(&source).unwrap();
     let sheet = StyleSheet::default();
     let boxes = place(&diagram, &sheet).unwrap();
     let error = route(&diagram, &boxes, &sheet).unwrap_err();
     assert!(error.message.contains("more than four self-relations"));
+    assert!(error.message.contains("relation 'fifth' (A -> A)"));
 }

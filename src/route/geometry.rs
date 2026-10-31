@@ -5,7 +5,7 @@ use crate::geometry::{BoxNode, NodeShape};
 fn compact_radius(node: &BoxNode) -> Option<f64> {
     match node.kind {
         crate::syntax::NodeKind::Association | crate::syntax::NodeKind::Junction => Some(12.0),
-        crate::syntax::NodeKind::Lollipop => Some(10.0),
+        crate::syntax::NodeKind::Lollipop | crate::syntax::NodeKind::Socket => Some(10.0),
         _ => None,
     }
 }
@@ -91,8 +91,10 @@ pub(super) fn intersection(a: Point, b: Point, node: &BoxNode) -> bool {
     };
     match node.shape {
         NodeShape::Ellipse => {
-            if node.kind == crate::syntax::NodeKind::Lollipop
-                && segment_hits_rect(a, b, node.x + 26.0, node.y, node.width - 26.0, node.height)
+            if matches!(
+                node.kind,
+                crate::syntax::NodeKind::Lollipop | crate::syntax::NodeKind::Socket
+            ) && segment_hits_rect(a, b, node.x + 26.0, node.y, node.width - 26.0, node.height)
             {
                 return true;
             }
@@ -262,17 +264,24 @@ pub(super) fn route_is_clear(points: &[Point], boxes: &[BoxNode], previous: &[Ro
                     && p.y > node.y
                     && p.y < node.y + node.height
             };
-            let own_container = node.kind == crate::syntax::NodeKind::Package
-                && (within(points[0]) || within(*points.last().unwrap()));
+            let own_container =
+                node.is_container && (within(points[0]) || within(*points.last().unwrap()));
             if own_container {
                 let title_width = node
                     .lines
                     .iter()
                     .filter_map(|line| crate::text::measure(line, node.font_size).ok())
                     .fold(0.0_f64, f64::max);
-                let tab_width = (title_width + node.padding * 2.0 + 12.0).min(node.width - 8.0);
-                let tab_height =
-                    node.padding + node.font_size * 1.25 * node.lines.len() as f64 + 4.0;
+                let tab_width = if node.kind == crate::syntax::NodeKind::Component {
+                    node.width
+                } else {
+                    (title_width + node.padding * 2.0 + 12.0).min(node.width - 8.0)
+                };
+                let tab_height = if node.kind == crate::syntax::NodeKind::Component {
+                    node.port_start
+                } else {
+                    node.padding + node.font_size * 1.25 * node.lines.len() as f64 + 4.0
+                };
                 super::labels::segment_hits_rect(
                     pair[0], pair[1], node.x, node.y, tab_width, tab_height,
                 )

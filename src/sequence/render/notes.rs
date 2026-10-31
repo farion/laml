@@ -6,6 +6,7 @@ use super::{
     geometry::label_width_at,
     styles,
     styles::escape,
+    text_collision::{self, Rect},
 };
 use crate::sequence::{AnnotationEnd, Note};
 use crate::styles::StyleSheet;
@@ -16,6 +17,8 @@ pub(super) fn height(note: &Note, sheet: &StyleSheet) -> f64 {
     (note.text.split('\n').count() as f64 * font * 1.25 + 18.0).max(38.0)
 }
 
+// Keep annotation text and note obstacles on the same timeline snapshot.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn draw(
     svg: &mut String,
     diagram: &SequenceDiagram,
@@ -23,8 +26,10 @@ pub(super) fn draw(
     centers: &[f64],
     notes: &[(&Note, f64)],
     anchors: &[MessageAnchor],
+    obstacles: &[Rect],
+    note_shapes: &[Rect],
 ) -> Result<(), String> {
-    for (note, top) in notes {
+    for (index, (note, top)) in notes.iter().enumerate() {
         let placement = diagram
             .note_layout
             .iter()
@@ -44,8 +49,53 @@ pub(super) fn draw(
                 },
             )?;
             let left = anchor_x + 18.0;
-            writeln!(svg, "<path d=\"M{anchor_x:.2},{at:.2} L{anchor_x:.2},{:.2} L{left:.2},{:.2}\" fill=\"none\" stroke=\"{}\" stroke-dasharray=\"4 3\" data-note-anchor=\"{}\" />",
-                top + height / 2.0, top + height / 2.0,
+            let middle = top + height / 2.0;
+            let start = (anchor_x, at);
+            let target = (left, middle);
+            let mut blockers = obstacles.to_vec();
+            blockers.extend(
+                note_shapes
+                    .iter()
+                    .enumerate()
+                    .filter(|(other, _)| *other != index)
+                    .map(|(_, rect)| *rect),
+            );
+            let mut options = vec![vec![start, (anchor_x, middle), target]];
+            for lane in [anchor_x - 24.0, anchor_x - 48.0, anchor_x - 72.0]
+                .into_iter()
+                .chain(blockers.iter().map(|rect| rect.x - 12.0))
+            {
+                if lane >= 8.0 && lane < anchor_x {
+                    options.push(vec![start, (lane, at), (lane, middle), target]);
+                }
+            }
+            let center = left + width / 2.0;
+            options.push(vec![
+                start,
+                (anchor_x, top - 16.0),
+                (center, top - 16.0),
+                (center, *top),
+            ]);
+            options.push(vec![
+                start,
+                (anchor_x, top + height + 16.0),
+                (center, top + height + 16.0),
+                (center, top + height),
+            ]);
+            let chosen = options
+                .into_iter()
+                .find(|path| text_collision::path_clear(&blockers, path))
+                .ok_or_else(|| {
+                    format!(
+                        "note '{}' cannot reach '{}' without crossing visible text; move the note or increase its gap",
+                        note.id, placement.target
+                    )
+                })?;
+            let mut d = String::new();
+            for (segment, (x, y)) in chosen.iter().enumerate() {
+                write!(d, "{}{x:.2},{y:.2}", if segment == 0 { "M" } else { " L" }).unwrap();
+            }
+            writeln!(svg, "<path d=\"{d}\" fill=\"none\" stroke=\"{}\" stroke-dasharray=\"4 3\" data-note-anchor=\"{}\" />",
                 escape(&paint.border), escape(&placement.target)).unwrap();
             left
         } else {

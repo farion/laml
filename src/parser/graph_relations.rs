@@ -8,7 +8,10 @@ pub(super) fn parse_semantic(
     scope: Option<&str>,
 ) -> Result<(), ParseError> {
     // Prefixes end at a colon before the arrow; labels begin at a colon after it.
-    let arrow_at = find_arrow(text).or_else(|| text.find(" .. ").map(|offset| offset + 1));
+    let arrow_at = find_arrow(text)
+        .or_else(|| text.find(" .. ").map(|offset| offset + 1))
+        .or_else(|| text.find(" == ").map(|offset| offset + 1))
+        .or_else(|| text.find(" => ").map(|offset| offset + 1));
     if arrow_at.is_none() {
         return bodies::node(text, line, diagram, false, scope);
     }
@@ -104,7 +107,7 @@ pub(super) fn parse_semantic(
     {
         return Err(error(line, "expected relation: A [end] -- [end] B"));
     }
-    let (kind, appearance, reversed) =
+    let (kind, appearance, reversed, connector) =
         graph_operators::parse(tokens[operator_index], diagram.settings.diagram_type, line)?;
     let first_end = ends::parse_tokens(
         &tokens[1..operator_index],
@@ -129,6 +132,7 @@ pub(super) fn parse_semantic(
         from: from.into(),
         to: to.into(),
         kind,
+        connector,
         appearance,
         source_end,
         target_end,

@@ -1,8 +1,8 @@
 //! Resolve globally named and scoped graph references before layout.
 use super::{Diagram, ParseError, error, uml};
-use crate::syntax::{DiagramType, NodeDecl};
+use crate::syntax::{DiagramType, NodeDecl, PortContract};
 
-fn resolve(nodes: &[NodeDecl], scope: Option<&str>, raw: &str) -> String {
+pub(super) fn resolve(nodes: &[NodeDecl], scope: Option<&str>, raw: &str) -> String {
     // An @id is a stable, diagram-wide address. A local default with the same
     // spelling remains reachable through its fully qualified package path.
     if nodes.iter().any(|node| {
@@ -32,6 +32,7 @@ fn resolve(nodes: &[NodeDecl], scope: Option<&str>, raw: &str) -> String {
 }
 
 pub(super) fn resolve_and_validate(diagram: &mut Diagram) -> Result<(), ParseError> {
+    super::part_types::expand(diagram)?;
     for relation in &mut diagram.relations {
         relation.from = resolve(&diagram.nodes, relation.scope.as_deref(), &relation.from);
         relation.to = resolve(&diagram.nodes, relation.scope.as_deref(), &relation.to);
@@ -42,6 +43,26 @@ pub(super) fn resolve_and_validate(diagram: &mut Diagram) -> Result<(), ParseErr
             attachment.scope.as_deref(),
             &attachment.source,
         );
+    }
+    let declared = diagram.nodes.clone();
+    for node in &mut diagram.nodes {
+        for port in &mut node.ports {
+            let Some(contract) = &mut port.contract else {
+                continue;
+            };
+            let interface = match contract {
+                PortContract::Provides(id) | PortContract::Requires(id) => id,
+            };
+            *interface = resolve(&declared, node.parent.as_deref(), interface);
+            if !declared.iter().any(|candidate| {
+                candidate.id == *interface && candidate.kind == crate::syntax::NodeKind::Interface
+            }) {
+                return Err(error(
+                    port.line,
+                    format!("component port interface '{interface}' must be a declared interface"),
+                ));
+            }
+        }
     }
     validate_references(diagram)
 }

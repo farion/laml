@@ -7,9 +7,9 @@ The [language reference](language-reference.md) defines the syntax; this documen
 - `semantics` declares graph nodes, typed classifier/instance elements, relations, identifiers, labels, members and styling classes. A relation is not itself a mandatory spatial constraint.
 - `layout` declares mandatory node placement and per-relation label placement. Impossible rules fail; they never become hints.
 - `styling` controls size, text, fill, border, and stroke through LSS rules and local imports. Styles affecting node dimensions are applied before placement.
-- `settings` selects a diagram type (`class`, `object`, `sequence`, or generic by omission), automatic flow direction, an optional identifier convention, and the default relation-label mode.
+- `settings` selects a diagram type (`class`, `object`, `component`, `sequence`, or generic by omission), automatic flow direction, an optional identifier convention, and the default relation-label mode.
 
-The bullets above describe generic, class and object graph diagrams. UML-specialized graph types validate their notation and reject unsupported combinations instead of treating them as generic arrows. A sequence diagram uses separate participant, occurrence, message and fragment rules while retaining the same separation between semantics, mandatory layout and LSS styling. See the [class/object guide](class-object-diagrams.md) for buildable examples.
+The bullets above describe generic, class, object and component graph diagrams. UML-specialized graph types validate their notation and reject unsupported combinations instead of treating them as generic arrows. In component diagrams a dependency is distinct from a connector between typed ports on owned parts; see the [component guide](component-diagrams.md). A sequence diagram uses separate participant, occurrence, message and fragment rules while retaining the same separation between semantics, mandatory layout and LSS styling. See the [class/object guide](class-object-diagrams.md) for buildable examples.
 
 Sections may appear in any order; each kind appears at most once, and `semantics` is required. Declarations are line-oriented. A node or named relation can be addressed by its identifier; only named relations can receive individual label-layout or object-specific styling rules.
 

@@ -3,19 +3,20 @@
 
 use crate::geometry::BoxNode;
 use crate::styles::{Element, StyleSheet, Value};
-use crate::syntax::{Diagram, EndPosition, LabelPlacement, PortSide, RelationDecl};
+use crate::syntax::{Diagram, EndPosition, PortSide, RelationDecl};
 
 mod attachments;
 mod bridges;
+mod detours;
 mod end_labels;
 mod geometry;
 mod labels;
 mod parallel;
 mod qualifiers;
+mod route_labels;
 mod self_loops;
 mod side_rules;
 use geometry::{center, member_port, port, route_is_clear};
-use labels::{label_along, label_inline, label_near};
 pub use qualifiers::QualifierBox;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -167,6 +168,11 @@ fn candidates(
             }
         }
     }
+    results.extend(
+        detours::corridors(a, b, boxes)
+            .into_iter()
+            .filter(|points| (source_side.is_none() && target_side.is_none()) || points.len() == 5),
+    );
     results
         .into_iter()
         .filter_map(|mut points| {
@@ -234,6 +240,24 @@ fn candidates(
                     points[1].x = start.x;
                     points[2].x = end.x;
                 }
+                5 => {
+                    if matches!(source_side, Some(PortSide::Top | PortSide::Bottom)) {
+                        points[1] = Point {
+                            x: start.x,
+                            y: points[2].y,
+                        };
+                    } else {
+                        points[1].y = start.y;
+                    }
+                    if matches!(target_side, Some(PortSide::Left | PortSide::Right)) {
+                        points[3] = Point {
+                            x: points[2].x,
+                            y: end.y,
+                        };
+                    } else {
+                        points[3].x = end.x;
+                    }
+                }
                 _ => {}
             }
             Some(points)
@@ -277,9 +301,12 @@ pub fn route(
         if from == to && (relation.from != boxes[from].id || relation.to != boxes[to].id) {
             return Err(RouteError {
                 line: relation.line,
-                message:
-                    "member-to-member relation within one node needs a separate exterior route"
-                        .into(),
+                message: format!(
+                    "relation '{}' ({} -> {}) connects two members of one node; use separate nodes or an exterior self-relation",
+                    relation.name.as_deref().unwrap_or("unnamed"),
+                    relation.from,
+                    relation.to
+                ),
             });
         }
         let (color, width, font_size) = style(relation, sheet);
@@ -291,8 +318,12 @@ pub fn route(
             if rank >= 4 {
                 return Err(RouteError {
                     line: relation.line,
-                    message: "more than four self-relations need additional distinct loop ports"
-                        .into(),
+                    message: format!(
+                        "relation '{}' ({} -> {}): more than four self-relations need distinct loop ports; use fewer loops or separate nodes",
+                        relation.name.as_deref().unwrap_or("unnamed"),
+                        relation.from,
+                        relation.to
+                    ),
                 });
             }
             side_rules::loop_options(
@@ -311,7 +342,6 @@ pub fn route(
                 })?;
             candidates(diagram, index, from, to, boxes, &routed, offset)
         };
-        let shown_label = relation.display_label();
         let label_rule = diagram
             .relation_layout
             .iter()
@@ -358,62 +388,16 @@ pub fn route(
                 label_error = Some("qualifier conflicts with required bridge".into());
                 continue;
             }
-            let own_markers = side_rules::label_clearance(relation, width);
-            let labeled = match shown_label.as_deref() {
-                None => Ok((None, None)),
-                Some(text) => match placement {
-                    LabelPlacement::Near => {
-                        label_near(&points, text, font_size, own_markers, boxes, &routed)
-                            .map(|label| (label, None))
-                    }
-                    LabelPlacement::Along => {
-                        label_along(&points, text, font_size, own_markers, boxes, &routed)
-                            .map(|label| (label, None))
-                    }
-                    LabelPlacement::Inline => {
-                        label_inline(&points, text, font_size, width, own_markers, boxes, &routed)
-                            .map(|result| match result {
-                                Some((label, gap)) => (Some(label), Some(gap)),
-                                None => (None, None),
-                            })
-                    }
-                },
-            };
-            let (label, label_gap) = match labeled {
-                Ok(pair) => pair,
-                Err(error) => {
-                    label_error = Some(error);
-                    continue;
-                }
-            };
-            if label.iter().any(|label| {
-                qualifier_boxes
-                    .iter()
-                    .any(|q| q.overlaps(label.x, label.y, label.width, label.height))
-            }) {
-                label_error = Some("qualifier overlaps relation label".into());
-                continue;
-            }
-            if label_gap.as_ref().is_some_and(|gap| {
-                plan.events.iter().any(|(_, bridge, _)| {
-                    bridge.segment == gap.segment
-                        && (bridge.distance - gap.distance).abs() < bridge.radius + gap.half + 4.0
-                })
-            }) {
-                label_error = Some("inline label gap conflicts with required bridge".into());
-                continue;
-            }
-            if !plan.avoids_label(&points, &label) {
-                label_error = Some("relation label conflicts with required bridge".into());
-                continue;
-            }
-            let end_labels = match end_labels::place(
+            let (label, end_labels, label_gap) = match route_labels::select(
                 relation,
                 &points,
-                (font_size, width),
                 boxes,
                 &routed,
-                label.as_ref(),
+                &plan,
+                &qualifier_boxes,
+                placement,
+                font_size,
+                width,
                 end_rules,
             ) {
                 Ok(labels) => labels,
@@ -422,26 +406,35 @@ pub fn route(
                     continue;
                 }
             };
-            if end_labels.iter().any(|label| {
-                qualifier_boxes
-                    .iter()
-                    .any(|q| q.overlaps(label.x, label.y, label.width, label.height))
-            }) {
-                label_error = Some("qualifier overlaps association-end text".into());
-                continue;
-            }
-            if end_labels
-                .iter()
-                .any(|end| !plan.avoids_label(&points, &Some(end.clone())))
-            {
-                label_error = Some("association-end text conflicts with required bridge".into());
-                continue;
-            }
             choice = Some((points, qualifier_boxes, label, end_labels, label_gap, plan));
             break;
         }
-        let (points,qualifier_boxes,label,end_labels,label_gap,plan) = choice.ok_or_else(|| RouteError { line: if label_error.is_some() {label_line} else {relation.line},
-            message: label_error.unwrap_or_else(|| "bounded router cannot avoid nodes/relations or make a safe bridge for the selected ports".into()) })?;
+        let (points, qualifier_boxes, label, end_labels, label_gap, plan) =
+            choice.ok_or_else(|| {
+                let label_failed = label_error.is_some();
+                let reason = label_error.unwrap_or_else(|| {
+                    "no safe path around nodes, other connections, and crossings".into()
+                });
+                let identity = relation.name.as_deref().unwrap_or("unnamed");
+                let advice = if let Some(name) = relation.name.as_deref() {
+                    format!(
+                        "Increase the gap between the connected elements or set relation[{name}].source : side=left (or choose a suitable target side)"
+                    )
+                } else {
+                    "Increase the gap between the connected elements or name the relation to select its attachment sides".into()
+                };
+                RouteError {
+                    line: if label_failed && label_rule.is_some() {
+                        label_line
+                    } else {
+                        relation.line
+                    },
+                    message: format!(
+                        "relation '{identity}' ({} -> {}): {reason}. {advice}",
+                        relation.from, relation.to
+                    ),
+                }
+            })?;
         let new_bridges = plan.apply(&mut routed);
         routed.push(Route {
             points,

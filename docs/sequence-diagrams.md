@@ -90,7 +90,7 @@ between[request.send,response.receive] : duration-constraint="<= 200 ms"
 order[request.receive,response.send]
 ```
 
-`at[...]` also supports `state`, `time-constraint`, and `time-observation`; `between[...]` supports duration observation or constraint. These are visible text/shapes, not evaluated conditions. `order[...]` adds a visible general-ordering connection and rejects contradictory explicit cycles. A named execution's explicit `.start` and `.finish` can also be anchors: `execution(API,work).start`. See [annotations](../examples/sequence-annotations.laml) and [order](../examples/sequence-order.laml).
+`at[...]` also supports `state`, `time-constraint`, and `time-observation`; `between[...]` supports duration observation or constraint. These are visible text/shapes, not evaluated conditions. Overlapping message labels on independently ordered rows create additional vertical space; frame titles, notes and continuations also reserve space against message labels. Time observations try alternate sides/heights when message text is in the way. Anchored annotation text and its visible connector avoid measured message labels, notes and frame captions. Duration brackets can move to the other side of their anchors, and note links try alternate paths around annotations. If no safe position exists, LAML names the affected anchor. `order[...]` adds a visible general-ordering connection and rejects contradictory explicit cycles. A named execution's explicit `.start` and `.finish` can also be anchors: `execution(API,work).start`. See [annotations](../examples/sequence-annotations.laml) and [order](../examples/sequence-order.laml).
 
 ## Notes, continuations, coregions and decomposition
 

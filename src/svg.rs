@@ -6,21 +6,11 @@ use crate::syntax::{EndSymbol, NodeKind, NodePart};
 use crate::text::{FONT, ITALIC_FONT, measure, measure_italic};
 use base64::Engine;
 use std::fmt::Write;
+mod compact;
+mod component_container;
+mod escape;
+use escape::escape;
 
-fn escape(value: &str) -> String {
-    let mut output = String::new();
-    for ch in value.chars() {
-        match ch {
-            '&' => output.push_str("&amp;"),
-            '<' => output.push_str("&lt;"),
-            '>' => output.push_str("&gt;"),
-            '"' => output.push_str("&quot;"),
-            '\'' => output.push_str("&apos;"),
-            _ => output.push(ch),
-        }
-    }
-    output
-}
 fn marker(symbol: EndSymbol, start: bool) -> &'static str {
     match (symbol, start) {
         (EndSymbol::None, _) => "",
@@ -204,6 +194,12 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
     for node in boxes.iter().filter(|node| node.kind == NodeKind::Package) {
         package_background(&mut svg, node)?;
     }
+    for node in boxes
+        .iter()
+        .filter(|node| node.kind == NodeKind::Component && node.is_container)
+    {
+        component_container::draw(&mut svg, node);
+    }
     for route in routes {
         let start = marker(route.appearance.start, true);
         let end = marker(route.appearance.end, false);
@@ -260,10 +256,10 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
             escape(&node.label)
         )
         .unwrap();
-        if node.kind == NodeKind::Lollipop {
-            let cy = node.y + node.height / 2.0;
-            writeln!(svg,"<circle cx=\"{:.2}\" cy=\"{cy:.2}\" r=\"10\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",node.x+10.0,node.fill,node.border_color,node.border_width).unwrap();
-            writeln!(svg,"<text x=\"{:.2}\" y=\"{:.2}\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\">{}</text>",node.x+28.0,cy+node.font_size*0.28,node.font_size,node.color,escape(&node.label)).unwrap();
+        if node.kind == NodeKind::Component && node.is_container {
+            // Its background was painted before internal routes; draw the heading and ports now.
+        } else if matches!(node.kind, NodeKind::Socket | NodeKind::Lollipop) {
+            compact::draw(&mut svg, node);
         } else if matches!(node.kind, NodeKind::Association | NodeKind::Junction) {
             let cy = node.y + node.height / 2.0;
             writeln!(svg,"<polygon points=\"{:.2},{:.2} {:.2},{:.2} {:.2},{:.2} {:.2},{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
@@ -290,6 +286,9 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
         } else {
             writeln!(svg,"<rect x=\"{:.2}\" y=\"{:.2}\" width=\"{:.2}\" height=\"{:.2}\" rx=\"{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
                 node.x,node.y,node.width,node.height,node.radius,node.fill,node.border_color,node.border_width).unwrap();
+        }
+        if node.kind == NodeKind::Component && node.top_band == 0.0 {
+            component_container::icon(&mut svg, node);
         }
         let line_height = node.font_size * 1.25;
         if let Some(parameters) = &node.template {

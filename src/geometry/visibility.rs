@@ -39,7 +39,10 @@ pub(crate) fn filtered(diagram: &Diagram, sheet: &StyleSheet) -> Result<Diagram,
         }
         true
     });
-    if diagram.settings.diagram_type == DiagramType::Class {
+    if matches!(
+        diagram.settings.diagram_type,
+        DiagramType::Class | DiagramType::Component
+    ) {
         for node in &mut visible.nodes {
             let scoped =
                 super::scoped_styles(diagram, node, sheet).with_ancestor(&node.id, &node.classes);
@@ -52,6 +55,7 @@ pub(crate) fn filtered(diagram: &Diagram, sheet: &StyleSheet) -> Result<Diagram,
             let classifier = matches!(
                 node.kind,
                 NodeKind::Class
+                    | NodeKind::Component
                     | NodeKind::Interface
                     | NodeKind::DataType
                     | NodeKind::AssociationClass

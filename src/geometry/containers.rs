@@ -111,11 +111,14 @@ fn scope(
         .map(|node| node.id.clone())
         .collect();
     for child in &children {
-        if diagram
-            .nodes
-            .iter()
-            .any(|node| node.id == *child && node.kind == NodeKind::Package)
-        {
+        if diagram.nodes.iter().any(|node| {
+            node.id == *child
+                && matches!(node.kind, NodeKind::Package | NodeKind::Component)
+                && diagram
+                    .nodes
+                    .iter()
+                    .any(|part| part.parent.as_deref() == Some(child.as_str()))
+        }) {
             scope(diagram, boxes, styles, Some(child))?;
         }
     }
@@ -188,7 +191,13 @@ fn scope(
             .expect("container measured");
         (
             box_parent.padding + 24.0,
-            box_parent.padding + box_parent.font_size * 1.25 * box_parent.lines.len() as f64 + 36.0,
+            if box_parent.kind == NodeKind::Component {
+                box_parent.height + 24.0
+            } else {
+                box_parent.padding
+                    + box_parent.font_size * 1.25 * box_parent.lines.len() as f64
+                    + 36.0
+            },
         )
     } else {
         (min_x, min_y)

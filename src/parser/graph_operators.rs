@@ -1,12 +1,14 @@
 //! Relationship notation is independent of placement direction.
 use super::{ParseError, error};
 use crate::RelationKind;
-use crate::syntax::{DiagramType, EdgeAppearance, EndSymbol};
+use crate::syntax::{ConnectorKind, DiagramType, EdgeAppearance, EndSymbol};
 
 pub(super) fn is_operator(token: &str) -> bool {
     matches!(
         token,
         "->" | "<-"
+            | "=="
+            | "=>"
             | "<->"
             | "--"
             | ".."
@@ -31,7 +33,7 @@ pub(super) fn parse(
     operator: &str,
     diagram_type: DiagramType,
     line: usize,
-) -> Result<(RelationKind, EdgeAppearance, bool), ParseError> {
+) -> Result<(RelationKind, EdgeAppearance, bool, Option<ConnectorKind>), ParseError> {
     use EndSymbol::{Arrow, FilledDiamond, None, OpenDiamond, Triangle};
     let solid = |start, end| EdgeAppearance {
         start,
@@ -63,12 +65,14 @@ pub(super) fn parse(
         "--o" => (RelationKind::Undirected, solid(None, OpenDiamond), false),
         "*-->" => (RelationKind::Directed, solid(FilledDiamond, Arrow), false),
         "o-->" => (RelationKind::Directed, solid(OpenDiamond, Arrow), false),
+        "==" | "=>" => (RelationKind::Undirected, solid(None, None), false),
         _ => return Err(error(line, "unknown relation operator")),
     };
     let allowed = match diagram_type {
-        DiagramType::Generic => true,
+        DiagramType::Generic => !matches!(operator, "==" | "=>"),
         DiagramType::Object => matches!(operator, "--" | ".."),
         DiagramType::Class => !matches!(operator, "->" | "<-" | "<->" | "<--" | "<.."),
+        DiagramType::Component => matches!(operator, "..>" | "..|>" | ".." | "==" | "=>"),
     };
     if !allowed {
         return Err(error(
@@ -76,5 +80,10 @@ pub(super) fn parse(
             "relationship operator is not valid for this diagram type",
         ));
     }
-    Ok((kind, appearance, reversed))
+    let connector = match operator {
+        "==" => Some(ConnectorKind::Assembly),
+        "=>" => Some(ConnectorKind::Delegation),
+        _ => Option::None,
+    };
+    Ok((kind, appearance, reversed, connector))
 }

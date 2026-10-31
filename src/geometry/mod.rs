@@ -6,6 +6,7 @@ mod containers;
 mod junctions;
 mod lollipop;
 mod members;
+mod node_notation;
 mod nodes;
 mod port_contours;
 mod ports;
@@ -47,7 +48,7 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
             let scoped = scoped_styles(diagram, node, styles);
             if matches!(
                 node.kind,
-                NodeKind::Association | NodeKind::Junction | NodeKind::Lollipop
+                NodeKind::Association | NodeKind::Junction | NodeKind::Lollipop | NodeKind::Socket
             ) {
                 junctions::measure(node, &scoped)
             } else {
@@ -64,6 +65,16 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
             })
         })
         .collect::<Result<_, _>>()?;
+    for node in &mut boxes {
+        if node.kind == NodeKind::Component
+            && diagram
+                .nodes
+                .iter()
+                .any(|child| child.parent.as_deref() == Some(node.id.as_str()))
+        {
+            node.is_container = true;
+        }
+    }
     for relation in &diagram.relations {
         for endpoint in [&relation.from, &relation.to] {
             if !boxes.iter().any(|node| node.has_endpoint(endpoint)) {

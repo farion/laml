@@ -15,8 +15,10 @@ mod lifetimes;
 mod messages;
 mod notes;
 mod order;
+mod reflow;
 mod retime;
 mod styles;
+mod text_collision;
 use super::{Event, Message, MessageKind, SequenceDiagram};
 use crate::styles::StyleSheet;
 use crate::svg::TextMode;
@@ -223,6 +225,10 @@ pub fn render_with_styles(
                 y += frames::reference_height(sheet) - 50.0;
             }
             Event::Message(m) => {
+                if m.label.is_some() {
+                    let font = styles::message(sheet, m.name.as_deref(), &m.classes).font_size;
+                    y = y.max(header_bottom + font + 20.0);
+                }
                 let lines = m
                     .label
                     .as_deref()
@@ -334,6 +340,30 @@ pub fn render_with_styles(
         };
         timeline.expand(region, threshold, delta);
     }
+    {
+        let mut timeline = retime::Shiftables {
+            anchors: &mut message_anchors,
+            frames: &mut drawn_frames,
+            bars: &mut bars,
+            open: &mut open,
+            positions: &mut event_positions,
+            deaths: &mut destructions,
+            branches: &mut branch_starts,
+            decompositions: &mut visible_decompositions,
+            notes: &mut visible_notes,
+            continuations: &mut visible_continuations,
+            references: &mut references,
+            final_y: &mut y,
+        };
+        reflow::message_text(
+            diagram,
+            &positioned,
+            &centers,
+            &widths,
+            &mut timeline,
+            sheet,
+        )?;
+    }
     coregions::validate_downward(&message_anchors)?;
     for frame in &drawn_frames {
         for &index in &frame.messages {
@@ -380,6 +410,8 @@ pub fn render_with_styles(
         .map(|(x, w)| x + w / 2.0 + 16.0)
         .unwrap_or(112.0);
     let frame_width = frame_right(diagram, frame_left, base_right, sheet)? - frame_left;
+    let reserved_frame_text =
+        text_collision::frame_regions(diagram, sheet, &centers, &widths, &drawn_frames)?;
     for frame in drawn_frames {
         let (left, right) = geometry::frame_bounds(
             diagram,
@@ -395,11 +427,11 @@ pub fn render_with_styles(
     bars.sort_by_key(|bar| bar.opened.depth);
     executions::draw(&mut svg, diagram, sheet, &centers, &bars)?;
     let mut drawn_gates = Vec::new();
-    for ((m, _), anchor) in positioned.into_iter().zip(&message_anchors) {
+    for ((m, _), anchor) in positioned.iter().zip(&message_anchors) {
         messages::draw(&mut svg, sheet, m, anchor, &mut drawn_gates)?;
     }
     coregions::draw(&mut svg, diagram, &centers, &message_anchors, sheet)?;
-    annotations::draw(
+    let annotation_regions = annotations::draw(
         &mut svg,
         &visible_annotations,
         &message_anchors,
@@ -407,6 +439,13 @@ pub fn render_with_styles(
         diagram,
         &centers,
         &bars,
+        &positioned,
+        &visible_notes,
+        &visible_continuations,
+        &reserved_frame_text,
+        header_bottom,
+        bottom,
+        canvas_width,
     )?;
     order::draw(
         &mut svg,
@@ -429,6 +468,18 @@ pub fn render_with_styles(
         frames::reference(&mut svg, label, frame_left, y, width, sheet)?;
     }
     continuations::draw(&mut svg, diagram, sheet, &centers, &visible_continuations)?;
+    let mut note_obstacles = text_collision::messages(&positioned, &message_anchors, sheet)?;
+    note_obstacles.extend_from_slice(&reserved_frame_text);
+    note_obstacles.extend(annotation_regions);
+    let shapes = text_collision::note_regions(
+        diagram,
+        &message_anchors,
+        &centers,
+        &visible_notes,
+        &visible_continuations,
+        sheet,
+    )?;
+    note_obstacles.extend_from_slice(&shapes[visible_notes.len()..]);
     notes::draw(
         &mut svg,
         diagram,
@@ -436,6 +487,8 @@ pub fn render_with_styles(
         &centers,
         &visible_notes,
         &message_anchors,
+        &note_obstacles,
+        &shapes[..visible_notes.len()],
     )?;
     lifetimes::draw_heads(&mut svg, sheet, &centers, &widths, &timeline)?;
     svg.push_str("</svg>\n");

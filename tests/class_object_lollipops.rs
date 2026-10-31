@@ -54,5 +54,6 @@ fn lollipop_fails_when_interface_box_is_used_or_realization_is_not_plain() {
     assert!(parse(&wrong_kind).is_err());
     let bad_value = SOURCE.replace("lollipop", "socket");
     let diagram = parse(&bad_value).unwrap();
-    assert!(load(&diagram, Path::new("examples/architecture.laml")).is_err());
+    let styles = load(&diagram, Path::new("examples/architecture.laml")).unwrap();
+    assert!(place(&diagram, &styles).is_err());
 }

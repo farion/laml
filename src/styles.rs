@@ -186,13 +186,13 @@ fn expand(
 fn validate_value(property: &Property, path: &Path) -> Result<Value, StyleError> {
     let value = property.value.trim();
     match property.name.as_str() {
-        "interface-notation" if matches!(value, "box" | "lollipop") => {
+        "interface-notation" if matches!(value, "box" | "lollipop" | "socket") => {
             Ok(Value::Keyword(value.into()))
         }
         "interface-notation" => Err(err(
             path,
             property.line,
-            "interface-notation must be box or lollipop",
+            "interface-notation must be box, lollipop or socket",
         )),
         "shape" if matches!(value, "rectangle" | "ellipse" | "diamond" | "note") => {
             Ok(Value::Keyword(value.to_string()))

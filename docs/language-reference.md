@@ -31,7 +31,7 @@ Unqualified identifiers match `[A-Za-z_][A-Za-z0-9_]*`; nested package paths use
 
 | Name | Values | Default |
 |---|---|---|
-| `type` | `class`, `object`, `sequence` (omitted for generic node-edge) | Generic graph |
+| `type` | `class`, `object`, `component`, `sequence` (omitted for generic node-edge) | Generic graph |
 | `direction` | `left-to-right`, `right-to-left`, `top-to-bottom`, `bottom-to-top` | `left-to-right` |
 | `naming-convention` | `uppercase-nodes-lowercase-relations` | Off |
 | `relation-label` | `near`, `along`, `inline` | `near` |
@@ -65,6 +65,10 @@ Directed relations give source-order *preferences* for automatic placement, not 
 ## Class and object diagrams
 
 Set `type: class` or `type: object` in `settings`. Class declarations (`class`, `interface`, `enum`, `datatype`, `association class`), notes, packages, attribute and operation compartments, objects with literal slots, named ports and checked UML operators share graph geometry with generic nodes. Simple author shorthand `int counter` / `+void start(int timeoutms)` renders as UML `counter: int` / `+start(timeoutms: int): void`; unsupported complex signatures fail. The [working class/object guide](class-object-diagrams.md) gives complete buildable sources and the accepted notation. Class associations can specify independent end multiplicities, roles and qualifiers; object links allow end names but reject multiplicities and qualifiers. For an empty, otherwise unused interface, a named class-to-interface realization can choose `interface-notation: lollipop` on its relation-specific LSS selector: each provider receives its own small circle and solid stalk. Unsupported UML combinations are errors rather than generic arrows. Generic graphs can additionally choose `shape: rectangle|ellipse|diamond|note` in LSS; a UML classifier cannot change its meaningful shape through styling.
+
+## Component diagrams
+
+Set `type: component`. Declare components and interfaces, with `..>` for component dependencies or required box interfaces and `..|>` for provided box interfaces. Named relations can opt into compact provided `lollipop` or required `socket` interface notation when their interface box is otherwise unused. Component ports require `provides=Interface` or `requires=Interface`. A contained `part name(of=DeclaredComponent)` inherits that component type's ports. Inside the containing component, `partA::out == partB::in` assembles opposite-role ports of the same interface; `Owner::outer => part::inner` delegates a boundary port to a same-role part port. Both are solid port-to-port connectors, not generic dependencies. Details, examples and limits are in the [component guide](component-diagrams.md) and [notation audit](uml-component-conformance.md).
 
 ## Layout
 
@@ -167,4 +171,4 @@ Follow the [sequence-diagram working guide](sequence-diagrams.md) for complete, 
 
 The output extension selects SVG, PNG, or PDF. SVG defaults to `--svg-text=embedded`: Inter Regular is embedded, and text remains selectable. `--svg-text=system` keeps selectable SVG text but omits the font; the viewer may substitute a font. `--svg-text=paths` converts SVG text into nonselectable glyph outlines and does not preserve node-level `<title>` metadata. These options apply only to SVG output. PNG uses the SVG's CSS-pixel dimensions rounded to whole pixels, on a white background; the image is limited to 64 million pixels. PDF is vector output with embedded, selectable text; 96 SVG pixels map to one inch of PDF page size. Rectangular nodes may have rounded corners via `corner-radius`. Relations attach to box boundaries. The router prefers a straight route and searches a finite set of detours when blocked. Parallel relations use separate boundary ports; self-relations use exterior loops. At a supported crossing, the later-declared relation receives a bridge and the earlier relation a gap. If no safe routing or label placement is found, `build` fails without writing a replacement image: it does not emit bare crossings or silently ignore mandatory rules.
 
-The installers and updater are described in the [README](../README.md). Normal `check` and `build` commands do not wait for the network: a cached version is shown if newer, and a background refresh runs at most once per 24 hours. Set `LAML_NO_UPDATE_CHECK=1` to opt out. See [Getting started](getting-started.md), the [class/object guide](class-object-diagrams.md), the [language contract](language-definition.md), and the [buildable examples](../examples/).
+The installers and updater are described in the [README](../README.md). Normal `check` and `build` commands do not wait for the network: a cached version is shown if newer, and a background refresh runs at most once per 24 hours. Set `LAML_NO_UPDATE_CHECK=1` to opt out. See [Getting started](getting-started.md), the [class/object guide](class-object-diagrams.md), the [component guide](component-diagrams.md), the [language contract](language-definition.md), and the [buildable examples](../examples/).

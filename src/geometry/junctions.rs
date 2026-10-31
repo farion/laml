@@ -40,10 +40,10 @@ pub(super) fn measure(node: &NodeDecl, sheet: &StyleSheet) -> Result<BoxNode, St
     };
     debug_assert!(matches!(
         node.kind,
-        NodeKind::Association | NodeKind::Junction | NodeKind::Lollipop
+        NodeKind::Association | NodeKind::Junction | NodeKind::Lollipop | NodeKind::Socket
     ));
     let label = node.label.clone().unwrap_or_default();
-    let base = if node.kind == NodeKind::Lollipop {
+    let base = if matches!(node.kind, NodeKind::Lollipop | NodeKind::Socket) {
         20.0
     } else {
         24.0
@@ -72,7 +72,8 @@ pub(super) fn measure(node: &NodeDecl, sheet: &StyleSheet) -> Result<BoxNode, St
         bottom_band: 0.0,
         abstract_node: false,
         kind: node.kind,
-        shape: if node.kind == NodeKind::Lollipop {
+        is_container: false,
+        shape: if matches!(node.kind, NodeKind::Lollipop | NodeKind::Socket) {
             NodeShape::Ellipse
         } else {
             NodeShape::Diamond

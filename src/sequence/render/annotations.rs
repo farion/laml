@@ -2,7 +2,7 @@
 
 use super::{
     anchors::MessageAnchor, escape, executions::DrawnExecution, geometry::label_width_at, order,
-    styles,
+    styles, text_collision,
 };
 use crate::sequence::{
     Annotation, AnnotationEnd, AnnotationKind, Event, OrderingEnd, SequenceDiagram,
@@ -89,6 +89,8 @@ fn execution_half_width(
         / 2.0)
 }
 
+// All referenced coordinates and obstacles belong to the same rendered timeline.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn draw(
     svg: &mut String,
     annotations: &[&Annotation],
@@ -97,7 +99,26 @@ pub(super) fn draw(
     diagram: &SequenceDiagram,
     centers: &[f64],
     bars: &[DrawnExecution],
-) -> Result<(), String> {
+    positioned: &[(&super::Message, f64)],
+    notes: &[(&crate::sequence::Note, f64)],
+    continuations: &[(&crate::sequence::Continuation, f64)],
+    frame_text: &[text_collision::Rect],
+    header_bottom: f64,
+    canvas_bottom: f64,
+    canvas_width: f64,
+) -> Result<Vec<text_collision::Rect>, String> {
+    let mut occupied = text_collision::messages(positioned, anchors, sheet)?;
+    let mut annotation_regions = Vec::new();
+    occupied.extend_from_slice(frame_text);
+    occupied.extend(text_collision::note_regions(
+        diagram,
+        anchors,
+        centers,
+        notes,
+        continuations,
+        sheet,
+    )?);
+    let mut connectors: Vec<Vec<(f64, f64)>> = Vec::new();
     for (index, annotation) in annotations.iter().enumerate() {
         let kind = styles::annotation_kind(annotation.kind);
         let paint = styles::annotation(sheet, kind);
@@ -106,6 +127,10 @@ pub(super) fn draw(
         let stroke = paint.width;
         let fill = &paint.fill;
         let (x, y) = order::endpoint(&annotation.first, anchors, diagram, centers, bars)?;
+        let anchor_name = match &annotation.first {
+            OrderingEnd::Message(end) => end.message.as_str(),
+            OrderingEnd::Execution { id, .. } => id.as_str(),
+        };
         if let Some(second) = &annotation.second {
             let (other_x, other_y) = order::endpoint(second, anchors, diagram, centers, bars)?;
             let right = (x + execution_half_width(&annotation.first, bars, diagram, sheet)?)
@@ -128,19 +153,116 @@ pub(super) fn draw(
                 && (x - other_x).abs() > 1.0
             {
                 let midpoint = (x + other_x) / 2.0;
-                writeln!(svg, "<path d=\"M{midpoint:.2},{y:.2} l16,-22\" fill=\"none\" stroke=\"{color}\" stroke-width=\"{stroke:.2}\" data-annotation=\"duration-observation\" />").unwrap();
-                writeln!(svg, "<text x=\"{:.2}\" y=\"{:.2}\" font-family=\"Inter\" font-size=\"{font:.2}\" fill=\"{color}\">{}</text>",
-                    midpoint + 19.0, y - 23.0, escape(&annotation.text)).unwrap();
+                let text_width = label_width_at(&annotation.text, font)?;
+                let mut chosen = None;
+                for baseline in [y - 23.0, y - 45.0, y + 20.0] {
+                    for side in [1.0, -1.0] {
+                        let label_x = if side > 0.0 {
+                            midpoint + 19.0
+                        } else {
+                            midpoint - 19.0 - text_width
+                        };
+                        let tip_x = midpoint + 16.0 * side;
+                        let region =
+                            text_collision::text(label_x, baseline, &annotation.text, font)?;
+                        if region.x >= 8.0
+                            && region.x + region.width < canvas_width - 8.0
+                            && region.y >= header_bottom + 4.0
+                            && region.y + region.height < canvas_bottom - 8.0
+                            && text_collision::region_clear(region, &occupied, &connectors)
+                            && text_collision::path_clear(
+                                &occupied,
+                                &[(midpoint, y), (tip_x, baseline + 1.0)],
+                            )
+                        {
+                            chosen = Some((label_x, baseline, tip_x, region));
+                            break;
+                        }
+                    }
+                    if chosen.is_some() {
+                        break;
+                    }
+                }
+                let (label_x, baseline, tip_x, region) = chosen.ok_or_else(|| {
+                    format!(
+                        "duration annotation '{}' from '{anchor_name}' has no clear text and leader position; increase the row gap",
+                        annotation.text
+                    )
+                })?;
+                occupied.push(region);
+                annotation_regions.push(region);
+                connectors.push(vec![(midpoint, y), (tip_x, baseline + 1.0)]);
+                writeln!(svg, "<path d=\"M{midpoint:.2},{y:.2} L{tip_x:.2},{:.2}\" fill=\"none\" stroke=\"{color}\" stroke-width=\"{stroke:.2}\" data-annotation=\"duration-observation\" />", baseline + 1.0).unwrap();
+                writeln!(svg, "<text x=\"{label_x:.2}\" y=\"{baseline:.2}\" font-family=\"Inter\" font-size=\"{font:.2}\" fill=\"{color}\">{}</text>", escape(&annotation.text)).unwrap();
                 continue;
             }
-            writeln!(svg, "<path d=\"M{top_x:.2},{top:.2} H{right:.2} V{bottom:.2} H{bottom_x:.2}\" fill=\"none\" stroke=\"{color}\" stroke-width=\"{stroke:.2}\" data-annotation=\"{kind}\" />").unwrap();
             let text = if annotation.kind == AnnotationKind::DurationConstraint {
                 format!("[{}]", annotation.text)
             } else {
                 annotation.text.clone()
             };
-            writeln!(svg, "<text x=\"{:.2}\" y=\"{:.2}\" text-anchor=\"start\" font-family=\"Inter\" font-size=\"{font:.2}\" fill=\"{color}\">{}</text>",
-                right + 7.0, (top + bottom) / 2.0 + 4.0, escape(&text)).unwrap();
+            let middle = (top + bottom) / 2.0 + 4.0;
+            let text_width = label_width_at(&text, font)?;
+            let mut chosen = None;
+            for side in [1.0, -1.0] {
+                for extra in [0.0, 24.0, 48.0, 80.0] {
+                    let lane = if side > 0.0 {
+                        right + extra
+                    } else {
+                        top_x.min(bottom_x) - 22.0 - extra
+                    };
+                    if !text_collision::path_clear(
+                        &occupied,
+                        &[
+                            (top_x, top),
+                            (lane, top),
+                            (lane, bottom),
+                            (bottom_x, bottom),
+                        ],
+                    ) {
+                        continue;
+                    }
+                    let label_x = if side > 0.0 {
+                        lane + 7.0
+                    } else {
+                        lane - 7.0 - text_width
+                    };
+                    for baseline in [middle, middle - 22.0, middle + 22.0] {
+                        let region = text_collision::text(label_x, baseline, &text, font)?;
+                        if region.x >= 8.0
+                            && region.x + region.width < canvas_width - 8.0
+                            && region.y >= header_bottom + 4.0
+                            && region.y + region.height < canvas_bottom - 8.0
+                            && text_collision::region_clear(region, &occupied, &connectors)
+                        {
+                            chosen = Some((lane, label_x, baseline, region));
+                            break;
+                        }
+                    }
+                    if chosen.is_some() {
+                        break;
+                    }
+                }
+                if chosen.is_some() {
+                    break;
+                }
+            }
+            let (lane, label_x, baseline, region) = chosen.ok_or_else(|| {
+                format!(
+                    "duration annotation '{}' from '{anchor_name}' has no clear bracket and text position; increase the row gap",
+                    annotation.text
+                )
+            })?;
+            occupied.push(region);
+            annotation_regions.push(region);
+            connectors.push(vec![
+                (top_x, top),
+                (lane, top),
+                (lane, bottom),
+                (bottom_x, bottom),
+            ]);
+            writeln!(svg, "<path d=\"M{top_x:.2},{top:.2} H{lane:.2} V{bottom:.2} H{bottom_x:.2}\" fill=\"none\" stroke=\"{color}\" stroke-width=\"{stroke:.2}\" data-annotation=\"{kind}\" />").unwrap();
+            writeln!(svg, "<text x=\"{label_x:.2}\" y=\"{baseline:.2}\" text-anchor=\"start\" font-family=\"Inter\" font-size=\"{font:.2}\" fill=\"{color}\">{}</text>", escape(&text)).unwrap();
             continue;
         }
         let offset: f64 = annotations[..index]
@@ -152,8 +274,50 @@ pub(super) fn draw(
                     .max(27.0)
             })
             .sum();
-        let top = y + 15.0 + offset;
+        let mut top = y + 15.0 + offset;
         let box_height = (font * 1.25 + 8.0).max(24.0);
+        if !matches!(annotation.kind, AnnotationKind::TimeObservation) {
+            let label = match annotation.kind {
+                AnnotationKind::TimeConstraint => format!("[{}]", annotation.text),
+                AnnotationKind::Invariant => format!("{{{}}}", annotation.text),
+                _ => annotation.text.clone(),
+            };
+            let text_width = label_width_at(&label, font)?;
+            let (left, width) = match annotation.kind {
+                AnnotationKind::Action => (x + 24.0, text_width + 20.0),
+                AnnotationKind::State => (x - text_width / 2.0 - 10.0, text_width + 20.0),
+                AnnotationKind::Invariant => (x - text_width / 2.0, text_width),
+                _ => (x, text_width),
+            };
+            let chosen = (0..=3).find_map(|step| {
+                let candidate_top = top + step as f64 * 24.0;
+                let region = text_collision::Rect {
+                    x: left,
+                    y: candidate_top,
+                    width,
+                    height: box_height,
+                };
+                let link_clear = annotation.kind != AnnotationKind::Action
+                    || text_collision::path_clear(
+                        &occupied,
+                        &[(x, y), (left, y), (left, candidate_top)],
+                    );
+                (region.y >= header_bottom + 4.0
+                    && region.y + region.height < canvas_bottom - 8.0
+                    && text_collision::region_clear(region, &occupied, &connectors)
+                    && link_clear)
+                    .then_some((candidate_top, region))
+            });
+            let (at, region) = chosen.ok_or_else(|| {
+                format!(
+                    "annotation '{}' at '{anchor_name}' overlaps message text; increase spacing around this message",
+                    annotation.text
+                )
+            })?;
+            top = at;
+            occupied.push(region);
+            annotation_regions.push(region);
+        }
         match annotation.kind {
             AnnotationKind::TimeObservation | AnnotationKind::TimeConstraint => {
                 let (kind, label, at_x, at_y) = if annotation.kind == AnnotationKind::TimeConstraint
@@ -165,14 +329,28 @@ pub(super) fn draw(
                         top + 15.0,
                     )
                 } else {
-                    writeln!(svg, "<path d=\"M{x:.2},{y:.2} l18,-{:.2}\" fill=\"none\" stroke=\"{color}\" stroke-width=\"{stroke:.2}\" data-annotation=\"time-observation\" />", 17.0 + offset).unwrap();
-                    (
-                        "time-observation",
-                        annotation.text.clone(),
-                        x + 22.0,
-                        y - 18.0 - offset,
+                    let (at_x, at_y) = text_collision::time_label(
+                        &occupied,
+                        &connectors,
+                        x,
+                        y,
+                        &annotation.text,
+                        font,
+                        header_bottom + 4.0,
+                        canvas_bottom,
+                        offset,
                     )
+                    .map_err(|reason| format!("annotation at '{anchor_name}': {reason}"))?;
+                    let dx = if at_x < x { -18.0 } else { 18.0 };
+                    connectors.push(vec![(x, y), (x + dx, at_y + 1.0)]);
+                    writeln!(svg, "<path d=\"M{x:.2},{y:.2} l{dx:.2},{:.2}\" fill=\"none\" stroke=\"{color}\" stroke-width=\"{stroke:.2}\" data-annotation=\"time-observation\" />", at_y - y + 1.0).unwrap();
+                    ("time-observation", annotation.text.clone(), at_x, at_y)
                 };
+                if annotation.kind == AnnotationKind::TimeObservation {
+                    let region = text_collision::text(at_x, at_y, &label, font)?;
+                    occupied.push(region);
+                    annotation_regions.push(region);
+                }
                 writeln!(svg, "<text x=\"{at_x:.2}\" y=\"{at_y:.2}\" text-anchor=\"start\" font-family=\"Inter\" font-size=\"{font:.2}\" fill=\"{color}\" data-annotation=\"{kind}\">{}</text>",
                     escape(&label)).unwrap();
             }
@@ -183,6 +361,7 @@ pub(super) fn draw(
             AnnotationKind::Action => {
                 let width = label_width_at(&annotation.text, font)? + 20.0;
                 let left = x + 24.0;
+                connectors.push(vec![(x, y), (left, y), (left, top)]);
                 writeln!(svg, "<path d=\"M{x:.2},{y:.2} H{left:.2} V{top:.2}\" fill=\"none\" stroke=\"{color}\" stroke-width=\"{stroke:.2}\" data-action-link=\"true\" />").unwrap();
                 writeln!(svg, "<rect x=\"{left:.2}\" y=\"{top:.2}\" width=\"{width:.2}\" height=\"{box_height:.2}\" fill=\"{fill}\" stroke=\"{color}\" stroke-width=\"{stroke:.2}\" data-annotation=\"action\" />").unwrap();
                 writeln!(svg, "<text x=\"{:.2}\" y=\"{:.2}\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"{font:.2}\" fill=\"{color}\">{}</text>",
@@ -200,5 +379,5 @@ pub(super) fn draw(
             }
         }
     }
-    Ok(())
+    Ok(annotation_regions)
 }

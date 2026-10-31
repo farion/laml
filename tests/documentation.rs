@@ -213,6 +213,23 @@ fn class_guide_complete_example_builds_all_formats() {
 }
 
 #[test]
+fn component_guide_example_builds_all_formats() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let guide = fs::read_to_string(root.join("docs/component-diagrams.md")).unwrap();
+    let source = text_blocks(&guide)
+        .into_iter()
+        .next()
+        .expect("missing component guide example");
+    let diagram = parse(&source).unwrap();
+    let styles = load(&diagram, &root.join("examples/component-internal.laml")).unwrap();
+    let boxes = place(&diagram, &styles).unwrap();
+    let routes = route(&diagram, &boxes, &styles).unwrap();
+    let svg = render(&boxes, &routes).unwrap();
+    assert!(png(&svg).unwrap().starts_with(b"\x89PNG"));
+    assert!(laml::export::pdf(&svg).unwrap().starts_with(b"%PDF-"));
+}
+
+#[test]
 fn user_documentation_contains_no_speculative_status_notes() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     for file in [

@@ -4,26 +4,24 @@ use crate::geometry::BoxNode;
 use crate::syntax::LabelPlacement;
 use crate::text::measure;
 
-pub(super) fn label_near(
+pub(super) fn near_options(
     points: &[Point],
     text: &str,
     size: f64,
     own_markers: [f64; 2],
     boxes: &[BoxNode],
     previous: &[Route],
-) -> Result<Option<Label>, String> {
-    if text.is_empty() {
-        return Ok(None);
-    }
+) -> Result<Vec<Label>, String> {
     let width = measure(text, size)?;
     let height = size * 1.25;
+    let mut options = Vec::new();
     for pair in points.windows(2) {
         let dx = pair[1].x - pair[0].x;
         let dy = pair[1].y - pair[0].y;
         if dx.hypot(dy) < 1e-6 {
             continue;
         }
-        for progress in [0.5, 0.3, 0.7] {
+        for progress in [0.5, 0.3, 0.7, 0.15, 0.85] {
             let mid = Point {
                 x: pair[0].x + dx * progress,
                 y: pair[0].y + dy * progress,
@@ -49,16 +47,19 @@ pub(super) fn label_near(
                     angle: 0.0,
                     placement: LabelPlacement::Near,
                 };
-                if !label_clear_with_markers(&label, points, None, boxes, previous, own_markers) {
-                    continue;
+                if label_clear_with_markers(&label, points, None, boxes, previous, own_markers) {
+                    options.push(label);
                 }
-                return Ok(Some(label));
             }
         }
     }
-    Err(format!(
-        "cannot place relation label '{text}' without an overlap"
-    ))
+    if options.is_empty() {
+        Err(format!(
+            "cannot place relation label '{text}' without an overlap"
+        ))
+    } else {
+        Ok(options)
+    }
 }
 fn near_marker(x: f64, y: f64, w: f64, h: f64, point: Point, radius: f64) -> bool {
     x < point.x + radius
@@ -81,6 +82,7 @@ pub(super) fn segment_hits_rect(a: Point, b: Point, x: f64, y: f64, w: f64, h: f
         bottom_band: 0.0,
         abstract_node: false,
         kind: crate::syntax::NodeKind::Generic,
+        is_container: false,
         shape: crate::geometry::NodeShape::Rectangle,
         x,
         y,
@@ -172,17 +174,18 @@ pub(super) fn label_clear_with_markers(
 
 /// Rotated real SVG text above or below a straight segment. The stored box is
 /// an axis-aligned envelope for conservative collision checks.
-pub(super) fn label_along(
+pub(super) fn along_options(
     points: &[Point],
     text: &str,
     size: f64,
     own_markers: [f64; 2],
     boxes: &[BoxNode],
     previous: &[Route],
-) -> Result<Option<Label>, String> {
+) -> Result<Vec<Label>, String> {
     if text.is_empty() {
-        return Ok(None);
+        return Ok(Vec::new());
     }
+    let mut options = Vec::new();
     let text_width = measure(text, size)?;
     let line_height = size * 1.25;
     for (index, pair) in points.windows(2).enumerate() {
@@ -235,18 +238,22 @@ pub(super) fn label_along(
                     previous,
                     own_markers,
                 ) {
-                    return Ok(Some(label));
+                    options.push(label);
                 }
             }
         }
     }
-    Err(format!(
-        "cannot align relation label '{text}' without an overlap"
-    ))
+    if options.is_empty() {
+        Err(format!(
+            "cannot align relation label '{text}' without an overlap"
+        ))
+    } else {
+        Ok(options)
+    }
 }
 
 /// Horizontal text interrupts exactly one segment of its own relation.
-pub(super) fn label_inline(
+pub(super) fn inline_options(
     points: &[Point],
     text: &str,
     size: f64,
@@ -254,10 +261,11 @@ pub(super) fn label_inline(
     own_markers: [f64; 2],
     boxes: &[BoxNode],
     previous: &[Route],
-) -> Result<Option<(Label, Gap)>, String> {
+) -> Result<Vec<(Label, Gap)>, String> {
     if text.is_empty() {
-        return Ok(None);
+        return Ok(Vec::new());
     }
+    let mut options = Vec::new();
     let text_width = measure(text, size)?;
     let height = size * 1.25;
     for (index, pair) in points.windows(2).enumerate() {
@@ -291,18 +299,22 @@ pub(super) fn label_inline(
                 placement: LabelPlacement::Inline,
             };
             if label_clear_with_markers(&label, points, Some(index), boxes, previous, own_markers) {
-                return Ok(Some((
+                options.push((
                     label,
                     Gap {
                         segment: index,
                         distance,
                         half,
                     },
-                )));
+                ));
             }
         }
     }
-    Err(format!(
-        "cannot place inline relation label '{text}' with a safe line gap"
-    ))
+    if options.is_empty() {
+        Err(format!(
+            "cannot place inline relation label '{text}' with a safe line gap"
+        ))
+    } else {
+        Ok(options)
+    }
 }

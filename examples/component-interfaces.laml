@@ -1,0 +1,24 @@
+// Compact provided and required interfaces on independent contracts.
+settings {
+    type: component
+}
+semantics {
+    interface HealthAPI
+    interface PaymentAPI
+    component Gateway {
+        port Health(provides=HealthAPI)
+        port Payment(requires=PaymentAPI)
+    }
+    component Payments
+    @provides Gateway ..|> HealthAPI
+    @requires Gateway ..> PaymentAPI
+    @calls Gateway ..> Payments : authorize
+}
+styling {
+    relation[provides] {
+        interface-notation: lollipop
+    }
+    relation[requires] {
+        interface-notation: socket
+    }
+}

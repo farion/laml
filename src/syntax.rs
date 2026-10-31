@@ -25,6 +25,7 @@ pub enum DiagramType {
     Generic,
     Class,
     Object,
+    Component,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -32,6 +33,8 @@ pub enum NodeKind {
     #[default]
     Generic,
     Class,
+    Component,
+    ComponentPart,
     Interface,
     Enumeration,
     DataType,
@@ -39,8 +42,10 @@ pub enum NodeKind {
     Association,
     AssociationClass,
     Junction,
-    /// Render-only interface realization ball; never accepted as a source declaration.
+    /// Render-only provided-interface ball; never accepted as a source declaration.
     Lollipop,
+    /// Render-only required-interface socket; never accepted as a source declaration.
+    Socket,
     Object,
     Note,
 }
@@ -70,11 +75,18 @@ pub enum NodePart {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PortContract {
+    Provides(String),
+    Requires(String),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PortDecl {
     pub id: String,
     pub label: String,
     pub explicit: bool,
     pub classes: Vec<String>,
+    pub contract: Option<PortContract>,
     pub line: usize,
 }
 
@@ -95,6 +107,8 @@ pub struct NodeDecl {
     pub classes: Vec<String>,
     pub stereotypes: Vec<String>,
     pub kind: NodeKind,
+    /// A component part names its declared component type; other nodes have none.
+    pub part_type: Option<String>,
     pub abstract_node: bool,
     pub visibility: Option<char>,
     pub templates: Vec<String>,
@@ -165,6 +179,12 @@ pub struct EndAnnotation {
     pub qualifier: Option<Vec<String>>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ConnectorKind {
+    Assembly,
+    Delegation,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RelationDecl {
     pub name: Option<String>,
@@ -175,6 +195,7 @@ pub struct RelationDecl {
     pub from: String,
     pub to: String,
     pub kind: RelationKind,
+    pub connector: Option<ConnectorKind>,
     pub appearance: EdgeAppearance,
     pub source_end: EndAnnotation,
     pub target_end: EndAnnotation,

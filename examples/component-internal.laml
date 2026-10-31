@@ -1,0 +1,27 @@
+settings {
+    type: component
+}
+semantics {
+    interface OrderAPI
+    component Browser {
+        port In(requires=OrderAPI)
+        port Out(requires=OrderAPI)
+    }
+    component Orders {
+        port In(provides=OrderAPI)
+    }
+    component Storefront {
+        port Public(requires=OrderAPI)
+        part browser(of=Browser)
+        part orders(of=Orders)
+        @assembly browser::Out == orders::In
+        @delegation Storefront::Public => browser::In
+    }
+}
+layout {
+    Storefront.browser < Storefront.orders : gap=120
+    port[Storefront::Public] : side=left
+    port[Storefront.browser::In] : side=left
+    port[Storefront.browser::Out] : side=right
+    port[Storefront.orders::In] : side=left
+}

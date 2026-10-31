@@ -12,12 +12,16 @@ use crate::syntax::{
 
 mod bindings;
 mod bodies;
+mod component;
+mod component_connectors;
 mod ends;
 mod graph_operators;
 mod graph_relations;
 mod layout;
 mod member_notation;
 mod node_modifiers;
+mod part_types;
+mod port_bodies;
 mod references;
 mod selectors;
 mod side_references;
@@ -71,6 +75,7 @@ fn prescan_type(source: &str) -> DiagramType {
             return match value.trim() {
                 "class" => DiagramType::Class,
                 "object" => DiagramType::Object,
+                "component" => DiagramType::Component,
                 _ => DiagramType::Generic,
             };
         }
@@ -157,7 +162,24 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
                 }
             }
             Section::NodeBody(index) => {
-                if text == "}" {
+                if diagram.nodes[index].kind == crate::syntax::NodeKind::ComponentPart {
+                    return Err(error(line, "part cannot contain a body"));
+                }
+                if diagram.nodes[index].kind == crate::syntax::NodeKind::Component
+                    && text.starts_with("part ")
+                {
+                    let parent = diagram.nodes[index].id.clone();
+                    bodies::node(text, line, &mut diagram, false, Some(&parent))?;
+                    Section::NodeBody(index)
+                } else if diagram.nodes[index].kind == crate::syntax::NodeKind::Component
+                    && text
+                        .split_whitespace()
+                        .any(|token| matches!(token, "==" | "=>"))
+                {
+                    let scope = diagram.nodes[index].id.clone();
+                    graph_relations::parse_semantic(text, line, &mut diagram, Some(&scope))?;
+                    Section::NodeBody(index)
+                } else if text == "}" {
                     bodies::close(
                         line,
                         &mut diagram.nodes[index],
@@ -367,6 +389,7 @@ fn parse_setting(
             diagram.settings.diagram_type = match value {
                 "class" => DiagramType::Class,
                 "object" => DiagramType::Object,
+                "component" => DiagramType::Component,
                 _ => return Err(error(line, "invalid graph diagram type")),
             }
         }

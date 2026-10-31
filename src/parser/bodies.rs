@@ -1,7 +1,7 @@
 //! Graph node declarations and source-ordered compartments.
 use super::{ParseError, attributes, classes, error};
 use crate::lex::{quoted_string, valid_identifier, valid_reference};
-use crate::syntax::{Diagram, DiagramType, MemberKind, NodeDecl, NodeKind, NodePart, PortDecl};
+use crate::syntax::{Diagram, DiagramType, MemberKind, NodeDecl, NodeKind, NodePart};
 
 pub(super) fn node(
     text: &str,
@@ -59,6 +59,10 @@ pub(super) fn node(
         (NodeKind::Package, name)
     } else if let Some(name) = source.strip_prefix("class ") {
         (NodeKind::Class, name)
+    } else if let Some(name) = source.strip_prefix("component ") {
+        (NodeKind::Component, name)
+    } else if let Some(name) = source.strip_prefix("part ") {
+        (NodeKind::ComponentPart, name)
     } else if let Some(name) = source.strip_prefix("interface ") {
         (NodeKind::Interface, name)
     } else if let Some(name) = source.strip_prefix("enum ") {
@@ -74,12 +78,23 @@ pub(super) fn node(
             DiagramType::Generic => (NodeKind::Generic, source),
             DiagramType::Class => (NodeKind::Class, source),
             DiagramType::Object => (NodeKind::Object, source),
+            DiagramType::Component => (NodeKind::Component, source),
         }
     };
     if (diagram.settings.diagram_type == DiagramType::Class
         && matches!(kind, NodeKind::Object | NodeKind::Junction))
         || (diagram.settings.diagram_type == DiagramType::Object
             && !matches!(kind, NodeKind::Object | NodeKind::Note))
+        || (diagram.settings.diagram_type == DiagramType::Component
+            && !matches!(
+                kind,
+                NodeKind::Component
+                    | NodeKind::ComponentPart
+                    | NodeKind::Interface
+                    | NodeKind::Package
+                    | NodeKind::Note
+            ))
+        || (diagram.settings.diagram_type != DiagramType::Component && kind == NodeKind::Component)
     {
         return Err(error(
             line,
@@ -104,6 +119,9 @@ pub(super) fn node(
             "unnamed junction needs @id and cannot have a body, visibility or stereotype",
         ));
     }
+    if kind == NodeKind::ComponentPart && block {
+        return Err(error(line, "part cannot have a body"));
+    }
     if kind == NodeKind::Package && !block {
         return Err(error(line, "package requires a nested declaration block"));
     }
@@ -115,6 +133,7 @@ pub(super) fn node(
         && !matches!(
             kind,
             NodeKind::Class
+                | NodeKind::Component
                 | NodeKind::AssociationClass
                 | NodeKind::Interface
                 | NodeKind::Enumeration
@@ -149,6 +168,7 @@ pub(super) fn node(
         classes: Vec::new(),
         stereotypes,
         kind,
+        part_type: None,
         abstract_node,
         visibility,
         templates: templates.clone(),
@@ -170,6 +190,9 @@ pub(super) fn node(
                 result.label = Some(quoted_string(&value).map_err(|msg| error(line, msg))?)
             }
             "style-classes" => result.classes = classes(&value, line)?,
+            "of" if kind == NodeKind::ComponentPart && valid_reference(value.trim()) => {
+                result.part_type = Some(value.trim().into());
+            }
             "of" if kind == NodeKind::Object && valid_reference(value.trim()) => {
                 classifier = Some(value.trim().to_string());
             }
@@ -181,6 +204,9 @@ pub(super) fn node(
             }
             _ => return Err(error(line, format!("unknown node attribute '{key}'"))),
         }
+    }
+    if kind == NodeKind::ComponentPart && result.part_type.is_none() {
+        return Err(error(line, "part requires of=Component"));
     }
     if kind == NodeKind::Object {
         if anonymous && classifier.is_none() {
@@ -216,6 +242,7 @@ pub(super) fn member(
         let node = &mut diagram.nodes[index];
         if diagram_type != DiagramType::Generic {
             if node.kind != NodeKind::Class
+                && node.kind != NodeKind::Component
                 && node.kind != NodeKind::AssociationClass
                 && node.kind != NodeKind::Interface
                 && node.kind != NodeKind::DataType
@@ -256,34 +283,13 @@ pub(super) fn member(
     } else {
         (None, Vec::new(), text)
     };
-    if let Some(port) = content.strip_prefix("port ") {
-        if !matches!(
-            diagram.nodes[index].kind,
-            NodeKind::Generic | NodeKind::Class
-        ) {
-            return Err(error(
-                line,
-                "ports are supported only on generic or class nodes",
-            ));
-        }
-        let (name, attrs) = attributes(port.trim(), line)?;
-        if name.is_empty() {
-            return Err(error(line, "port name required"));
-        }
-        let mut port_classes = member_classes;
-        for (key, value) in attrs {
-            if key != "style-classes" {
-                return Err(error(line, format!("unknown port attribute '{key}'")));
-            }
-            port_classes = classes(&value, line)?;
-        }
-        diagram.nodes[index].ports.push(PortDecl {
-            id: id.clone().unwrap_or_else(|| name.clone()),
-            label: name,
-            explicit: id.is_some(),
-            classes: port_classes,
-            line,
-        });
+    if super::port_bodies::parse(
+        content,
+        line,
+        &mut diagram.nodes[index],
+        &id,
+        &member_classes,
+    )? {
         return Ok(());
     }
     if let Some(id) = &id
@@ -374,7 +380,7 @@ pub(super) fn member(
             return Err(error(line, format!("duplicate UML object slot '{slot}'")));
         }
     }
-    if diagram_type == DiagramType::Class {
+    if matches!(diagram_type, DiagramType::Class | DiagramType::Component) {
         if node.kind == NodeKind::Interface && content.starts_with(['-', '#', '~']) {
             return Err(error(line, "UML interface features must be public"));
         }
@@ -445,7 +451,7 @@ pub(super) fn member(
             .map(str::to_string)
     };
     let shown = literal.unwrap_or_else(|| content.to_string());
-    let shown = if diagram_type == DiagramType::Class {
+    let shown = if matches!(diagram_type, DiagramType::Class | DiagramType::Component) {
         super::member_notation::normalize(&shown, kind, line)?
     } else {
         shown
