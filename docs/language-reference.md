@@ -25,7 +25,7 @@ styling {
 }
 ```
 
-Unqualified identifiers match `[A-Za-z_][A-Za-z0-9_]*`; nested package paths use `.` and member addresses use `::`. Explicit `@id` replaces a default graph identity and is unique across explicitly named elements. Node labels and style import paths use double-quoted strings with `\n`, `\r`, `\t`, `\"`, and `\\` escapes. Relation text after `:` may be unquoted to the end of its line. Semicolons separate multiple *inline attributes*, never whole declarations.
+Unqualified identifiers match `[A-Za-z_][A-Za-z0-9_]*`; nested package paths use `.` and member addresses use `::`. A root-qualified path resolves absolutely even inside a package that contains a shadowing nested path; unqualified names prefer the nearest package scope. Explicit `@id` replaces a default graph identity and is unique across explicitly named elements. Node labels and style import paths use double-quoted strings with `\n`, `\r`, `\t`, `\"`, and `\\` escapes. Relation text after `:` may be unquoted to the end of its line. Semicolons separate multiple *inline attributes*, never whole declarations.
 
 ## Settings
 
