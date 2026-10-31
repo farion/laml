@@ -80,7 +80,7 @@ pub fn render_with_mode(
 ) -> Result<String, String> {
     let svg = render_svg(boxes, routes, mode)?;
     if mode == TextMode::Paths {
-        crate::export::outlines(&svg)
+        crate::export_metadata::preserve_svg_notice(&svg, crate::export::outlines(&svg)?)
     } else {
         Ok(svg)
     }
@@ -177,6 +177,14 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
     svg.push_str("<marker id=\"filled-diamond\" markerWidth=\"17\" markerHeight=\"11\" refX=\"1\" refY=\"5.5\" orient=\"auto\" markerUnits=\"userSpaceOnUse\"><path d=\"M1,5.5 L8,1 L16,5.5 L8,10 Z\" fill=\"context-stroke\"/></marker>");
     svg.push_str("<marker id=\"open-diamond-end\" markerWidth=\"17\" markerHeight=\"11\" refX=\"16\" refY=\"5.5\" orient=\"auto\" markerUnits=\"userSpaceOnUse\"><path d=\"M1,5.5 L8,1 L16,5.5 L8,10 Z\" fill=\"white\" stroke=\"context-stroke\" stroke-width=\"1.5\"/></marker>");
     svg.push_str("<marker id=\"filled-diamond-end\" markerWidth=\"17\" markerHeight=\"11\" refX=\"16\" refY=\"5.5\" orient=\"auto\" markerUnits=\"userSpaceOnUse\"><path d=\"M1,5.5 L8,1 L16,5.5 L8,10 Z\" fill=\"context-stroke\"/></marker></defs>\n");
+    if boxes
+        .iter()
+        .any(|node| !node.icons.is_empty() || node.body_styles.iter().any(|row| row.icon.is_some()))
+    {
+        svg.push_str(crate::export_metadata::MARKER);
+        svg.push_str(&escape(crate::export_metadata::PHOSPHOR_LICENSE));
+        svg.push_str("</metadata>\n");
+    }
     for node in boxes.iter().filter(|node| node.kind == NodeKind::Package) {
         package_background(&mut svg, node)?;
     }
@@ -264,8 +272,28 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
                 node.y + node.padding + node.top_band + line_height * 0.78
             };
         for (i, line) in node.lines.iter().enumerate() {
-            writeln!(svg,"<text x=\"{:.2}\" y=\"{:.2}\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\"{}>{}</text>",
-                node.x+node.width/2.0,first_baseline+line_height*i as f64,node.font_size,node.color,
+            let baseline = first_baseline + line_height * i as f64;
+            let last_with_icons = i + 1 == node.lines.len() && !node.icons.is_empty();
+            let (text_x, anchor) = if last_with_icons {
+                let width = measure(line, node.font_size)?;
+                let span = (node.font_size + 4.0) * node.icons.len() as f64;
+                let x = node.x + (node.width - width - span) / 2.0;
+                for (index, icon) in node.icons.iter().enumerate() {
+                    crate::svg_icons::draw(
+                        &mut svg,
+                        icon,
+                        x + (node.font_size + 4.0) * index as f64,
+                        baseline - node.font_size * 0.82,
+                        node.font_size,
+                        &node.color,
+                    )?;
+                }
+                (x + span, "start")
+            } else {
+                (node.x + node.width / 2.0, "middle")
+            };
+            writeln!(svg,"<text x=\"{text_x:.2}\" y=\"{baseline:.2}\" text-anchor=\"{anchor}\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\"{}>{}</text>",
+                node.font_size,node.color,
                 if node.abstract_node { " font-style=\"italic\"" } else { "" },escape(line)).unwrap();
             if node.kind == NodeKind::Object && i + 1 == node.lines.len() {
                 let width = measure(line, node.font_size)?;
@@ -298,20 +326,36 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
                         ..
                     } => {
                         let baseline = y + row.font_size * 1.25 * 0.78;
+                        let (text_x, shown) = if let Some(icon) = &row.icon {
+                            crate::svg_icons::draw(
+                                &mut svg,
+                                icon,
+                                node.x + node.padding,
+                                baseline - row.font_size * 0.82,
+                                row.font_size,
+                                &row.color,
+                            )?;
+                            (
+                                node.x + node.padding + row.font_size + 4.0,
+                                crate::geometry::member_visible_text(text, row),
+                            )
+                        } else {
+                            (node.x + node.padding, text.as_str())
+                        };
                         let rendered_id = id.clone().or_else(|| {
                             default_id
                                 .as_ref()
                                 .map(|name| format!("{}::{name}", node.id))
                         });
                         writeln!(svg,"<text x=\"{:.2}\" y=\"{baseline:.2}\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\"{}{}>{}</text>",
-                            node.x+node.padding,row.font_size,row.color,
+                            text_x,row.font_size,row.color,
                             if *abstract_member { " font-style=\"italic\"" } else { "" },
                             rendered_id.as_ref().map(|id| format!(" data-member-id=\"{}\"",escape(id))).unwrap_or_default(),
-                            escape(text)).unwrap();
+                            escape(shown)).unwrap();
                         if *static_member {
-                            let width = measure(text, row.font_size)?;
+                            let width = measure(shown, row.font_size)?;
                             writeln!(svg,"<line x1=\"{:.2}\" x2=\"{:.2}\" y1=\"{:.2}\" y2=\"{:.2}\" stroke=\"{}\" stroke-width=\"1\" />",
-                                node.x+node.padding,node.x+node.padding+width,baseline+2.0,baseline+2.0,row.color).unwrap();
+                                text_x,text_x+width,baseline+2.0,baseline+2.0,row.color).unwrap();
                         }
                         y += row.font_size * 1.25;
                     }

@@ -1,7 +1,7 @@
 //! Place children inside measured containers before solving the outer graph.
 use super::{BoxNode, GeometryError, constraints};
 use crate::styles::StyleSheet;
-use crate::syntax::{Diagram, NodeKind};
+use crate::syntax::{Alignment, Axis, Diagram, LayoutRule, NodeKind, Placement, ScopedAlignment};
 
 fn err(line: usize, message: impl Into<String>) -> GeometryError {
     GeometryError {
@@ -54,6 +54,50 @@ fn shift(diagram: &Diagram, boxes: &mut [BoxNode], root: &str, dx: f64, dy: f64)
     }
 }
 
+fn projected_alignment(
+    rule: &LayoutRule,
+    first: &str,
+    second: &str,
+    boxes: &[BoxNode],
+) -> ScopedAlignment {
+    let a = boxes
+        .iter()
+        .find(|node| node.id == rule.first)
+        .expect("validated layout endpoint");
+    let b = boxes
+        .iter()
+        .find(|node| node.id == rule.second)
+        .expect("validated layout endpoint");
+    let oa = boxes
+        .iter()
+        .find(|node| node.id == first)
+        .expect("measured group owner");
+    let ob = boxes
+        .iter()
+        .find(|node| node.id == second)
+        .expect("measured group owner");
+    let vertical = matches!(rule.placement, Placement::Left | Placement::Right);
+    let extent = |node: &BoxNode| if vertical { node.height } else { node.width };
+    let anchor = |node: &BoxNode| match rule.align.expect("alignment requested") {
+        Alignment::Top | Alignment::Left => 0.0,
+        Alignment::Center => extent(node) / 2.0,
+        Alignment::Bottom | Alignment::Right => extent(node),
+    };
+    let coordinate = |node: &BoxNode| if vertical { node.y } else { node.x };
+    ScopedAlignment {
+        first: first.into(),
+        second: second.into(),
+        axis: if vertical {
+            Axis::Vertical
+        } else {
+            Axis::Horizontal
+        },
+        delta: coordinate(a) - coordinate(oa) + anchor(a) - coordinate(b) + coordinate(ob)
+            - anchor(b),
+        line: rule.line,
+    }
+}
+
 fn scope(
     diagram: &Diagram,
     boxes: &mut [BoxNode],
@@ -89,21 +133,27 @@ fn scope(
         settings: diagram.settings.clone(),
         ..Default::default()
     };
-    graph.layout = diagram
-        .layout
-        .iter()
-        .filter_map(|rule| {
-            let a = direct_owner(diagram, &rule.first, parent)?;
-            let b = direct_owner(diagram, &rule.second, parent)?;
-            if a == b {
-                return None;
-            }
-            let mut mapped = rule.clone();
-            mapped.first = a;
-            mapped.second = b;
-            Some(mapped)
-        })
-        .collect();
+    for rule in &diagram.layout {
+        let (Some(a), Some(b)) = (
+            direct_owner(diagram, &rule.first, parent),
+            direct_owner(diagram, &rule.second, parent),
+        ) else {
+            continue;
+        };
+        if a == b {
+            continue;
+        }
+        let mut mapped = rule.clone();
+        if rule.align.is_some() && (a != rule.first || b != rule.second) {
+            graph
+                .scoped_alignments
+                .push(projected_alignment(rule, &a, &b, boxes));
+            mapped.align = None;
+        }
+        mapped.first = a;
+        mapped.second = b;
+        graph.layout.push(mapped);
+    }
     graph.relations = diagram
         .relations
         .iter()
@@ -207,12 +257,6 @@ pub(super) fn place(
             return Err(err(
                 rule.line,
                 "mandatory separation cannot place a child outside its own container",
-            ));
-        }
-        if a.parent != b.parent && rule.align.is_some() {
-            return Err(err(
-                rule.line,
-                "cross-container alignment needs an explicit group-level rule",
             ));
         }
     }

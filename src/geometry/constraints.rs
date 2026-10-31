@@ -1,6 +1,6 @@
 use super::nodes::BoxNode;
 use crate::styles::{Element, StyleSheet, Value};
-use crate::syntax::{Alignment, Diagram, FlowDirection, Placement};
+use crate::syntax::{Alignment, Axis, Diagram, FlowDirection, Placement};
 use crate::text::measure;
 
 #[derive(Clone, Debug)]
@@ -221,6 +221,18 @@ pub fn place(
             } else {
                 eq_x.push(eq);
             }
+        }
+    }
+    for rule in &diagram.scoped_alignments {
+        let equality = Equality {
+            a: find(&rule.first),
+            b: find(&rule.second),
+            delta: rule.delta,
+            line: rule.line,
+        };
+        match rule.axis {
+            Axis::Horizontal => eq_x.push(equality),
+            Axis::Vertical => eq_y.push(equality),
         }
     }
     // Only explicit constraints may cause a hard failure at this point.

@@ -7,6 +7,7 @@
 //! must never be discarded this way.
 
 pub mod export;
+mod export_metadata;
 pub mod geometry;
 pub mod layout;
 mod lex;
@@ -15,6 +16,7 @@ pub mod route;
 pub mod sequence;
 pub mod styles;
 pub mod svg;
+mod svg_icons;
 mod svg_paths;
 pub mod syntax;
 pub mod text;

@@ -189,6 +189,30 @@ fn validate_value(property: &Property, path: &Path) -> Result<Value, StyleError>
             Ok(Value::Keyword(value.to_string()))
         }
         "shape" => Err(err(path, property.line, "unknown node shape")),
+        "symbol-rendering" if matches!(value, "icons" | "text") => Ok(Value::Keyword(value.into())),
+        "symbol-rendering" => Err(err(
+            path,
+            property.line,
+            "symbol-rendering must be icons or text",
+        )),
+        "icon-set" if value == "phosphor" => Ok(Value::Keyword(value.into())),
+        "icon-set" => Err(err(
+            path,
+            property.line,
+            "only icon-set: phosphor is supported",
+        )),
+        "icon" => {
+            let name = crate::lex::quoted_string(value)
+                .map_err(|message| err(path, property.line, message))?;
+            if crate::svg_icons::source(&name).is_none() {
+                return Err(err(
+                    path,
+                    property.line,
+                    format!("unknown Phosphor icon '{name}'"),
+                ));
+            }
+            Ok(Value::Keyword(name))
+        }
         "display" if matches!(value, "none" | "block") => Ok(Value::Keyword(value.to_string())),
         "display" => Err(err(path, property.line, "display must be none or block")),
         "fill" | "color" | "border-color" => parse_color(value)
@@ -242,7 +266,10 @@ fn parse_color(input: &str) -> Result<String, &'static str> {
 fn applicable(property: &str, element: &Element<'_>) -> bool {
     match element {
         Element::Node { .. } => true,
-        Element::Member { .. } => matches!(property, "color" | "font-size" | "display"),
+        Element::Member { .. } => matches!(
+            property,
+            "color" | "font-size" | "display" | "symbol-rendering" | "icon-set"
+        ),
         Element::Port { .. } => matches!(property, "color" | "fill" | "border-color" | "display"),
         Element::Continuation { .. } | Element::Note { .. } => matches!(
             property,

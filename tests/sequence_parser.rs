@@ -32,6 +32,17 @@ fn parses_lifelines_messages_activations_and_short_reply() {
 }
 
 #[test]
+fn sequence_explicit_names_cannot_shadow_lifelines_or_other_diagram_elements() {
+    let source = "settings {\ntype: sequence\n}\nsemantics {\nA\nB\n@A A -> B : call\n}\n";
+    assert!(
+        parse(source)
+            .unwrap_err()
+            .message
+            .contains("duplicate sequence diagram ID")
+    );
+}
+
+#[test]
 fn named_sequence_message_accepts_global_at_prefix() {
     let source = "settings {\ntype: sequence\n}\nsemantics {\nA\nB\n@request A -> B : call\n}\n";
     let diagram = parse(source).unwrap();

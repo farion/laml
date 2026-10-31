@@ -15,6 +15,7 @@ pub enum NodeShape {
 pub struct RowStyle {
     pub font_size: f64,
     pub color: String,
+    pub icon: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -22,6 +23,7 @@ pub struct BoxNode {
     pub id: String,
     pub label: String,
     pub lines: Vec<String>,
+    pub icons: Vec<String>,
     pub body: Vec<NodePart>,
     pub body_styles: Vec<RowStyle>,
     pub ports: Vec<BoxPort>,
@@ -78,7 +80,12 @@ impl BoxNode {
     }
 }
 
-fn number(sheet: &StyleSheet, element: &Element<'_>, property: &str, default: f64) -> f64 {
+pub(super) fn number(
+    sheet: &StyleSheet,
+    element: &Element<'_>,
+    property: &str,
+    default: f64,
+) -> f64 {
     match sheet
         .get(element, property)
         .map(|declaration| &declaration.value)
@@ -88,7 +95,12 @@ fn number(sheet: &StyleSheet, element: &Element<'_>, property: &str, default: f6
     }
 }
 
-fn color(sheet: &StyleSheet, element: &Element<'_>, property: &str, default: &str) -> String {
+pub(super) fn color(
+    sheet: &StyleSheet,
+    element: &Element<'_>,
+    property: &str,
+    default: &str,
+) -> String {
     match sheet
         .get(element, property)
         .map(|declaration| &declaration.value)
@@ -96,75 +108,6 @@ fn color(sheet: &StyleSheet, element: &Element<'_>, property: &str, default: &st
         Some(Value::Color(color)) => color.clone(),
         _ => default.into(),
     }
-}
-
-fn visible_body(
-    node: &NodeDecl,
-    styles: &StyleSheet,
-    size: f64,
-    default_color: &str,
-) -> (Vec<NodePart>, Vec<RowStyle>) {
-    let scoped = styles.with_ancestor(&node.id, &node.classes);
-    let mut visible = Vec::new();
-    let mut rows = Vec::new();
-    for part in &node.parts {
-        match part {
-            NodePart::Separator => {
-                visible.push(NodePart::Separator);
-                rows.push(RowStyle {
-                    font_size: size,
-                    color: default_color.into(),
-                });
-            }
-            NodePart::Member {
-                id,
-                default_id,
-                classes,
-                kind,
-                ..
-            } => {
-                let scoped_id = id.clone().or_else(|| {
-                    default_id
-                        .as_ref()
-                        .map(|name| format!("{}::{name}", node.id))
-                });
-                let element = Element::Member {
-                    id: scoped_id.as_deref(),
-                    classes,
-                    kind: *kind,
-                };
-                if matches!(scoped.get(&element, "display").map(|d| &d.value), Some(Value::Keyword(mode)) if mode == "none")
-                {
-                    continue;
-                }
-                visible.push(part.clone());
-                rows.push(RowStyle {
-                    font_size: number(&scoped, &element, "font-size", size),
-                    color: color(&scoped, &element, "color", default_color),
-                });
-            }
-        }
-    }
-    let mut body = Vec::new();
-    let mut styled = Vec::new();
-    for (index, part) in visible.iter().enumerate() {
-        if matches!(part, NodePart::Separator)
-            && (body.is_empty()
-                || matches!(body.last(), Some(NodePart::Separator))
-                || !visible[index + 1..]
-                    .iter()
-                    .any(|p| matches!(p, NodePart::Member { .. })))
-        {
-            continue;
-        }
-        body.push(part.clone());
-        styled.push(rows[index].clone());
-    }
-    while matches!(body.last(), Some(NodePart::Separator)) {
-        body.pop();
-        styled.pop();
-    }
-    (body, styled)
 }
 
 pub fn measure_node(
@@ -200,7 +143,39 @@ pub fn measure_node(
     }
     let font_size = number(styles, &element, "font-size", 14.0);
     let text_color = color(styles, &element, "color", "#17212e");
-    let (mut body, body_styles) = visible_body(node, styles, font_size, &text_color);
+    let icons_requested = matches!(styles.get(&element, "symbol-rendering").map(|d| &d.value),
+        Some(Value::Keyword(mode)) if mode == "icons");
+    if icons_requested
+        && !matches!(styles.get(&element, "icon-set").map(|d| &d.value),
+        Some(Value::Keyword(set)) if set == "phosphor")
+    {
+        return Err("symbol-rendering: icons requires icon-set: phosphor".into());
+    }
+    let mut icons = Vec::new();
+    let visibility_icon = if icons_requested {
+        node.visibility.and_then(crate::svg_icons::visibility)
+    } else {
+        None
+    };
+    if let Some(icon) = visibility_icon {
+        icons.push(icon.into());
+    }
+    if node.kind == NodeKind::Package && !icons.is_empty() {
+        return Err("package visibility icons need a notation-safe tab layout".into());
+    }
+    if let Some(Value::Keyword(icon)) = styles.get(&element, "icon").map(|d| &d.value) {
+        if diagram_type != DiagramType::Generic || node.kind != NodeKind::Generic {
+            return Err("additional icons are not valid on this UML or structural node".into());
+        }
+        icons.push(icon.clone());
+    }
+    let icon_space = if icons.is_empty() {
+        0.0
+    } else {
+        (font_size + 4.0) * icons.len() as f64
+    };
+    let (mut body, body_styles) =
+        super::members::visible_body(node, styles, font_size, &text_color)?;
     let scoped = styles.with_ancestor(&node.id, &node.classes);
     let ports: Vec<_> = node.ports.iter().filter_map(|port| {
         let id = if port.explicit { port.id.clone() } else { format!("{}::{}", node.id, port.id) };
@@ -233,8 +208,8 @@ pub fn measure_node(
     let padding = number(styles, &element, "padding", 12.0);
     let name = node.label.clone().unwrap_or_else(|| node.id.clone());
     let name = match node.visibility {
-        Some(marker) => format!("{marker}{name}"),
-        None => name,
+        Some(marker) if visibility_icon.is_none() => format!("{marker}{name}"),
+        _ => name,
     };
     let label = match node.kind {
         NodeKind::Interface => format!("«interface»\n{name}"),
@@ -291,12 +266,23 @@ pub fn measure_node(
         .try_fold(0.0_f64, |max, text| -> Result<f64, String> {
             Ok(max.max(measure(text, font_size)?))
         })?;
+    if let Some(last) = original.last() {
+        longest = longest.max(measure(last, font_size)? + icon_space);
+    }
     if node.kind == NodeKind::Package {
         longest += 12.0; // leave room for the folder-tab shoulder
     }
     for (part, row) in body.iter().zip(&body_styles) {
         if let NodePart::Member { text, .. } = part {
-            longest = longest.max(measure(text, row.font_size)?);
+            let shown = super::members::visible_text(text, row);
+            longest = longest.max(
+                measure(shown, row.font_size)?
+                    + if row.icon.is_some() {
+                        row.font_size + 4.0
+                    } else {
+                        0.0
+                    },
+            );
         }
     }
     for port in &ports {
@@ -392,12 +378,31 @@ pub fn measure_node(
     let mut lines = Vec::new();
     for (index, text) in original[..visible].iter().enumerate() {
         let force = vertical_overflow && index + 1 == visible;
-        lines.push(ellipsize(text, available_width, font_size, force)?);
+        let space = if index + 1 == visible {
+            icon_space
+        } else {
+            0.0
+        };
+        lines.push(ellipsize(text, available_width - space, font_size, force)?);
     }
     if diagram_type == DiagramType::Generic {
         for (part, row) in body.iter_mut().zip(&body_styles) {
             if let NodePart::Member { text, .. } = part {
-                *text = ellipsize(text, available_width, row.font_size, false)?;
+                if row.icon.is_some() {
+                    let marker = text.chars().next().expect("visible icon needs glyph");
+                    let shown = super::members::visible_text(text, row);
+                    *text = format!(
+                        "{marker}{}",
+                        ellipsize(
+                            shown,
+                            available_width - row.font_size - 4.0,
+                            row.font_size,
+                            false
+                        )?
+                    );
+                } else {
+                    *text = ellipsize(text, available_width, row.font_size, false)?;
+                }
             }
         }
     }
@@ -411,6 +416,7 @@ pub fn measure_node(
         id: node.id.clone(),
         label,
         lines,
+        icons,
         body,
         body_styles,
         port_start,

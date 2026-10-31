@@ -8,9 +8,16 @@ pub(super) fn measure(node: &NodeDecl, sheet: &StyleSheet) -> Result<BoxNode, St
         id: &node.id,
         classes: &node.classes,
     };
-    if ["shape", "width", "height", "min-width", "min-height"]
-        .iter()
-        .any(|key| sheet.get(&element, key).is_some())
+    if [
+        "shape",
+        "width",
+        "height",
+        "min-width",
+        "min-height",
+        "icon",
+    ]
+    .iter()
+    .any(|key| sheet.get(&element, key).is_some())
     {
         return Err("junction diamond is a fixed UML/GNE primitive, not a resizable node".into());
     }
@@ -38,6 +45,7 @@ pub(super) fn measure(node: &NodeDecl, sheet: &StyleSheet) -> Result<BoxNode, St
         id: node.id.clone(),
         label: String::new(),
         lines: Vec::new(),
+        icons: Vec::new(),
         body: Vec::new(),
         body_styles: Vec::new(),
         ports: Vec::new(),

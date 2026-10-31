@@ -72,6 +72,7 @@ pub(super) fn segment_hits_rect(a: Point, b: Point, x: f64, y: f64, w: f64, h: f
         id: String::new(),
         label: String::new(),
         lines: Vec::new(),
+        icons: Vec::new(),
         body: Vec::new(),
         body_styles: Vec::new(),
         ports: Vec::new(),

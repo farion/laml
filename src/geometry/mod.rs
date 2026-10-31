@@ -4,11 +4,13 @@
 mod constraints;
 mod containers;
 mod junctions;
+mod members;
 mod nodes;
 mod ports;
 mod visibility;
 
 pub use constraints::GeometryError;
+pub(crate) use members::visible_text as member_visible_text;
 pub use nodes::{BoxNode, NodeShape};
 pub(crate) use visibility::filtered as visible_diagram;
 

@@ -80,14 +80,17 @@ fn fixed_packages_reject_clipping_and_cross_scope_rules_project_safely() {
     let diagram = parse(cross).unwrap();
     let boxes = place(&diagram, &StyleSheet::default()).unwrap();
     assert!(boxes[1].x + boxes[1].width + 70.0 <= boxes[2].x + 1e-6);
-    let alignment = cross.replace("gap=70", "align=center");
+    let alignment = cross.replace("gap=70", "align=center; gap=70");
     let diagram = parse(&alignment).unwrap();
-    assert!(
-        place(&diagram, &StyleSheet::default())
-            .unwrap_err()
-            .message
-            .contains("cross-container alignment")
-    );
+    let boxes = place(&diagram, &StyleSheet::default()).unwrap();
+    let first = boxes[1].y + boxes[1].height / 2.0;
+    let second = boxes[2].y + boxes[2].height / 2.0;
+    assert!((first - second).abs() < 1e-6);
+    let nested = "semantics {\npackage P {\npackage Q {\nA\n}\n}\nB\n}\nlayout {\nP.Q.A above B : align=left; gap=40\n}\n";
+    let diagram = parse(nested).unwrap();
+    let boxes = place(&diagram, &StyleSheet::default()).unwrap();
+    assert!((boxes[2].x - boxes[3].x).abs() < 1e-6);
+    assert!(boxes[2].y + boxes[2].height + 40.0 <= boxes[3].y + 1e-6);
     let hidden = "semantics {\npackage P {\nA\n}\nB\nP.A --> B\n}\nstyling {\nnode[P] {\ndisplay: none\n}\n}\n";
     let diagram = parse(hidden).unwrap();
     let styles = load(&diagram, std::path::Path::new("examples/architecture.laml")).unwrap();

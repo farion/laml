@@ -31,17 +31,27 @@ pub fn png(svg: &str) -> Result<Vec<u8>, String> {
         tiny_skia::Transform::identity(),
         &mut pixmap.as_mut(),
     );
-    pixmap
+    let encoded = pixmap
         .encode_png()
-        .map_err(|e| format!("PNG encoding failed: {e}"))
+        .map_err(|e| format!("PNG encoding failed: {e}"))?;
+    if crate::export_metadata::uses_phosphor(svg) {
+        crate::export_metadata::png_notice(encoded)
+    } else {
+        Ok(encoded)
+    }
 }
 
 pub fn pdf(svg: &str) -> Result<Vec<u8>, String> {
     let document = tree(svg)?;
-    svg2pdf::to_pdf(
+    let converted = svg2pdf::to_pdf(
         &document,
         svg2pdf::ConversionOptions::default(),
         svg2pdf::PageOptions { dpi: 96.0 },
     )
-    .map_err(|e| format!("PDF conversion failed: {e}"))
+    .map_err(|e| format!("PDF conversion failed: {e}"))?;
+    if crate::export_metadata::uses_phosphor(svg) {
+        crate::export_metadata::pdf_notice(converted)
+    } else {
+        Ok(converted)
+    }
 }

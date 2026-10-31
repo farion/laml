@@ -105,6 +105,7 @@ fn parse_inner(source: &str, complete: bool) -> Result<SequenceDiagram, ParseErr
     }
     if complete {
         layout_scoped::validate(&mut diagram)?;
+        identities::validate(&diagram)?;
     }
     // An execution may remain open at the end of the drawn excerpt; an extra
     // close is always invalid. Missing replies are equally permissible.

@@ -243,6 +243,21 @@ pub struct LayoutRule {
     pub line: usize,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Axis {
+    Horizontal,
+    Vertical,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ScopedAlignment {
+    pub first: String,
+    pub second: String,
+    pub axis: Axis,
+    pub delta: f64,
+    pub line: usize,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RelationLabelRule {
     pub name: String,
@@ -315,6 +330,7 @@ pub struct Diagram {
     pub relations: Vec<RelationDecl>,
     pub attachments: Vec<EdgeAttachment>,
     pub layout: Vec<LayoutRule>,
+    pub scoped_alignments: Vec<ScopedAlignment>,
     pub relation_layout: Vec<RelationLabelRule>,
     pub relation_end_layout: Vec<RelationEndRule>,
     pub port_layout: Vec<PortLayoutRule>,
