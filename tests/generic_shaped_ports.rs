@@ -73,6 +73,20 @@ fn shaped_ports_can_use_top_bottom_and_left_contours() {
 }
 
 #[test]
+fn abstract_shaped_headers_are_checked_with_the_italic_face() {
+    let source =
+        "semantics {\nabstract A {\nport Out\n}\n}\nstyling {\nnode[A] {\nshape: ellipse\n}\n}\n";
+    let diagram = parse(source).unwrap();
+    let styles = load(&diagram, Path::new("examples/architecture.laml")).unwrap();
+    let boxes = place(&diagram, &styles).unwrap();
+    assert!(
+        render(&boxes, &[])
+            .unwrap()
+            .contains("font-style=\"italic\"")
+    );
+}
+
+#[test]
 fn too_small_shaped_port_labels_fail_instead_of_clipping() {
     let source = "semantics {\nA {\nport VeryLongName\n}\n}\nstyling {\nnode[A] {\nshape: diamond\nwidth: 100\nheight: 50\n}\n}\n";
     let diagram = parse(source).unwrap();

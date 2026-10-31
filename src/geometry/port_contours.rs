@@ -1,7 +1,7 @@
 //! Contour-aware labels and boundary anchors for shaped generic nodes.
 use super::{BoxNode, GeometryError, NodeShape};
 use crate::syntax::PortSide;
-use crate::text::measure;
+use crate::text::{measure, measure_italic};
 
 fn contains(node: &BoxNode, x: f64, y: f64) -> bool {
     let dx = (x - node.x - node.width / 2.0) / (node.width / 2.0);
@@ -34,7 +34,12 @@ pub(super) fn validate(boxes: &[BoxNode]) -> Result<(), GeometryError> {
         let line_height = size * 1.25;
         let header = node.y + node.padding + node.top_band + line_height * 0.78;
         for (index, text) in node.lines.iter().enumerate() {
-            let width = measure(text, size).map_err(|_| fail())?;
+            let width = if node.abstract_node && index + 1 == node.lines.len() {
+                measure_italic(text, size)
+            } else {
+                measure(text, size)
+            }
+            .map_err(|_| fail())?;
             let baseline = header + index as f64 * line_height;
             let rect = (
                 node.x + (node.width - width) / 2.0,
