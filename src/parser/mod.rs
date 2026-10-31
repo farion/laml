@@ -10,6 +10,7 @@ use crate::syntax::{
     StyleRule,
 };
 
+mod bindings;
 mod bodies;
 mod ends;
 mod graph_operators;

@@ -12,6 +12,34 @@ pub(super) fn validate_relation(
     let owner = |id: &str| diagram.nodes.iter().find(|node| node.has_endpoint(id));
     let from = owner(&relation.from).expect("endpoints validated before UML notation");
     let to = owner(&relation.to).expect("endpoints validated before UML notation");
+    if let Some(bindings) = &relation.binding {
+        if diagram.settings.diagram_type != DiagramType::Class
+            || from.kind != NodeKind::Class
+            || to.kind != NodeKind::Class
+            || from.id == to.id
+            || to.templates.is_empty()
+            || !relation.appearance.dashed
+            || relation.appearance.start != EndSymbol::None
+            || relation.appearance.end != EndSymbol::Arrow
+            || relation.label.is_some()
+            || !relation.stereotypes.is_empty()
+            || relation.source_end != Default::default()
+            || relation.target_end != Default::default()
+        {
+            return Err(error(
+                relation.line,
+                "<<bind>> needs a dashed open-arrow dependency from a class to a local template class",
+            ));
+        }
+        for (formal, _) in bindings {
+            if !to.templates.contains(formal) {
+                return Err(error(
+                    relation.line,
+                    format!("unknown template parameter '{formal}' on '{}'", to.id),
+                ));
+            }
+        }
+    }
     let member_end = from.id != relation.from || to.id != relation.to;
     let note_end = from.kind == NodeKind::Note || to.kind == NodeKind::Note;
     let end_label = [&relation.source_end, &relation.target_end]

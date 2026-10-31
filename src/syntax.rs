@@ -164,6 +164,7 @@ pub struct RelationDecl {
     pub name: Option<String>,
     pub classes: Vec<String>,
     pub stereotypes: Vec<String>,
+    pub binding: Option<Vec<(String, String)>>,
     /// The semantic source; `A <- B` is normalized to `from=B, to=A`.
     pub from: String,
     pub to: String,
@@ -188,6 +189,16 @@ pub struct EdgeAttachment {
 
 impl RelationDecl {
     pub fn display_label(&self) -> Option<String> {
+        if let Some(bindings) = &self.binding {
+            return Some(format!(
+                "«bind» {}",
+                bindings
+                    .iter()
+                    .map(|(formal, actual)| format!("{formal}->{actual}"))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
         if self.stereotypes.is_empty() {
             return self.label.clone();
         }

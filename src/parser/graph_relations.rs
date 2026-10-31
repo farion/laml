@@ -60,6 +60,7 @@ pub(super) fn parse_semantic(
         }
         None => (body.trim(), None),
     };
+    let (endpoints, binding) = bindings::suffix(endpoints, line, diagram.settings.diagram_type)?;
     let (endpoints, stereotypes) =
         stereotypes::suffix(endpoints, line, diagram.settings.diagram_type)?;
     let tokens: Vec<_> = endpoints.split_whitespace().collect();
@@ -128,6 +129,7 @@ pub(super) fn parse_semantic(
         name,
         classes: relation_classes,
         stereotypes,
+        binding,
         from: from.into(),
         to: to.into(),
         kind,
