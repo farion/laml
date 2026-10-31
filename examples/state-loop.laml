@@ -1,0 +1,18 @@
+settings {
+    type: state
+}
+semantics {
+    initial Start
+    state Closed
+    state Open
+    final Done
+    Start --> Closed
+    @open Closed --> Open : open [authorized] / unlock()
+    @ping Open --> Open : ping / keepAlive()
+    @close Open --> Closed : close
+    @shutdown Open --> Done : shutdown
+}
+layout {
+    Closed < Open : gap=120
+    Open < Done : gap=120
+}

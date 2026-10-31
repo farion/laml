@@ -9,6 +9,9 @@ pub(super) fn measure(node: &NodeDecl, sheet: &StyleSheet) -> Result<BoxNode, St
         id: &node.id,
         classes: &node.classes,
     };
+    if node.kind == NodeKind::StateInitial && sheet.get(&element, "fill").is_some() {
+        return Err("initial pseudostate must remain visibly filled".into());
+    }
     if [
         "shape",
         "width",
@@ -20,7 +23,15 @@ pub(super) fn measure(node: &NodeDecl, sheet: &StyleSheet) -> Result<BoxNode, St
     .iter()
     .any(|key| sheet.get(&element, key).is_some())
     {
-        return Err("junction diamond is a fixed UML/GNE primitive, not a resizable node".into());
+        return Err(if matches!(
+            node.kind,
+            NodeKind::StateInitial | NodeKind::StateFinal | NodeKind::StateChoice
+        ) {
+            "state pseudostate is a fixed UML primitive, not a resizable node"
+        } else {
+            "junction diamond is a fixed UML/GNE primitive, not a resizable node"
+        }
+        .into());
     }
     let fill = match sheet.get(&element, "fill").map(|d| &d.value) {
         Some(Value::Color(value)) => value.clone(),
@@ -38,15 +49,28 @@ pub(super) fn measure(node: &NodeDecl, sheet: &StyleSheet) -> Result<BoxNode, St
         Some(Value::Number(value)) => *value,
         _ => 1.0,
     };
+    if matches!(
+        node.kind,
+        NodeKind::StateInitial | NodeKind::StateFinal | NodeKind::StateChoice
+    ) && (border_color == "none" || border_width == 0.0)
+    {
+        return Err("state pseudostate requires a visible outline and center".into());
+    }
     debug_assert!(matches!(
         node.kind,
-        NodeKind::Association | NodeKind::Junction | NodeKind::Lollipop | NodeKind::Socket
+        NodeKind::Association
+            | NodeKind::Junction
+            | NodeKind::Lollipop
+            | NodeKind::Socket
+            | NodeKind::StateInitial
+            | NodeKind::StateFinal
+            | NodeKind::StateChoice
     ));
     let label = node.label.clone().unwrap_or_default();
-    let base = if matches!(node.kind, NodeKind::Lollipop | NodeKind::Socket) {
-        20.0
-    } else {
-        24.0
+    let base = match node.kind {
+        NodeKind::Lollipop | NodeKind::Socket => 20.0,
+        NodeKind::StateInitial => 18.0,
+        _ => 24.0,
     };
     let width = if label.is_empty() {
         base
@@ -74,7 +98,10 @@ pub(super) fn measure(node: &NodeDecl, sheet: &StyleSheet) -> Result<BoxNode, St
         kind: node.kind,
         is_container: false,
         deployment: false,
-        shape: if matches!(node.kind, NodeKind::Lollipop | NodeKind::Socket) {
+        shape: if matches!(
+            node.kind,
+            NodeKind::Lollipop | NodeKind::Socket | NodeKind::StateInitial | NodeKind::StateFinal
+        ) {
             NodeShape::Ellipse
         } else {
             NodeShape::Diamond
@@ -87,7 +114,11 @@ pub(super) fn measure(node: &NodeDecl, sheet: &StyleSheet) -> Result<BoxNode, St
         fixed_height: None,
         font_size: 14.0,
         padding: 0.0,
-        fill,
+        fill: if node.kind == NodeKind::StateInitial {
+            border_color.clone()
+        } else {
+            fill
+        },
         color,
         border_color,
         border_width,

@@ -74,6 +74,7 @@ pub(super) fn parse(
         DiagramType::Class => !matches!(operator, "->" | "<-" | "<->" | "<--" | "<.."),
         DiagramType::Component => matches!(operator, "..>" | "..|>" | ".." | "==" | "=>"),
         DiagramType::Deployment => matches!(operator, "--" | "..>" | ".."),
+        DiagramType::State => matches!(operator, "-->" | ".."),
     };
     if !allowed {
         return Err(error(

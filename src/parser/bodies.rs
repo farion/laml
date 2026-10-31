@@ -49,51 +49,14 @@ pub(super) fn node(
         anonymous,
         diagram.settings.diagram_type,
     );
-    if (diagram.settings.diagram_type == DiagramType::Class
-        && matches!(kind, NodeKind::Object | NodeKind::Junction))
-        || (diagram.settings.diagram_type == DiagramType::Object
-            && !matches!(kind, NodeKind::Object | NodeKind::Note))
-        || (diagram.settings.diagram_type == DiagramType::Component
-            && !matches!(
-                kind,
-                NodeKind::Component
-                    | NodeKind::ComponentPart
-                    | NodeKind::Interface
-                    | NodeKind::Package
-                    | NodeKind::Note
-            ))
-        || (diagram.settings.diagram_type == DiagramType::Deployment
-            && !matches!(
-                kind,
-                NodeKind::DeploymentNode
-                    | NodeKind::Device
-                    | NodeKind::ExecutionEnvironment
-                    | NodeKind::Artifact
-                    | NodeKind::Component
-                    | NodeKind::Package
-                    | NodeKind::Note
-            ))
-        || (!matches!(
-            diagram.settings.diagram_type,
-            DiagramType::Component | DiagramType::Deployment
-        ) && kind == NodeKind::Component)
-        || (diagram.settings.diagram_type != DiagramType::Deployment
-            && matches!(
-                kind,
-                NodeKind::DeploymentNode
-                    | NodeKind::Device
-                    | NodeKind::ExecutionEnvironment
-                    | NodeKind::Artifact
-            ))
-        || (diagram.settings.diagram_type != DiagramType::Component
-            && kind == NodeKind::ComponentPart)
-    {
+    if !super::node_kinds::allowed(kind, diagram.settings.diagram_type) {
         return Err(error(
             line,
             "element kind is not supported by this UML diagram type",
         ));
     }
     super::deployment::validate_node(diagram, kind, parent, block, visibility, &stereotypes, line)?;
+    super::state::validate_node(diagram, kind, parent, block, visibility, &stereotypes, line)?;
     if kind == NodeKind::AssociationClass && diagram.settings.diagram_type != DiagramType::Class {
         return Err(error(line, "association class requires type: class"));
     }
@@ -155,6 +118,11 @@ pub(super) fn node(
         explicit,
         label: if matches!(kind, NodeKind::Association | NodeKind::Junction) {
             Some(name.clone())
+        } else if matches!(
+            kind,
+            NodeKind::StateInitial | NodeKind::StateFinal | NodeKind::StateChoice
+        ) {
+            Some(String::new())
         } else {
             note.map(|(_, text)| text)
         },

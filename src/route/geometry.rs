@@ -6,6 +6,8 @@ fn compact_radius(node: &BoxNode) -> Option<f64> {
     match node.kind {
         crate::syntax::NodeKind::Association | crate::syntax::NodeKind::Junction => Some(12.0),
         crate::syntax::NodeKind::Lollipop | crate::syntax::NodeKind::Socket => Some(10.0),
+        crate::syntax::NodeKind::StateInitial => Some(9.0),
+        crate::syntax::NodeKind::StateFinal | crate::syntax::NodeKind::StateChoice => Some(12.0),
         _ => None,
     }
 }

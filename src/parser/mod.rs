@@ -27,6 +27,7 @@ mod port_bodies;
 mod references;
 mod selectors;
 mod side_references;
+mod state;
 mod stereotypes;
 mod template_formals;
 mod uml;
@@ -79,6 +80,7 @@ fn prescan_type(source: &str) -> DiagramType {
                 "object" => DiagramType::Object,
                 "component" => DiagramType::Component,
                 "deployment" => DiagramType::Deployment,
+                "state" => DiagramType::State,
                 _ => DiagramType::Generic,
             };
         }
@@ -161,6 +163,38 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
                     Section::NodeBody(diagram.nodes.len() - 1)
                 } else {
                     graph_relations::parse_semantic(text, line, &mut diagram, Some(&scope))?;
+                    Section::NodeBody(index)
+                }
+            }
+            Section::NodeBody(index)
+                if diagram.nodes[index].kind == crate::syntax::NodeKind::State =>
+            {
+                let scope = diagram.nodes[index].id.clone();
+                if text == "}" {
+                    if let Some(parent) = &diagram.nodes[index].parent {
+                        let outer = diagram
+                            .nodes
+                            .iter()
+                            .position(|node| &node.id == parent)
+                            .expect("validated composite state parent");
+                        Section::NodeBody(outer)
+                    } else {
+                        Section::Semantics
+                    }
+                } else if let Some(header) = text.strip_suffix('{') {
+                    bodies::node(header.trim(), line, &mut diagram, true, Some(&scope))?;
+                    Section::NodeBody(diagram.nodes.len() - 1)
+                } else if ["state ", "initial ", "final ", "choice ", "note "]
+                    .iter()
+                    .any(|prefix| text.starts_with(prefix))
+                {
+                    bodies::node(text, line, &mut diagram, false, Some(&scope))?;
+                    Section::NodeBody(index)
+                } else if find_arrow(text).is_some() || text.contains(" .. ") {
+                    graph_relations::parse_semantic(text, line, &mut diagram, Some(&scope))?;
+                    Section::NodeBody(index)
+                } else {
+                    state::behavior(text, line, &mut diagram.nodes[index])?;
                     Section::NodeBody(index)
                 }
             }
@@ -314,6 +348,7 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
         return Err(error(1, "missing semantics section"));
     }
     references::resolve_and_validate(&mut diagram)?;
+    state::validate(&diagram)?;
     Ok(diagram)
 }
 
@@ -415,6 +450,7 @@ fn parse_setting(
                 "object" => DiagramType::Object,
                 "component" => DiagramType::Component,
                 "deployment" => DiagramType::Deployment,
+                "state" => DiagramType::State,
                 _ => return Err(error(line, "invalid graph diagram type")),
             }
         }

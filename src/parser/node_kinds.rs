@@ -41,6 +41,14 @@ pub(super) fn classify<'a>(
         (NodeKind::DeploymentNode, name)
     } else if let Some(name) = source.strip_prefix("artifact ") {
         (NodeKind::Artifact, name)
+    } else if let Some(name) = source.strip_prefix("state ") {
+        (NodeKind::State, name)
+    } else if let Some(name) = source.strip_prefix("initial ") {
+        (NodeKind::StateInitial, name)
+    } else if let Some(name) = source.strip_prefix("final ") {
+        (NodeKind::StateFinal, name)
+    } else if let Some(name) = source.strip_prefix("choice ") {
+        (NodeKind::StateChoice, name)
     } else if anonymous && source.starts_with("object(") {
         (NodeKind::Object, &source["object".len()..])
     } else if let Some(name) = source.strip_prefix("object ") {
@@ -51,7 +59,53 @@ pub(super) fn classify<'a>(
             DiagramType::Class => (NodeKind::Class, source),
             DiagramType::Object => (NodeKind::Object, source),
             DiagramType::Component => (NodeKind::Component, source),
-            DiagramType::Deployment => (NodeKind::Generic, source),
+            DiagramType::Deployment | DiagramType::State => (NodeKind::Generic, source),
+        }
+    }
+}
+
+pub(super) fn allowed(kind: NodeKind, ty: DiagramType) -> bool {
+    let deployment = matches!(
+        kind,
+        NodeKind::DeploymentNode
+            | NodeKind::Device
+            | NodeKind::ExecutionEnvironment
+            | NodeKind::Artifact
+    );
+    let state = matches!(
+        kind,
+        NodeKind::State | NodeKind::StateInitial | NodeKind::StateFinal | NodeKind::StateChoice
+    );
+    match ty {
+        DiagramType::Object => matches!(kind, NodeKind::Object | NodeKind::Note),
+        DiagramType::Component => matches!(
+            kind,
+            NodeKind::Component
+                | NodeKind::ComponentPart
+                | NodeKind::Interface
+                | NodeKind::Package
+                | NodeKind::Note
+        ),
+        DiagramType::Deployment => {
+            deployment
+                || matches!(
+                    kind,
+                    NodeKind::Component | NodeKind::Package | NodeKind::Note
+                )
+        }
+        DiagramType::State => state || kind == NodeKind::Note,
+        DiagramType::Class => {
+            !matches!(
+                kind,
+                NodeKind::Object
+                    | NodeKind::Junction
+                    | NodeKind::Component
+                    | NodeKind::ComponentPart
+            ) && !deployment
+                && !state
+        }
+        DiagramType::Generic => {
+            !matches!(kind, NodeKind::Component | NodeKind::ComponentPart) && !deployment && !state
         }
     }
 }

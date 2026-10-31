@@ -492,7 +492,7 @@ pub fn measure_node(
         color: text_color,
         border_color: color(styles, &element, "border-color", "#395373"),
         border_width: number(styles, &element, "border-width", 1.0),
-        radius: number(styles, &element, "corner-radius", 0.0),
+        radius: super::node_notation::corner_radius(node.kind, styles, &element)?,
         line: node.line,
     })
 }

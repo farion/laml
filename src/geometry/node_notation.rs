@@ -1,5 +1,23 @@
 //! Measured classifier headings; semantic UML keywords are not decorative icons.
+use crate::styles::{Element, StyleSheet};
 use crate::syntax::{DiagramType, NodeDecl, NodeKind};
+
+pub(super) fn corner_radius(
+    kind: NodeKind,
+    styles: &StyleSheet,
+    element: &Element<'_>,
+) -> Result<f64, String> {
+    let radius = super::nodes::number(
+        styles,
+        element,
+        "corner-radius",
+        if kind == NodeKind::State { 14.0 } else { 0.0 },
+    );
+    if kind == NodeKind::State && !(8.0..=24.0).contains(&radius) {
+        return Err("UML state requires visibly rounded corners (radius 8..24)".into());
+    }
+    Ok(radius)
+}
 
 pub(super) fn header(node: &NodeDecl, name: String, diagram_type: DiagramType) -> String {
     // The bundled regular face need not support italic synthesis in every exporter.

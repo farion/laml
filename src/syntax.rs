@@ -27,6 +27,7 @@ pub enum DiagramType {
     Object,
     Component,
     Deployment,
+    State,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -40,6 +41,10 @@ pub enum NodeKind {
     Device,
     ExecutionEnvironment,
     Artifact,
+    State,
+    StateInitial,
+    StateFinal,
+    StateChoice,
     Interface,
     Enumeration,
     DataType,

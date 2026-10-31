@@ -113,8 +113,10 @@ fn scope(
     for child in &children {
         if diagram.nodes.iter().any(|node| {
             node.id == *child
-                && (matches!(node.kind, NodeKind::Package | NodeKind::Component)
-                    || node.kind.is_deployment_target())
+                && (matches!(
+                    node.kind,
+                    NodeKind::Package | NodeKind::Component | NodeKind::State
+                ) || node.kind.is_deployment_target())
                 && diagram
                     .nodes
                     .iter()
@@ -192,7 +194,9 @@ fn scope(
             .expect("container measured");
         (
             box_parent.padding + 24.0,
-            if box_parent.kind == NodeKind::Component || box_parent.kind.is_deployment_target() {
+            if matches!(box_parent.kind, NodeKind::Component | NodeKind::State)
+                || box_parent.kind.is_deployment_target()
+            {
                 box_parent.height + 24.0
             } else {
                 box_parent.padding

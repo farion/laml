@@ -1,0 +1,23 @@
+settings {
+    type: state
+}
+semantics {
+    initial Start
+    state Idle
+    state Processing {
+        entry / open()
+        exit / close()
+        initial Begin
+        state Running
+        final Complete
+        Begin --> Running
+        Running --> Complete : finished
+    }
+    final Done
+    Start --> Idle
+    Idle --> Processing : submit
+    Processing --> Done
+}
+layout {
+    Idle < Processing : gap=96
+}

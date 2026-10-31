@@ -40,7 +40,7 @@ SVG defaults to embedded Inter Regular with selectable text; diagrams with abstr
 
 ## Examples
 
-These four larger showcases cover generic, class, object and sequence diagrams. Focused component and deployment examples follow below. Each has a source link. Click an image to inspect it at full size; the examples are executable `.laml` files built by LAML. Each also builds as SVG and vector PDF.
+These four larger showcases cover generic, class, object and sequence diagrams. Focused component, deployment and state examples follow below. Each has a source link. Click an image to inspect it at full size; the examples are executable `.laml` files built by LAML. Each also builds as SVG and vector PDF.
 
 ### Generic node-edge diagram · [source](examples/showcase-generic.laml)
 
@@ -123,6 +123,16 @@ Executions, synchronous and asynchronous messages, replies, a self-call, alterna
 | [![An artifact manifests a component and is deployed on a JVM](docs/images/deployment-manifest.png)](examples/deployment-manifest.laml) |
 | Artifact-to-component manifestation is distinct from artifact-to-node deployment. See the [deployment-diagram guide](docs/deployment-diagrams.md) and [notation audit](docs/uml-deployment-conformance.md). |
 
+| [States and choice](examples/state-basic.laml) | [Composite state](examples/state-composite.laml) |
+|---|---|
+| [![Initial/final symbols, guarded choice and visible entry/do/exit behaviors](docs/images/state-basic.png)](examples/state-basic.laml) | [![Rounded composite state with its own initial, running and final vertices](docs/images/state-composite.png)](examples/state-composite.laml) |
+| UML state vertices, guarded transitions and behavior text. | One visible nested region and an outer completion transition. |
+
+| [State self-transition](examples/state-loop.laml) |
+|---|
+| [![Guarded open transition, exterior ping self-loop and return transition](docs/images/state-loop.png)](examples/state-loop.laml) |
+| Event, guard and effect text with safe exterior routing. See the [state-diagram guide](docs/state-diagrams.md) and [UML notation audit](docs/uml-state-conformance.md). |
+
 Set `type: sequence` in `settings` to use the sequence grammar. Sequence diagrams use the same SVG/PNG/vector-PDF export commands; their node, message, fragment, annotation, gate and ordering visuals are styled with LSS. Start with the [sequence-diagram guide](docs/sequence-diagrams.md), then use the [syntax reference](docs/language-reference.md#sequence-diagrams) and [UML 2.5.1 notation audit](docs/uml-sequence-conformance.md). The outer UML `sd` interaction frame is intentionally deferred; divergent open executions at fragment joins are rejected rather than implicitly resolved.
 
 Build any example with `cargo run -- build examples/NAME.laml`. The output filename selects the format (`.svg`, `.png`, or `.pdf`). SVG text modes are selected with `--svg-text=embedded|system|paths` after the optional output filename. The README images are generated with `cargo run -- build examples/NAME.laml docs/images/NAME.png`. Source files and matching images are tested together.
@@ -138,6 +148,7 @@ Build any example with `cargo run -- build examples/NAME.laml`. The output filen
 - Class and object diagram grammars with checked UML relationship notation, member compartments, instances and slots, associations, packages, qualifiers, notes, templates and addressable ports; unsupported combinations fail rather than silently drawing a different notation.
 - Component diagrams with dependencies, provided/required interfaces, typed ports, contained parts and checked assembly/delegation connectors; no hidden UML model or runtime execution.
 - Deployment diagrams with device/node cubes, execution environments, artifacts, nested deployment targets, solid communication paths and distinct checked `«deploy»`/`«manifest»` arrows.
+- Behavior state diagrams with rounded states, initial/final and choice symbols, guarded transitions, entry/do/exit text and one-region composite states; strings are displayed, never executed.
 - Generic node-edge shapes, nested containers, styled members, boundary ports, optional icons, named edge attachments and conditional icon-license metadata.
 - Separate sequence grammar with lifelines, calls and replies, creation/deletion, fragments, interaction uses, annotations, coregions, inline part decompositions and mandatory layout constraints.
 - `check`, `build`, and `update` commands, source-linked diagnostics, and conformance tests for deterministic and mandatory geometry.
@@ -166,6 +177,8 @@ The test suite includes buildable examples, export formats, mandatory geometry, 
 - [Class and object diagram guide](docs/class-object-diagrams.md)
 - [Component-diagram guide](docs/component-diagrams.md)
 - [Deployment-diagram guide](docs/deployment-diagrams.md)
+- [State-diagram guide](docs/state-diagrams.md)
+- [UML state-machine notation audit and limits](docs/uml-state-conformance.md)
 - [UML deployment notation audit and limits](docs/uml-deployment-conformance.md)
 - [UML component notation audit and limits](docs/uml-component-conformance.md)
 - [UML class/object notation audit and limits](docs/uml-class-object-conformance.md)

@@ -1,0 +1,19 @@
+settings {
+    type: state
+}
+semantics {
+    initial Start
+    state Idle
+    choice Check
+    state Active {
+        entry / startSession()
+        do / awaitWork()
+        exit / stopSession()
+    }
+    final Done
+    Start --> Idle
+    @submit Idle --> Check : submit / validate()
+    @accept Check --> Active : [valid]
+    @retry Check --> Idle : [else]
+    @stop Active --> Done : stop
+}

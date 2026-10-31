@@ -48,7 +48,13 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
             let scoped = scoped_styles(diagram, node, styles);
             if matches!(
                 node.kind,
-                NodeKind::Association | NodeKind::Junction | NodeKind::Lollipop | NodeKind::Socket
+                NodeKind::Association
+                    | NodeKind::Junction
+                    | NodeKind::Lollipop
+                    | NodeKind::Socket
+                    | NodeKind::StateInitial
+                    | NodeKind::StateFinal
+                    | NodeKind::StateChoice
             ) {
                 junctions::measure(node, &scoped)
             } else {
@@ -66,7 +72,9 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
         })
         .collect::<Result<_, _>>()?;
     for node in &mut boxes {
-        if (node.kind == NodeKind::Component || node.kind.is_deployment_target())
+        if (node.kind == NodeKind::Component
+            || node.kind == NodeKind::State
+            || node.kind.is_deployment_target())
             && diagram
                 .nodes
                 .iter()
