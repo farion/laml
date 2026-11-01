@@ -60,7 +60,7 @@ Review -(error@Failure:"Failed")-> HandleError
 Review -(message@Cancellation:"Cancel")-> Cancel
 ```
 
-`timer+` and `message+` denote noninterrupting boundary events with dashed rings. The string is diagram text, not an evaluated timer expression. `data Order("Order document")` and `store Archive("Archive")` are associated with tasks using `Order ..> Review` and `Review ..> Archive`.
+`timer+` and `message+` denote noninterrupting boundary events with dashed rings. The string is diagram text, not an evaluated timer expression. `data Order("Order document")` and `store Archive("Archive")` are associated with tasks using `Order ..> Review` and `Review ..> Archive`. A BPMN text annotation uses `note Policy("Escalate after 2 days")` and an undirected dashed association `Policy .. Review`; it is neither a data association nor a process step.
 
 `+Check("Pack items")` draws a **collapsed** subprocess; `Check("Pack items") { ... }` draws its inner flow in a visibly **expanded** frame. These are alternative depictions, not two declarations of the same ID. Outer flows connect to the subprocess border, never directly to its inner nodes. See [`examples/bpmn-subprocess.laml`](../examples/bpmn-subprocess.laml):
 
@@ -99,4 +99,4 @@ styling {
 
 ## Coverage boundary
 
-The current BPMN drawing subset does not include BPMN XML interchange, choreography/conversation diagrams, simulation, complex gateways, transactions, compensation, text annotations, event subprocesses, multi-instance task markers or every event subtype. It aims to cover common *drawn* processes and collaborations while rejecting unsupported constructs. Read that boundary before using the diagrams as evidence of BPMN conformance.
+The current BPMN drawing subset does not include BPMN XML interchange, choreography/conversation diagrams, simulation, complex gateways, transactions, compensation, event subprocesses, multi-instance task markers or every event subtype. It aims to cover common *drawn* processes and collaborations while rejecting unsupported constructs. Read that boundary before using the diagrams as evidence of BPMN conformance.

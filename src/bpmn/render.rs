@@ -138,6 +138,10 @@ fn shape(svg: &mut String, n: &Node, b: BoxAt, icon: Option<&str>) {
                 text(svg, x, y + h / 2.0 + 22.0, &n.label, 12.0);
             }
         }
+        Kind::Annotation => {
+            writeln!(svg,"<path class=\"bpmn-body\" d=\"M {:.1} {:.1} H {:.1} V {:.1} H {:.1}\" fill=\"none\" stroke=\"#263548\" stroke-width=\"1.6\"/>",x-w/2.0+15.0,y-h/2.0+6.0,x-w/2.0,y+h/2.0-6.0,x-w/2.0+15.0).unwrap();
+            text(svg, x + 8.0, y + 5.0, &n.label, 13.0);
+        }
         Kind::Data => {
             writeln!(svg,"<path class=\"bpmn-body\" d=\"M {:.1} {:.1} h 49 l 13 13 v 60 h -62 Z M {:.1} {:.1} v 13 h 13\" fill=\"white\" stroke=\"#263548\" stroke-width=\"1.8\"/>",x-31.0,y-39.0,x+18.0,y-39.0).unwrap();
             text(svg, x, y + 57.0, &n.label, 12.0);
@@ -176,6 +180,7 @@ fn edge(svg: &mut String, doc: &Document, geom: &Geometry, e: &super::Edge) {
         EdgeKind::Sequence => ("", "solid-arrow"),
         EdgeKind::Message => ("stroke-dasharray=\"8 5\"", "open-arrow"),
         EdgeKind::Data => ("stroke-dasharray=\"2 5\"", "open-arrow"),
+        EdgeKind::Association => ("stroke-dasharray=\"4 4\"", ""),
     };
     let (mid_x, mid_y) = ((x1 + x2) / 2.0, (y1 + y2) / 2.0);
     let blocked = horizontal
@@ -217,6 +222,39 @@ fn edge(svg: &mut String, doc: &Document, geom: &Geometry, e: &super::Edge) {
             corridor -= 45.0;
         }
     }
+    let blocked_vertical = !horizontal
+        && e.kind != EdgeKind::Message
+        && doc.nodes.iter().enumerate().any(|(i, n)| {
+            if i == ai
+                || i == bi
+                || n.parent != doc.nodes[ai].parent
+                || n.pool != doc.nodes[ai].pool
+            {
+                return false;
+            }
+            let q = geom.nodes[i];
+            q.x - q.w / 2.0 < x1
+                && q.x + q.w / 2.0 > x1
+                && q.y + q.h / 2.0 > y1.min(y2)
+                && q.y - q.h / 2.0 < y1.max(y2)
+        });
+    let corridor_x = if blocked_vertical {
+        doc.nodes
+            .iter()
+            .enumerate()
+            .filter(|(i, n)| {
+                *i != ai
+                    && *i != bi
+                    && n.parent == doc.nodes[ai].parent
+                    && n.pool == doc.nodes[ai].pool
+            })
+            .map(|(i, _)| geom.nodes[i])
+            .filter(|q| q.y + q.h / 2.0 > y1.min(y2) && q.y - q.h / 2.0 < y1.max(y2))
+            .map(|q| q.x + q.w / 2.0 + 30.0)
+            .fold(x1.max(x2) + 30.0, f64::max)
+    } else {
+        mid_x
+    };
     let path = if blocked {
         format!(
             "M {x1:.1} {y1:.1} L {:.1} {y1:.1} L {:.1} {corridor:.1} L {:.1} {corridor:.1} L {:.1} {y2:.1} L {x2:.1} {y2:.1}",
@@ -227,10 +265,23 @@ fn edge(svg: &mut String, doc: &Document, geom: &Geometry, e: &super::Edge) {
         )
     } else if horizontal {
         format!("M {x1:.1} {y1:.1} L {mid_x:.1} {y1:.1} L {mid_x:.1} {y2:.1} L {x2:.1} {y2:.1}")
+    } else if blocked_vertical {
+        format!(
+            "M {x1:.1} {y1:.1} L {corridor_x:.1} {y1:.1} L {corridor_x:.1} {y2:.1} L {x2:.1} {y2:.1}"
+        )
     } else {
         format!("M {x1:.1} {y1:.1} L {x1:.1} {mid_y:.1} L {x2:.1} {mid_y:.1} L {x2:.1} {y2:.1}")
     };
-    writeln!(svg,"<path d=\"{path}\" fill=\"none\" stroke=\"#263548\" stroke-width=\"1.7\" {dash} marker-end=\"url(#{marker})\"/>").unwrap();
+    let arrow = if marker.is_empty() {
+        String::new()
+    } else {
+        format!("marker-end=\"url(#{marker})\"")
+    };
+    writeln!(
+        svg,
+        "<path d=\"{path}\" fill=\"none\" stroke=\"#263548\" stroke-width=\"1.7\" {dash} {arrow}/>"
+    )
+    .unwrap();
     if e.kind == EdgeKind::Message {
         writeln!(
             svg,

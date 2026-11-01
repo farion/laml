@@ -55,6 +55,8 @@ fn arrows(text: &str) -> Vec<(&str, Option<EdgeKind>)> {
                     ("~~>", EdgeKind::Message)
                 } else if text[i..].starts_with("..>") {
                     ("..>", EdgeKind::Data)
+                } else if text[i..].starts_with("..") {
+                    ("..", EdgeKind::Association)
                 } else {
                     continue;
                 };

@@ -46,6 +46,17 @@ fn all_bpmn_examples_export_to_every_format() {
 }
 
 #[test]
+fn annotation_is_not_data_or_sequence_flow() {
+    let source =
+        "settings {\ntype: bpmn\n}\nsemantics {\nA --> B\nnote Info(\"Check again\")\nInfo .. A\n}";
+    let doc = bpmn::parse(source).unwrap();
+    let svg = bpmn::render(&doc, TextMode::System).unwrap();
+    assert!(svg.contains("stroke-dasharray=\"4 4\""));
+    assert!(bpmn::parse(&source.replace("Info .. A", "Info ..> A")).is_err());
+    assert!(bpmn::parse(&source.replace("Info .. A", "Info --> A")).is_err());
+}
+
+#[test]
 fn no_icon_needs_no_phosphor_notice() {
     let source = "settings {\ntype: bpmn\n}\nsemantics {\nstartEvent Start\nStart --> Plain\nPlain --> endEvent End\n}";
     let doc = bpmn::parse(source).unwrap();

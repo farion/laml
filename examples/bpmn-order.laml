@@ -25,6 +25,8 @@ semantics {
             userTask Review(label="Review order"; icon="folder")
             data Order("Order document")
             store Archive("Archive")
+            note Policy("Escalate after 2 days")
+            Policy .. Review
             Order ..> Review
             Review ..> Archive
             Received --> Review

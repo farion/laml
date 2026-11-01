@@ -22,12 +22,14 @@ pub enum Kind {
     Collapsed,
     Data,
     Store,
+    Annotation,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EdgeKind {
     Sequence,
     Message,
     Data,
+    Association,
 }
 #[derive(Clone, Debug)]
 pub struct Node {
@@ -290,6 +292,7 @@ fn endpoint(doc: &mut Document, text: &str, ctx: &Context, line: usize) -> Resul
         ("manualTask ", Kind::ManualTask, None),
         ("data ", Kind::Data, None),
         ("store ", Kind::Store, None),
+        ("note ", Kind::Annotation, None),
         ("<X>@", Kind::Exclusive, None),
         ("<+>@", Kind::Parallel, None),
         ("<O>@", Kind::Inclusive, None),
@@ -334,8 +337,8 @@ fn add_edge(
             }
             if a.kind == Kind::End
                 || matches!(b.kind, Kind::Start | Kind::Boundary)
-                || matches!(a.kind, Kind::Data | Kind::Store)
-                || matches!(b.kind, Kind::Data | Kind::Store)
+                || matches!(a.kind, Kind::Data | Kind::Store | Kind::Annotation)
+                || matches!(b.kind, Kind::Data | Kind::Store | Kind::Annotation)
             {
                 return Err(error(line, "invalid sequence-flow endpoint"));
             }
@@ -358,13 +361,27 @@ fn add_edge(
                     "message flow requires separate pools and visible endpoints",
                 ));
             }
-            if matches!(a.kind, Kind::Data | Kind::Store)
-                || matches!(b.kind, Kind::Data | Kind::Store)
+            if matches!(a.kind, Kind::Data | Kind::Store | Kind::Annotation)
+                || matches!(b.kind, Kind::Data | Kind::Store | Kind::Annotation)
             {
                 return Err(error(line, "message flow cannot connect data objects"));
             }
         }
+        EdgeKind::Association => {
+            if a.pool != b.pool
+                || a.parent != b.parent
+                || (a.kind == Kind::Annotation) == (b.kind == Kind::Annotation)
+            {
+                return Err(error(
+                    line,
+                    "text annotation association needs one note in the same scope",
+                ));
+            }
+        }
         EdgeKind::Data => {
+            if a.kind == Kind::Annotation || b.kind == Kind::Annotation {
+                return Err(error(line, "text annotation needs '..' without arrow"));
+            }
             if a.pool != b.pool
                 || a.parent != b.parent
                 || !(matches!(a.kind, Kind::Data | Kind::Store)
