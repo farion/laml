@@ -1,0 +1,15 @@
+settings {
+    type: class
+}
+semantics {
+    class Customer {
+        +name: String
+    }
+    class Order {
+        +number: String
+    }
+    @places Customer "1" -- "0..*" Order : places
+}
+layout {
+    Customer < Order : gap=160
+}

@@ -1,0 +1,10 @@
+settings {
+    type: package
+}
+semantics {
+    package Shop {
+        package Orders
+    }
+    package Payments
+    Shop.Orders ..> Payments
+}

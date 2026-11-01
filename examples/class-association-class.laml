@@ -1,0 +1,16 @@
+settings {
+    type: class
+}
+semantics {
+    class Kunde
+    class Bestellung
+    association class Auftrag {
+        id: UUID
+    }
+    @orders Kunde -- Bestellung
+    Auftrag .. relation[orders]
+}
+layout {
+    Kunde < Bestellung : align=center; gap=240
+    Auftrag above Kunde : gap=90
+}

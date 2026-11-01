@@ -1,0 +1,10 @@
+settings {
+    type: usecase
+}
+semantics {
+    actor Customer
+    system Shop {
+        usecase Order(label="Place order")
+    }
+    Customer -- Shop.Order
+}

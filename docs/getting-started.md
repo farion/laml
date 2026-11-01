@@ -1,94 +1,98 @@
-# Getting started with LAML
+# Getting started
 
-LAML separates **semantics** (nodes and relations), **layout** (mandatory placement and label rules), and **styling** (appearance). One `.laml` file builds one SVG, PNG, or PDF image. For a prebuilt executable on Linux, macOS, or Windows, use the [installer instructions](../README.md#install-the-latest-release); run `laml update` when you choose to install a newer version.
+## Install
 
-## 1. Describe the diagram
-
-```text
-semantics {
-    Browser(label="Customer portal"; style-classes=channel)
-    WebEdge(label="Web gateway"; style-classes=edge)
-    Catalog(label="Catalog service"; style-classes=service)
-    CatalogDB(label="Catalog store"; style-classes=data)
-
-    Browser -> WebEdge : HTTPS
-    WebEdge -> Catalog : query
-    Catalog -> CatalogDB : read
-}
-```
-
-`Browser`, `WebEdge`, `Catalog`, and `CatalogDB` are node identifiers. `label` supplies visible text; `style-classes` group objects for styling. Relations can be unnamed or have a name such as `query: WebEdge -> Catalog` for individual targeting. Visible relation text follows the final `:`. `A <- B` means B to A; `A <-> B` is bidirectional. The [complete architecture example](../examples/architecture.laml) has twelve nodes arranged into four layers.
-
-## 2. Add only the placement rules you need
-
-```text
-layout {
-    Browser < WebEdge : align=center; gap=110
-    WebEdge < Catalog : align=center; gap=110
-    Catalog < CatalogDB : align=center; gap=110
-}
-```
-
-These rules separate each pair of **boxes** by at least 110 layout units and align their vertical centres. The complete example also aligns three lanes with mandatory `above` rules. These rules are mandatory, not preferences; `gap` is a minimum rather than an exact distance. A directional rule without `align` places no requirement on the perpendicular axis. One layout unit corresponds to one SVG/CSS pixel.
-
-Symbols and words are equivalent: `<` / `left of`, `>` / `right of`, `^` / `above`, `v` / `below`. A contradictory set of mandatory rules fails with a source-line diagnostic. Relations guide automatic placement but never override a mandatory rule.
-
-### Relation labels
-
-The `relation-label` setting chooses a diagram-wide mode: `near` (default), `along` (text following a straight segment), or `inline` (horizontal text in a gap in its own relation). A named, labeled relation can override that setting in `layout`:
-
-```text
-settings {
-    relation-label: inline
-}
-layout {
-    relation[along] : label=along
-}
-```
-
-These sections are part of the [buildable label-modes example](../examples/label-modes.laml). If a chosen mode cannot be placed safely, `build` fails instead of choosing a different mode.
-
-## 3. Style separately
-
-```text
-styling {
-    import "architecture.lamlstyle"
-
-    node.service {
-        fill: rgb(35, 75, 125)
-        color: rgb(255, 255, 255)
-    }
-
-    node.channel {
-        fill: rgb(235, 245, 255)
-    }
-}
-```
-
-LAML Style Sheets (LSS) have CSS-like selectors, but declarations use newline-separated `property: value` entries, without semicolons. `.service` matches a class on either kind of object; `node.service` and `node.channel` target just nodes. `node[Catalog]` and `relation[query]` target individual named objects. Imports load local `.lamlstyle` files relative to the file containing the import.
-
-## 4. Build and inspect
-
-From the repository root:
+Linux or macOS:
 
 ```sh
-cargo run -- check examples/architecture.laml
-cargo run -- build examples/architecture.laml
-# writes examples/architecture.svg
-cargo run -- build examples/architecture.laml examples/architecture.png
-cargo run -- build examples/architecture.laml examples/architecture.pdf
-cargo run -- build examples/architecture.laml examples/architecture-paths.svg --svg-text=paths
+curl -fsSL https://raw.githubusercontent.com/farion/laml/main/scripts/install.sh | sh
 ```
 
-`check` validates the source, references, imported styles, and directional placement cycles; `build` also measures boxes, solves placement, routes relations, and writes SVG. Routing uses distinct boundary ports for parallel relations, exterior self-loops, and bridges for supported crossings. If no safe route is found, the build fails rather than drawing an overlapping or bare-crossing stroke. The default SVG embeds Inter Regular and retains selectable text. The `--svg-text=system` option omits the font while keeping text selectable (the viewer must provide Inter or substitute another font); `--svg-text=paths` turns text into nonselectable glyph outlines. PNG has a white background. PDF is a vector document with selectable text.
+Windows PowerShell:
 
-To build lifelines, calls, fragments and annotated occurrences instead, follow the [sequence-diagram working guide](sequence-diagrams.md). Other buildable graph examples: [crossing](../examples/crossing.laml), [parallel relations and loop](../examples/parallel-loops.laml), and [label modes](../examples/label-modes.laml).
+```powershell
+irm https://raw.githubusercontent.com/farion/laml/main/scripts/install.ps1 | iex
+```
 
-## 5. Syntax reminders
+The installer verifies the downloaded archive against `SHA256SUMS`; a checksum is not a digital signature. Review remote scripts before executing them if your environment requires it. On Windows, open a new terminal after installation. Verify the installation with `laml --version`; run `laml update` when you choose to install a newer release.
 
-- Write one declaration or property per line. Use `;` only between inline attributes, such as `label="API"; style-classes=backend`.
-- Identifiers match `[A-Za-z_][A-Za-z0-9_]*`. Node labels and import paths are double-quoted; strings support `\n`, `\r`, `\t`, `\"`, and `\\` escapes. A relation label can extend unquoted to the end of its line.
-- `#` begins a comment outside a quoted string. For hexadecimal colours, use quoted `"#rrggbb"` (or use `rgb(r,g,b)`).
-- Named relations are required for per-relation layout and styling; endpoints must refer to declared nodes.
+## First diagram
 
-See the [language reference](language-reference.md) for the full syntax and the [language contract](language-definition.md) for compiler behaviour.
+Save this as `first.laml` (also available as [a complete source file](../examples/gne-basic.laml)):
+
+```laml
+semantics {
+    Browser
+    API
+    Browser -> API : request
+}
+layout {
+    Browser < API : align=center; gap=110
+}
+styling {
+    node[API] {
+        fill: "#e4f1ff"
+    }
+}
+```
+
+```sh
+laml check first.laml
+laml build first.laml
+# writes first.svg
+laml build first.laml first.png
+laml build first.laml first.pdf
+```
+
+`check` validates source without producing an image; `build` also checks measured layout and routing. An omitted output filename writes SVG next to the source.
+
+![Browser sends a request to the API](images/gne-basic.png)
+
+This image was built from the [complete source](../examples/gne-basic.laml).
+
+## Basic concepts
+
+| Section | Use |
+|---|---|
+| `settings` | Diagram type and diagram-wide options; omit `type` for GNE. |
+| `semantics` | Elements, relationships, visible labels and identifiers. Required. |
+| `layout` | Mandatory placement, alignment and diagram-specific geometry. |
+| `styling` | Colors, sizes and shape styling via LSS selectors; local `.lamlstyle` files can be imported. |
+
+Elements named in `semantics` can be addressed in `layout` or `styling`. A relationship describes a connection, not a mandatory position. See [GNE](diagrams/gne.md) for common placement, routing, labels and styling, and the [syntax reference](language-reference.md) for all accepted forms.
+
+## Design principles
+
+**Describe first, constrain sparingly.** LAML arranges the unconstrained parts automatically. `A < B : align=center; gap=110` requires A left of B, vertical-center alignment and at least 110 units between their boxes. It is not a suggestion. Conflicting constraints cause an error rather than a silently different layout. Colors and typography live in `styling`, not in the relationship declaration.
+
+For the same simple connection, the three sources emphasize different things:
+
+| PlantUML | Mermaid | LAML |
+|---|---|---|
+| `@startuml`<br>`rectangle Browser`<br>`rectangle API`<br>`Browser --> API : request`<br>`@enduml` | `flowchart LR`<br>`Browser -- request --> API` | `Browser -> API : request` in `semantics`<br>`Browser < API : gap=110` in `layout` |
+
+PlantUML also has direction controls; Mermaid supports flow directions, layout configuration and invisible links. The distinction is **not** that other tools cannot influence layout. LAML expresses the required box separation independently of the relationship: the rule is checked against measured geometry. [See the crossing and its complete source](diagrams/gne.md#placement-and-routing). Syntax references: [PlantUML](https://plantuml.com/deployment-diagram) · [Mermaid flowcharts](https://mermaid.js.org/syntax/flowchart.html).
+
+## Diagram types
+
+The lines in the middle column are **syntax excerpts**, not complete files. Follow the linked guide for a starting example with its rendered image and complete source.
+
+| Type | At a glance | Guide |
+|---|---|---|
+| Generic node-edge (GNE) | `A -> B : request` | [GNE](diagrams/gne.md) |
+| Class | `class Order { ... }` | [Class](diagrams/class.md) |
+| Object | `order1(of=Order)` | [Object](diagrams/object.md) |
+| Component | `component Gateway` | [Component](diagrams/component.md) |
+| Deployment | `device Edge { ... }` | [Deployment](diagrams/deployment.md) |
+| State | `state Idle` | [State](diagrams/state.md) |
+| Activity | `action Inspect` | [Activity](diagrams/activity.md) |
+| Use case | `usecase Order` | [Use case](diagrams/usecase.md) |
+| Package | `package Shop { ... }` | [Package](diagrams/package.md) |
+| Sequence | `Client -> API+ : request` | [Sequence](diagrams/sequence.md) |
+| Communication | `message 1 Buyer --> Shop : placeOrder()` | [Communication](diagrams/communication.md) |
+| Interaction overview | `interaction-use SignIn(ref=EstablishAccess)` | [Interaction overview](diagrams/interaction-overview.md) |
+| Timing | `state User at 2 : WaitCard` | [Timing](diagrams/timing.md) |
+| Composite structure | `part store(of=Store)` | [Composite structure](diagrams/composite.md) |
+| Profile | `profile Audit {` followed by `stereotype Tracked` on the next line | [Profile](diagrams/profile.md) |
+
+For the complete syntax and defaults, use the [language reference](language-reference.md). For compiler behavior, use the [language contract](language-definition.md).

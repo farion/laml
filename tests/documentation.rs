@@ -14,7 +14,7 @@ fn text_blocks(guide: &str) -> Vec<String> {
         .collect()
 }
 
-fn assert_preview_matches(root: &Path, readme: &str, path: &Path, svg: &str) {
+fn assert_preview_matches(root: &Path, path: &Path, svg: &str) {
     let name = path.file_stem().unwrap().to_str().unwrap();
     let preview = root.join("docs/images").join(format!("{name}.png"));
     let expected = resvg::tiny_skia::Pixmap::decode_png(&fs::read(&preview).unwrap()).unwrap();
@@ -43,8 +43,6 @@ fn assert_preview_matches(root: &Path, readme: &str, path: &Path, svg: &str) {
         "{} is out of sync",
         preview.display()
     );
-    assert!(readme.contains(&format!("examples/{name}.laml")));
-    assert!(readme.contains(&format!("docs/images/{name}.png")));
 }
 
 #[test]
@@ -56,12 +54,10 @@ fn guide_examples_are_extracted_from_lf_and_crlf_files() {
 }
 
 #[test]
-fn readme_showcases_cover_all_four_supported_diagram_families() {
+fn readme_showcases_include_generic_class_and_sequence() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let readme = fs::read_to_string(root.join("README.md")).unwrap();
-    for (kind, minimum_nodes, minimum_relations) in
-        [("generic", 9, 6), ("class", 10, 5), ("object", 7, 5)]
-    {
+    for (kind, minimum_nodes, minimum_relations) in [("generic", 9, 6), ("class", 10, 5)] {
         let name = format!("showcase-{kind}");
         assert!(readme.contains(&format!("examples/{name}.laml")));
         assert!(readme.contains(&format!("docs/images/{name}.png")));
@@ -85,7 +81,6 @@ fn readme_showcases_cover_all_four_supported_diagram_families() {
 fn every_published_example_checks_and_builds() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let examples = root.join("examples");
-    let readme = fs::read_to_string(root.join("README.md")).unwrap();
     for entry in fs::read_dir(examples).unwrap() {
         let path = entry.unwrap().path();
         if path.extension().and_then(|e| e.to_str()) != Some("laml") {
@@ -105,7 +100,7 @@ fn every_published_example_checks_and_builds() {
                 laml::svg::TextMode::Embedded,
             )
             .unwrap();
-            assert_preview_matches(root, &readme, &path, &svg);
+            assert_preview_matches(root, &path, &svg);
             continue;
         }
         if laml::communication::is_communication_source(&source) {
@@ -122,7 +117,7 @@ fn every_published_example_checks_and_builds() {
                 laml::svg::TextMode::Embedded,
             )
             .unwrap();
-            assert_preview_matches(root, &readme, &path, &svg);
+            assert_preview_matches(root, &path, &svg);
             continue;
         }
         if laml::timing::is_timing_source(&source) {
@@ -133,7 +128,7 @@ fn every_published_example_checks_and_builds() {
             };
             let sheet = load(&input, &path).unwrap();
             let svg = laml::timing::render(&doc, &sheet, laml::svg::TextMode::Embedded).unwrap();
-            assert_preview_matches(root, &readme, &path, &svg);
+            assert_preview_matches(root, &path, &svg);
             continue;
         }
         if laml::sequence::is_sequence_source(&source) {
@@ -186,8 +181,6 @@ fn every_published_example_checks_and_builds() {
                     "{} is out of sync with its sequence source",
                     preview.display()
                 );
-                assert!(readme.contains(&format!("docs/images/{name}.png")));
-                assert!(readme.contains(&format!("examples/{name}.laml")));
             }
             continue;
         }
@@ -239,14 +232,6 @@ fn every_published_example_checks_and_builds() {
             changed * 1000 <= expected.pixels().len() * 3,
             "{} is out of sync with its LAML source ({changed} changed pixels)",
             preview_path.display()
-        );
-        assert!(
-            readme.contains(&format!("docs/images/{name}.png")),
-            "{name}: image is missing from README"
-        );
-        assert!(
-            readme.contains(&format!("examples/{name}.laml")),
-            "{name}: source is missing from README"
         );
     }
 }

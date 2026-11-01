@@ -1,0 +1,13 @@
+semantics {
+    Browser
+    API
+    Browser -> API : request
+}
+layout {
+    Browser < API : align=center; gap=110
+}
+styling {
+    node[API] {
+        fill: "#e4f1ff"
+    }
+}

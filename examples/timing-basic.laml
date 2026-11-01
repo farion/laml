@@ -1,0 +1,26 @@
+settings {
+    type: timing
+    interaction: Request
+    time-unit: ms
+}
+semantics {
+    lifeline Client(of=Browser) : Idle
+    state Client at 2 : Waiting
+    state Client at 5 : Done
+    event Client at 2 : Send
+
+    lifeline Server(of=API) : Ready
+    state Server at 3 : Busy
+    state Server at 5 : Ready
+    event Server at 5 : Reply
+}
+layout {
+    scale: 100
+    lane-gap: 62
+    end: 8
+    tick 0
+    tick 2
+    tick 3
+    tick 5
+    tick 7
+}

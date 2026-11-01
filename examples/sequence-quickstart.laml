@@ -1,0 +1,12 @@
+settings {
+    type: sequence
+}
+semantics {
+    Client
+    API
+    Client -> API+ : request
+    <-- : response
+}
+layout {
+    Client < API : gap=80
+}

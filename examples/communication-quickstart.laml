@@ -1,0 +1,14 @@
+settings {
+    type: communication
+    interaction: Checkout
+}
+semantics {
+    object Buyer(of=Customer)
+    object Shop(of=Store)
+    Buyer -- Shop
+    message 1 Buyer --> Shop : placeOrder()
+    message 2 Shop --> Buyer : confirmation()
+}
+layout {
+    Buyer < Shop : gap=180
+}

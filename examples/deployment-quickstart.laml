@@ -1,0 +1,13 @@
+settings {
+    type: deployment
+}
+semantics {
+    device Server {
+        artifact App
+    }
+    device Database
+    Server -- Database : TLS
+}
+layout {
+    Server < Database : gap=130
+}

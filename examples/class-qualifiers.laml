@@ -1,0 +1,11 @@
+settings {
+    type: class
+}
+semantics {
+    class Kunde
+    class Auftrag
+    @orders Kunde qualifier(id:UUID,region:String) -- qualifier(nr:Integer) Auftrag
+}
+layout {
+    Kunde < Auftrag : align=center; gap=350
+}

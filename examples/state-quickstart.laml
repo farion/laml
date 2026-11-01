@@ -1,0 +1,12 @@
+settings {
+    type: state
+}
+semantics {
+    initial Start
+    state Ready
+    state Running
+    final Done
+    Start --> Ready
+    Ready --> Running : begin
+    Running --> Done : finish
+}

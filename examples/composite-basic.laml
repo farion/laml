@@ -1,0 +1,20 @@
+settings {
+    type: composite
+}
+semantics {
+    interface API
+    class Adapter {
+        port Out(requires=API)
+    }
+    class Service {
+        port In(provides=API)
+    }
+    structure System {
+        part adapter(of=Adapter)
+        part service(of=Service)
+        @wire adapter::Out == service::In
+    }
+}
+layout {
+    System.adapter < System.service : gap=130
+}

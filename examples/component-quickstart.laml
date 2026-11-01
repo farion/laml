@@ -1,0 +1,11 @@
+settings {
+    type: component
+}
+semantics {
+    component Gateway
+    component Orders
+    @calls Gateway ..> Orders : place order
+}
+layout {
+    Gateway < Orders : gap=120
+}

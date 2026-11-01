@@ -1,0 +1,15 @@
+settings {
+    type: interaction-overview
+    interaction: Checkout
+    direction: top-to-bottom
+}
+semantics {
+    initial Start
+    interaction-use SignIn(ref=Authenticate)
+    interaction-use Pay(ref=AuthorizePayment)
+    final Done
+
+    Start --> SignIn
+    SignIn --> Pay
+    Pay --> Done
+}

@@ -1,0 +1,15 @@
+settings {
+    type: activity
+}
+semantics {
+    initial Start
+    objectNode Request
+    action Review {
+        input request
+    }
+    activityFinal Done
+
+    object Request --> Review::request
+    control Start --> Review
+    control Review --> Done
+}

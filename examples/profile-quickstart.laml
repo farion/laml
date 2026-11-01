@@ -1,0 +1,13 @@
+settings {
+    type: profile
+}
+semantics {
+    profile Audit {
+        stereotype Tracked
+    }
+    metaclass Class
+    Audit.Tracked --^> Class
+}
+layout {
+    Audit < Class : gap=170
+}
