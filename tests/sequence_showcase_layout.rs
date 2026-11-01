@@ -31,6 +31,33 @@ fn bar(svg: &str, owner: &str) -> (f64, f64) {
 }
 
 #[test]
+fn lifelines_are_visible_through_fragment_backgrounds_but_behind_executions() {
+    let svg = render(
+        &parse(include_str!("../examples/showcase-sequence.laml")).unwrap(),
+        TextMode::System,
+    )
+    .unwrap();
+    let loop_frame = svg.find("data-fragment-operator=\"loop\"").unwrap();
+    let lifeline = svg.find("stroke-dasharray=\"5 5\"").unwrap();
+    let execution = svg.find("data-activation-owner=\"API\"").unwrap();
+    assert!(loop_frame < lifeline && lifeline < execution);
+}
+
+#[test]
+fn nested_fragment_backgrounds_are_painted_outer_first() {
+    let source = "settings {\ntype: sequence\n}\nsemantics {\nA\nB\nalt \"ready\" {\nloop(min=1; max=2) {\nA -> B : ping\n}\n}\n}\n";
+    let svg = render(&parse(source).unwrap(), TextMode::System).unwrap();
+    assert!(
+        svg.find("data-fragment-operator=\"alt\"").unwrap()
+            < svg.find("data-fragment-operator=\"loop\"").unwrap()
+    );
+    assert!(
+        svg.find("data-fragment-operator=\"loop\"").unwrap()
+            < svg.find("stroke-dasharray=\"5 5\"").unwrap()
+    );
+}
+
+#[test]
 fn showcase_messages_meet_execution_edges_and_annotation_stays_clear() {
     let source = include_str!("../examples/showcase-sequence.laml");
     let svg = render(&parse(source).unwrap(), TextMode::System).unwrap();

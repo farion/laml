@@ -44,7 +44,7 @@ API -> API : retry
 at[request.receive] : invariant="authenticated"
 // […]
 alt "cart valid" {
-    @reserve API ->> Worker : reserve inventory
+    @reserve API ->> Worker : reserve stock
     API -> API : calculate total
 }
 else "cart expired" {

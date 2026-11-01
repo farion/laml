@@ -395,14 +395,6 @@ pub fn render_with_styles(
         header_height,
         bottom,
     };
-    lifetimes::draw_lines(&mut svg, sheet, &centers, &timeline)?;
-    decompositions::draw(
-        &mut svg,
-        diagram,
-        &centers,
-        &nested,
-        &visible_decompositions,
-    )?;
     let frame_left = geometry::frame_left(diagram, sheet, &centers, &widths)?;
     let base_right = centers
         .last()
@@ -412,18 +404,26 @@ pub fn render_with_styles(
     let frame_width = frame_right(diagram, frame_left, base_right, sheet)? - frame_left;
     let reserved_frame_text =
         text_collision::frame_regions(diagram, sheet, &centers, &widths, &drawn_frames)?;
+    drawn_frames.sort_by(|a, b| {
+        a.top
+            .total_cmp(&b.top)
+            .then_with(|| b.bottom.total_cmp(&a.bottom))
+    });
+    let right = frame_left + frame_width;
     for frame in drawn_frames {
-        let (left, right) = geometry::frame_bounds(
-            diagram,
-            sheet,
-            &centers,
-            &widths,
-            &frame,
-            frame_left,
-            frame_left + frame_width,
-        )?;
+        let (left, right) =
+            geometry::frame_bounds(diagram, sheet, &centers, &widths, &frame, frame_left, right)?;
         frames::fragment(&mut svg, frame, left, right - left, sheet)?;
     }
+    // Frames are backgrounds; lifelines continue through them, beneath executions.
+    lifetimes::draw_lines(&mut svg, sheet, &centers, &timeline)?;
+    decompositions::draw(
+        &mut svg,
+        diagram,
+        &centers,
+        &nested,
+        &visible_decompositions,
+    )?;
     bars.sort_by_key(|bar| bar.opened.depth);
     executions::draw(&mut svg, diagram, sheet, &centers, &bars)?;
     let mut drawn_gates = Vec::new();

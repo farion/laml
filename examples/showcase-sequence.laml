@@ -15,7 +15,7 @@ semantics {
     @found API <-- DB : cart data
     DB-
     alt "cart valid" {
-        @reserve API ->> Worker : reserve inventory
+        @reserve API ->> Worker : reserve stock
         API -> API : calculate total
     }
     else "cart expired" {

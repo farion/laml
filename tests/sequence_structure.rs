@@ -374,13 +374,13 @@ fn named_fragment_can_override_operator_style_without_changing_other_frames() {
 }
 
 #[test]
-fn global_fragment_stays_visible_across_inline_decomposition() {
+fn global_fragment_is_background_for_inline_decomposition() {
     use laml::svg::TextMode;
     let source = "settings {\ntype: sequence\n}\nsemantics {\nClient\nAPI\nalt \"ready\" {\ndecompose API \"Internals\" {\nCache\nDB\nCache -> DB : query\n}\n}\n}\n";
     let svg = laml::sequence::render::render(&parse(source).unwrap(), TextMode::System).unwrap();
     assert!(
-        svg.find("data-decomposition=\"API\"").unwrap()
-            < svg.find("data-fragment-operator=\"alt\"").unwrap()
+        svg.find("data-fragment-operator=\"alt\"").unwrap()
+            < svg.find("data-decomposition=\"API\"").unwrap()
     );
     assert!(svg.contains("query") && svg.contains("ref Internals"));
 }
