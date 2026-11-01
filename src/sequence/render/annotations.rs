@@ -53,7 +53,7 @@ pub(super) fn reserve_row(
         .sum();
     let font = styles::annotation(sheet, styles::annotation_kind(annotation.kind)).font_size;
     let height = (font * 1.25 + 8.0).max(24.0);
-    Ok(y.max(anchor + 15.0 + offset + height + 12.0 - 58.0))
+    Ok(y.max(anchor + 15.0 + offset + height + 12.0 - 48.0))
 }
 
 fn execution_half_width(
@@ -87,6 +87,67 @@ fn execution_half_width(
         .transpose()?
         .unwrap_or(paint.width)
         / 2.0)
+}
+
+fn invariant_left(
+    end: &OrderingEnd,
+    x: f64,
+    y: f64,
+    bars: &[DrawnExecution],
+    diagram: &SequenceDiagram,
+    sheet: &StyleSheet,
+    centers: &[f64],
+) -> Result<f64, String> {
+    let participant = match end {
+        OrderingEnd::Execution { participant, .. } => Some(participant.as_str()),
+        OrderingEnd::Message(anchor) => diagram.events.iter().find_map(|event| match event {
+            Event::Message(m) if m.name.as_deref() == Some(&anchor.message) => {
+                Some(if anchor.end == AnnotationEnd::Send {
+                    m.from.as_str()
+                } else {
+                    m.to.as_str()
+                })
+            }
+            _ => None,
+        }),
+    };
+    let Some(participant) = participant else {
+        return Ok(x + 24.0);
+    };
+    let Some(bar) = bars
+        .iter()
+        .filter(|bar| {
+            bar.opened.participant == participant
+                && y >= bar.opened.from - 0.01
+                && y <= bar.to + 0.01
+        })
+        .max_by_key(|bar| bar.opened.depth)
+    else {
+        return Ok(x + 24.0);
+    };
+    let Some((index, person)) = diagram
+        .participants
+        .iter()
+        .enumerate()
+        .find(|(_, p)| p.id == participant)
+    else {
+        return Ok(x + 24.0);
+    };
+    let paint = styles::activation(
+        sheet,
+        participant,
+        bar.opened.id.as_deref(),
+        &person.classes,
+    );
+    let width = bar
+        .opened
+        .label
+        .as_deref()
+        .map(|label| label_width_at(label, paint.font_size).map(|w| w + 20.0))
+        .transpose()?
+        .unwrap_or(0.0)
+        .max(paint.width);
+    Ok((x + 24.0).max(centers[index] + 5.0 * bar.opened.depth as f64 + width / 2.0 + 12.0))
 }
 
 // All referenced coordinates and obstacles belong to the same rendered timeline.
@@ -286,7 +347,10 @@ pub(super) fn draw(
             let (left, width) = match annotation.kind {
                 AnnotationKind::Action => (x + 24.0, text_width + 20.0),
                 AnnotationKind::State => (x - text_width / 2.0 - 10.0, text_width + 20.0),
-                AnnotationKind::Invariant => (x - text_width / 2.0, text_width),
+                AnnotationKind::Invariant => (
+                    invariant_left(&annotation.first, x, y, bars, diagram, sheet, centers)?,
+                    text_width,
+                ),
                 _ => (x, text_width),
             };
             let chosen = (0..=3).find_map(|step| {
@@ -355,7 +419,11 @@ pub(super) fn draw(
                     escape(&label)).unwrap();
             }
             AnnotationKind::Invariant => {
-                writeln!(svg, "<text x=\"{x:.2}\" y=\"{:.2}\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"{font:.2}\" fill=\"{color}\" data-annotation=\"invariant\">{{{}}}</text>",
+                let width = label_width_at(&format!("{{{}}}", annotation.text), font)?;
+                let center =
+                    invariant_left(&annotation.first, x, y, bars, diagram, sheet, centers)?
+                        + width / 2.0;
+                writeln!(svg, "<text x=\"{center:.2}\" y=\"{:.2}\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"{font:.2}\" fill=\"{color}\" data-annotation=\"invariant\">{{{}}}</text>",
                     top + font + 3.0, escape(&annotation.text)).unwrap();
             }
             AnnotationKind::Action => {

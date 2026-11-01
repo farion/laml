@@ -30,7 +30,7 @@ styling {
 }
 ```
 
-A participant declaration draws its head and dashed lifeline; it does not open an execution bar. `API+` opens a bar; `API-` closes it. The short `<--` reply resolves the last unambiguous open call; write `response: Client <-- API : 200 OK` when its endpoints need to be explicit. The `layout` rule keeps full participant heads at least 80 pixels apart. Message order provides a stable row tie-break; it does **not** assert that independent events on different lifelines have a temporal order. The source of [sequence-basic.laml](../examples/sequence-basic.laml) and its [rendered image](images/sequence-basic.png) provide a shorter variation.
+A participant declaration draws its head and dashed lifeline; it does not open an execution bar. `API+` opens a bar; `API-` closes it. Messages arriving at or leaving an active execution attach to its visible edge on the side of the other endpoint. The short `<--` reply resolves the last unambiguous open call; write `response: Client <-- API : 200 OK` when its endpoints need to be explicit. The `layout` rule keeps full participant heads at least 80 pixels apart. Message order provides a stable row tie-break; it does **not** assert that independent events on different lifelines have a temporal order. The source of [sequence-basic.laml](../examples/sequence-basic.laml) and its [rendered image](images/sequence-basic.png) provide a shorter variation.
 
 ## Messages and lifetimes
 
@@ -94,7 +94,7 @@ order[request.receive,response.send]
 
 ## Notes, continuations, coregions and decomposition
 
-Define a note in `semantics` and **place it in `layout`**: `hint: note "Retry once"` with `hint over API : gap=16` or `hint over request.receive : gap=16`. Continuations similarly have a named declaration and a mandatory `spans` rule. A `coregion API { request.receive ... }` marks occurrences on one lifeline that can be reordered with an explicit `above` rule; a positive `gap` is a minimum. Conflicting order or overlap with a later occurrence on that lifeline fails. See [notes](../examples/sequence-notes.laml), [continuations](../examples/sequence-continuation.laml) and [coregion](../examples/sequence-coregion.laml).
+Define a note in `semantics` and **place it in `layout`**: `hint: note "Retry once"` with `hint over API : gap=16` (centered in its own event row), `hint over request.receive : gap=16` (linked to that message end), or `hint right of API : gap=12` (beside the lifeline, without a connector; here `gap` is horizontal). Continuations similarly have a named declaration and a mandatory `spans` rule. A `coregion API { request.receive ... }` marks occurrences on one lifeline that can be reordered with an explicit `above` rule; a positive `gap` is a minimum. Conflicting order or overlap with a later occurrence on that lifeline fails. See [notes](../examples/sequence-notes.laml), [continuations](../examples/sequence-continuation.laml) and [coregion](../examples/sequence-coregion.laml).
 
 `decompose API "Internals" { ... }` draws child lifelines and messages **inline in the same source**. Root layout targets them through qualified IDs such as `API.Cache`. Styles can select context without propagating classes: `node[API] node[Cache]` targets that head, while `node[API] relation[query]` targets its message. See [decomposition](../examples/sequence-decomposition.laml).
 

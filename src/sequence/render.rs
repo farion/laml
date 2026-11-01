@@ -4,6 +4,7 @@
 mod anchors;
 mod annotations;
 mod arrows;
+mod bar_attachments;
 mod continuations;
 mod coregions;
 mod decompositions;
@@ -11,6 +12,7 @@ mod executions;
 mod frames;
 mod gates;
 mod geometry;
+mod lane_gaps;
 mod lifetimes;
 mod messages;
 mod notes;
@@ -23,14 +25,12 @@ use super::{Event, Message, MessageKind, SequenceDiagram};
 use crate::styles::StyleSheet;
 use crate::svg::TextMode;
 use crate::text::FONT;
-use anchors::MessageAnchor;
 use base64::Engine;
 use executions::{DrawnExecution, OpenExecution};
 use geometry::{frame_right, head_label, label_width_at, lanes, x_of};
 use std::fmt::Write;
 use styles::escape;
 
-const FONT_SIZE: f64 = 14.0;
 const HEADER_Y: f64 = 32.0;
 const HEADER_HEIGHT: f64 = 48.0;
 
@@ -99,7 +99,7 @@ pub fn render_with_styles(
     let mut frames: Vec<OpenFrame> = Vec::new();
     let mut bars: Vec<DrawnExecution> = Vec::new();
     let mut open: Vec<OpenExecution> = Vec::new();
-    let mut y = header_bottom + 52.0;
+    let mut y = header_bottom + 44.0;
     let mut previous_line = 0;
     for event in &diagram.events {
         let line = match event {
@@ -119,7 +119,7 @@ pub fn render_with_styles(
         };
         if line != previous_line {
             if previous_line != 0 {
-                y += 58.0;
+                y += 48.0;
             }
             previous_line = line;
         }
@@ -148,7 +148,9 @@ pub fn render_with_styles(
                     .iter()
                     .find(|p| p.note == note.id)
                     .ok_or("note has no placement")?;
-                y += placement.gap;
+                if placement.side == super::notes::NoteSide::Over {
+                    y += placement.gap;
+                }
                 visible_notes.push((note, y));
                 y += notes::height(note, sheet);
             }
@@ -297,7 +299,7 @@ pub fn render_with_styles(
                     let font =
                         styles::activation(sheet, participant, id.as_deref(), classes).font_size;
                     let text_height = font * 1.25 * label.split('\n').count() as f64 + 12.0;
-                    y = y.max(from + text_height - 58.0);
+                    y = y.max(from + text_height - 48.0);
                     y += font * 1.25 * (label.split('\n').count().saturating_sub(1)) as f64;
                 }
             }
@@ -310,18 +312,16 @@ pub fn render_with_styles(
             }
         }
     }
-    let mut message_anchors = positioned
-        .iter()
-        .map(|(m, y)| {
-            let (from, to) = geometry::message_endpoints(diagram, sheet, &centers, &widths, m)?;
-            Ok(MessageAnchor {
-                id: m.name.clone().unwrap_or_default(),
-                send: (from, *y),
-                receive: (to, if m.from == m.to { y + 24.0 } else { *y }),
-            })
-        })
-        .collect::<Result<Vec<_>, String>>()?;
-    gates::align(diagram, &positioned, &mut message_anchors)?;
+    let mut message_anchors = bar_attachments::anchors(
+        diagram,
+        sheet,
+        &centers,
+        &widths,
+        &positioned,
+        &bars,
+        &open,
+        y,
+    )?;
     for region in &diagram.coregions {
         let (threshold, delta) = coregions::reorder_region(diagram, region, &mut message_anchors)?;
         let mut timeline = retime::Shiftables {
@@ -376,7 +376,7 @@ pub fn render_with_styles(
     let bottom = message_anchors
         .iter()
         .fold(y, |max, a| max.max(a.send.1).max(a.receive.1))
-        + 64.0;
+        + 48.0;
     for bar in open {
         bars.push(bar.finish(bottom - 16.0));
     }

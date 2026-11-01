@@ -96,14 +96,14 @@ semantics {
 semantics {
     // […]
     @request Browser -> API+ : POST /orders
-    at[request.send] : time-observation="t0"
+    at[request.receive] : invariant="authenticated"
     @lookup API -> DB+ : load cart
     @found API <-- DB : cart data
     // […]
 }
 ```
 
-![Sequence diagram with fragments and annotations](docs/images/showcase-sequence.png)
+![Compact sequence diagram with activation bars, fragments, a note and destruction crosses](docs/images/showcase-sequence.png)
 
 [Full showcase source](examples/showcase-sequence.laml) · [Sequence guide](docs/diagrams/sequence.md).
 

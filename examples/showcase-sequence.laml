@@ -1,4 +1,4 @@
-// Sequence notation: calls, replies, fragments, notes, annotations and lifelines.
+// Compact sequence: calls, replies, fragments, a note and two lifeline endings.
 settings {
     type: sequence
 }
@@ -9,9 +9,8 @@ semantics {
     Worker(label="Worker")
 
     @request Browser -> API+ : POST /orders
-    at[request.send] : time-observation="t0"
     at[request.receive] : invariant="authenticated"
-    hint: note "The request starts an API execution."
+    hint: note "Order processing begins."
     @lookup API -> DB+ : load cart
     @found API <-- DB : cart data
     DB-
@@ -29,18 +28,16 @@ semantics {
     }
     API-
     @response Browser <-- API : 201 Created
-    between[request.send,response.receive] : duration-constraint="<= 2 s"
-    checkpoint: continuation "Asynchronous fulfillment"
-    ref "Send confirmation"
     Browser ->> Worker : subscribe
+    Browser!
     Worker -> ? : webhook
+    Worker!
 }
 layout {
-    Browser < API : gap=84
-    API < DB : gap=84
-    DB < Worker : gap=84
-    hint over request.receive : gap=18
-    checkpoint spans Browser,Worker : gap=20
+    Browser < API : gap=48
+    API < DB : gap=48
+    DB < Worker : gap=48
+    hint right of API : gap=12
 }
 styling {
     node.client {
@@ -59,8 +56,5 @@ styling {
     }
     note[hint] {
         fill: "#fff4da"
-    }
-    continuation[checkpoint] {
-        fill: "#e8f0ff"
     }
 }

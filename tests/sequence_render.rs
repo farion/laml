@@ -425,7 +425,7 @@ fn first_plus_places_created_header_on_first_message() {
     let source = "settings {\ntype: sequence\n}\nsemantics {\nClient\nClient -> API+ : spawn\n}\n";
     let svg = render(&parse(source).unwrap(), TextMode::System).unwrap();
     assert!(svg.contains(">API</text>"));
-    assert!(svg.contains("y=\"108.00\""));
+    assert!(svg.contains("y=\"100.00\""));
     assert!(svg.contains("L"));
 }
 

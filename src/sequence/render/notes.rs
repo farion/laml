@@ -8,9 +8,45 @@ use super::{
     styles::escape,
     text_collision::{self, Rect},
 };
-use crate::sequence::{AnnotationEnd, Note};
+use crate::sequence::{
+    AnnotationEnd, Note,
+    notes::{NoteSide, Placement},
+};
 use crate::styles::StyleSheet;
 use std::fmt::Write;
+
+pub(super) fn left(
+    diagram: &SequenceDiagram,
+    centers: &[f64],
+    anchors: &[MessageAnchor],
+    placement: &Placement,
+    width: f64,
+) -> Result<f64, String> {
+    let center = if let Some((name, end)) = placement.target.split_once('.') {
+        position(
+            anchors,
+            name,
+            if end == "send" {
+                AnnotationEnd::Send
+            } else {
+                AnnotationEnd::Receive
+            },
+        )?
+        .0
+    } else {
+        let index = diagram
+            .participants
+            .iter()
+            .position(|p| p.id == placement.target)
+            .ok_or_else(|| format!("unknown participant '{}'", placement.target))?;
+        centers[index]
+    };
+    Ok(match placement.side {
+        NoteSide::Over if placement.target.contains('.') => center + 18.0,
+        NoteSide::Over => center - width / 2.0,
+        NoteSide::Right => center + 18.0 + placement.gap,
+    })
+}
 
 pub(super) fn height(note: &Note, sheet: &StyleSheet) -> f64 {
     let font = styles::note(sheet, &note.id).font_size;
@@ -38,7 +74,8 @@ pub(super) fn draw(
         let paint = styles::note(sheet, &note.id);
         let width = label_width_at(&note.text, paint.font_size)? + 32.0;
         let height = height(note, sheet);
-        let x = if let Some((name, end)) = placement.target.split_once('.') {
+        let x = if placement.side == NoteSide::Over && placement.target.contains('.') {
+            let (name, end) = placement.target.split_once('.').unwrap();
             let (anchor_x, at) = position(
                 anchors,
                 name,
@@ -99,12 +136,7 @@ pub(super) fn draw(
                 escape(&paint.border), escape(&placement.target)).unwrap();
             left
         } else {
-            let index = diagram
-                .participants
-                .iter()
-                .position(|p| p.id == placement.target)
-                .ok_or_else(|| format!("unknown participant '{}'", placement.target))?;
-            centers[index] - width / 2.0
+            left(diagram, centers, anchors, placement, width)?
         };
         let fold = 12.0;
         writeln!(svg, "<path d=\"M{x:.2},{top:.2} h{:.2} l{fold:.2},{fold:.2} v{:.2} h-{width:.2} Z M{:.2},{top:.2} v{fold:.2} h{fold:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" data-note=\"{}\" />",

@@ -41,7 +41,7 @@ API -> API : retry
 ```laml
 // Excerpts from examples/showcase-sequence.laml
 @request Browser -> API+ : POST /orders
-at[request.send] : time-observation="t0"
+at[request.receive] : invariant="authenticated"
 // […]
 alt "cart valid" {
     @reserve API ->> Worker : reserve inventory
@@ -54,7 +54,7 @@ else "cart expired" {
 
 ![Sequence with branches, notes and annotations](../images/showcase-sequence.png)
 
-[Complete source for this image](../../examples/showcase-sequence.laml). Name a message to anchor observations at `.send` or `.receive`; use `alt`/`else` for alternatives, `loop` for repetition and `ref` for an interaction-use frame.
+[Complete source for this image](../../examples/showcase-sequence.laml). Name a message to attach an annotation to its `.send` or `.receive` end; use `alt`/`else` for alternatives and `loop` for repetition. The [interaction-use example](../../examples/sequence-basic.laml) shows `ref`.
 
 | Form | Meaning |
 |---|---|
@@ -89,21 +89,19 @@ else "construct" {
 // Excerpts from examples/showcase-sequence.laml
 semantics {
     // […]
-    hint: note "The request starts an API execution."
-    // […]
-    between[request.send,response.receive] : duration-constraint="<= 2 s"
+    hint: note "Order processing begins."
+    at[request.receive] : invariant="authenticated"
     // […]
 }
 layout {
     // […]
-    hint over request.receive : gap=18
-    // […]
+    hint right of API : gap=12
 }
 ```
 
-![Note and duration annotation in the full interaction](../images/showcase-sequence.png)
+![Note beside the API and an invariant beside its activation](../images/showcase-sequence.png)
 
-[Complete source](../../examples/showcase-sequence.laml). Name a note in `semantics` and place it in `layout`. Name messages to address `.send` and `.receive` for time, duration or state annotations.
+[Complete source](../../examples/showcase-sequence.laml). Name a note in `semantics` and place it in `layout`; `right of` places it beside a participant without a connector. For time and duration annotations, see the [annotation example](../../examples/sequence-annotations.laml).
 
 | Fragment | Use |
 |---|---|

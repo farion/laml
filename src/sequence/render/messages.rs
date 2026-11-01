@@ -1,7 +1,8 @@
 //! Sequence message strokes, labels, arrows, unknown ends and gates.
 use super::styles::escape;
 use super::{
-    Message, MessageAnchor, MessageKind, arrows, geometry::label_width_at, styled_text, styles,
+    Message, MessageKind, anchors::MessageAnchor, arrows, geometry::label_width_at, styled_text,
+    styles,
 };
 use crate::sequence::messages::gate_id;
 use crate::styles::StyleSheet;
@@ -25,7 +26,11 @@ pub(super) fn draw(
     };
     if m.from == m.to {
         let height = receive_y - y;
-        writeln!(svg, "<path d=\"M{start:.2},{y:.2} h44 v{height:.2} h-44\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\"{dash} data-message=\"{name}\" />", paint.color, paint.width).unwrap();
+        if (start - end).abs() < 0.01 {
+            writeln!(svg, "<path d=\"M{start:.2},{y:.2} h44 v{height:.2} h-44\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\"{dash} data-message=\"{name}\" />", paint.color, paint.width).unwrap();
+        } else {
+            writeln!(svg, "<path d=\"M{start:.2},{y:.2} h44 v{height:.2} H{end:.2}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\"{dash} data-message=\"{name}\" />", paint.color, paint.width).unwrap();
+        }
         if m.kind != MessageKind::Delete {
             arrows::draw(
                 svg,

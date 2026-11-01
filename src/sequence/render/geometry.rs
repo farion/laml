@@ -1,6 +1,6 @@
 //! Font-backed lane sizing and frame boundaries.
 
-use super::{Event, FONT_SIZE, SequenceDiagram, styles};
+use super::{Event, SequenceDiagram, styles};
 use crate::sequence::Participant;
 use crate::sequence::messages::gate_id;
 use crate::styles::StyleSheet;
@@ -27,10 +27,6 @@ pub(super) fn head_label(diagram: &SequenceDiagram, participant: &Participant) -
     }
 }
 
-pub(super) fn label_width(text: &str) -> Result<f64, String> {
-    label_width_at(text, FONT_SIZE)
-}
-
 pub(super) fn lanes(
     diagram: &SequenceDiagram,
     sheet: &StyleSheet,
@@ -53,79 +49,14 @@ pub(super) fn lanes(
             })
         })
         .collect::<Result<_, _>>()?;
-    let mut longest = 0.0_f64;
-    for event in &diagram.events {
-        let width = match event {
-            Event::Message(m) => m
-                .label
-                .as_deref()
-                .map(|label| {
-                    label_width_at(
-                        label,
-                        styles::message(sheet, m.name.as_deref(), &m.classes).font_size,
-                    )
-                })
-                .transpose()?,
-            Event::Annotation(annotation) => Some(label_width_at(
-                &annotation.text,
-                styles::annotation(sheet, styles::annotation_kind(annotation.kind)).font_size,
-            )?),
-            Event::Reference { label, .. } => Some(label_width_at(
-                label,
-                styles::fragment(sheet, "ref", None).font_size,
-            )?),
-            Event::Continuation(cont) => Some(
-                label_width_at(&cont.text, styles::continuation(sheet, &cont.id).font_size)? + 32.0,
-            ),
-            Event::Note(note) => {
-                Some(label_width_at(&note.text, styles::note(sheet, &note.id).font_size)? + 32.0)
-            }
-            Event::Activate {
-                participant,
-                id,
-                label: Some(label),
-                ..
-            } => {
-                let classes = &diagram
-                    .participants
-                    .iter()
-                    .find(|p| p.id == *participant)
-                    .ok_or_else(|| format!("unknown execution participant '{participant}'"))?
-                    .classes;
-                let size = styles::activation(sheet, participant, id.as_deref(), classes).font_size;
-                Some(label_width_at(label, size)? + 20.0)
-            }
-            _ => None,
-        };
-        if let Some(width) = width {
-            longest = longest.max(width);
-        }
-        if let Event::Message(m) = event {
-            for endpoint in [&m.from, &m.to] {
-                if let Some(gate) = gate_id(endpoint) {
-                    let parent = styles::message(sheet, m.name.as_deref(), &m.classes);
-                    let font = styles::gate(sheet, gate, &parent).font_size;
-                    longest = longest.max(label_width_at(gate, font)? + 24.0);
-                }
-            }
-        }
-    }
-    for event in &diagram.events {
-        if let Event::FrameStart {
-            operator, guard, ..
-        } = event
-        {
-            longest = longest.max(label_width(&frame_caption(operator, guard))?);
-        }
-    }
-    let gap = (longest + 36.0).max(72.0);
+    let gaps = super::lane_gaps::measure(diagram, sheet, &widths)?;
     let guard_pad = guard_padding(diagram, sheet, widths.first().copied().unwrap_or(0.0))?;
     let mut centers: Vec<f64> = Vec::with_capacity(widths.len());
     for (i, width) in widths.iter().enumerate() {
         let mut x = if i == 0 {
-            32.0 + width / 2.0 + longest / 2.0 + guard_pad
+            32.0 + width / 2.0 + guard_pad
         } else {
-            centers[i - 1] + widths[i - 1] / 2.0 + gap + width / 2.0
+            centers[i - 1] + widths[i - 1] / 2.0 + gaps[i - 1] + width / 2.0
         };
         for rule in &diagram.layout {
             if diagram.participants[i].id == rule.right {
@@ -144,10 +75,11 @@ pub(super) fn lanes(
         .zip(widths.last())
         .map(|(x, width)| x + width / 2.0)
         .unwrap_or(32.0);
-    Ok((centers, widths, (right + longest + 64.0).max(128.0)))
+    let trailing = super::lane_gaps::trailing(diagram, sheet, &centers, &widths)?;
+    Ok((centers, widths, (right + trailing).max(128.0)))
 }
 
-fn guard_padding(
+pub(super) fn guard_padding(
     diagram: &SequenceDiagram,
     sheet: &StyleSheet,
     first_width: f64,

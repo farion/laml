@@ -11,10 +11,17 @@ pub struct Note {
     pub line: usize,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NoteSide {
+    Over,
+    Right,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Placement {
     pub note: String,
     pub target: String,
+    pub side: NoteSide,
     pub gap: f64,
     pub line: usize,
 }
@@ -47,7 +54,12 @@ pub(super) fn parse_placement(text: &str, line: usize) -> Result<Option<Placemen
         Some((location, attributes)) => (location.trim(), Some(attributes.trim())),
         None => (text, None),
     };
-    let Some((id, participant)) = location.split_once(" over ") else {
+    let (id, participant, side) = if let Some((id, participant)) = location.split_once(" right of ")
+    {
+        (id, participant, NoteSide::Right)
+    } else if let Some((id, participant)) = location.split_once(" over ") {
+        (id, participant, NoteSide::Over)
+    } else {
         return Ok(None);
     };
     let (id, target) = (id.trim(), participant.trim());
@@ -58,7 +70,7 @@ pub(super) fn parse_placement(text: &str, line: usize) -> Result<Option<Placemen
     if !valid_identifier(id) || !valid_target {
         return Err(error(
             line,
-            "expected noteId over participant or message.send/receive",
+            "expected noteId over/right of participant or message.send/receive",
         ));
     }
     let gap = match attributes {
@@ -82,6 +94,7 @@ pub(super) fn parse_placement(text: &str, line: usize) -> Result<Option<Placemen
     Ok(Some(Placement {
         note: id.into(),
         target: target.into(),
+        side,
         gap,
         line,
     }))

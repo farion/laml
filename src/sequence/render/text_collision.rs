@@ -1,12 +1,12 @@
 //! Measured message-text obstacles for anchored sequence annotations.
 use super::{
     DrawnFrame, Message,
-    anchors::{self, MessageAnchor},
+    anchors::MessageAnchor,
     continuations, frames,
     geometry::{self, label_width_at},
     notes, styles,
 };
-use crate::sequence::{AnnotationEnd, Continuation, Note, SequenceDiagram};
+use crate::sequence::{Continuation, Note, SequenceDiagram};
 use crate::styles::StyleSheet;
 
 #[derive(Clone, Copy, Debug)]
@@ -142,25 +142,7 @@ pub(super) fn note_regions(
             .ok_or("note has no placement")?;
         let font = styles::note(sheet, &note.id).font_size;
         let width = label_width_at(&note.text, font)? + 32.0;
-        let x = if let Some((name, end)) = placement.target.split_once('.') {
-            let (at, _) = anchors::position(
-                anchors,
-                name,
-                if end == "send" {
-                    AnnotationEnd::Send
-                } else {
-                    AnnotationEnd::Receive
-                },
-            )?;
-            at + 18.0
-        } else {
-            let index = diagram
-                .participants
-                .iter()
-                .position(|p| p.id == placement.target)
-                .ok_or("unknown note participant")?;
-            centers[index] - width / 2.0
-        };
+        let x = notes::left(diagram, centers, anchors, placement, width)?;
         regions.push(Rect {
             x,
             y: *top,
