@@ -27,7 +27,18 @@ jobs:
         run: rustup toolchain install stable --profile minimal
       - name: Test
         shell: bash
-        run: cargo +stable test --locked --all-targets
+        run: |
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            if ! cargo +stable test --locked --all-targets > windows-test.log 2>&1; then
+              tail -n 45 windows-test.log | while IFS= read -r line; do
+                printf '::error title=Windows test output::%s\n' "$line"
+              done
+              exit 1
+            fi
+            cat windows-test.log
+          else
+            cargo +stable test --locked --all-targets
+          fi
       - name: Check code formatting and warnings
         if: runner.os == 'Linux'
         shell: bash
