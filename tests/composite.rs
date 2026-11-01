@@ -241,17 +241,31 @@ fn compartment_label_occupies_real_checked_geometry() {
     assert!(err.contains("crosses internal structure label"));
 }
 
-#[test]
-fn guide_example_matches_compiler_and_preserves_pdf_vector_text() {
-    let text = std::fs::read_to_string("docs/composite-structure-diagrams.md").unwrap();
-    let source = text
+fn first_guide_example(text: &str) -> String {
+    text.replace("\r\n", "\n")
         .split("```text\n")
         .nth(1)
         .unwrap()
         .split("```")
         .next()
-        .unwrap();
-    let doc = graph(source);
+        .unwrap()
+        .to_owned()
+}
+
+#[test]
+fn guide_example_is_extracted_on_lf_and_crlf_checkouts() {
+    let sample = "```text\nsemantics {\nA\n}\n```\n";
+    assert_eq!(
+        first_guide_example(sample),
+        first_guide_example(&sample.replace('\n', "\r\n"))
+    );
+}
+
+#[test]
+fn guide_example_matches_compiler_and_preserves_pdf_vector_text() {
+    let text = std::fs::read_to_string("docs/composite-structure-diagrams.md").unwrap();
+    let source = first_guide_example(&text);
+    let doc = graph(&source);
     let sheet = load(&doc, Path::new("examples/composite-checkout.laml")).unwrap();
     let boxes = place(&doc, &sheet).unwrap();
     let routes = route(&doc, &boxes, &sheet).unwrap();
