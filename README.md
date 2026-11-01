@@ -26,7 +26,7 @@ LAML gives you three separate controls:
 - **Layout:** specify the positions and alignments that must hold; let LAML place the rest and route connections safely. Conflicting mandatory rules fail rather than being silently ignored.
 - **Styling:** use CSS-like LAML Style Sheets to make the image fit the document.
 
-Not every architecture picture is UML. **Generic node-edge diagrams** let you combine shapes, ports, notes, relationships and styles without UML notation rules. The [architecture example](#architecture-placement-and-color) shows placement and styling in a buildable source; the [GNE guide](docs/diagrams/gne.md) shows the available elements.
+Not every architecture picture is UML. **Generic node-edge (GNE) diagrams** let you combine shapes, ports, notes, relationships and styles without UML notation rules. The [architecture example](#architecture-placement-and-color) shows placement and styling in a buildable source; the [GNE guide](docs/diagrams/gne.md) shows the available elements.
 
 ## Installing & getting started
 
