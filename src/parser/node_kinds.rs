@@ -19,6 +19,12 @@ pub(super) fn classify<'a>(
         (NodeKind::Association, name)
     } else if let Some(name) = source.strip_prefix("junction ") {
         (NodeKind::Junction, name)
+    } else if let Some(name) = source.strip_prefix("profile ") {
+        (NodeKind::Profile, name)
+    } else if let Some(name) = source.strip_prefix("stereotype ") {
+        (NodeKind::Stereotype, name)
+    } else if let Some(name) = source.strip_prefix("metaclass ") {
+        (NodeKind::Metaclass, name)
     } else if let Some(name) = source.strip_prefix("package ") {
         (NodeKind::Package, name)
     } else if let Some(name) = source.strip_prefix("class ") {
@@ -106,7 +112,8 @@ pub(super) fn classify<'a>(
             | DiagramType::Package
             | DiagramType::Communication
             | DiagramType::InteractionOverview
-            | DiagramType::Composite => (NodeKind::Generic, source),
+            | DiagramType::Composite
+            | DiagramType::Profile => (NodeKind::Generic, source),
         }
     }
 }
@@ -140,6 +147,10 @@ pub(super) fn allowed(kind: NodeKind, ty: DiagramType) -> bool {
             | NodeKind::ActivityJoin
     );
     match ty {
+        DiagramType::Profile => matches!(
+            kind,
+            NodeKind::Profile | NodeKind::Stereotype | NodeKind::Metaclass | NodeKind::Package
+        ),
         DiagramType::Composite => matches!(
             kind,
             NodeKind::CompositeStructure
@@ -190,6 +201,9 @@ pub(super) fn allowed(kind: NodeKind, ty: DiagramType) -> bool {
                     | NodeKind::CompositeStructure
                     | NodeKind::CompositePart
                     | NodeKind::CompositeRole
+                    | NodeKind::Profile
+                    | NodeKind::Stereotype
+                    | NodeKind::Metaclass
             ) && !deployment
                 && !state
                 && !activity
@@ -204,6 +218,9 @@ pub(super) fn allowed(kind: NodeKind, ty: DiagramType) -> bool {
                     | NodeKind::CompositeStructure
                     | NodeKind::CompositePart
                     | NodeKind::CompositeRole
+                    | NodeKind::Profile
+                    | NodeKind::Stereotype
+                    | NodeKind::Metaclass
             ) && !deployment
                 && !state
                 && !activity

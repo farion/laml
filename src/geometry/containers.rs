@@ -116,6 +116,7 @@ fn scope(
                 && (matches!(
                     node.kind,
                     NodeKind::Package
+                        | NodeKind::Profile
                         | NodeKind::Component
                         | NodeKind::CompositeStructure
                         | NodeKind::State

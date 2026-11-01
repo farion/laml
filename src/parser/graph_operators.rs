@@ -16,6 +16,7 @@ pub(super) fn is_operator(token: &str) -> bool {
             | "<--"
             | "..>"
             | "<.."
+            | "--^>"
             | "--|>"
             | "<|--"
             | "..|>"
@@ -55,6 +56,11 @@ pub(super) fn parse(
         "<--" => (RelationKind::Directed, solid(None, Arrow), true),
         "..>" => (RelationKind::Directed, dashed(Arrow), false),
         "<.." => (RelationKind::Directed, dashed(Arrow), true),
+        "--^>" => (
+            RelationKind::Directed,
+            solid(None, EndSymbol::FilledTriangle),
+            false,
+        ),
         "--|>" => (RelationKind::Directed, solid(None, Triangle), false),
         "<|--" => (RelationKind::Directed, solid(None, Triangle), true),
         "..|>" => (RelationKind::Directed, dashed(Triangle), false),
@@ -74,6 +80,7 @@ pub(super) fn parse(
         DiagramType::Class => !matches!(operator, "->" | "<-" | "<->" | "<--" | "<.."),
         DiagramType::Component => matches!(operator, "..>" | "..|>" | ".." | "==" | "=>"),
         DiagramType::Composite => matches!(operator, "==" | "=>"),
+        DiagramType::Profile => matches!(operator, "--^>" | "..>"),
         DiagramType::Deployment => matches!(operator, "--" | "..>" | ".."),
         DiagramType::State | DiagramType::Activity | DiagramType::InteractionOverview => {
             matches!(operator, "-->" | "..")

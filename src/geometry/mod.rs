@@ -111,8 +111,10 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
         }
     }
     for node in &mut boxes {
-        if diagram.settings.diagram_type == crate::syntax::DiagramType::Package
-            && node.kind == NodeKind::Package
+        if matches!(
+            diagram.settings.diagram_type,
+            crate::syntax::DiagramType::Package | crate::syntax::DiagramType::Profile
+        ) && node.kind == NodeKind::Package
             && !diagram
                 .nodes
                 .iter()

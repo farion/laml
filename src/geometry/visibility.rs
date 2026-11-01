@@ -27,13 +27,16 @@ pub(crate) fn filtered(diagram: &Diagram, sheet: &StyleSheet) -> Result<Diagram,
         .collect();
     if matches!(
         diagram.settings.diagram_type,
-        DiagramType::InteractionOverview | DiagramType::Composite
+        DiagramType::InteractionOverview | DiagramType::Composite | DiagramType::Profile
     ) && !hidden_nodes.is_empty()
     {
         return Err((
             1,
-            if diagram.settings.diagram_type == DiagramType::Composite {
-                "composite classifier, parts and roles must remain visible"
+            if matches!(
+                diagram.settings.diagram_type,
+                DiagramType::Composite | DiagramType::Profile
+            ) {
+                "profile/composite structural nodes must remain visible"
             } else {
                 "interaction overview nodes must remain visible"
             }
@@ -100,6 +103,7 @@ pub(crate) fn filtered(diagram: &Diagram, sheet: &StyleSheet) -> Result<Diagram,
             | DiagramType::Communication
             | DiagramType::InteractionOverview
             | DiagramType::Composite
+            | DiagramType::Profile
     ) {
         for relation in &diagram.relations {
             if (relation.activity_flow.is_some()
@@ -108,6 +112,7 @@ pub(crate) fn filtered(diagram: &Diagram, sheet: &StyleSheet) -> Result<Diagram,
                     DiagramType::Communication
                         | DiagramType::InteractionOverview
                         | DiagramType::Composite
+                        | DiagramType::Profile
                 ))
                 && hidden(
                     sheet,
@@ -125,6 +130,8 @@ pub(crate) fn filtered(diagram: &Diagram, sheet: &StyleSheet) -> Result<Diagram,
                         "interaction overview flows must remain visible"
                     } else if diagram.settings.diagram_type == DiagramType::Composite {
                         "composite connectors must remain visible"
+                    } else if diagram.settings.diagram_type == DiagramType::Profile {
+                        "profile relationships must remain visible"
                     } else {
                         "communication links must remain visible"
                     }

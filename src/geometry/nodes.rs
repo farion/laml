@@ -60,7 +60,7 @@ impl BoxNode {
             && x >= self.x + 1.0
             && x + width <= self.x + self.width - 1.0
             && y >= self.y
-                + if self.kind != NodeKind::Package {
+                + if !matches!(self.kind, NodeKind::Package | NodeKind::Profile) {
                     self.port_start
                 } else {
                     self.padding + self.font_size * 1.25 * self.lines.len() as f64 + 4.0
@@ -156,7 +156,7 @@ pub fn measure_node(
     if let Some(icon) = visibility_icon {
         icons.push(icon.into());
     }
-    if node.kind == NodeKind::Package && !icons.is_empty() {
+    if matches!(node.kind, NodeKind::Package | NodeKind::Profile) && !icons.is_empty() {
         return Err("package visibility icons need a notation-safe tab layout".into());
     }
     if let Some(Value::Keyword(icon)) = styles.get(&element, "icon").map(|d| &d.value) {
@@ -195,7 +195,7 @@ pub fn measure_node(
             id,
         })
     }).collect();
-    if node.kind == NodeKind::Package && shape != NodeShape::Rectangle {
+    if matches!(node.kind, NodeKind::Package | NodeKind::Profile) && shape != NodeShape::Rectangle {
         return Err("package container requires a rectangular frame".into());
     }
     if matches!(shape, NodeShape::Diamond | NodeShape::Ellipse) && !body.is_empty() {
@@ -277,7 +277,7 @@ pub fn measure_node(
         };
         longest = longest.max(width + icon_space);
     }
-    if node.kind == NodeKind::Package {
+    if matches!(node.kind, NodeKind::Package | NodeKind::Profile) {
         longest += 12.0; // leave room for the folder-tab shoulder
     }
     if node.kind.is_deployment_target() {
@@ -390,7 +390,7 @@ pub fn measure_node(
         return Err("fixed node box cannot fit even one line of text and padding".into());
     }
     if (diagram_type != DiagramType::Generic
-        || node.kind == NodeKind::Package
+        || matches!(node.kind, NodeKind::Package | NodeKind::Profile)
         || matches!(shape, NodeShape::Diamond | NodeShape::Ellipse))
         && (longest > available_width + 0.01 || natural_height > height + 0.01)
     {
@@ -458,7 +458,7 @@ pub fn measure_node(
         ports,
         abstract_node: node.abstract_node,
         kind: node.kind,
-        is_container: node.kind == NodeKind::Package,
+        is_container: matches!(node.kind, NodeKind::Package | NodeKind::Profile),
         deployment: diagram_type == DiagramType::Deployment,
         shape,
         x: 0.0,

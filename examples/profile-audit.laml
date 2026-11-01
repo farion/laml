@@ -1,0 +1,17 @@
+settings {
+    type: profile
+}
+semantics {
+    profile Audit {
+        stereotype Tracked
+    }
+    metaclass Class
+    package Commerce
+    Audit.Tracked --^> Class
+    Audit ..> Class <<reference>>
+    Commerce ..> Audit <<apply>>
+}
+layout {
+    Audit < Class : gap=260
+    Commerce below Audit : gap=160
+}

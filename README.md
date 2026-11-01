@@ -40,7 +40,7 @@ SVG defaults to embedded Inter Regular with selectable text; diagrams with abstr
 
 ## Examples
 
-These four larger showcases cover generic, class, object and sequence diagrams. Focused component, deployment, state, activity, use-case, package, communication, interaction-overview, timing and composite-structure examples follow below. Each has a source link. Click an image to inspect it at full size; the examples are executable `.laml` files built by LAML. Each also builds as SVG and vector PDF.
+These four larger showcases cover generic, class, object and sequence diagrams. Focused component, deployment, state, activity, use-case, package, communication, interaction-overview, timing, composite-structure and profile examples follow below. Each has a source link. Click an image to inspect it at full size; the examples are executable `.laml` files built by LAML. Each also builds as SVG and vector PDF.
 
 ### Generic node-edge diagram · [source](examples/showcase-generic.laml)
 
@@ -177,6 +177,12 @@ Discrete states change at explicitly declared times on one shared scale. Visible
 
 Solid *parts* and dashed *reference roles* have explicit class types; compatible port-to-port assembly and delegation connectors remain distinct from dependencies between definitions. See the [composite-structure guide](docs/composite-structure-diagrams.md) and [UML notation audit](docs/uml-composite-structure-conformance.md).
 
+### UML profile diagram · [audit profile](examples/profile-audit.laml)
+
+[![Audit profile owning Tracked stereotype, metaclass extension with filled triangle, optional metaclass reference and package application](docs/images/profile-audit.png)](examples/profile-audit.laml)
+
+Checked `«profile»`, `«stereotype»` and `«metaclass»` headings distinguish definition from application. A solid filled-triangle extension is not a hollow generalization; dashed `«reference»` and `«apply»` arrows have different endpoints. See the [profile guide](docs/profile-diagrams.md) and [UML notation audit](docs/uml-profile-conformance.md).
+
 Set `type: sequence` in `settings` to use the sequence grammar. Sequence diagrams use the same SVG/PNG/vector-PDF export commands; their node, message, fragment, annotation, gate and ordering visuals are styled with LSS. Start with the [sequence-diagram guide](docs/sequence-diagrams.md), then use the [syntax reference](docs/language-reference.md#sequence-diagrams) and [UML 2.5.1 notation audit](docs/uml-sequence-conformance.md). The outer UML `sd` interaction frame is intentionally deferred; divergent open executions at fragment joins are rejected rather than implicitly resolved.
 
 Build any example with `cargo run -- build examples/NAME.laml`. The output filename selects the format (`.svg`, `.png`, or `.pdf`). SVG text modes are selected with `--svg-text=embedded|system|paths` after the optional output filename. The README images are generated with `cargo run -- build examples/NAME.laml docs/images/NAME.png`. Source files and matching images are tested together.
@@ -200,6 +206,7 @@ Build any example with `cargo run -- build examples/NAME.laml`. The output filen
 - Interaction-overview diagrams with `ref` interaction-use frames and checked, properly nested decision/merge and fork/join control flow.
 - Timing diagrams with discrete lifelines, explicit state changes, event labels and a shared numeric time ruler; no inferred execution or messages.
 - Composite-structure diagrams with an internal-structure compartment, distinct owned parts/reference roles and checked simple port connectors.
+- Profile diagrams with checked stereotype definitions, metaclass extensions, references and profile applications; no model or profile execution.
 - Generic node-edge shapes, nested containers, styled members, boundary ports, optional icons, named edge attachments and conditional icon-license metadata.
 - Separate sequence grammar with lifelines, calls and replies, creation/deletion, fragments, interaction uses, annotations, coregions, inline part decompositions and mandatory layout constraints.
 - `check`, `build`, and `update` commands, source-linked diagnostics, and conformance tests for deterministic and mandatory geometry.
@@ -244,6 +251,8 @@ The test suite includes buildable examples, export formats, mandatory geometry, 
 - [UML timing notation audit and limits](docs/uml-timing-conformance.md)
 - [Composite-structure diagram guide](docs/composite-structure-diagrams.md)
 - [UML composite-structure notation audit and limits](docs/uml-composite-structure-conformance.md)
+- [Profile-diagram guide](docs/profile-diagrams.md)
+- [UML profile notation audit and limits](docs/uml-profile-conformance.md)
 - [UML deployment notation audit and limits](docs/uml-deployment-conformance.md)
 - [UML component notation audit and limits](docs/uml-component-conformance.md)
 - [UML class/object notation audit and limits](docs/uml-class-object-conformance.md)

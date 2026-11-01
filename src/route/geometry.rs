@@ -223,7 +223,7 @@ pub(super) fn marker_radius(symbol: crate::syntax::EndSymbol, stroke: f64) -> f6
     (match symbol {
         EndSymbol::None => return 0.0,
         EndSymbol::Arrow => 12.0,
-        EndSymbol::Triangle => 14.0,
+        EndSymbol::Triangle | EndSymbol::FilledTriangle => 14.0,
         EndSymbol::OpenDiamond | EndSymbol::FilledDiamond => 18.0,
     }) + stroke / 2.0
 }
@@ -291,12 +291,18 @@ pub(super) fn route_is_clear(points: &[Point], boxes: &[BoxNode], previous: &[Ro
                     .iter()
                     .filter_map(|line| crate::text::measure(line, node.font_size).ok())
                     .fold(0.0_f64, f64::max);
-                let tab_width = if node.kind != crate::syntax::NodeKind::Package {
+                let tab_width = if !matches!(
+                    node.kind,
+                    crate::syntax::NodeKind::Package | crate::syntax::NodeKind::Profile
+                ) {
                     node.width
                 } else {
                     (title_width + node.padding * 2.0 + 12.0).min(node.width - 8.0)
                 };
-                let tab_height = if node.kind != crate::syntax::NodeKind::Package {
+                let tab_height = if !matches!(
+                    node.kind,
+                    crate::syntax::NodeKind::Package | crate::syntax::NodeKind::Profile
+                ) {
                     node.port_start
                 } else {
                     node.padding + node.font_size * 1.25 * node.lines.len() as f64 + 4.0

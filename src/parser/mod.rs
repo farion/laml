@@ -5,10 +5,7 @@ use crate::lex::{
     find_arrow, quoted_string, split_once_top_level, split_top_level, valid_identifier,
     valid_reference, without_comment,
 };
-use crate::syntax::{
-    Diagram, DiagramType, FlowDirection, LabelPlacement, Property, RelationDecl, StyleEntry,
-    StyleRule,
-};
+use crate::syntax::{Diagram, DiagramType, Property, RelationDecl, StyleEntry, StyleRule};
 
 mod activity;
 mod bindings;
@@ -24,12 +21,16 @@ mod graph_operators;
 mod graph_relations;
 mod layout;
 mod member_notation;
+mod members;
 mod node_kinds;
 mod node_modifiers;
 mod package_diagram;
 mod part_types;
 mod port_bodies;
+mod profile;
 mod references;
+mod settings;
+use settings::parse_setting;
 mod selectors;
 mod side_references;
 mod state;
@@ -149,7 +150,9 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
             Section::NodeBody(index)
                 if matches!(
                     diagram.nodes[index].kind,
-                    crate::syntax::NodeKind::Package | crate::syntax::NodeKind::UseCaseSystem
+                    crate::syntax::NodeKind::Package
+                        | crate::syntax::NodeKind::Profile
+                        | crate::syntax::NodeKind::UseCaseSystem
                 ) =>
             {
                 let scope = diagram.nodes[index].id.clone();
@@ -287,7 +290,7 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
                     Section::NodeBody(index)
                 } else {
                     composite::body_member(&diagram, index, text, line)?;
-                    bodies::member(text, line, &mut diagram, index)?;
+                    members::member(text, line, &mut diagram, index)?;
                     Section::NodeBody(index)
                 }
             }
@@ -380,6 +383,7 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
     usecase::validate(&diagram)?;
     package_diagram::validate(&diagram)?;
     composite::validate(&diagram)?;
+    profile::validate(&diagram)?;
     Ok(diagram)
 }
 
@@ -429,69 +433,4 @@ fn classes(value: &str, line: usize) -> Result<Vec<String>, ParseError> {
             }
         })
         .collect()
-}
-
-fn parse_setting(
-    text: &str,
-    line: usize,
-    diagram: &mut Diagram,
-    seen: &mut [bool; 4],
-) -> Result<(), ParseError> {
-    let (key, value) =
-        split_once_top_level(text, ':').ok_or_else(|| error(line, "expected setting: value"))?;
-    let value = value.trim();
-    let slot = match key.trim() {
-        "direction" => 0,
-        "naming-convention" => 1,
-        "relation-label" => 2,
-        "type" => 3,
-        _ => return Err(error(line, format!("unknown setting '{}'", key.trim()))),
-    };
-    if seen[slot] {
-        return Err(error(line, format!("duplicate setting '{}'", key.trim())));
-    }
-    seen[slot] = true;
-    match key.trim() {
-        "direction" => {
-            diagram.settings.direction = match value {
-                "left-to-right" => FlowDirection::LeftToRight,
-                "right-to-left" => FlowDirection::RightToLeft,
-                "top-to-bottom" => FlowDirection::TopToBottom,
-                "bottom-to-top" => FlowDirection::BottomToTop,
-                _ => return Err(error(line, "invalid diagram direction")),
-            }
-        }
-        "naming-convention" => {
-            if value != "uppercase-nodes-lowercase-relations" {
-                return Err(error(line, "invalid naming convention"));
-            }
-            diagram.settings.strict_case = true;
-        }
-        "relation-label" => {
-            diagram.settings.relation_label = match value {
-                "near" => LabelPlacement::Near,
-                "along" => LabelPlacement::Along,
-                "inline" => LabelPlacement::Inline,
-                _ => return Err(error(line, "invalid relation-label setting")),
-            }
-        }
-        "type" => {
-            diagram.settings.diagram_type = match value {
-                "class" => DiagramType::Class,
-                "object" => DiagramType::Object,
-                "component" => DiagramType::Component,
-                "composite" => DiagramType::Composite,
-                "deployment" => DiagramType::Deployment,
-                "state" => DiagramType::State,
-                "activity" => DiagramType::Activity,
-                "usecase" => DiagramType::UseCase,
-                "package" => DiagramType::Package,
-                "communication" => DiagramType::Communication,
-                "interaction-overview" => DiagramType::InteractionOverview,
-                _ => return Err(error(line, "invalid graph diagram type")),
-            }
-        }
-        _ => return Err(error(line, format!("unknown setting '{}'", key.trim()))),
-    }
-    Ok(())
 }

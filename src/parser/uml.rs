@@ -44,6 +44,9 @@ pub(super) fn validate_relation(
     let owner = |id: &str| diagram.nodes.iter().find(|node| node.has_endpoint(id));
     let from = owner(&relation.from).expect("endpoints validated before UML notation");
     let to = owner(&relation.to).expect("endpoints validated before UML notation");
+    if diagram.settings.diagram_type == DiagramType::Profile {
+        return super::profile::relation(diagram, relation, from, to);
+    }
     if let Some(bindings) = &relation.binding {
         if diagram.settings.diagram_type != DiagramType::Class
             || from.kind != NodeKind::Class

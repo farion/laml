@@ -31,7 +31,7 @@ Unqualified identifiers match `[A-Za-z_][A-Za-z0-9_]*`; nested package paths use
 
 | Name | Values | Default |
 |---|---|---|
-| `type` | `class`, `object`, `component`, `composite`, `deployment`, `state`, `activity`, `usecase`, `package`, `communication`, `interaction-overview`, `timing`, `sequence` (omitted for generic node-edge) | Generic graph |
+| `type` | `class`, `object`, `component`, `composite`, `profile`, `deployment`, `state`, `activity`, `usecase`, `package`, `communication`, `interaction-overview`, `timing`, `sequence` (omitted for generic node-edge) | Generic graph |
 | `direction` | `left-to-right`, `right-to-left`, `top-to-bottom`, `bottom-to-top` | `left-to-right` |
 | `naming-convention` | `uppercase-nodes-lowercase-relations` | Off |
 | `relation-label` | `near`, `along`, `inline` | `near` |
@@ -101,6 +101,10 @@ Set `type: interaction-overview` and `interaction: Name` in `settings`. Declare 
 ## Composite-structure diagrams
 
 Set `type: composite`. One root `structure Name { ... }` encloses a mandatory `internal structure` compartment with `part id(of=Class)` (solid, composite ownership) and `role id(of=Class)` (dashed, noncomposite reference). Define class/interface types outside the owner. `port P(provides=Interface)` or `port P(requires=Interface)` on a class or structure creates a checked simple boundary port; class ports are copied to its contained parts/roles. `part::port == other::port` is assembly between opposite-role matching sibling ports; `Owner::port => part::port` is delegation with matching same-role ports. Both draw solid connectors without dependency arrows. See the [guide](composite-structure-diagrams.md) and [notation audit](uml-composite-structure-conformance.md).
+
+## Profile diagrams
+
+Set `type: profile`. `profile Name { stereotype S }` declares a visible `«profile»` tabbed package and its directly owned `«stereotype»` classifier; `metaclass Class` is an external UML metaclass classifier from the supported name set, and `package Business` is an external application target. `Name.S --^> Class` is a solid extension with a filled triangle at the metaclass. Optional `Name ..> Class <<reference>>` is a dashed open-arrow metaclass reference; `Business ..> Name <<apply>>` or `<<strict>>` is a dashed open-arrow profile application. The extension is neither a hollow `--|>` generalization nor a dashed dependency. See the [guide](profile-diagrams.md) and [notation audit](uml-profile-conformance.md); these symbols do not execute or validate a profile application.
 
 ## Timing diagrams
 

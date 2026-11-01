@@ -56,13 +56,13 @@ pub(super) fn validate_composite_border(
     styles: &StyleSheet,
     element: &Element<'_>,
 ) -> Result<(), String> {
-    if ty == DiagramType::Composite
+    if matches!(ty, DiagramType::Composite | DiagramType::Profile)
         && (matches!(styles.get(element,"border-color").map(|d| &d.value), Some(Value::Color(color)) if color=="none")
             || matches!(styles.get(element,"color").map(|d| &d.value), Some(Value::Color(color)) if color=="none")
             || super::nodes::number(styles, element, "border-width", 1.0) < 1.0)
     {
         return Err(format!(
-            "composite {kind:?} frame must retain a visible outline"
+            "UML {kind:?} frame must retain a visible outline and text"
         ));
     }
     Ok(())

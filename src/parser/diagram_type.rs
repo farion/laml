@@ -15,6 +15,7 @@ pub(super) fn prescan_type(source: &str) -> DiagramType {
                 "object" => DiagramType::Object,
                 "component" => DiagramType::Component,
                 "composite" => DiagramType::Composite,
+                "profile" => DiagramType::Profile,
                 "deployment" => DiagramType::Deployment,
                 "state" => DiagramType::State,
                 "activity" => DiagramType::Activity,

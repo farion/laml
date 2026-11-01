@@ -296,8 +296,10 @@ pub fn route(
             });
         }
         let (color, width, font_size) = edge_style::style(relation, sheet);
-        if diagram.settings.diagram_type == crate::syntax::DiagramType::Composite
-            && (color == "none" || width < 1.0)
+        if matches!(
+            diagram.settings.diagram_type,
+            crate::syntax::DiagramType::Composite | crate::syntax::DiagramType::Profile
+        ) && (color == "none" || width < 1.0)
         {
             return Err(RouteError {
                 line: relation.line,

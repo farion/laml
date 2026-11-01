@@ -18,7 +18,6 @@ mod package;
 mod state;
 mod usecase;
 use escape::escape;
-use markers::marker;
 fn include_point(point: Point, bounds: &mut (f64, f64, f64, f64)) {
     bounds.0 = bounds.0.min(point.x);
     bounds.1 = bounds.1.min(point.y);
@@ -152,12 +151,7 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
         }
         svg.push_str("</style>\n");
     }
-    svg.push_str("<marker id=\"arrow\" markerWidth=\"12\" markerHeight=\"8\" refX=\"10\" refY=\"4\" orient=\"auto-start-reverse\" markerUnits=\"userSpaceOnUse\"><path d=\"M0,0 L10,4 L0,8\" fill=\"none\" stroke=\"context-stroke\" stroke-width=\"1.5\"/></marker>");
-    svg.push_str("<marker id=\"triangle\" markerWidth=\"13\" markerHeight=\"11\" refX=\"12\" refY=\"5.5\" orient=\"auto-start-reverse\" markerUnits=\"userSpaceOnUse\"><path d=\"M1,1 L12,5.5 L1,10 Z\" fill=\"white\" stroke=\"context-stroke\" stroke-width=\"1.5\"/></marker>");
-    svg.push_str("<marker id=\"open-diamond\" markerWidth=\"17\" markerHeight=\"11\" refX=\"1\" refY=\"5.5\" orient=\"auto\" markerUnits=\"userSpaceOnUse\"><path d=\"M1,5.5 L8,1 L16,5.5 L8,10 Z\" fill=\"white\" stroke=\"context-stroke\" stroke-width=\"1.5\"/></marker>");
-    svg.push_str("<marker id=\"filled-diamond\" markerWidth=\"17\" markerHeight=\"11\" refX=\"1\" refY=\"5.5\" orient=\"auto\" markerUnits=\"userSpaceOnUse\"><path d=\"M1,5.5 L8,1 L16,5.5 L8,10 Z\" fill=\"context-stroke\"/></marker>");
-    svg.push_str("<marker id=\"open-diamond-end\" markerWidth=\"17\" markerHeight=\"11\" refX=\"16\" refY=\"5.5\" orient=\"auto\" markerUnits=\"userSpaceOnUse\"><path d=\"M1,5.5 L8,1 L16,5.5 L8,10 Z\" fill=\"white\" stroke=\"context-stroke\" stroke-width=\"1.5\"/></marker>");
-    svg.push_str("<marker id=\"filled-diamond-end\" markerWidth=\"17\" markerHeight=\"11\" refX=\"16\" refY=\"5.5\" orient=\"auto\" markerUnits=\"userSpaceOnUse\"><path d=\"M1,5.5 L8,1 L16,5.5 L8,10 Z\" fill=\"context-stroke\"/></marker></defs>\n");
+    markers::definitions(&mut svg);
     if boxes
         .iter()
         .any(|node| !node.icons.is_empty() || node.body_styles.iter().any(|row| row.icon.is_some()))
@@ -166,7 +160,10 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
         svg.push_str(&escape(crate::export_metadata::PHOSPHOR_LICENSE));
         svg.push_str("</metadata>\n");
     }
-    for node in boxes.iter().filter(|node| node.kind == NodeKind::Package) {
+    for node in boxes
+        .iter()
+        .filter(|node| matches!(node.kind, NodeKind::Package | NodeKind::Profile))
+    {
         package::background(&mut svg, node)?;
     }
     for node in boxes
@@ -185,8 +182,8 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
     state::backgrounds(&mut svg, boxes);
     usecase::background(&mut svg, boxes);
     for route in routes {
-        let start = marker(route.appearance.start, true);
-        let end = marker(route.appearance.end, false);
+        let start = markers::marker(route.appearance.start, true);
+        let end = markers::marker(route.appearance.end, false);
         let start_marker = if start.is_empty() {
             String::new()
         } else {
@@ -232,7 +229,10 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
                 cy+route.font_size*1.25*0.28,route.font_size,route.color,rotation,escape(&label.text)).unwrap();
         }
     }
-    for node in boxes.iter().filter(|node| node.kind != NodeKind::Package) {
+    for node in boxes
+        .iter()
+        .filter(|node| !matches!(node.kind, NodeKind::Package | NodeKind::Profile))
+    {
         writeln!(
             svg,
             "<g data-node-id=\"{}\"><title>{}</title>",
@@ -312,7 +312,7 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
         } else if node.body.is_empty()
             && node.ports.is_empty()
             && node.template.is_none()
-            && node.kind != NodeKind::Package
+            && !matches!(node.kind, NodeKind::Package | NodeKind::Profile)
             && !node.is_container
             && !node.kind.is_deployment_target()
         {
