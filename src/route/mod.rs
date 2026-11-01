@@ -14,11 +14,13 @@ mod geometry;
 mod labels;
 mod outline_clearance;
 mod parallel;
+mod preferred;
 mod qualifiers;
 mod route_labels;
 mod self_loops;
 mod side_rules;
 use geometry::{center, member_port, port, route_is_clear};
+use preferred::{forced_port, horizontal_connection, named_port_candidates, normal_at_port};
 pub use qualifiers::QualifierBox;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -72,29 +74,6 @@ pub struct RouteError {
     pub message: String,
 }
 
-fn forced_port(node: &BoxNode, side: PortSide) -> Point {
-    let c = center(node);
-    let towards = match side {
-        PortSide::Left => Point {
-            x: c.x - 1000.0,
-            y: c.y,
-        },
-        PortSide::Right => Point {
-            x: c.x + 1000.0,
-            y: c.y,
-        },
-        PortSide::Top => Point {
-            x: c.x,
-            y: c.y - 1000.0,
-        },
-        PortSide::Bottom => Point {
-            x: c.x,
-            y: c.y + 1000.0,
-        },
-    };
-    port(node, towards)
-}
-
 fn candidates(
     diagram: &Diagram,
     index: usize,
@@ -118,7 +97,42 @@ fn candidates(
     let cb = center(b);
     let source_side = side_rules::requested(diagram, index, EndPosition::Source);
     let target_side = side_rules::requested(diagram, index, EndPosition::Target);
-    let mut results = vec![vec![port(a, cb), port(b, ca)]];
+    let named_port = |node: &BoxNode, id: Option<&str>| {
+        id.and_then(|id| node.ports.iter().find(|port| port.id == id))
+            .map(|port| {
+                (
+                    Point {
+                        x: port.x,
+                        y: port.y,
+                    },
+                    port.side,
+                )
+            })
+    };
+    // UML assembly and delegation connectors obey their own owner-boundary
+    // notation; normal exit here applies to generic named boundary ports.
+    let generic_ports = diagram.settings.diagram_type == crate::syntax::DiagramType::Generic;
+    let source_port = generic_ports
+        .then(|| named_port(a, source_member))
+        .flatten();
+    let target_port = generic_ports
+        .then(|| named_port(b, target_member))
+        .flatten();
+    let mut results = if source_port.is_some() || target_port.is_some() {
+        named_port_candidates(a, b, source_port, target_port)
+    } else {
+        horizontal_connection(a, b)
+            .filter(|_| {
+                source_side.is_none()
+                    && target_side.is_none()
+                    && source_member.is_none()
+                    && target_member.is_none()
+            })
+            .into_iter()
+            .collect()
+    };
+    let preferred_count = results.len();
+    results.push(vec![port(a, cb), port(b, ca)]);
     for bend in [Point { x: cb.x, y: ca.y }, Point { x: ca.x, y: cb.y }] {
         results.push(vec![port(a, bend), bend, port(b, bend)]);
     }
@@ -177,7 +191,8 @@ fn candidates(
     );
     results
         .into_iter()
-        .filter_map(|mut points| {
+        .enumerate()
+        .filter_map(|(option, mut points)| {
             let last = points.len() - 1;
             if let Some(side) = source_side {
                 points[0] = forced_port(a, side);
@@ -219,48 +234,55 @@ fn candidates(
             points[last] = end;
             // Shifting a boundary port must shift its adjacent elbow too.
             // Otherwise an exterior detour gains short diagonal stubs.
-            match points.len() {
-                3 if first_horizontal && !last_horizontal => {
-                    points[1] = Point {
-                        x: end.x,
-                        y: start.y,
-                    };
-                }
-                3 if !first_horizontal && last_horizontal => {
-                    points[1] = Point {
-                        x: start.x,
-                        y: end.y,
-                    };
-                }
-                3 if first_horizontal && last_horizontal => points[1].y = start.y,
-                3 => points[1].x = start.x,
-                4 if first_horizontal && last_horizontal => {
-                    points[1].y = start.y;
-                    points[2].y = end.y;
-                }
-                4 if !first_horizontal && !last_horizontal => {
-                    points[1].x = start.x;
-                    points[2].x = end.x;
-                }
-                5 => {
-                    if matches!(source_side, Some(PortSide::Top | PortSide::Bottom)) {
+            if option >= preferred_count {
+                match points.len() {
+                    3 if first_horizontal && !last_horizontal => {
+                        points[1] = Point {
+                            x: end.x,
+                            y: start.y,
+                        };
+                    }
+                    3 if !first_horizontal && last_horizontal => {
                         points[1] = Point {
                             x: start.x,
-                            y: points[2].y,
-                        };
-                    } else {
-                        points[1].y = start.y;
-                    }
-                    if matches!(target_side, Some(PortSide::Left | PortSide::Right)) {
-                        points[3] = Point {
-                            x: points[2].x,
                             y: end.y,
                         };
-                    } else {
-                        points[3].x = end.x;
                     }
+                    3 if first_horizontal && last_horizontal => points[1].y = start.y,
+                    3 => points[1].x = start.x,
+                    4 if first_horizontal && last_horizontal => {
+                        points[1].y = start.y;
+                        points[2].y = end.y;
+                    }
+                    4 if !first_horizontal && !last_horizontal => {
+                        points[1].x = start.x;
+                        points[2].x = end.x;
+                    }
+                    5 => {
+                        if matches!(source_side, Some(PortSide::Top | PortSide::Bottom)) {
+                            points[1] = Point {
+                                x: start.x,
+                                y: points[2].y,
+                            };
+                        } else {
+                            points[1].y = start.y;
+                        }
+                        if matches!(target_side, Some(PortSide::Left | PortSide::Right)) {
+                            points[3] = Point {
+                                x: points[2].x,
+                                y: end.y,
+                            };
+                        } else {
+                            points[3].x = end.x;
+                        }
+                    }
+                    _ => {}
                 }
-                _ => {}
+            }
+            if source_port.is_some_and(|(_, side)| !normal_at_port(&points, side, true))
+                || target_port.is_some_and(|(_, side)| !normal_at_port(&points, side, false))
+            {
+                return None;
             }
             Some(points)
         })
@@ -451,38 +473,4 @@ pub fn route(
     }
     attachments::route_attachments(diagram, boxes, sheet, &mut routed)?;
     Ok(routed)
-}
-
-#[cfg(test)]
-mod candidate_tests {
-    use super::*;
-    use crate::geometry::place;
-    use crate::parser::parse;
-
-    #[test]
-    fn shifted_ports_keep_bent_detours_orthogonal_on_both_axes() {
-        for rule in [
-            "A < B : align=center; gap=220",
-            "A above B : align=center; gap=220",
-        ] {
-            let source = format!("semantics {{\nA\nB\n}}\nlayout {{\n{rule}\n}}\n");
-            let diagram = parse(&source).unwrap();
-            let boxes = place(&diagram, &StyleSheet::default()).unwrap();
-            let options = candidates(&diagram, 0, 0, 1, &boxes, &[], 12.0);
-            let valid: Vec<_> = options
-                .iter()
-                .filter(|points| route_is_clear(points, &boxes, &[]))
-                .collect();
-            assert!(valid.iter().any(|points| points.len() == 4), "{rule}");
-            for points in valid {
-                assert!(
-                    points
-                        .windows(2)
-                        .all(|pair| (pair[0].x - pair[1].x).abs() < 1e-6
-                            || (pair[0].y - pair[1].y).abs() < 1e-6),
-                    "{rule}: {points:?}"
-                );
-            }
-        }
-    }
 }

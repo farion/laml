@@ -320,7 +320,7 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
                 + (node.height - line_height * node.lines.len() as f64) / 2.0
                 + line_height * 0.78
         } else {
-            node.y + node.padding + node.top_band + line_height * 0.78
+            node.y + node.padding / 2.0 + node.top_band + line_height * 0.78
         };
         for (i, line) in node.lines.iter().enumerate() {
             let baseline = first_baseline + line_height * i as f64;

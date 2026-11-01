@@ -28,7 +28,7 @@ pub(super) fn background(svg: &mut String, node: &BoxNode) -> Result<(), String>
     for (index, line) in node.lines.iter().enumerate() {
         writeln!(svg,"<text x=\"{:.2}\" y=\"{:.2}\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\">{}</text>",
             if node.is_container { node.x+tab_width/2.0 } else { node.x+node.width/2.0 },
-            node.y+node.padding+step*(index as f64+0.78)+if node.is_container {0.0} else {tab_height},
+            node.y+if node.is_container { (tab_height-step*node.lines.len() as f64)/2.0 } else { node.padding+tab_height }+step*(index as f64+0.78),
             node.font_size,node.color,super::escape(line)).unwrap();
     }
     writeln!(svg,"<line x1=\"{:.2}\" y1=\"{:.2}\" x2=\"{:.2}\" y2=\"{:.2}\" stroke=\"{}\" stroke-width=\"{:.2}\" /></g>",
