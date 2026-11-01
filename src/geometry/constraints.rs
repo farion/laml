@@ -1,6 +1,6 @@
 use super::nodes::BoxNode;
 use crate::styles::{Element, StyleSheet, Value};
-use crate::syntax::{Alignment, Axis, Diagram, FlowDirection, Placement};
+use crate::syntax::{Alignment, Axis, Diagram, FlowDirection, Placement, ScopedAlignment};
 use crate::text::measure;
 
 #[derive(Clone, Debug)]
@@ -122,6 +122,7 @@ pub fn place(
     diagram: &Diagram,
     boxes: &mut [BoxNode],
     styles: &StyleSheet,
+    soft_alignments: &[ScopedAlignment],
 ) -> Result<(), GeometryError> {
     let n = boxes.len();
     // The preferred centre is independent of the measured size. Expansion
@@ -340,6 +341,20 @@ pub fn place(
             } else {
                 try_soft(n, &eq_y, &mut y, bound, &pref_y);
             }
+        }
+    }
+    // Optional center alignment follows actual relation endpoints (including
+    // children of containers), but never overrides mandatory placement.
+    for rule in soft_alignments {
+        let candidate = Equality {
+            a: find(&rule.first),
+            b: find(&rule.second),
+            delta: rule.delta,
+            line: 0,
+        };
+        eq_y.push(candidate);
+        if solve_axis(n, &eq_y, &y, &pref_y).is_err() {
+            eq_y.pop();
         }
     }
     // Preserve earlier node positions where possible: move the later node's

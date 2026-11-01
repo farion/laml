@@ -1,7 +1,9 @@
 //! Place children inside measured containers before solving the outer graph.
 use super::{BoxNode, GeometryError, constraints};
 use crate::styles::StyleSheet;
-use crate::syntax::{Alignment, Axis, Diagram, LayoutRule, NodeKind, Placement, ScopedAlignment};
+use crate::syntax::{
+    Alignment, Axis, Diagram, FlowDirection, LayoutRule, NodeKind, Placement, ScopedAlignment,
+};
 
 fn err(line: usize, message: impl Into<String>) -> GeometryError {
     GeometryError {
@@ -98,6 +100,60 @@ fn projected_alignment(
     }
 }
 
+// A connection can join a child in this scope to a node outside its frame.
+// Prefer aligning the visible endpoint centers, not the frame centers, when
+// laying out the containing groups. This remains subordinate to layout rules.
+fn relation_alignments(
+    diagram: &Diagram,
+    boxes: &[BoxNode],
+    local: &[BoxNode],
+    parent: Option<&str>,
+) -> Vec<ScopedAlignment> {
+    if !matches!(
+        diagram.settings.direction,
+        FlowDirection::LeftToRight | FlowDirection::RightToLeft
+    ) {
+        return Vec::new();
+    }
+    diagram
+        .relations
+        .iter()
+        .filter_map(|relation| {
+            let from = boxes
+                .iter()
+                .find(|node| node.has_endpoint(&relation.from))?;
+            let to = boxes.iter().find(|node| node.has_endpoint(&relation.to))?;
+            // A named port or member has its own measured attachment position.
+            if relation.from != from.id
+                || relation.to != to.id
+                || from.kind != NodeKind::Generic
+                || to.kind != NodeKind::Generic
+            {
+                return None;
+            }
+            let a = direct_owner(diagram, &relation.from, parent)?;
+            let b = direct_owner(diagram, &relation.to, parent)?;
+            if a == b {
+                return None;
+            }
+            let owner_a = local.iter().find(|node| node.id == a)?;
+            let owner_b = local.iter().find(|node| node.id == b)?;
+            let center = |node: &BoxNode| node.y + node.height / 2.0;
+            Some(ScopedAlignment {
+                first: a,
+                second: b,
+                axis: Axis::Vertical,
+                delta: owner_a.height / 2.0 + center(from)
+                    - center(owner_a)
+                    - owner_b.height / 2.0
+                    - center(to)
+                    + center(owner_b),
+                line: 0,
+            })
+        })
+        .collect()
+}
+
 fn scope(
     diagram: &Diagram,
     boxes: &mut [BoxNode],
@@ -180,7 +236,8 @@ fn scope(
             Some(mapped)
         })
         .collect();
-    constraints::place(&graph, &mut local, styles)?;
+    let preferred = relation_alignments(diagram, boxes, &local, parent);
+    constraints::place(&graph, &mut local, styles, &preferred)?;
     if local.is_empty() {
         return Ok(());
     }

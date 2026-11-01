@@ -40,7 +40,29 @@ fn named_ports_exit_normally_and_nearby_generic_nodes_connect_horizontally() {
 
     let classify = named("decide");
     assert_eq!(classify.len(), 2);
-    assert!((classify[0].y - classify[1].y).abs() < 1e-6);
+    let center_y = |id: &str| {
+        let node = boxes.iter().find(|node| node.id == id).unwrap();
+        node.y + node.height / 2.0
+    };
+    assert!((classify[0].y - center_y("Platform.Validator")).abs() < 1e-6);
+    assert!((classify[1].y - center_y("Choice")).abs() < 1e-6);
+    let enqueue = named("buffer");
+    assert!((enqueue[0].y - center_y("Choice")).abs() < 1e-6);
+    assert!((enqueue[1].y - center_y("Queue")).abs() < 1e-6);
+}
+
+#[test]
+fn automatic_relation_alignment_yields_to_mandatory_vertical_layout() {
+    let source = "semantics {\nA\nB\nA -> B\n}\nlayout {\nA above B : gap=60\n}\n";
+    let graph = parse(source).unwrap();
+    let boxes = place(
+        &graph,
+        &load(&graph, Path::new("examples/gne-basic.laml")).unwrap(),
+    )
+    .unwrap();
+    let a = boxes.iter().find(|node| node.id == "A").unwrap();
+    let b = boxes.iter().find(|node| node.id == "B").unwrap();
+    assert!(a.y + a.height + 60.0 <= b.y + 1e-6);
 }
 
 #[test]
