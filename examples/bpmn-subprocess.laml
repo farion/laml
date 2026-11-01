@@ -1,0 +1,15 @@
+settings {
+    type: bpmn
+}
+semantics {
+    startEvent Start
+    endEvent Done
+    // An expanded subprocess draws the following inner flow within its frame.
+    Check("Check application") {
+        startEvent SubStart
+        userTask Verify("Verify documents")
+        endEvent SubDone
+        SubStart --> Verify --> SubDone
+    }
+    Start --> Check --> Done
+}

@@ -87,6 +87,23 @@ fn every_published_example_checks_and_builds() {
             continue;
         }
         let source = fs::read_to_string(&path).unwrap();
+        if laml::bpmn::is_bpmn_source(&source) {
+            let doc = laml::bpmn::parse(&source).unwrap();
+            let styles = load(
+                &laml::syntax::Diagram {
+                    styling: doc.styling.clone(),
+                    ..Default::default()
+                },
+                &path,
+            )
+            .unwrap();
+            laml::bpmn::validate_styles(&doc, &styles).unwrap();
+            laml::bpmn::validate_geometry(&doc).unwrap();
+            let svg = laml::bpmn::render_with_styles(&doc, &styles, laml::svg::TextMode::Embedded)
+                .unwrap();
+            assert_preview_matches(root, &path, &svg);
+            continue;
+        }
         if laml::interaction_overview::is_overview_source(&source) {
             let doc = laml::interaction_overview::parse(&source).unwrap();
             let styles = load(&doc.graph, &path).unwrap();

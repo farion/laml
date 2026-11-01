@@ -1,0 +1,12 @@
+// First BPMN drawing slice: inline split, join, implicit tasks, explicit events.
+settings {
+    type: bpmn
+}
+semantics {
+    startEvent Start
+    endEvent Done
+    Start --> Review(label="Antrag prüfen"; icon="folder")
+    Review <X>@Complete Approve("Freigeben"):ja ; RequestDocuments("Unterlagen nachfordern"):nein
+    Approve --> <X>@Merge --> Done
+    RequestDocuments --> Merge
+}

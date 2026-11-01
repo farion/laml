@@ -25,13 +25,13 @@ styling {
 }
 ```
 
-Unqualified identifiers match `[A-Za-z_][A-Za-z0-9_]*`; nested package paths use `.` and member addresses use `::`. A root-qualified path resolves absolutely even inside a package that contains a shadowing nested path; unqualified defaults prefer the nearest package scope. A global explicit `@id` takes precedence over a local default of the same spelling; use the qualified package path to address that default. Explicit `@id` replaces a default graph identity and is unique across explicitly named elements. Node labels and style import paths use double-quoted strings with `\n`, `\r`, `\t`, `\"`, and `\\` escapes. Relation text after `:` may be unquoted to the end of its line. Semicolons separate multiple *inline attributes*, never whole declarations.
+Unqualified identifiers match `[A-Za-z_][A-Za-z0-9_]*`; nested package paths use `.` and member addresses use `::`. A root-qualified path resolves absolutely even inside a package that contains a shadowing nested path; unqualified defaults prefer the nearest package scope. A global explicit `@id` takes precedence over a local default of the same spelling; use the qualified package path to address that default. Explicit `@id` replaces a default graph identity and is unique across explicitly named elements. Node labels and style import paths use double-quoted strings with `\n`, `\r`, `\t`, `\"`, and `\\` escapes. Relation text after `:` may be unquoted to the end of its line. Semicolons separate multiple *inline attributes*; in BPMN inline gateway splits, they separate outgoing branches (`A <X> B:yes ; C:no`). They never separate whole declarations.
 
 ## Settings
 
 | Name | Values | Default |
 |---|---|---|
-| `type` | `class`, `object`, `component`, `composite`, `profile`, `deployment`, `state`, `activity`, `usecase`, `package`, `communication`, `interaction-overview`, `timing`, `sequence` (omitted for generic node-edge) | Generic graph |
+| `type` | `class`, `object`, `component`, `composite`, `profile`, `deployment`, `state`, `activity`, `usecase`, `package`, `communication`, `interaction-overview`, `timing`, `sequence`, `bpmn` (omitted for generic node-edge) | Generic graph |
 | `direction` | `left-to-right`, `right-to-left`, `top-to-bottom`, `bottom-to-top` | `left-to-right` |
 | `naming-convention` | `uppercase-nodes-lowercase-relations` | Off |
 | `relation-label` | `near`, `along`, `inline` | `near` |
@@ -166,7 +166,7 @@ Selectors include `*`, `.class`, `node.class`, `relation.class`, `node[ID]`, `re
 | `font-size` | Finite positive number | Nodes, members, ports and relations |
 | `display` | `none` | Nodes, members, ports and relations (visible references fail) |
 | `shape` | `rectangle`, `ellipse`, `diamond`, `note` | Generic nodes, subject to measured content |
-| `symbol-rendering`, `icon-set`, `icon` | `text|icons`, `phosphor`, allowlisted icon name | Visibility glyphs and optional generic node icons |
+| `symbol-rendering`, `icon-set`, `icon` | `text|icons`, `phosphor`, bundled regular icon name (`laml icons`) | Visibility glyphs and optional node icons |
 | `interface-notation` | `box`, `lollipop` | Named UML realization relations, with validated compact-interface eligibility |
 
 Colours are `rgb(r,g,b)` with integer channels 0–255, quoted `"#rrggbb"`, or `none`. Numeric values are unadorned pixels, without a `px` suffix. Unknown properties and invalid values are errors, even for unmatched selectors. Default node minimum size is 100 × 50, padding 12, and font size 14. Width and height, when set, are fixed sizes; a conflicting explicit minimum or a box too small for its text and padding fails.

@@ -18,7 +18,7 @@ fn main() {
 }
 
 fn usage() -> String {
-    "usage: laml [--version | update | check FILE.laml | build FILE.laml [OUTPUT.svg|OUTPUT.png|OUTPUT.pdf] [--svg-text=embedded|system|paths]]".into()
+    "usage: laml [--version | update | icons [FILTER] | check FILE.laml | build FILE.laml [OUTPUT.svg|OUTPUT.png|OUTPUT.pdf] [--svg-text=embedded|system|paths]]".into()
 }
 
 fn run() -> Result<(), String> {
@@ -30,6 +30,16 @@ fn run() -> Result<(), String> {
         }
         [command] if command == "update" => {
             println!("{}", laml::update::update()?);
+            return Ok(());
+        }
+        [command] | [command, _] if command == "icons" => {
+            let filter = args.get(1).map_or("", String::as_str);
+            for icon in include_str!("../assets/phosphor/icons.txt")
+                .lines()
+                .filter(|i| i.contains(filter))
+            {
+                println!("{icon}");
+            }
             return Ok(());
         }
         [command] if command == "__update-check" => {
@@ -60,6 +70,46 @@ fn run() -> Result<(), String> {
     laml::update::notify_in_background();
     let path = Path::new(&args[1]);
     let text = fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    if laml::bpmn::is_bpmn_source(&text) {
+        let document = laml::bpmn::parse(&text).map_err(|e| format!("{}:{e}", path.display()))?;
+        let styles = load(
+            &laml::syntax::Diagram {
+                styling: document.styling.clone(),
+                ..Default::default()
+            },
+            path,
+        )
+        .map_err(|e| format!("{}:{}: {}", e.path.display(), e.line, e.message))?;
+        laml::bpmn::validate_styles(&document, &styles)?;
+        laml::bpmn::validate_geometry(&document)?;
+        if args[0] == "check" {
+            println!(
+                "parsed BPMN: {} nodes, {} flows; geometry validated",
+                document.nodes.len(),
+                document.edges.len()
+            );
+            return Ok(());
+        }
+        if path.extension().and_then(|e| e.to_str()) != Some("laml") {
+            return Err("build input must have a .laml extension".into());
+        }
+        let output = output_arg
+            .map(PathBuf::from)
+            .unwrap_or_else(|| path.with_extension("svg"));
+        let format = output
+            .extension()
+            .and_then(|e| e.to_str())
+            .ok_or("build output must end in .svg, .png or .pdf")?;
+        if !matches!(format, "svg" | "png" | "pdf") {
+            return Err("build output must end in .svg, .png or .pdf".into());
+        }
+        if text_arg.is_some() && format != "svg" {
+            return Err("--svg-text is only available for SVG output".into());
+        }
+        let svg = laml::bpmn::render_with_styles(&document, &styles, mode)
+            .map_err(|e| format!("{}: BPMN rendering failed: {e}", path.display()))?;
+        return write_image(&svg, &output, format);
+    }
     if laml::communication::is_communication_source(&text) {
         let document = laml::communication::parse(&text)
             .map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?;

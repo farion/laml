@@ -1,0 +1,29 @@
+settings {
+    type: bpmn
+    direction: top-to-bottom
+}
+semantics {
+    pool Customer("Customer") {
+        startEvent Start
+        sendTask Submit("Send order")
+        endEvent Finished
+        Start --> Submit --> Finished
+    }
+    pool Shop("Shop") {
+        lane Intake("Intake") {
+            messageStart Received("Order received")
+            userTask Check("Check order")
+            Received --> Check
+        }
+        lane Fulfillment("Fulfillment") {
+            serviceTask Dispatch("Dispatch")
+            endEvent Done
+            Dispatch --> Done
+        }
+        Check --> Dispatch
+    }
+    Customer.Submit ~~> Shop.Received : order
+}
+layout {
+    Shop.Received above Shop.Check
+}

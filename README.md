@@ -10,7 +10,7 @@ LAML turns a `.laml` file into an SVG, PNG or vector PDF diagram. Describe the e
 
 ## What is LAML?
 
-LAML is a diagram language and compiler for architecture drawings and 14 UML diagram types. Its source separates **semantics** (what connects), **layout** (where things must go), and **styling** (how they look). It produces an image from the current source; it does not need a drawing editor or previous layout state.
+LAML is a diagram language and compiler for architecture drawings, 14 UML diagram types and a checked subset of BPMN process/collaboration diagrams. Its source separates **semantics** (what connects), **layout** (where things must go), and **styling** (how they look). It produces an image from the current source; it does not need a drawing editor or previous layout state.
 
 ## Why LAML?
 
@@ -111,9 +111,23 @@ semantics {
 
 [Full showcase source](examples/showcase-sequence.laml) · [Sequence guide](docs/diagrams/sequence.md).
 
+### BPMN: paint a decision, keep the process readable
+
+```laml
+// Selected lines from examples/bpmn-basic.laml
+Start --> Review("Antrag prüfen")
+Review <X>@Complete Approve("Freigeben"):ja ; RequestDocuments("Unterlagen nachfordern"):nein
+Approve --> <X>@Merge --> Done
+RequestDocuments --> Merge
+```
+
+![BPMN process with an exclusive decision](docs/images/bpmn-basic.png)
+
+[Complete BPMN source](examples/bpmn-basic.laml) · [BPMN guide and coverage limits](docs/bpmn-diagrams.md).
+
 ## Features
 
-- **15 diagram types:**
+- **16 diagram types** (GNE, 14 UML types and BPMN):
   - [Generic node-edge (GNE)](docs/diagrams/gne.md)
   - [Class](docs/diagrams/class.md)
   - [Object](docs/diagrams/object.md)
@@ -129,10 +143,12 @@ semantics {
   - [Timing](docs/diagrams/timing.md)
   - [Composite structure](docs/diagrams/composite.md)
   - [Profile](docs/diagrams/profile.md)
-- Automatic placement with mandatory separation and alignment rules; measured routing and labels.
+  - [BPMN process/collaboration subset](docs/diagrams/bpmn.md)
+- Automatic placement with mandatory corrections; BPMN currently supports relative ordering rules, not numeric gap/alignment options.
 - LSS styling with selectors, classes, local imports and per-element overrides.
 - SVG with selectable text by default, PNG and vector PDF.
 - `laml check` for source validation; `laml build` for measured geometry and image output.
+- All 1,512 bundled Phosphor regular icons are discoverable with `laml icons [FILTER]`.
 
 [Language reference](docs/language-reference.md) · [Behavioral contract](docs/language-definition.md)
 

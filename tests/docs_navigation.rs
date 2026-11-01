@@ -16,6 +16,7 @@ const GUIDES: &[&str] = &[
     "timing",
     "composite",
     "profile",
+    "bpmn",
 ];
 
 fn links(markdown: &str) -> impl Iterator<Item = &str> {

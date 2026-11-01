@@ -1,17 +1,39 @@
-//! Small allowlist of vendored Phosphor paths; no remote assets or icon-font metrics.
+//! Full vendored Phosphor regular icon catalogue; no remote assets or font metrics.
 use std::fmt::Write;
+mod catalog0;
+mod catalog1;
+mod catalog10;
+mod catalog11;
+mod catalog12;
+mod catalog13;
+mod catalog14;
+mod catalog15;
+mod catalog2;
+mod catalog3;
+mod catalog4;
+mod catalog5;
+mod catalog6;
+mod catalog7;
+mod catalog8;
+mod catalog9;
 
 pub(crate) fn source(name: &str) -> Option<&'static str> {
-    match name {
-        "folder" => Some(include_str!("../assets/phosphor/regular/folder.svg")),
-        "lock" => Some(include_str!("../assets/phosphor/regular/lock.svg")),
-        "globe" => Some(include_str!("../assets/phosphor/regular/globe.svg")),
-        "shield" => Some(include_str!("../assets/phosphor/regular/shield.svg")),
-        "package" => Some(include_str!("../assets/phosphor/regular/package.svg")),
-        "user" => Some(include_str!("../assets/phosphor/regular/user.svg")),
-        "database" => Some(include_str!("../assets/phosphor/regular/database.svg")),
-        _ => None,
-    }
+    catalog0::source(name)
+        .or_else(|| catalog1::source(name))
+        .or_else(|| catalog2::source(name))
+        .or_else(|| catalog3::source(name))
+        .or_else(|| catalog4::source(name))
+        .or_else(|| catalog5::source(name))
+        .or_else(|| catalog6::source(name))
+        .or_else(|| catalog7::source(name))
+        .or_else(|| catalog8::source(name))
+        .or_else(|| catalog9::source(name))
+        .or_else(|| catalog10::source(name))
+        .or_else(|| catalog11::source(name))
+        .or_else(|| catalog12::source(name))
+        .or_else(|| catalog13::source(name))
+        .or_else(|| catalog14::source(name))
+        .or_else(|| catalog15::source(name))
 }
 
 pub(crate) fn visibility(glyph: char) -> Option<&'static str> {

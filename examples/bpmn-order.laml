@@ -1,0 +1,51 @@
+// Collaboration with two participants, lanes, an interrupting boundary timer,
+// typed tasks, a data association, a collapsed and an expanded subprocess.
+settings {
+    type: bpmn
+}
+semantics {
+    pool Customer("Customer") {
+        startEvent Begin
+        sendTask Submit("Submit order")
+        receiveTask Response("Receive answer")
+        endEvent CustomerDone
+        Begin --> Submit --> Response --> CustomerDone
+    }
+    pool Shop("Shop") {
+        lane Fulfillment("Fulfillment") {
+            Accept("Accept")
+            Decline("Decline")
+            Escalate("Escalate")
+            +Pack("Pack items")
+            sendTask Reply("Send answer")
+            endEvent ShopDone
+        }
+        lane Intake("Intake") {
+            messageStart Received("Order arrived")
+            userTask Review(label="Review order"; icon="folder")
+            data Order("Order document")
+            store Archive("Archive")
+            Order ..> Review
+            Review ..> Archive
+            Received --> Review
+            Review -(timer@Deadline:"2 days")-> Escalate
+        }
+        Review <X>@Decision Accept:yes ; Decline:no
+        Accept --> Pack --> <X>@Merge --> Reply
+        Decline --> Merge
+        Escalate --> Merge
+        Reply --> ShopDone
+    }
+    Customer.Submit ~~> Shop.Received : order
+    Shop.Reply ~~> Customer.Response : answer
+}
+styling {
+    * {
+        icon-set: phosphor
+    }
+    node[Shop.Review] {
+        fill: "#e8f3ff"
+        border-color: "#285b85"
+        icon: "magnifying-glass"
+    }
+}
