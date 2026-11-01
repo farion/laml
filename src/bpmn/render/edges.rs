@@ -58,22 +58,91 @@ fn gateway_route(
     });
     let (sx, sy) = stub(source);
     let (tx, ty) = stub(target);
-    let start_vertical = matches!(source.side, Side::Top | Side::Bottom);
-    let end_vertical = matches!(target.side, Side::Top | Side::Bottom);
-    let mut points = vec![(source.x, source.y), (sx, sy)];
-    match (start_vertical, end_vertical) {
-        (true, false) => points.push((tx, sy)),
-        (false, true) => points.push((sx, ty)),
-        (true, true) => {
-            let mid = (sy + ty) / 2.0;
-            points.extend([(sx, mid), (tx, mid)]);
+    // A branch above/below (or left/right in a vertical diagram) can leave
+    // the gateway in its outward direction and enter the task in one bend.
+    let corner = if from.is_some() && to.is_none() {
+        match (source.side, target.side) {
+            (Side::Top, Side::Left | Side::Right) if target.y < source.y - 2.0 => {
+                Some((source.x, target.y))
+            }
+            (Side::Bottom, Side::Left | Side::Right) if target.y > source.y + 2.0 => {
+                Some((source.x, target.y))
+            }
+            (Side::Left, Side::Top | Side::Bottom) if target.x < source.x - 2.0 => {
+                Some((target.x, source.y))
+            }
+            (Side::Right, Side::Top | Side::Bottom) if target.x > source.x + 2.0 => {
+                Some((target.x, source.y))
+            }
+            _ => None,
         }
-        (false, false) => {
-            let mid = (sx + tx) / 2.0;
-            points.extend([(mid, sy), (mid, ty)]);
+    } else if from.is_none() && to.is_some() {
+        match (source.side, target.side) {
+            (Side::Left | Side::Right, Side::Top) if source.y < target.y - 2.0 => {
+                Some((target.x, source.y))
+            }
+            (Side::Left | Side::Right, Side::Bottom) if source.y > target.y + 2.0 => {
+                Some((target.x, source.y))
+            }
+            (Side::Top | Side::Bottom, Side::Left) if source.x < target.x - 2.0 => {
+                Some((source.x, target.y))
+            }
+            (Side::Top | Side::Bottom, Side::Right) if source.x > target.x + 2.0 => {
+                Some((source.x, target.y))
+            }
+            _ => None,
         }
-    }
-    points.extend([(tx, ty), (target.x, target.y)]);
+    } else {
+        None
+    };
+    let clear = |corner: (f64, f64)| {
+        let points = [(source.x, source.y), corner, (target.x, target.y)];
+        points.windows(2).all(|leg| {
+            doc.nodes.iter().enumerate().all(|(i, node)| {
+                if node.id == e.from
+                    || node.id == e.to
+                    || node.pool
+                        != doc.nodes[doc.nodes.iter().position(|n| n.id == e.from).unwrap()].pool
+                {
+                    return true;
+                }
+                let b = geom.nodes[i];
+                let margin = 5.0;
+                if (leg[0].0 - leg[1].0).abs() < 0.01 {
+                    leg[0].0 <= b.x - b.w / 2.0 - margin
+                        || leg[0].0 >= b.x + b.w / 2.0 + margin
+                        || leg[0].1.max(leg[1].1) <= b.y - b.h / 2.0 - margin
+                        || leg[0].1.min(leg[1].1) >= b.y + b.h / 2.0 + margin
+                } else {
+                    leg[0].1 <= b.y - b.h / 2.0 - margin
+                        || leg[0].1 >= b.y + b.h / 2.0 + margin
+                        || leg[0].0.max(leg[1].0) <= b.x - b.w / 2.0 - margin
+                        || leg[0].0.min(leg[1].0) >= b.x + b.w / 2.0 + margin
+                }
+            })
+        })
+    };
+    let mut points = if let Some(corner) = corner.filter(|&corner| clear(corner)) {
+        vec![(source.x, source.y), corner, (target.x, target.y)]
+    } else {
+        let start_vertical = matches!(source.side, Side::Top | Side::Bottom);
+        let end_vertical = matches!(target.side, Side::Top | Side::Bottom);
+        let mut points = vec![(source.x, source.y), (sx, sy)];
+        match (start_vertical, end_vertical) {
+            (true, false) => points.push((tx, sy)),
+            (false, true) => points.push((sx, ty)),
+            (true, true) => {
+                let mid = (sy + ty) / 2.0;
+                points.extend([(sx, mid), (tx, mid)]);
+            }
+            (false, false) => {
+                let mid = (sx + tx) / 2.0;
+                points.extend([(mid, sy), (mid, ty)]);
+            }
+        }
+        points.extend([(tx, ty), (target.x, target.y)]);
+        points
+    };
     points.dedup_by(|a, b| (a.0 - b.0).abs() < 0.01 && (a.1 - b.1).abs() < 0.01);
     let mut path = String::new();
     for (i, (x, y)) in points.iter().enumerate() {

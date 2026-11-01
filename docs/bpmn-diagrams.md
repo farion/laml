@@ -83,7 +83,7 @@ layout {
 
 Contradictory rules fail. Layout directions (`<`, `>`, `above`, `below`) describe actual image coordinates even when the automatic flow is top-to-bottom. A manual rule cannot change pool, lane or subprocess membership. This BPMN renderer supports relative ordering; numeric gap and alignment constraints are not yet supported for BPMN.
 
-By default, a gateway with up to four sequence flows assigns **a distinct cardinal docking point to each flow**. For the basic example, the split enters from the left and exits at the top (`ja`) and bottom (`nein`); the merge enters at the top and bottom and exits to the right. More than four flows are distributed at distinct points along the diamond's perimeter rather than sharing an anchor. To override an individual gateway end, identify the flow by its endpoint IDs:
+By default, a gateway with up to four sequence flows assigns **a distinct cardinal docking point to each flow**. For the basic example, the split enters from the left and exits at the top (`ja`) and bottom (`nein`); the merge enters at the top and bottom and exits to the right. Automatic placement centers the straight-through path between the two branches; where unobstructed, each branch needs only one right-angle bend between its gateway and task. More than four flows are distributed at distinct points along the diamond's perimeter rather than sharing an anchor. To override an individual gateway end, identify the flow by its endpoint IDs:
 
 ```text
 layout {

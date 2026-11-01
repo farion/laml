@@ -63,6 +63,7 @@ fn size(doc: &Document, node: &Node) -> (f64, f64) {
         }
     }
 }
+mod branch;
 mod ranks;
 use ranks::ranks;
 fn node_index(doc: &Document, name: &str) -> Result<usize, String> {
@@ -127,6 +128,22 @@ fn place_group(
         };
         row_bottom[rank] = y + h / 2.0 + 45.0;
         height = height.max(row_bottom[rank] - top + 25.0);
+    }
+    if let Some(center) = branch::spine_center(doc, indices, ranks, boxes) {
+        for &i in indices {
+            if indices.iter().filter(|&&j| ranks[j] == ranks[i]).count() == 1
+                && doc.edges.iter().any(|e| {
+                    e.kind == super::EdgeKind::Sequence
+                        && (e.from == doc.nodes[i].id || e.to == doc.nodes[i].id)
+                })
+            {
+                boxes[i].y = center;
+            }
+        }
+        height = indices
+            .iter()
+            .map(|&i| boxes[i].y + boxes[i].h / 2.0 + 70.0 - top)
+            .fold(height, f64::max);
     }
     let width = x[max_rank] - left + widths[max_rank] / 2.0 + 70.0;
     (width, height)

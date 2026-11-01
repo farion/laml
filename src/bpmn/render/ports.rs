@@ -203,7 +203,45 @@ mod tests {
         assert_ne!((top.x, top.y), (bottom.x, bottom.y));
         let y = |id: &str| geom.nodes[doc.nodes.iter().position(|n| n.id == id).unwrap()].y;
         assert_eq!(y("Start"), y("Review"));
+        assert_eq!(y("Review"), y("Complete"));
+        assert_eq!(y("Complete"), y("Merge"));
         assert_eq!(y("Merge"), y("Done"));
+        assert_eq!(y("Complete"), (y("Approve") + y("RequestDocuments")) / 2.0);
+        let svg = crate::bpmn::render(&doc, crate::svg::TextMode::System).unwrap();
+        let arrows: Vec<_> = svg
+            .lines()
+            .filter(|line| line.contains("marker-end=\"url(#solid-arrow)\""))
+            .collect();
+        assert_eq!(arrows.len(), doc.edges.len());
+        for (from, to) in [
+            ("Complete", "Approve"),
+            ("Complete", "RequestDocuments"),
+            ("Approve", "Merge"),
+            ("RequestDocuments", "Merge"),
+        ] {
+            assert_eq!(
+                arrows[edge_index(&doc, from, to)].matches(" L ").count(),
+                2,
+                "{from}->{to} should have exactly one bend"
+            );
+        }
+    }
+    #[test]
+    fn three_way_gateway_centers_the_trunk_on_the_middle_branch() {
+        let source = "settings {\ntype: bpmn\n}\nsemantics {\nStart <X>@Split A ; B ; C\nA --> <X>@Merge --> End\nB --> Merge\nC --> Merge\n}";
+        let doc = parse(source).unwrap();
+        let geom = geometry::place(&doc).unwrap();
+        let y = |id: &str| geom.nodes[doc.nodes.iter().position(|n| n.id == id).unwrap()].y;
+        assert_eq!(y("Split"), y("B"));
+        assert_eq!(y("Merge"), y("B"));
+        assert_eq!(y("Start"), y("End"));
+        let ports = assign(&doc, &geom).unwrap();
+        for (name, side) in [("A", Side::Top), ("B", Side::Right), ("C", Side::Bottom)] {
+            assert_eq!(
+                ports.ends[edge_index(&doc, "Split", name)].0.unwrap().side,
+                side
+            );
+        }
     }
     #[test]
     fn explicit_side_overrides_are_mandatory_and_collisions_fail() {
@@ -233,13 +271,9 @@ mod tests {
     }
     #[test]
     fn degree_above_four_spreads_perimeter_attachments() {
-        let source = "settings {\ntype: bpmn\n}\nsemantics {\nStart --> <X>@Choice\nChoice <X>@Extra A ; B\n}";
         // A single split with five exits and one incoming.
-        let source = source.replace(
-            "Start --> <X>@Choice\nChoice <X>@Extra A ; B",
-            "Start <X>@Choice A ; B ; C ; D ; E",
-        );
-        let doc = parse(&source).unwrap();
+        let source = "settings {\ntype: bpmn\n}\nsemantics {\nstartEvent Begin\nBegin --> Start\nStart <X>@Choice A ; B ; C ; D ; E\n}";
+        let doc = parse(source).unwrap();
         let geom = geometry::place(&doc).unwrap();
         let ports = assign(&doc, &geom).unwrap();
         let points: Vec<_> = doc
