@@ -212,7 +212,9 @@ fn mandatory_visuals_cannot_be_styled_away() {
 
 #[test]
 fn guide_block_is_buildable_and_line_ending_agnostic() {
-    let guide = std::fs::read_to_string("docs/profile-diagrams.md").unwrap();
+    let guide = std::fs::read_to_string("docs/profile-diagrams.md")
+        .unwrap()
+        .replace("\r\n", "\n");
     let code = blocks(&guide);
     assert_eq!(
         code.trim(),
