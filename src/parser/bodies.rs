@@ -58,6 +58,7 @@ pub(super) fn node(
     super::deployment::validate_node(diagram, kind, parent, block, visibility, &stereotypes, line)?;
     super::state::validate_node(diagram, kind, parent, block, visibility, &stereotypes, line)?;
     super::activity::validate_node(diagram, kind, parent, block, visibility, &stereotypes, line)?;
+    super::composite::node(diagram, kind, parent, block, visibility, &stereotypes, line)?;
     crate::interaction_overview::validate_node(
         diagram,
         kind,
@@ -179,7 +180,11 @@ pub(super) fn node(
                 }
                 result.label = Some(value.trim().into());
             }
-            "of" if kind == NodeKind::ComponentPart && valid_reference(value.trim()) => {
+            "of" if matches!(
+                kind,
+                NodeKind::ComponentPart | NodeKind::CompositePart | NodeKind::CompositeRole
+            ) && valid_reference(value.trim()) =>
+            {
                 result.part_type = Some(value.trim().into());
             }
             "of" if kind == NodeKind::Object && valid_reference(value.trim()) => {
@@ -197,7 +202,11 @@ pub(super) fn node(
     if kind == NodeKind::InteractionUse && result.label.is_none() {
         return Err(error(line, "interaction-use requires ref=InteractionName"));
     }
-    if kind == NodeKind::ComponentPart && result.part_type.is_none() {
+    if matches!(
+        kind,
+        NodeKind::ComponentPart | NodeKind::CompositePart | NodeKind::CompositeRole
+    ) && result.part_type.is_none()
+    {
         return Err(error(line, "part requires of=Component"));
     }
     if kind == NodeKind::Object {
@@ -279,6 +288,7 @@ pub(super) fn member(
         content,
         line,
         &mut diagram.nodes[index],
+        diagram_type,
         &id,
         &member_classes,
     )? {

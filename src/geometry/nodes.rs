@@ -135,6 +135,7 @@ pub fn measure_node(
     if diagram_type != DiagramType::Generic && shape != expected {
         return Err("UML node form cannot be replaced by an LSS shape".into());
     }
+    super::node_notation::validate_composite_border(node.kind, diagram_type, styles, &element)?;
     let font_size = number(styles, &element, "font-size", 14.0);
     super::node_notation::validate_ref_font(node.kind, font_size)?;
     let text_color = color(styles, &element, "color", "#17212e");

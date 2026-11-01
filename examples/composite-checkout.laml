@@ -1,0 +1,30 @@
+settings {
+    type: composite
+}
+semantics {
+    interface OrderAPI
+    class Gateway {
+        port Public(requires=OrderAPI)
+        port Backend(requires=OrderAPI)
+    }
+    class Store {
+        port In(provides=OrderAPI)
+    }
+    structure Checkout {
+        port Front(requires=OrderAPI)
+        role gateway(of=Gateway)
+        part store(of=Store)
+        @external Checkout::Front => gateway::Public
+        @internal gateway::Backend == store::In
+    }
+}
+layout {
+    Checkout.gateway < Checkout.store : gap=160
+    Gateway < Store : gap=90
+    Gateway above Checkout : gap=85
+    Store above Checkout : gap=85
+    port[Checkout::Front] : side=left
+    port[Checkout.gateway::Public] : side=left
+    port[Checkout.gateway::Backend] : side=right
+    port[Checkout.store::In] : side=left
+}

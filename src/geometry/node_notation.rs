@@ -50,6 +50,24 @@ pub(super) fn validate_ref_height(
     Ok(())
 }
 
+pub(super) fn validate_composite_border(
+    kind: NodeKind,
+    ty: DiagramType,
+    styles: &StyleSheet,
+    element: &Element<'_>,
+) -> Result<(), String> {
+    if ty == DiagramType::Composite
+        && (matches!(styles.get(element,"border-color").map(|d| &d.value), Some(Value::Color(color)) if color=="none")
+            || matches!(styles.get(element,"color").map(|d| &d.value), Some(Value::Color(color)) if color=="none")
+            || super::nodes::number(styles, element, "border-width", 1.0) < 1.0)
+    {
+        return Err(format!(
+            "composite {kind:?} frame must retain a visible outline"
+        ));
+    }
+    Ok(())
+}
+
 pub(super) fn corner_radius(
     kind: NodeKind,
     styles: &StyleSheet,

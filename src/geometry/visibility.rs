@@ -25,9 +25,20 @@ pub(crate) fn filtered(diagram: &Diagram, sheet: &StyleSheet) -> Result<Diagram,
         })
         .map(|node| node.id.as_str())
         .collect();
-    if diagram.settings.diagram_type == DiagramType::InteractionOverview && !hidden_nodes.is_empty()
+    if matches!(
+        diagram.settings.diagram_type,
+        DiagramType::InteractionOverview | DiagramType::Composite
+    ) && !hidden_nodes.is_empty()
     {
-        return Err((1, "interaction overview nodes must remain visible".into()));
+        return Err((
+            1,
+            if diagram.settings.diagram_type == DiagramType::Composite {
+                "composite classifier, parts and roles must remain visible"
+            } else {
+                "interaction overview nodes must remain visible"
+            }
+            .into(),
+        ));
     }
     visible.nodes.retain(|node| {
         let mut current = Some(node.id.as_str());
@@ -85,13 +96,18 @@ pub(crate) fn filtered(diagram: &Diagram, sheet: &StyleSheet) -> Result<Diagram,
     }
     if matches!(
         diagram.settings.diagram_type,
-        DiagramType::Activity | DiagramType::Communication | DiagramType::InteractionOverview
+        DiagramType::Activity
+            | DiagramType::Communication
+            | DiagramType::InteractionOverview
+            | DiagramType::Composite
     ) {
         for relation in &diagram.relations {
             if (relation.activity_flow.is_some()
                 || matches!(
                     diagram.settings.diagram_type,
-                    DiagramType::Communication | DiagramType::InteractionOverview
+                    DiagramType::Communication
+                        | DiagramType::InteractionOverview
+                        | DiagramType::Composite
                 ))
                 && hidden(
                     sheet,
@@ -107,6 +123,8 @@ pub(crate) fn filtered(diagram: &Diagram, sheet: &StyleSheet) -> Result<Diagram,
                         "activity control and object flows must remain visible"
                     } else if diagram.settings.diagram_type == DiagramType::InteractionOverview {
                         "interaction overview flows must remain visible"
+                    } else if diagram.settings.diagram_type == DiagramType::Composite {
+                        "composite connectors must remain visible"
                     } else {
                         "communication links must remain visible"
                     }

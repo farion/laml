@@ -3,6 +3,17 @@ use crate::geometry::BoxNode;
 use crate::syntax::NodeKind;
 use std::fmt::Write;
 
+pub(super) fn junction(svg: &mut String, node: &BoxNode) {
+    let cy = node.y + node.height / 2.0;
+    writeln!(svg,"<polygon points=\"{:.2},{:.2} {:.2},{:.2} {:.2},{:.2} {:.2},{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
+        node.x+12.0,cy-12.0,node.x+24.0,cy,node.x+12.0,cy+12.0,node.x,cy,
+        node.fill,node.border_color,node.border_width).unwrap();
+    if !node.label.is_empty() {
+        writeln!(svg,"<text x=\"{:.2}\" y=\"{:.2}\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\">{}</text>",
+            node.x+30.0,cy+node.font_size*0.28,node.font_size,node.color,super::escape(&node.label)).unwrap();
+    }
+}
+
 pub(super) fn draw(svg: &mut String, node: &BoxNode) {
     let cy = node.y + node.height / 2.0;
     if node.kind == NodeKind::Socket {

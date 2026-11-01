@@ -73,6 +73,7 @@ pub(super) fn parse(
         DiagramType::Object => matches!(operator, "--" | ".."),
         DiagramType::Class => !matches!(operator, "->" | "<-" | "<->" | "<--" | "<.."),
         DiagramType::Component => matches!(operator, "..>" | "..|>" | ".." | "==" | "=>"),
+        DiagramType::Composite => matches!(operator, "==" | "=>"),
         DiagramType::Deployment => matches!(operator, "--" | "..>" | ".."),
         DiagramType::State | DiagramType::Activity | DiagramType::InteractionOverview => {
             matches!(operator, "-->" | "..")

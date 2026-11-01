@@ -118,6 +118,9 @@ pub(super) fn validate_relation(
         }
         return Ok(());
     }
+    if diagram.settings.diagram_type == DiagramType::Composite {
+        return super::composite::relation(relation, from, to);
+    }
     if diagram.settings.diagram_type == DiagramType::Component {
         return super::component::validate(relation, from, to);
     }

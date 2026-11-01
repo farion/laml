@@ -117,6 +117,7 @@ fn scope(
                     node.kind,
                     NodeKind::Package
                         | NodeKind::Component
+                        | NodeKind::CompositeStructure
                         | NodeKind::State
                         | NodeKind::UseCaseSystem
                 ) || node.kind.is_deployment_target())
@@ -197,7 +198,9 @@ fn scope(
             .expect("container measured");
         (
             box_parent.padding + 24.0,
-            if matches!(box_parent.kind, NodeKind::Component | NodeKind::State)
+            if box_parent.kind == NodeKind::CompositeStructure {
+                super::composite::header_height(box_parent) + 48.0
+            } else if matches!(box_parent.kind, NodeKind::Component | NodeKind::State)
                 || box_parent.kind.is_deployment_target()
             {
                 box_parent.height + 24.0

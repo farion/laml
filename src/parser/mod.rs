@@ -15,6 +15,7 @@ mod bindings;
 mod bodies;
 mod component;
 mod component_connectors;
+mod composite;
 mod deployment;
 mod diagram_type;
 use diagram_type::prescan_type;
@@ -235,19 +236,29 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
                 }
             }
             Section::NodeBody(index) => {
-                if diagram.nodes[index].kind == crate::syntax::NodeKind::ComponentPart {
+                if matches!(
+                    diagram.nodes[index].kind,
+                    crate::syntax::NodeKind::ComponentPart
+                        | crate::syntax::NodeKind::CompositePart
+                        | crate::syntax::NodeKind::CompositeRole
+                ) {
                     return Err(error(line, "part cannot contain a body"));
                 }
-                if diagram.nodes[index].kind == crate::syntax::NodeKind::Component
-                    && text.starts_with("part ")
+                if (diagram.nodes[index].kind == crate::syntax::NodeKind::Component
+                    && text.starts_with("part "))
+                    || (diagram.nodes[index].kind == crate::syntax::NodeKind::CompositeStructure
+                        && (text.starts_with("part ") || text.starts_with("role ")))
                 {
                     let parent = diagram.nodes[index].id.clone();
                     bodies::node(text, line, &mut diagram, false, Some(&parent))?;
                     Section::NodeBody(index)
-                } else if diagram.nodes[index].kind == crate::syntax::NodeKind::Component
-                    && text
-                        .split_whitespace()
-                        .any(|token| matches!(token, "==" | "=>"))
+                } else if matches!(
+                    diagram.nodes[index].kind,
+                    crate::syntax::NodeKind::Component
+                        | crate::syntax::NodeKind::CompositeStructure
+                ) && text
+                    .split_whitespace()
+                    .any(|token| matches!(token, "==" | "=>"))
                 {
                     let scope = diagram.nodes[index].id.clone();
                     graph_relations::parse_semantic(text, line, &mut diagram, Some(&scope))?;
@@ -275,6 +286,7 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
                     );
                     Section::NodeBody(index)
                 } else {
+                    composite::body_member(&diagram, index, text, line)?;
                     bodies::member(text, line, &mut diagram, index)?;
                     Section::NodeBody(index)
                 }
@@ -367,6 +379,7 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
     activity::validate(&diagram)?;
     usecase::validate(&diagram)?;
     package_diagram::validate(&diagram)?;
+    composite::validate(&diagram)?;
     Ok(diagram)
 }
 
@@ -467,6 +480,7 @@ fn parse_setting(
                 "class" => DiagramType::Class,
                 "object" => DiagramType::Object,
                 "component" => DiagramType::Component,
+                "composite" => DiagramType::Composite,
                 "deployment" => DiagramType::Deployment,
                 "state" => DiagramType::State,
                 "activity" => DiagramType::Activity,

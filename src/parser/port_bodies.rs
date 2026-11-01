@@ -1,12 +1,13 @@
 //! Named graph ports and explicit UML component interface contracts.
 use super::{ParseError, attributes, classes, error};
 use crate::lex::valid_reference;
-use crate::syntax::{NodeDecl, NodeKind, PortContract, PortDecl};
+use crate::syntax::{DiagramType, NodeDecl, NodeKind, PortContract, PortDecl};
 
 pub(super) fn parse(
     content: &str,
     line: usize,
     node: &mut NodeDecl,
+    diagram_type: DiagramType,
     id: &Option<String>,
     member_classes: &[String],
 ) -> Result<bool, ParseError> {
@@ -15,7 +16,7 @@ pub(super) fn parse(
     };
     if !matches!(
         node.kind,
-        NodeKind::Generic | NodeKind::Class | NodeKind::Component
+        NodeKind::Generic | NodeKind::Class | NodeKind::Component | NodeKind::CompositeStructure
     ) {
         return Err(error(
             line,
@@ -26,12 +27,13 @@ pub(super) fn parse(
     if name.is_empty() {
         return Err(error(line, "port name required"));
     }
+    let typed = node.kind == NodeKind::Component || diagram_type == DiagramType::Composite;
     let mut port_classes = member_classes.to_vec();
     let mut contract = None;
     for (key, value) in attrs {
         match key.as_str() {
             "style-classes" => port_classes = classes(&value, line)?,
-            "provides" | "requires" if node.kind == NodeKind::Component => {
+            "provides" | "requires" if typed => {
                 if contract.is_some() || !valid_reference(value.trim()) {
                     return Err(error(
                         line,
@@ -47,10 +49,10 @@ pub(super) fn parse(
             _ => return Err(error(line, format!("unsupported port attribute '{key}'"))),
         }
     }
-    if node.kind == NodeKind::Component && contract.is_none() {
+    if typed && contract.is_none() {
         return Err(error(
             line,
-            "component port needs provides=Interface or requires=Interface",
+            "typed port needs provides=Interface or requires=Interface",
         ));
     }
     let port_id = id.clone().unwrap_or_else(|| name.clone());

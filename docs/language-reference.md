@@ -31,7 +31,7 @@ Unqualified identifiers match `[A-Za-z_][A-Za-z0-9_]*`; nested package paths use
 
 | Name | Values | Default |
 |---|---|---|
-| `type` | `class`, `object`, `component`, `deployment`, `state`, `activity`, `usecase`, `package`, `communication`, `interaction-overview`, `timing`, `sequence` (omitted for generic node-edge) | Generic graph |
+| `type` | `class`, `object`, `component`, `composite`, `deployment`, `state`, `activity`, `usecase`, `package`, `communication`, `interaction-overview`, `timing`, `sequence` (omitted for generic node-edge) | Generic graph |
 | `direction` | `left-to-right`, `right-to-left`, `top-to-bottom`, `bottom-to-top` | `left-to-right` |
 | `naming-convention` | `uppercase-nodes-lowercase-relations` | Off |
 | `relation-label` | `near`, `along`, `inline` | `near` |
@@ -97,6 +97,10 @@ Set `type: communication` and `interaction: Name` in `settings`. Declare typed l
 ## Interaction-overview diagrams
 
 Set `type: interaction-overview` and `interaction: Name` in `settings`. Declare `interaction-use Call(ref=Interaction)` as a `ref` frame. Add initial/final and optionally decision/merge or fork/join control vertices; join corresponding branches with `-->` control flows. Decision exits have `[guard]` or `[else]` labels. The graph must be connected, acyclic and properly nested. Ordinary activity actions and object flows are not valid substitutes for interaction uses. See the [guide](interaction-overview-diagrams.md) and [UML notation audit](uml-interaction-overview-conformance.md).
+
+## Composite-structure diagrams
+
+Set `type: composite`. One root `structure Name { ... }` encloses a mandatory `internal structure` compartment with `part id(of=Class)` (solid, composite ownership) and `role id(of=Class)` (dashed, noncomposite reference). Define class/interface types outside the owner. `port P(provides=Interface)` or `port P(requires=Interface)` on a class or structure creates a checked simple boundary port; class ports are copied to its contained parts/roles. `part::port == other::port` is assembly between opposite-role matching sibling ports; `Owner::port => part::port` is delegation with matching same-role ports. Both draw solid connectors without dependency arrows. See the [guide](composite-structure-diagrams.md) and [notation audit](uml-composite-structure-conformance.md).
 
 ## Timing diagrams
 

@@ -23,6 +23,12 @@ pub(super) fn classify<'a>(
         (NodeKind::Package, name)
     } else if let Some(name) = source.strip_prefix("class ") {
         (NodeKind::Class, name)
+    } else if let Some(name) = source.strip_prefix("structure ") {
+        (NodeKind::CompositeStructure, name)
+    } else if diagram_type == DiagramType::Composite && source.starts_with("part ") {
+        (NodeKind::CompositePart, &source["part ".len()..])
+    } else if let Some(name) = source.strip_prefix("role ") {
+        (NodeKind::CompositeRole, name)
     } else if let Some(name) = source.strip_prefix("component ") {
         (NodeKind::Component, name)
     } else if let Some(name) = source.strip_prefix("part ") {
@@ -99,7 +105,8 @@ pub(super) fn classify<'a>(
             | DiagramType::UseCase
             | DiagramType::Package
             | DiagramType::Communication
-            | DiagramType::InteractionOverview => (NodeKind::Generic, source),
+            | DiagramType::InteractionOverview
+            | DiagramType::Composite => (NodeKind::Generic, source),
         }
     }
 }
@@ -133,6 +140,14 @@ pub(super) fn allowed(kind: NodeKind, ty: DiagramType) -> bool {
             | NodeKind::ActivityJoin
     );
     match ty {
+        DiagramType::Composite => matches!(
+            kind,
+            NodeKind::CompositeStructure
+                | NodeKind::CompositePart
+                | NodeKind::CompositeRole
+                | NodeKind::Class
+                | NodeKind::Interface
+        ),
         DiagramType::Activity => activity || kind == NodeKind::Note,
         DiagramType::InteractionOverview => matches!(
             kind,
@@ -172,6 +187,9 @@ pub(super) fn allowed(kind: NodeKind, ty: DiagramType) -> bool {
                     | NodeKind::Component
                     | NodeKind::ComponentPart
                     | NodeKind::InteractionUse
+                    | NodeKind::CompositeStructure
+                    | NodeKind::CompositePart
+                    | NodeKind::CompositeRole
             ) && !deployment
                 && !state
                 && !activity
@@ -180,7 +198,12 @@ pub(super) fn allowed(kind: NodeKind, ty: DiagramType) -> bool {
         DiagramType::Generic => {
             !matches!(
                 kind,
-                NodeKind::Component | NodeKind::ComponentPart | NodeKind::InteractionUse
+                NodeKind::Component
+                    | NodeKind::ComponentPart
+                    | NodeKind::InteractionUse
+                    | NodeKind::CompositeStructure
+                    | NodeKind::CompositePart
+                    | NodeKind::CompositeRole
             ) && !deployment
                 && !state
                 && !activity

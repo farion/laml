@@ -2,12 +2,13 @@
 //! crossing.
 
 use crate::geometry::BoxNode;
-use crate::styles::{Element, StyleSheet, Value};
-use crate::syntax::{Diagram, EndPosition, PortSide, RelationDecl};
+use crate::styles::StyleSheet;
+use crate::syntax::{Diagram, EndPosition, PortSide};
 
 mod attachments;
 mod bridges;
 mod detours;
+mod edge_style;
 mod end_labels;
 mod geometry;
 mod labels;
@@ -265,22 +266,6 @@ fn candidates(
         })
         .collect()
 }
-fn style(relation: &RelationDecl, sheet: &StyleSheet) -> (String, f64, f64) {
-    let element = Element::Relation {
-        name: relation.name.as_deref(),
-        classes: &relation.classes,
-    };
-    let number = |key, default| match sheet.get(&element, key).map(|d| &d.value) {
-        Some(Value::Number(n)) => *n,
-        _ => default,
-    };
-    let color = match sheet.get(&element, "color").map(|d| &d.value) {
-        Some(Value::Color(c)) => c.clone(),
-        _ => "#395373".into(),
-    };
-    (color, number("width", 2.0), number("font-size", 14.0))
-}
-
 pub fn route(
     diagram: &Diagram,
     boxes: &[BoxNode],
@@ -310,7 +295,15 @@ pub fn route(
                 ),
             });
         }
-        let (color, width, font_size) = style(relation, sheet);
+        let (color, width, font_size) = edge_style::style(relation, sheet);
+        if diagram.settings.diagram_type == crate::syntax::DiagramType::Composite
+            && (color == "none" || width < 1.0)
+        {
+            return Err(RouteError {
+                line: relation.line,
+                message: "composite connector stroke must remain visible".into(),
+            });
+        }
         let options = if from == to {
             let rank = diagram.relations[..index]
                 .iter()

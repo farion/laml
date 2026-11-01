@@ -9,6 +9,7 @@ use std::fmt::Write;
 mod activity;
 mod compact;
 mod component_container;
+mod composite;
 mod deployment;
 mod escape;
 mod interaction_use;
@@ -50,6 +51,7 @@ pub fn render_with_mode(
 }
 
 fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<String, String> {
+    composite::validate(boxes, routes)?;
     let mut bounds = (0.0_f64, 0.0_f64, 0.0_f64, 0.0_f64);
     for node in boxes {
         include_point(
@@ -173,6 +175,12 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
     {
         component_container::draw(&mut svg, node);
     }
+    for node in boxes
+        .iter()
+        .filter(|node| node.kind == NodeKind::CompositeStructure && node.is_container)
+    {
+        composite::background(&mut svg, node);
+    }
     deployment::backgrounds(&mut svg, boxes);
     state::backgrounds(&mut svg, boxes);
     usecase::background(&mut svg, boxes);
@@ -258,19 +266,16 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
             if !node.is_container {
                 deployment::cube(&mut svg, node);
             }
+        } else if node.kind == NodeKind::CompositeStructure && node.is_container {
+            // Its internal-structure compartment was painted behind routed connectors.
         } else if node.kind == NodeKind::Component && node.is_container {
             // Its background was painted before internal routes; draw the heading and ports now.
         } else if matches!(node.kind, NodeKind::Socket | NodeKind::Lollipop) {
             compact::draw(&mut svg, node);
         } else if matches!(node.kind, NodeKind::Association | NodeKind::Junction) {
-            let cy = node.y + node.height / 2.0;
-            writeln!(svg,"<polygon points=\"{:.2},{:.2} {:.2},{:.2} {:.2},{:.2} {:.2},{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
-                node.x+12.0,cy-12.0,node.x+24.0,cy,node.x+12.0,cy+12.0,node.x,cy,
-                node.fill,node.border_color,node.border_width).unwrap();
-            if !node.label.is_empty() {
-                writeln!(svg,"<text x=\"{:.2}\" y=\"{:.2}\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\">{}</text>",
-                    node.x+30.0,cy+node.font_size*0.28,node.font_size,node.color,escape(&node.label)).unwrap();
-            }
+            compact::junction(&mut svg, node);
+        } else if node.kind == NodeKind::CompositeRole {
+            composite::role(&mut svg, node);
         } else if node.shape == NodeShape::Note {
             let fold = 12.0_f64.min(node.width / 4.0).min(node.height / 4.0);
             writeln!(svg,"<path d=\"M{:.2},{:.2} H{:.2} L{:.2},{:.2} V{:.2} H{:.2} Z M{:.2},{:.2} V{:.2} H{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",

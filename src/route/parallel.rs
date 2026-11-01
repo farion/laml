@@ -1,6 +1,7 @@
 //! Stable source-order lanes for multiple relations sharing an unordered pair.
 
-use super::{Point, Route, center, port, self_loops, style};
+use super::edge_style::style;
+use super::{Point, Route, center, port, self_loops};
 use crate::geometry::BoxNode;
 use crate::styles::StyleSheet;
 use crate::syntax::Diagram;

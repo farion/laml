@@ -1,6 +1,7 @@
 //! First geometry stage: measure rectangular nodes and satisfy hard rules.
 //! Collision resolution is bounded. Complex routes may still fail explicitly.
 
+pub(crate) mod composite;
 mod constraints;
 mod containers;
 mod junctions;
@@ -82,10 +83,30 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
         })
         .collect::<Result<_, _>>()?;
     for (source, drawn) in diagram.nodes.iter().zip(&boxes) {
-        if source.kind == NodeKind::ActivityAction && source.ports.len() != drawn.ports.len() {
+        if diagram.settings.diagram_type == crate::syntax::DiagramType::Composite
+            && drawn
+                .ports
+                .iter()
+                .any(|port| port.border_color == "none" || port.color == "none")
+        {
             return Err(GeometryError {
                 line: source.line,
-                message: "activity pins must remain visible".into(),
+                message: "composite port outline and label must remain visible".into(),
+            });
+        }
+        if (source.kind == NodeKind::ActivityAction
+            || diagram.settings.diagram_type == crate::syntax::DiagramType::Composite)
+            && source.ports.len() != drawn.ports.len()
+        {
+            return Err(GeometryError {
+                line: source.line,
+                message:
+                    if diagram.settings.diagram_type == crate::syntax::DiagramType::Composite {
+                        "composite ports must remain visible"
+                    } else {
+                        "activity pins must remain visible"
+                    }
+                    .into(),
             });
         }
     }
@@ -109,6 +130,7 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
             node.height = node.height.max(required);
         }
         if (node.kind == NodeKind::Component
+            || node.kind == NodeKind::CompositeStructure
             || node.kind == NodeKind::State
             || node.kind == NodeKind::UseCaseSystem
             || node.kind.is_deployment_target())
