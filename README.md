@@ -12,28 +12,17 @@ LAML is a diagram language and compiler for architecture drawings and 14 UML dia
 
 ## Why LAML?
 
-Relations describe connections; `layout` separately states which positions must hold. In this example, the source fixes four nodes in a grid while their two relations cross:
+A diagram can be technically correct and still fail the people who need to read it. An architect changes one service, rebuilds the image, and suddenly familiar elements have moved. A decision-maker comparing two versions can no longer see what actually changed. The diagram is too wide for the document, or its colors and typography look nothing like the surrounding pages.
 
-```laml
-// Excerpts from examples/crossing.laml
-semantics {
-    // […]
-    first: A -> D
-    second: B -> C
-}
-layout {
-    A < B : align=top; gap=120
-    C < D : align=top; gap=120
-    A above C : align=left; gap=120
-    B above D : align=left; gap=120
-}
-```
+Text-to-diagram tools make it easy to describe connections, but often leave the placement to the renderer. For architecture documents, **layout is part of the communication**: the same systems should stay in recognizable positions across diagrams, and a small edit should not force readers to relearn the picture.
 
-The minimum gaps and alignments are mandatory. LAML routes the crossing with a visible bridge; if it cannot satisfy the placement and routing safely, the build fails:
+**LAML treats layout as authored intent, not an accident of rendering.** It gives you three separate controls:
 
-![Explicitly placed crossing with a routed bridge](docs/images/crossing.png)
+- **Semantics:** declare the elements and relationships that give the diagram its meaning.
+- **Layout:** specify the positions and alignments that must hold; let LAML place the rest and route connections safely. Conflicting mandatory rules fail rather than being silently ignored.
+- **Styling:** use CSS-like LAML Style Sheets to make the image fit the document.
 
-[Code that builds this image](examples/crossing.laml) · [Placement and routing explained](docs/diagrams/gne.md#placement-and-routing).
+Not every architecture picture is UML. **Generic node-edge diagrams** let you combine shapes, ports, notes, relationships and styles without UML notation rules. The [architecture example](#architecture-placement-and-color) shows placement and styling in a buildable source; the [GNE guide](docs/diagrams/gne.md) shows the available elements.
 
 ## Installing & getting started
 
