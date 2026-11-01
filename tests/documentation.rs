@@ -57,7 +57,7 @@ fn guide_examples_are_extracted_from_lf_and_crlf_files() {
 fn readme_showcases_include_generic_class_and_sequence() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let readme = fs::read_to_string(root.join("README.md")).unwrap();
-    for (kind, minimum_nodes, minimum_relations) in [("generic", 9, 6), ("class", 10, 5)] {
+    for (kind, minimum_nodes, minimum_relations) in [("generic", 9, 6), ("class", 5, 3)] {
         let name = format!("showcase-{kind}");
         assert!(readme.contains(&format!("examples/{name}.laml")));
         assert!(readme.contains(&format!("docs/images/{name}.png")));

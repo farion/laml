@@ -59,9 +59,9 @@ semantics {
         // […]
     }
     // […]
+    @placed Domain.Customer "1"/customer -- "0..*"/+orders Domain.Order : places
     @owns Domain.Order "1" *-- "1..*" Domain.Line
-    @priced Checkout ..|> Domain.Pricing
-    @requests Checkout ..> Domain.Order
+    @priced Domain.Order ..> Domain.Pricing : quote
     // […]
 }
 ```

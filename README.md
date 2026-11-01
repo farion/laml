@@ -85,7 +85,7 @@ semantics {
 }
 ```
 
-![Styled class diagram with packages and relationships](docs/images/showcase-class.png)
+![Compact class diagram with Customer, Order, Line and Pricing](docs/images/showcase-class.png)
 
 [Full class source](examples/showcase-class.laml) · [Class guide](docs/diagrams/class.md)
 
