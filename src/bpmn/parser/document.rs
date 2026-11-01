@@ -1,9 +1,56 @@
 //! BPMN section and scope parser.
 use super::flow::flow;
 use super::{Context, Document, Kind, Lane, Pool, endpoint, error, name_args};
-use crate::lex::without_comment;
+use crate::bpmn::{EdgeKind, FlowPortRule, Side};
+use crate::lex::{split_top_level, without_comment};
 
 fn layout(doc: &mut Document, text: &str, line: usize) -> Result<(), String> {
+    if let Some(rest) = text.strip_prefix("flow[") {
+        let (endpoints, tail) = rest
+            .split_once(']')
+            .ok_or_else(|| error(line, "flow layout needs a closing ']'"))?;
+        let (from, to) = endpoints
+            .split_once("->")
+            .ok_or_else(|| error(line, "flow layout expects source->target"))?;
+        let properties = tail
+            .trim()
+            .strip_prefix(':')
+            .ok_or_else(|| error(line, "flow layout needs ':' and side properties"))?;
+        let (mut from_side, mut to_side) = (None, None);
+        for property in split_top_level(properties, ';') {
+            let (key, value) = property
+                .trim()
+                .split_once('=')
+                .ok_or_else(|| error(line, "flow layout expects from= or to="))?;
+            let side = match value.trim() {
+                "left" => Side::Left,
+                "top" => Side::Top,
+                "right" => Side::Right,
+                "bottom" => Side::Bottom,
+                _ => {
+                    return Err(error(
+                        line,
+                        "flow attachment side must be left, top, right or bottom",
+                    ));
+                }
+            };
+            match key.trim() {
+                "from" if from_side.replace(side).is_none() => {}
+                "to" if to_side.replace(side).is_none() => {}
+                _ => return Err(error(line, "duplicate or unknown flow attachment property")),
+            }
+        }
+        if from_side.is_none() && to_side.is_none() {
+            return Err(error(line, "empty flow attachment rule"));
+        }
+        doc.flow_layout.push(FlowPortRule {
+            from: from.trim().into(),
+            to: to.trim().into(),
+            from_side,
+            to_side,
+        });
+        return Ok(());
+    }
     let parts: Vec<_> = text.split_whitespace().collect();
     if parts.len() != 3 || !matches!(parts[1], "<" | ">" | "above" | "below") {
         return Err(error(
@@ -190,6 +237,47 @@ pub fn parse(source: &str) -> Result<Document, String> {
     if !stylesheet.is_empty() {
         doc.styling = crate::parser::parse_stylesheet(&stylesheet)
             .map_err(|e| format!("styling:{}: {}", e.line, e.message))?;
+    }
+    for rule in &mut doc.flow_layout {
+        let selected: Vec<_> = doc
+            .edges
+            .iter()
+            .filter(|e| {
+                e.kind == EdgeKind::Sequence
+                    && (e.from == rule.from || e.from.ends_with(&format!(".{}", rule.from)))
+                    && (e.to == rule.to || e.to.ends_with(&format!(".{}", rule.to)))
+            })
+            .collect();
+        if selected.len() != 1 {
+            return Err(format!(
+                "flow[{}->{}] must identify exactly one sequence flow",
+                rule.from, rule.to
+            ));
+        }
+        let edge = selected[0];
+        rule.from = edge.from.clone();
+        rule.to = edge.to.clone();
+        let source = doc.nodes.iter().find(|n| n.id == rule.from).unwrap();
+        let target = doc.nodes.iter().find(|n| n.id == rule.to).unwrap();
+        let gateway = |kind| {
+            matches!(
+                kind,
+                Kind::Exclusive | Kind::Parallel | Kind::Inclusive | Kind::EventBased
+            )
+        };
+        if (rule.from_side.is_some() && !gateway(source.kind))
+            || (rule.to_side.is_some() && !gateway(target.kind))
+        {
+            return Err("flow attachment overrides apply only to gateway ends".into());
+        }
+    }
+    for (i, rule) in doc.flow_layout.iter().enumerate() {
+        if doc.flow_layout[..i]
+            .iter()
+            .any(|prior| prior.from == rule.from && prior.to == rule.to)
+        {
+            return Err("duplicate gateway flow attachment rule".into());
+        }
     }
     for (a, _, b) in &doc.layout {
         let ids = [a, b];

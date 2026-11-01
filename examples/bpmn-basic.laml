@@ -1,4 +1,4 @@
-// First BPMN drawing slice: inline split, join, implicit tasks, explicit events.
+// Inline split and merge with distinct gateway docking points.
 settings {
     type: bpmn
 }

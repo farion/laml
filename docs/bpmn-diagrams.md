@@ -81,7 +81,18 @@ layout {
 }
 ```
 
-Contradictory rules fail. Layout directions (`<`, `>`, `above`, `below`) describe actual image coordinates even when the automatic flow is top-to-bottom. A manual rule cannot change pool, lane or subprocess membership. This first BPMN renderer supports relative ordering; numeric gap and alignment constraints are not yet supported for BPMN.
+Contradictory rules fail. Layout directions (`<`, `>`, `above`, `below`) describe actual image coordinates even when the automatic flow is top-to-bottom. A manual rule cannot change pool, lane or subprocess membership. This BPMN renderer supports relative ordering; numeric gap and alignment constraints are not yet supported for BPMN.
+
+By default, a gateway with up to four sequence flows assigns **a distinct cardinal docking point to each flow**. For the basic example, the split enters from the left and exits at the top (`ja`) and bottom (`nein`); the merge enters at the top and bottom and exits to the right. More than four flows are distributed at distinct points along the diamond's perimeter rather than sharing an anchor. To override an individual gateway end, identify the flow by its endpoint IDs:
+
+```text
+layout {
+    flow[Complete->Approve] : from=right
+    flow[RequestDocuments->Merge] : to=left
+}
+```
+
+`from` selects the exit side of a gateway; `to` selects its entry side. Options are `top`, `right`, `bottom`, `left`; both properties may be supplied, separated by `;`, when both ends are gateways. The bracket must identify exactly one sequence flow. Contradictory overrides (two flows on one cardinal point when there are four or fewer) fail during `check` and `build`. Attachments do not change the BPMN semantics.
 
 LAML bundles the **complete 1,512-icon Phosphor regular catalogue**. Use `laml icons` for the list, `laml icons clock` to filter it, or see [`assets/phosphor/icons.txt`](../assets/phosphor/icons.txt). An icon on a task is illustrative; it never changes the task type. The timer marker itself uses the bundled Phosphor `clock` SVG. SVG, PNG and PDF retain the existing hidden license metadata policy when icons are actually used.
 

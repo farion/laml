@@ -102,12 +102,23 @@ fn place_group(
     for rank in 1..=max_rank {
         x[rank] = x[rank - 1] + widths[rank - 1] / 2.0 + widths[rank] / 2.0 + 80.0;
     }
+    let first_height = indices
+        .iter()
+        .map(|&i| size(doc, &doc.nodes[i]).1)
+        .fold(70.0_f64, f64::max);
+    let first_center = top + 30.0 + first_height / 2.0;
     let mut row_bottom = vec![top + 30.0; max_rank + 1];
+    let mut occupied = vec![false; max_rank + 1];
     let mut height = 100.0_f64;
     for &i in indices {
         let rank = ranks[i];
         let (w, h) = size(doc, &doc.nodes[i]);
-        let y = row_bottom[rank] + h / 2.0;
+        let y = if occupied[rank] {
+            row_bottom[rank] + h / 2.0
+        } else {
+            first_center
+        };
+        occupied[rank] = true;
         boxes[i] = BoxAt {
             x: x[rank],
             y,

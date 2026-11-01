@@ -1,76 +1,8 @@
 //! Line-oriented BPMN source parser. Explicitly reject constructs not yet drawable.
 use crate::lex::split_top_level;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Kind {
-    Task,
-    UserTask,
-    ServiceTask,
-    SendTask,
-    ReceiveTask,
-    ScriptTask,
-    ManualTask,
-    Start,
-    End,
-    Intermediate,
-    Boundary,
-    Exclusive,
-    Parallel,
-    Inclusive,
-    EventBased,
-    Subprocess,
-    Collapsed,
-    Data,
-    Store,
-    Annotation,
-}
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum EdgeKind {
-    Sequence,
-    Message,
-    Data,
-    Association,
-}
-#[derive(Clone, Debug)]
-pub struct Node {
-    pub id: String,
-    pub label: String,
-    pub kind: Kind,
-    pub icon: Option<String>,
-    pub marker: Option<String>,
-    pub pool: Option<String>,
-    pub lane: Option<String>,
-    pub parent: Option<String>,
-    pub attached: Option<String>,
-    pub interrupting: bool,
-}
-#[derive(Clone, Debug)]
-pub struct Edge {
-    pub from: String,
-    pub to: String,
-    pub label: Option<String>,
-    pub kind: EdgeKind,
-}
-#[derive(Clone, Debug)]
-pub struct Lane {
-    pub id: String,
-    pub label: String,
-}
-#[derive(Clone, Debug)]
-pub struct Pool {
-    pub id: String,
-    pub label: String,
-    pub lanes: Vec<Lane>,
-}
-#[derive(Clone, Debug, Default)]
-pub struct Document {
-    pub direction: crate::syntax::FlowDirection,
-    pub nodes: Vec<Node>,
-    pub edges: Vec<Edge>,
-    pub pools: Vec<Pool>,
-    pub layout: Vec<(String, String, String)>,
-    pub styling: Vec<crate::syntax::StyleEntry>,
-}
+use super::model::{Document, Edge, EdgeKind, Kind, Lane, Node, Pool};
+
 #[derive(Clone, Debug, Default)]
 struct Context {
     pool: Option<String>,
@@ -326,6 +258,19 @@ fn add_edge(
     let b = doc.nodes.iter().find(|n| n.id == to).unwrap();
     if from == to {
         return Err(error(line, "self flow is not a BPMN connection"));
+    }
+    if kind != EdgeKind::Sequence
+        && [a.kind, b.kind].into_iter().any(|kind| {
+            matches!(
+                kind,
+                Kind::Exclusive | Kind::Parallel | Kind::Inclusive | Kind::EventBased
+            )
+        })
+    {
+        return Err(error(
+            line,
+            "only sequence flows attach to gateways in this BPMN subset",
+        ));
     }
     match kind {
         EdgeKind::Sequence => {

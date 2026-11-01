@@ -1,5 +1,7 @@
 //! BPMN SVG renderer: participant bands, independent flow kinds and shape markers.
 use super::geometry::{BoxAt, Geometry, place};
+mod edges;
+mod ports;
 use super::{Document, EdgeKind, Kind, Node};
 use crate::styles::{StyleSheet, Value};
 use crate::svg::TextMode;
@@ -152,152 +154,8 @@ fn shape(svg: &mut String, n: &Node, b: BoxAt, icon: Option<&str>) {
         }
     }
 }
-fn edge(svg: &mut String, doc: &Document, geom: &Geometry, e: &super::Edge) {
-    let ai = doc.nodes.iter().position(|n| n.id == e.from).unwrap();
-    let bi = doc.nodes.iter().position(|n| n.id == e.to).unwrap();
-    let (a, b) = (geom.nodes[ai], geom.nodes[bi]);
-    let dx = b.x - a.x;
-    let dy = b.y - a.y;
-    let horizontal = dx.abs() > dy.abs() * 0.75 && e.kind != EdgeKind::Message;
-    let (x1, y1, x2, y2) = if horizontal {
-        let sign = dx.signum();
-        (
-            a.x + sign * a.w / 2.0,
-            a.y,
-            b.x - sign * b.w / 2.0 - sign * 4.0,
-            b.y,
-        )
-    } else {
-        let sign = dy.signum();
-        (
-            a.x,
-            a.y + sign * a.h / 2.0,
-            b.x,
-            b.y - sign * b.h / 2.0 - sign * 4.0,
-        )
-    };
-    let (dash, marker) = match e.kind {
-        EdgeKind::Sequence => ("", "solid-arrow"),
-        EdgeKind::Message => ("stroke-dasharray=\"8 5\"", "open-arrow"),
-        EdgeKind::Data => ("stroke-dasharray=\"2 5\"", "open-arrow"),
-        EdgeKind::Association => ("stroke-dasharray=\"4 4\"", ""),
-    };
-    let (mid_x, mid_y) = ((x1 + x2) / 2.0, (y1 + y2) / 2.0);
-    let blocked = horizontal
-        && (y1 - y2).abs() < 2.0
-        && doc.nodes.iter().enumerate().any(|(i, n)| {
-            if i == ai
-                || i == bi
-                || n.parent != doc.nodes[ai].parent
-                || n.pool != doc.nodes[ai].pool
-            {
-                return false;
-            }
-            let q = geom.nodes[i];
-            q.x + q.w / 2.0 > x1.min(x2)
-                && q.x - q.w / 2.0 < x1.max(x2)
-                && q.y - q.h / 2.0 < y1
-                && q.y + q.h / 2.0 > y1
-        });
-    let channel_clear = |y: f64| {
-        !doc.nodes.iter().enumerate().any(|(i, n)| {
-            if i == ai
-                || i == bi
-                || n.parent != doc.nodes[ai].parent
-                || n.pool != doc.nodes[ai].pool
-            {
-                return false;
-            }
-            let q = geom.nodes[i];
-            q.x + q.w / 2.0 > x1.min(x2)
-                && q.x - q.w / 2.0 < x1.max(x2)
-                && q.y - q.h / 2.0 - 8.0 < y
-                && q.y + q.h / 2.0 + 8.0 > y
-        })
-    };
-    let mut corridor = y1.max(y2) + a.h.max(b.h) / 2.0 + 55.0;
-    if !channel_clear(corridor) {
-        corridor = y1.min(y2) - a.h.max(b.h) / 2.0 - 55.0;
-        while !channel_clear(corridor) && corridor > 35.0 {
-            corridor -= 45.0;
-        }
-    }
-    let blocked_vertical = !horizontal
-        && e.kind != EdgeKind::Message
-        && doc.nodes.iter().enumerate().any(|(i, n)| {
-            if i == ai
-                || i == bi
-                || n.parent != doc.nodes[ai].parent
-                || n.pool != doc.nodes[ai].pool
-            {
-                return false;
-            }
-            let q = geom.nodes[i];
-            q.x - q.w / 2.0 < x1
-                && q.x + q.w / 2.0 > x1
-                && q.y + q.h / 2.0 > y1.min(y2)
-                && q.y - q.h / 2.0 < y1.max(y2)
-        });
-    let corridor_x = if blocked_vertical {
-        doc.nodes
-            .iter()
-            .enumerate()
-            .filter(|(i, n)| {
-                *i != ai
-                    && *i != bi
-                    && n.parent == doc.nodes[ai].parent
-                    && n.pool == doc.nodes[ai].pool
-            })
-            .map(|(i, _)| geom.nodes[i])
-            .filter(|q| q.y + q.h / 2.0 > y1.min(y2) && q.y - q.h / 2.0 < y1.max(y2))
-            .map(|q| q.x + q.w / 2.0 + 30.0)
-            .fold(x1.max(x2) + 30.0, f64::max)
-    } else {
-        mid_x
-    };
-    let path = if blocked {
-        format!(
-            "M {x1:.1} {y1:.1} L {:.1} {y1:.1} L {:.1} {corridor:.1} L {:.1} {corridor:.1} L {:.1} {y2:.1} L {x2:.1} {y2:.1}",
-            x1 + 15.0,
-            x1 + 15.0,
-            x2 - 15.0,
-            x2 - 15.0
-        )
-    } else if horizontal {
-        format!("M {x1:.1} {y1:.1} L {mid_x:.1} {y1:.1} L {mid_x:.1} {y2:.1} L {x2:.1} {y2:.1}")
-    } else if blocked_vertical {
-        format!(
-            "M {x1:.1} {y1:.1} L {corridor_x:.1} {y1:.1} L {corridor_x:.1} {y2:.1} L {x2:.1} {y2:.1}"
-        )
-    } else {
-        format!("M {x1:.1} {y1:.1} L {x1:.1} {mid_y:.1} L {x2:.1} {mid_y:.1} L {x2:.1} {y2:.1}")
-    };
-    let arrow = if marker.is_empty() {
-        String::new()
-    } else {
-        format!("marker-end=\"url(#{marker})\"")
-    };
-    writeln!(
-        svg,
-        "<path d=\"{path}\" fill=\"none\" stroke=\"#263548\" stroke-width=\"1.7\" {dash} {arrow}/>"
-    )
-    .unwrap();
-    if e.kind == EdgeKind::Message {
-        writeln!(
-            svg,
-            "<circle cx=\"{x1:.1}\" cy=\"{y1:.1}\" r=\"4\" fill=\"white\" stroke=\"#263548\"/>"
-        )
-        .unwrap();
-    }
-    if let Some(label) = &e.label {
-        text(
-            svg,
-            mid_x,
-            if blocked { corridor - 9.0 } else { mid_y - 9.0 },
-            label,
-            12.0,
-        );
-    }
+pub(super) fn validate_attachments(doc: &Document, geom: &Geometry) -> Result<(), String> {
+    ports::assign(doc, geom).map(|_| ())
 }
 pub fn render(doc: &Document, mode: TextMode) -> Result<String, String> {
     render_with_styles(doc, &StyleSheet::default(), mode)
@@ -402,8 +260,9 @@ pub fn render_with_styles(
         shape(&mut svg, n, b, super::style::icon(sheet, n));
         svg.push_str("</g>\n");
     }
-    for e in &doc.edges {
-        edge(&mut svg, doc, &geom, e);
+    let ports = ports::assign(doc, &geom)?;
+    for (index, e) in doc.edges.iter().enumerate() {
+        edges::edge(&mut svg, doc, &geom, e, index, &ports);
     }
     for (n, &b) in doc
         .nodes

@@ -46,6 +46,25 @@ fn all_bpmn_examples_export_to_every_format() {
 }
 
 #[test]
+fn gateway_side_rules_parse_validate_and_reject_conflicts() {
+    let source = include_str!("../examples/bpmn-basic.laml");
+    let custom = format!(
+        "{source}\nlayout {{\nflow[Complete->Approve] : from=right\nflow[RequestDocuments->Merge] : to=left\n}}"
+    );
+    let doc = bpmn::parse(&custom).unwrap();
+    bpmn::validate_geometry(&doc).unwrap();
+    assert_eq!(doc.flow_layout.len(), 2);
+    assert_eq!(doc.flow_layout[0].from_side, Some(bpmn::Side::Right));
+    assert_eq!(doc.flow_layout[1].to_side, Some(bpmn::Side::Left));
+    let conflict = format!(
+        "{source}\nlayout {{\nflow[Complete->Approve] : from=top\nflow[Complete->RequestDocuments] : from=top\n}}"
+    );
+    assert!(bpmn::validate_geometry(&bpmn::parse(&conflict).unwrap()).is_err());
+    let unknown = format!("{source}\nlayout {{\nflow[Review->Approve] : from=top\n}}");
+    assert!(bpmn::parse(&unknown).is_err());
+}
+
+#[test]
 fn annotation_is_not_data_or_sequence_flow() {
     let source =
         "settings {\ntype: bpmn\n}\nsemantics {\nA --> B\nnote Info(\"Check again\")\nInfo .. A\n}";
