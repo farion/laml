@@ -4,7 +4,7 @@ use std::path::Path;
 const SOURCE: &str = include_str!("../examples/showcase-generic.laml");
 
 #[test]
-fn named_ports_exit_normally_and_nearby_generic_nodes_connect_horizontally() {
+fn named_ports_exit_normally_and_showcase_routes_follow_vertical_layout() {
     let graph = parse(SOURCE).unwrap();
     let styles = load(&graph, Path::new("examples/showcase-generic.laml")).unwrap();
     let boxes = place(&graph, &styles).unwrap();
@@ -40,15 +40,36 @@ fn named_ports_exit_normally_and_nearby_generic_nodes_connect_horizontally() {
 
     let classify = named("decide");
     assert_eq!(classify.len(), 2);
+    let center_x = |id: &str| {
+        let node = boxes.iter().find(|node| node.id == id).unwrap();
+        node.x + node.width / 2.0
+    };
+    assert!((classify[0].x - center_x("Platform.Validator")).abs() < 1e-6);
+    assert!((classify[1].x - center_x("Choice")).abs() < 1e-6);
+    assert!((classify[0].x - classify[1].x).abs() < 1e-6);
+    let enqueue = named("buffer");
+    assert!((enqueue[0].x - center_x("Choice")).abs() < 1e-6);
+    assert!((enqueue[1].x - center_x("Queue")).abs() < 1e-6);
+    assert!((enqueue[0].x - enqueue[1].x).abs() < 1e-6);
+    let platform = boxes.iter().find(|node| node.id == "Platform").unwrap();
+    let choice = boxes.iter().find(|node| node.id == "Choice").unwrap();
+    let queue = boxes.iter().find(|node| node.id == "Queue").unwrap();
+    let archive = boxes.iter().find(|node| node.id == "Archive").unwrap();
+    assert!(choice.y > platform.y + platform.height);
+    let validator = boxes
+        .iter()
+        .find(|node| node.id == "Platform.Validator")
+        .unwrap();
+    assert!(choice.y >= validator.y + validator.height + 95.0 - 1e-6);
+    assert!(queue.y >= choice.y + choice.height + 95.0 - 1e-6);
+    assert!(archive.x + archive.width + 100.0 <= queue.x + 1e-6);
+    let persist = named("store");
     let center_y = |id: &str| {
         let node = boxes.iter().find(|node| node.id == id).unwrap();
         node.y + node.height / 2.0
     };
-    assert!((classify[0].y - center_y("Platform.Validator")).abs() < 1e-6);
-    assert!((classify[1].y - center_y("Choice")).abs() < 1e-6);
-    let enqueue = named("buffer");
-    assert!((enqueue[0].y - center_y("Choice")).abs() < 1e-6);
-    assert!((enqueue[1].y - center_y("Queue")).abs() < 1e-6);
+    assert!((persist[0].y - center_y("Queue")).abs() < 1e-6);
+    assert!((persist[persist.len() - 1].y - center_y("Archive")).abs() < 1e-6);
 }
 
 #[test]

@@ -50,10 +50,22 @@ fn entry_points_link_to_all_diagram_guides() {
     let readme = fs::read_to_string(root.join("README.md")).unwrap();
     let started = fs::read_to_string(root.join("docs/getting-started.md")).unwrap();
     assert!(readme.contains("docs/getting-started.md"));
+    let features = readme
+        .split_once("## Features")
+        .unwrap()
+        .1
+        .split_once("## License")
+        .unwrap()
+        .0;
+    assert_eq!(features.matches("  - [").count(), GUIDES.len());
     for name in GUIDES {
         assert!(
             started.contains(&format!("diagrams/{name}.md")),
             "getting started must link to {name}"
+        );
+        assert!(
+            features.contains(&format!("docs/diagrams/{name}.md")),
+            "README features must link to {name}"
         );
     }
 }

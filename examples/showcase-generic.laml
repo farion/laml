@@ -36,9 +36,10 @@ semantics {
 }
 layout {
     Cloud < Platform : gap=120
-    Platform < Choice : gap=130
-    Choice < Queue : gap=125
-    Queue above Archive : align=center; gap=150
+    Platform.Validator above Choice : align=center; gap=95
+    Choice above Queue : align=center; gap=95
+    Archive < Queue : align=center; gap=100
+    Platform.Dispatcher above Archive : align=center; gap=170
     Hint above Cloud : gap=115
     port[input] : side=left
     port[output] : side=right
