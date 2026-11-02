@@ -78,10 +78,17 @@ pub enum Side {
     Right,
     Bottom,
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LabelOrientation {
+    Auto,
+    Horizontal,
+    Vertical,
+}
 #[derive(Clone, Debug)]
 pub struct FlowPortRule {
     pub from: String,
     pub to: String,
     pub from_side: Option<Side>,
     pub to_side: Option<Side>,
+    pub label_orientation: Option<LabelOrientation>,
 }

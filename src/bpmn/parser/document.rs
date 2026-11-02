@@ -1,7 +1,7 @@
 //! BPMN section and scope parser.
 use super::flow::flow;
 use super::{Context, Document, Kind, Lane, Pool, endpoint, error, name_args};
-use crate::bpmn::{EdgeKind, FlowPortRule, Side};
+use crate::bpmn::{EdgeKind, FlowPortRule, LabelOrientation, Side};
 use crate::lex::{split_top_level, without_comment};
 
 fn layout(doc: &mut Document, text: &str, line: usize) -> Result<(), String> {
@@ -16,13 +16,31 @@ fn layout(doc: &mut Document, text: &str, line: usize) -> Result<(), String> {
             .trim()
             .strip_prefix(':')
             .ok_or_else(|| error(line, "flow layout needs ':' and side properties"))?;
-        let (mut from_side, mut to_side) = (None, None);
+        let (mut from_side, mut to_side, mut label_orientation) = (None, None, None);
         for property in split_top_level(properties, ';') {
             let (key, value) = property
                 .trim()
                 .split_once('=')
-                .ok_or_else(|| error(line, "flow layout expects from= or to="))?;
-            let side = match value.trim() {
+                .ok_or_else(|| error(line, "flow layout expects key=value"))?;
+            let value = value.trim();
+            if key.trim() == "label-orientation" {
+                let orientation = match value {
+                    "auto" => LabelOrientation::Auto,
+                    "horizontal" => LabelOrientation::Horizontal,
+                    "vertical" => LabelOrientation::Vertical,
+                    _ => {
+                        return Err(error(
+                            line,
+                            "label-orientation must be auto, horizontal or vertical",
+                        ));
+                    }
+                };
+                if label_orientation.replace(orientation).is_some() {
+                    return Err(error(line, "duplicate label-orientation property"));
+                }
+                continue;
+            }
+            let side = match value {
                 "left" => Side::Left,
                 "top" => Side::Top,
                 "right" => Side::Right,
@@ -40,7 +58,7 @@ fn layout(doc: &mut Document, text: &str, line: usize) -> Result<(), String> {
                 _ => return Err(error(line, "duplicate or unknown flow attachment property")),
             }
         }
-        if from_side.is_none() && to_side.is_none() {
+        if from_side.is_none() && to_side.is_none() && label_orientation.is_none() {
             return Err(error(line, "empty flow attachment rule"));
         }
         doc.flow_layout.push(FlowPortRule {
@@ -48,6 +66,7 @@ fn layout(doc: &mut Document, text: &str, line: usize) -> Result<(), String> {
             to: to.trim().into(),
             from_side,
             to_side,
+            label_orientation,
         });
         return Ok(());
     }
@@ -270,13 +289,21 @@ pub fn parse(source: &str) -> Result<Document, String> {
         {
             return Err("flow attachment overrides apply only to gateway ends".into());
         }
+        if rule.label_orientation.is_some()
+            && edge.label.is_none()
+            && !(source.kind == Kind::Boundary && !source.label.is_empty())
+        {
+            return Err(
+                "label-orientation requires a labeled sequence flow or boundary event".into(),
+            );
+        }
     }
     for (i, rule) in doc.flow_layout.iter().enumerate() {
         if doc.flow_layout[..i]
             .iter()
             .any(|prior| prior.from == rule.from && prior.to == rule.to)
         {
-            return Err("duplicate gateway flow attachment rule".into());
+            return Err("duplicate BPMN flow layout rule".into());
         }
     }
     for (a, _, b) in &doc.layout {

@@ -65,6 +65,56 @@ fn gateway_side_rules_parse_validate_and_reject_conflicts() {
 }
 
 #[test]
+fn flow_label_orientation_can_be_auto_horizontal_or_vertical() {
+    let source = include_str!("../examples/bpmn-order.laml");
+    let custom = format!(
+        "{source}\nlayout {{\nflow[Decision->Accept] : label-orientation=vertical\nflow[Decision->Decline] : label-orientation=horizontal\nflow[Deadline->Escalate] : label-orientation=horizontal\n}}"
+    );
+    let doc = bpmn::parse(&custom).unwrap();
+    assert_eq!(
+        doc.flow_layout[0].label_orientation,
+        Some(bpmn::LabelOrientation::Vertical)
+    );
+    let svg = bpmn::render(&doc, TextMode::System).unwrap();
+    let yes = svg
+        .lines()
+        .find(|line| line.ends_with(">yes</text>"))
+        .unwrap();
+    let no = svg
+        .lines()
+        .find(|line| line.ends_with(">no</text>"))
+        .unwrap();
+    let days = svg
+        .lines()
+        .find(|line| line.ends_with(">2 days</text>"))
+        .unwrap();
+    assert!(yes.contains("rotate(-90"));
+    assert!(!no.contains("rotate("));
+    assert!(!days.contains("rotate("));
+    let automatic =
+        format!("{source}\nlayout {{\nflow[Decision->Accept] : label-orientation=auto\n}}");
+    assert_eq!(
+        bpmn::parse(&automatic).unwrap().flow_layout[0].label_orientation,
+        Some(bpmn::LabelOrientation::Auto)
+    );
+    let combined = format!(
+        "{}\nlayout {{\nflow[Complete->Approve] : from=top; label-orientation=horizontal\n}}",
+        include_str!("../examples/bpmn-basic.laml")
+    );
+    bpmn::validate_geometry(&bpmn::parse(&combined).unwrap()).unwrap();
+    let bad =
+        format!("{source}\nlayout {{\nflow[Decision->Accept] : label-orientation=diagonal\n}}");
+    assert!(bpmn::parse(&bad).is_err());
+    let unlabeled =
+        format!("{source}\nlayout {{\nflow[Accept->Pack] : label-orientation=vertical\n}}");
+    assert!(bpmn::parse(&unlabeled).is_err());
+    let impossible = source.replace("Reply --> ShopDone", "Reply --> ShopDone : done");
+    let impossible =
+        format!("{impossible}\nlayout {{\nflow[Reply->ShopDone] : label-orientation=vertical\n}}");
+    assert!(bpmn::validate_geometry(&bpmn::parse(&impossible).unwrap()).is_err());
+}
+
+#[test]
 fn annotation_is_not_data_or_sequence_flow() {
     let source =
         "settings {\ntype: bpmn\n}\nsemantics {\nA --> B\nnote Info(\"Check again\")\nInfo .. A\n}";

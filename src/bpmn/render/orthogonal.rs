@@ -12,7 +12,6 @@ pub(super) struct Prior {
 }
 pub(super) struct Plan {
     pub points: Vec<Point>,
-    pub label: Point,
     pub cost: f64,
 }
 fn stub(p: Attach, length: f64) -> Point {
@@ -216,68 +215,6 @@ fn score(
     cost += (points.len().saturating_sub(2)) as f64 * 100.0;
     Some(cost)
 }
-fn label(doc: &Document, geom: &Geometry, points: &[Point], name: &str) -> Point {
-    let text_width = crate::text::measure(name, 12.0).unwrap_or(40.0);
-    let mut options: Vec<(f64, Point)> = Vec::new();
-    for leg in points.windows(2) {
-        let (a, b) = (leg[0], leg[1]);
-        let horiz = (a.1 - b.1).abs() < 0.05;
-        let length = if horiz {
-            (a.0 - b.0).abs()
-        } else {
-            (a.1 - b.1).abs()
-        };
-        if length < (text_width + 20.0).max(45.0) {
-            continue;
-        }
-        for fraction in [0.25, 0.5, 0.75] {
-            let mid = (a.0 + (b.0 - a.0) * fraction, a.1 + (b.1 - a.1) * fraction);
-            let candidate = if horiz {
-                (mid.0, mid.1 - 10.0)
-            } else {
-                (mid.0 + text_width / 2.0 + 13.0, mid.1)
-            };
-            let label_box = super::super::geometry::BoxAt {
-                x: candidate.0,
-                y: candidate.1 - 5.0,
-                w: text_width + 8.0,
-                h: 18.0,
-            };
-            if doc.nodes.iter().enumerate().any(|(i, _)| {
-                let q = geom.nodes[i];
-                (q.x - label_box.x).abs() < (q.w + label_box.w) / 2.0 + 5.0
-                    && (q.y - label_box.y).abs() < (q.h + label_box.h) / 2.0 + 5.0
-            }) {
-                continue;
-            }
-            let near_border = geom.pools.iter().any(|pool| {
-                [pool.y, pool.y + 30.0, pool.y + pool.h]
-                    .iter()
-                    .any(|&y| (candidate.1 - y).abs() < 22.0)
-                    || pool
-                        .bands
-                        .iter()
-                        .any(|band| (candidate.1 - band.y).abs() < 22.0)
-            });
-            let score = length
-                - (if near_border { 1000.0 } else { 0.0 })
-                - (if horiz { 0.0 } else { 15.0 })
-                - (fraction - 0.5_f64).abs() * 5.0;
-            options.push((score, candidate));
-        }
-    }
-    options
-        .into_iter()
-        .max_by(|a, b| a.0.total_cmp(&b.0))
-        .map_or_else(
-            || {
-                let a = points[0];
-                let b = points[points.len() - 1];
-                ((a.0 + b.0) / 2.0, (a.1 + b.1) / 2.0 - 10.0)
-            },
-            |(_, point)| point,
-        )
-}
 pub(super) fn route(
     doc: &Document,
     geom: &Geometry,
@@ -371,16 +308,7 @@ pub(super) fn route(
                 e.from, e.to
             )
         })?;
-    let label = e
-        .label
-        .as_deref()
-        .map(|name| label(doc, geom, &best, name))
-        .unwrap_or((0.0, 0.0));
-    Ok(Plan {
-        points: best,
-        label,
-        cost,
-    })
+    Ok(Plan { points: best, cost })
 }
 pub(super) fn bridges(points: &[Point], previous: &[Prior]) -> Vec<(usize, Point)> {
     let mut result = Vec::new();

@@ -448,6 +448,7 @@ mod tests {
             to: "Approve".into(),
             from_side: Some(Side::Right),
             to_side: None,
+            label_orientation: None,
         });
         let geom = geometry::place(&doc).unwrap();
         let ports = assign(&doc, &geom).unwrap();
@@ -463,6 +464,7 @@ mod tests {
             to: "RequestDocuments".into(),
             from_side: Some(Side::Right),
             to_side: None,
+            label_orientation: None,
         });
         assert!(assign(&doc, &geom).is_err());
     }

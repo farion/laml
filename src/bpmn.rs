@@ -4,7 +4,7 @@ mod model;
 mod parser;
 mod render;
 mod style;
-pub use model::{Document, Edge, EdgeKind, FlowPortRule, Kind, Node, Pool, Side};
+pub use model::{Document, Edge, EdgeKind, FlowPortRule, Kind, LabelOrientation, Node, Pool, Side};
 pub use parser::{is_bpmn_source, parse};
 pub use render::{render, render_with_styles};
 pub use style::validate_styles;

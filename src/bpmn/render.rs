@@ -1,6 +1,7 @@
 //! BPMN SVG renderer: participant bands, independent flow kinds and shape markers.
 use super::geometry::{BoxAt, Geometry, place};
 mod edges;
+mod labels;
 mod orthogonal;
 mod ports;
 #[cfg(test)]
@@ -124,9 +125,7 @@ fn shape(svg: &mut String, n: &Node, b: BoxAt, icon: Option<&str>) {
             if let Some(marker) = &n.marker {
                 event_marker(svg, marker, x, y, n.kind == Kind::End);
             }
-            if n.kind == Kind::Boundary {
-                text(svg, x + radius + 65.0, y + radius + 22.0, &n.label, 12.0);
-            } else {
+            if n.kind != Kind::Boundary {
                 text(svg, x, y + radius + 22.0, &n.label, 12.0);
             }
         }
@@ -175,6 +174,7 @@ pub(super) fn validate_attachments(doc: &Document, geom: &Geometry) -> Result<()
     for (index, e) in doc.edges.iter().enumerate() {
         edges::edge(&mut sink, doc, geom, e, index, &ports, &mut previous)?;
     }
+    labels::render(&mut sink, doc, geom, &previous)?;
     Ok(())
 }
 pub fn render(doc: &Document, mode: TextMode) -> Result<String, String> {
@@ -320,6 +320,7 @@ pub fn render_with_styles(
         shape(&mut svg, n, b, super::style::icon(sheet, n));
         svg.push_str("</g>\n");
     }
+    labels::render(&mut svg, doc, &geom, &previous)?;
     svg.push_str("</svg>\n");
     if mode == TextMode::Paths {
         crate::export_metadata::preserve_svg_notice(&svg, crate::export::outlines(&svg)?)

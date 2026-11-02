@@ -177,6 +177,46 @@ fn all_order_edges_have_unique_node_anchors_and_clear_paths() {
         note.y + note.h / 2.0 - 6.0
     )));
     assert!(svg.contains(" Q "), "crossings need bridge humps");
+    let label = |name: &str| {
+        let line = svg
+            .lines()
+            .find(|line| {
+                line.contains("class=\"bpmn-flow-label\"")
+                    && line.ends_with(&format!(">{name}</text>"))
+            })
+            .unwrap();
+        let coord = |key: &str| {
+            line.split(&format!("{key}=\""))
+                .nth(1)
+                .unwrap()
+                .split('"')
+                .next()
+                .unwrap()
+                .parse::<f64>()
+                .unwrap()
+        };
+        (coord("x"), coord("y"), line.contains("rotate(-90"))
+    };
+    let timer_node = node("Shop.Deadline");
+    let (days_x, days_y, days_vertical) = label("2 days");
+    assert!(
+        days_vertical
+            && (days_x - timer_node.x).abs() < 20.0
+            && days_y > timer_node.y
+            && days_y < timer_node.y + 90.0,
+        "timer caption belongs beside its outgoing line near the event"
+    );
+    let gateway = node("Shop.Decision");
+    let (yes_x, yes_y, _) = label("yes");
+    let (_, no_y, _) = label("no");
+    assert!(
+        yes_x > gateway.x
+            && yes_x < gateway.x + 70.0
+            && yes_y < gateway.y
+            && no_y > gateway.y
+            && no_y < gateway.y + 70.0,
+        "branch labels must remain by their source gateway"
+    );
     for pool in &geom.pools {
         assert!(
             svg.contains(&format!(

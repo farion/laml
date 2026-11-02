@@ -1,6 +1,6 @@
 //! Edge attachment and orthogonal routes.
 use super::ports::{Attach, Ports};
-use super::{Document, EdgeKind, Geometry, text};
+use super::{Document, EdgeKind, Geometry};
 use crate::bpmn::{Edge, Side};
 use std::fmt::Write;
 
@@ -212,9 +212,6 @@ pub(super) fn edge(
             source.x, source.y
         )
         .unwrap();
-    }
-    if let Some(label) = &e.label {
-        text(svg, plan.label.0, plan.label.1, label, 12.0);
     }
     previous.push(super::orthogonal::Prior {
         points: plan.points,
