@@ -11,6 +11,7 @@ mod detours;
 mod edge_style;
 mod end_labels;
 mod geometry;
+mod junction_arms;
 mod labels;
 mod outline_clearance;
 mod parallel;
@@ -146,6 +147,12 @@ fn candidates(
             .into_iter()
             .collect()
     };
+    if diagram.settings.diagram_type == crate::syntax::DiagramType::Class
+        && source_side.is_none()
+        && target_side.is_none()
+    {
+        results.extend(junction_arms::candidates(a, b));
+    }
     let preferred_count = results.len();
     results.push(vec![port(a, cb), port(b, ca)]);
     for bend in [Point { x: cb.x, y: ca.y }, Point { x: ca.x, y: cb.y }] {

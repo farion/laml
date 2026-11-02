@@ -1,12 +1,13 @@
 //! SVG output with selectable or outlined text measured against bundled Inter.
 
 use crate::geometry::{BoxNode, NodeShape};
-use crate::route::{Point, Route};
+use crate::route::Route;
 use crate::syntax::{NodeKind, NodePart};
 use crate::text::{FONT, ITALIC_FONT, measure, measure_italic};
 use base64::Engine;
 use std::fmt::Write;
 mod activity;
+mod bounds;
 mod compact;
 mod component_container;
 mod composite;
@@ -18,13 +19,6 @@ mod package;
 mod state;
 mod usecase;
 use escape::escape;
-fn include_point(point: Point, bounds: &mut (f64, f64, f64, f64)) {
-    bounds.0 = bounds.0.min(point.x);
-    bounds.1 = bounds.1.min(point.y);
-    bounds.2 = bounds.2.max(point.x);
-    bounds.3 = bounds.3.max(point.y);
-}
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TextMode {
     Embedded,
@@ -51,82 +45,7 @@ pub fn render_with_mode(
 
 fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<String, String> {
     composite::validate(boxes, routes)?;
-    let mut bounds = (0.0_f64, 0.0_f64, 0.0_f64, 0.0_f64);
-    for node in boxes {
-        include_point(
-            Point {
-                x: node.x,
-                y: node.y,
-            },
-            &mut bounds,
-        );
-        include_point(
-            Point {
-                x: node.x + node.width,
-                y: node.y + node.height,
-            },
-            &mut bounds,
-        );
-    }
-    for route in routes {
-        for &point in &route.points {
-            include_point(point, &mut bounds);
-        }
-        for qualifier in &route.qualifiers {
-            include_point(
-                Point {
-                    x: qualifier.x,
-                    y: qualifier.y,
-                },
-                &mut bounds,
-            );
-            include_point(
-                Point {
-                    x: qualifier.x + qualifier.width,
-                    y: qualifier.y + qualifier.height,
-                },
-                &mut bounds,
-            );
-        }
-        for bridge in &route.bridges {
-            let pair = &route.points[bridge.segment..=bridge.segment + 1];
-            let dx = pair[1].x - pair[0].x;
-            let dy = pair[1].y - pair[0].y;
-            let length = dx.hypot(dy);
-            let along = bridge.distance / length;
-            let normal = crate::route::bridge_normal(Point {
-                x: dx / length,
-                y: dy / length,
-            });
-            let apex = Point {
-                x: pair[0].x + dx * along + normal.x * bridge.height * 2.0,
-                y: pair[0].y + dy * along + normal.y * bridge.height * 2.0,
-            };
-            include_point(apex, &mut bounds);
-        }
-        for label in route.label.iter().chain(route.end_labels.iter()) {
-            include_point(
-                Point {
-                    x: label.x,
-                    y: label.y,
-                },
-                &mut bounds,
-            );
-            include_point(
-                Point {
-                    x: label.x + label.width,
-                    y: label.y + label.height,
-                },
-                &mut bounds,
-            );
-        }
-    }
-    let (left, top, right, bottom) = (
-        bounds.0 - 32.0,
-        bounds.1 - 32.0,
-        bounds.2 + 32.0,
-        bounds.3 + 32.0,
-    );
+    let (left, top, right, bottom) = bounds::measure(boxes, routes);
     let mut svg = String::new();
     writeln!(svg, "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{:.2}\" height=\"{:.2}\" viewBox=\"{left:.2} {top:.2} {:.2} {:.2}\">", right-left,bottom-top,right-left,bottom-top).unwrap();
     svg.push_str("<defs>");

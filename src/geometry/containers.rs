@@ -230,6 +230,21 @@ fn scope(
             if a == b {
                 return None;
             }
+            // An implicit link into a nested package need not put that
+            // package to the right of its peer. Stacking the two siblings
+            // keeps the child-to-child connection axial through the frame.
+            if diagram.settings.diagram_type == crate::syntax::DiagramType::Class
+                && relation.to != b
+                && local
+                    .iter()
+                    .any(|node| node.id == b && node.kind == NodeKind::Package)
+                && !graph
+                    .layout
+                    .iter()
+                    .any(|r| (r.first == a && r.second == b) || (r.first == b && r.second == a))
+            {
+                return None;
+            }
             let mut mapped = relation.clone();
             mapped.from = a;
             mapped.to = b;

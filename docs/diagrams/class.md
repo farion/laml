@@ -93,7 +93,7 @@ styling {
 
 ![Compact interface notation](../images/class-lollipops.png)
 
-[Complete source](../../examples/class-lollipops.laml).
+[Complete source](../../examples/class-lollipops.laml). Each compact interface symbol stays level with its provider, so its connector is horizontal.
 
 ## Nested packages, templates and n-ary associations
 
@@ -110,7 +110,7 @@ package Vertrieb {
 
 ![Nested packages with scoped classes](../images/class-packages.png)
 
-[Complete package source](../../examples/class-packages.laml). Use `Vertrieb.Kunde` to refer to a class from outside the package.
+[Complete package source](../../examples/class-packages.laml). Without an explicit placement rule, a nested package linked from a sibling may stack below it so the child connection is vertical. Use `Vertrieb.Kunde` to refer to a class from outside the package.
 
 ```laml
 // Excerpt from examples/class-binding.laml
@@ -133,7 +133,7 @@ Medikament -- Verordnet
 
 ![Three-arm association](../images/class-nary.png)
 
-[Complete association source](../../examples/class-nary.laml).
+[Complete association source](../../examples/class-nary.laml). An unpositioned n-ary diamond aligns with the middle participant; its arms prefer horizontal and vertical runs over diagonals. Explicit layout rules still take precedence.
 
 ## Qualified ends and association classes
 

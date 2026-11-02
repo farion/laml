@@ -1,6 +1,8 @@
 use super::nodes::BoxNode;
 use crate::styles::{Element, StyleSheet, Value};
-use crate::syntax::{Alignment, Axis, Diagram, FlowDirection, Placement, ScopedAlignment};
+use crate::syntax::{
+    Alignment, Axis, Diagram, FlowDirection, NodeKind, Placement, ScopedAlignment,
+};
 use crate::text::measure;
 
 #[derive(Clone, Debug)]
@@ -353,6 +355,75 @@ pub fn place(
             line: 0,
         };
         eq_y.push(candidate);
+        if solve_axis(n, &eq_y, &y, &pref_y).is_err() {
+            eq_y.pop();
+        }
+    }
+    // Compact interface symbols follow their provider's centre. Without this
+    // soft equality, separating two symbols moves the symbol alone and tilts
+    // its realization even though the provider has room to move with it.
+    for relation in &diagram.relations {
+        let (a, b) = (owner(&relation.from), owner(&relation.to));
+        if matches!(boxes[b].kind, NodeKind::Lollipop | NodeKind::Socket) {
+            let candidate = Equality {
+                a,
+                b,
+                delta: (boxes[a].height - boxes[b].height) / 2.0,
+                line: 0,
+            };
+            eq_y.push(candidate);
+            if solve_axis(n, &eq_y, &y, &pref_y).is_err() {
+                eq_y.pop();
+            }
+        }
+    }
+    // A free n-ary hub belongs beside the middle participating classifier.
+    // Authored hub placement remains mandatory and is never replaced here.
+    let positions = solve_axis(n, &eq_y, &y, &pref_y)?;
+    for (hub, node) in boxes.iter().enumerate() {
+        if node.kind != NodeKind::Association
+            || diagram
+                .layout
+                .iter()
+                .any(|r| r.first == node.id || r.second == node.id)
+            || diagram
+                .scoped_alignments
+                .iter()
+                .any(|r| r.first == node.id || r.second == node.id)
+        {
+            continue;
+        }
+        let mut arms: Vec<_> = diagram
+            .relations
+            .iter()
+            .filter_map(|r| {
+                let arm = if r.from == node.id {
+                    Some(owner(&r.to))
+                } else if r.to == node.id {
+                    Some(owner(&r.from))
+                } else {
+                    None
+                };
+                arm.filter(|&i| boxes[i].kind != NodeKind::AssociationClass)
+            })
+            .collect();
+        arms.sort_unstable();
+        arms.dedup();
+        if arms.len() < 3 {
+            continue;
+        }
+        arms.sort_by(|&a, &b| {
+            let ya = positions[a] + boxes[a].height / 2.0;
+            let yb = positions[b] + boxes[b].height / 2.0;
+            ya.total_cmp(&yb).then(a.cmp(&b))
+        });
+        let middle = arms[arms.len() / 2];
+        eq_y.push(Equality {
+            a: middle,
+            b: hub,
+            delta: (boxes[middle].height - node.height) / 2.0,
+            line: 0,
+        });
         if solve_axis(n, &eq_y, &y, &pref_y).is_err() {
             eq_y.pop();
         }
