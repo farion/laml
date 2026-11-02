@@ -13,6 +13,7 @@ pub(super) struct Prior {
 pub(super) struct Plan {
     pub points: Vec<Point>,
     pub label: Point,
+    pub cost: f64,
 }
 fn stub(p: Attach, length: f64) -> Point {
     match p.side {
@@ -96,6 +97,11 @@ fn score(
     previous: &[Prior],
 ) -> Option<f64> {
     let mut cost = 0.0;
+    let short_end = |id: &str| {
+        doc.nodes
+            .iter()
+            .any(|n| n.id == id && matches!(n.kind, Kind::Data | Kind::Annotation))
+    };
     for triple in points.windows(3) {
         let first = (triple[1].0 - triple[0].0, triple[1].1 - triple[0].1);
         let second = (triple[2].0 - triple[1].0, triple[2].1 - triple[1].1);
@@ -110,7 +116,15 @@ fn score(
         if (a.0 - b.0).abs() > 0.05 && (a.1 - b.1).abs() > 0.05 {
             return None;
         }
-        cost += (a.0 - b.0).abs() + (a.1 - b.1).abs();
+        let length = (a.0 - b.0).abs() + (a.1 - b.1).abs();
+        if points.len() > 2 {
+            let bracket = (segment == 0 && short_end(&e.from))
+                || (segment == points.len() - 2 && short_end(&e.to));
+            if length < (if bracket { 12.0 } else { 20.0 }) - 0.1 {
+                return None;
+            }
+        }
+        cost += length;
         if e.kind == EdgeKind::Message
             && doc.direction != crate::syntax::FlowDirection::TopToBottom
             && (a.1 - b.1).abs() < 0.05
@@ -199,7 +213,7 @@ fn score(
             }
         }
     }
-    cost += (points.len().saturating_sub(2)) as f64 * 24.0;
+    cost += (points.len().saturating_sub(2)) as f64 * 100.0;
     Some(cost)
 }
 fn label(doc: &Document, geom: &Geometry, points: &[Point], name: &str) -> Point {
@@ -343,7 +357,7 @@ pub(super) fn route(
             candidates.push(vec![first, s, (x, s.1), (x, y), (t.0, y), t, last]);
         }
     }
-    let best = candidates
+    let (cost, best) = candidates
         .into_iter()
         .enumerate()
         .filter_map(|(i, points)| {
@@ -351,7 +365,6 @@ pub(super) fn route(
             score(doc, geom, e, &points, previous).map(|cost| (cost + i as f64 * 0.001, points))
         })
         .min_by(|a, b| a.0.total_cmp(&b.0))
-        .map(|(_, p)| p)
         .ok_or_else(|| {
             format!(
                 "no obstacle-free orthogonal BPMN route for {} -> {}",
@@ -366,6 +379,7 @@ pub(super) fn route(
     Ok(Plan {
         points: best,
         label,
+        cost,
     })
 }
 pub(super) fn bridges(points: &[Point], previous: &[Prior]) -> Vec<(usize, Point)> {

@@ -12,43 +12,37 @@ fn setup() -> (Document, Geometry) {
 fn all_order_edges_have_unique_node_anchors_and_clear_paths() {
     let (doc, geom) = setup();
     let ports = ports::assign(&doc, &geom).unwrap();
-    for node in &doc.nodes {
-        let mut anchors = Vec::new();
-        for (i, e) in doc.edges.iter().enumerate() {
-            if e.from == node.id {
-                let p = ports.ends[i].0.unwrap();
-                anchors.push((p.x, p.y));
-            }
-            if e.to == node.id {
-                let p = ports.ends[i].1.unwrap();
-                anchors.push((p.x, p.y));
-            }
-        }
-        for (i, p) in anchors.iter().enumerate() {
-            for q in anchors.iter().skip(i + 1) {
-                assert!(
-                    (p.0 - q.0).abs() + (p.1 - q.1).abs() > 2.0,
-                    "shared attachment at {}",
-                    node.id
-                );
-            }
-        }
-    }
     let mut previous = Vec::new();
     for (i, e) in doc.edges.iter().enumerate() {
         edges::edge(&mut String::new(), &doc, &geom, e, i, &ports, &mut previous).unwrap();
         let points = &previous.last().unwrap().points;
-        let start = ports.ends[i].0.unwrap();
-        let end = ports.ends[i].1.unwrap();
-        assert!(
-            (points[0].0 - start.x).abs() < 0.08 && (points[0].1 - start.y).abs() < 0.08,
-            "{} source",
-            e.from
-        );
-        assert!(
-            (points.last().unwrap().0 - end.x).abs() < 0.08
-                && (points.last().unwrap().1 - end.y).abs() < 0.08
-        );
+        if points.len() > 2 {
+            for (segment, leg) in points.windows(2).enumerate() {
+                let id = if segment == 0 { &e.from } else { &e.to };
+                let bracket = (segment == 0 || segment == points.len() - 2)
+                    && doc
+                        .nodes
+                        .iter()
+                        .any(|n| &n.id == id && matches!(n.kind, Kind::Data | Kind::Annotation));
+                let min = if bracket { 12.0 } else { 20.0 };
+                assert!(
+                    (leg[1].0 - leg[0].0).abs() + (leg[1].1 - leg[0].1).abs() >= min - 0.1,
+                    "short leg on {} -> {}",
+                    e.from,
+                    e.to
+                );
+            }
+        }
+        for (out, point) in [(true, points[0]), (false, *points.last().unwrap())] {
+            assert!(
+                ports::alternatives::for_end(&doc, &geom, &ports, i, out)
+                    .iter()
+                    .any(|p| (point.0 - p.x).abs() < 0.08 && (point.1 - p.y).abs() < 0.08),
+                "{} -> {} must dock on an available port",
+                e.from,
+                e.to
+            );
+        }
         if e.from == "Shop.Deadline" {
             assert_eq!(
                 doc.nodes.iter().find(|n| n.id == e.from).unwrap().kind,
@@ -83,6 +77,26 @@ fn all_order_edges_have_unique_node_anchors_and_clear_paths() {
             );
         }
     }
+    for node in &doc.nodes {
+        let mut anchors = Vec::new();
+        for (i, e) in doc.edges.iter().enumerate() {
+            if e.from == node.id {
+                anchors.push(previous[i].points[0]);
+            }
+            if e.to == node.id {
+                anchors.push(*previous[i].points.last().unwrap());
+            }
+        }
+        for (i, p) in anchors.iter().enumerate() {
+            for q in anchors.iter().skip(i + 1) {
+                assert!(
+                    (p.0 - q.0).abs() + (p.1 - q.1).abs() > 2.0,
+                    "shared attachment at {}",
+                    node.id
+                );
+            }
+        }
+    }
     let edge = |from: &str, to: &str| {
         doc.edges
             .iter()
@@ -110,6 +124,24 @@ fn all_order_edges_have_unique_node_anchors_and_clear_paths() {
         previous[edge("Shop.Pack", "Shop.Merge")].points.len(),
         3,
         "pack should need only one bend into the centered join"
+    );
+    let escalation = &previous[edge("Shop.Escalate", "Shop.Merge")].points;
+    assert_eq!(
+        escalation.len(),
+        3,
+        "choose the task's bottom port instead of a short right-hand dogleg"
+    );
+    assert!((escalation[0].0 - escalation[1].0).abs() < 0.01);
+    let archive = &previous[edge("Shop.Review", "Shop.Archive")].points;
+    let store = geom.nodes[doc
+        .nodes
+        .iter()
+        .position(|n| n.id == "Shop.Archive")
+        .unwrap()];
+    assert!(
+        (archive.last().unwrap().0 - (store.x + 31.0)).abs() < 0.01
+            && (archive.last().unwrap().1 - store.y).abs() < 0.01,
+        "enter the store from its free right side instead of adding a tiny terminal kink"
     );
     let node = |id: &str| geom.nodes[doc.nodes.iter().position(|n| n.id == id).unwrap()];
     assert_eq!(

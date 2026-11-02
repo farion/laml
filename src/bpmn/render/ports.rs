@@ -1,6 +1,7 @@
 //! Gateway ports: distinct cardinal anchors for degree <= 4, distributed
 //! perimeter points for larger gateways. Explicit layout overrides reserve sides.
 use super::Geometry;
+pub(super) mod alternatives;
 use crate::bpmn::{Document, EdgeKind, Kind, Side};
 use crate::syntax::FlowDirection;
 

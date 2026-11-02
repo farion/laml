@@ -132,8 +132,6 @@ pub(super) fn edge(
     ports: &Ports,
     previous: &mut Vec<super::orthogonal::Prior>,
 ) -> Result<(), String> {
-    let (source, target) = ports.ends[index];
-    let (source, target) = (source.unwrap(), target.unwrap());
     let ai = doc.nodes.iter().position(|n| n.id == e.from).unwrap();
     let bi = doc.nodes.iter().position(|n| n.id == e.to).unwrap();
     let gateway = |kind| {
@@ -145,14 +143,43 @@ pub(super) fn edge(
                 | crate::bpmn::Kind::EventBased
         )
     };
-    let from = gateway(doc.nodes[ai].kind).then_some(source);
-    let to = gateway(doc.nodes[bi].kind).then_some(target);
-    let preferred = if e.kind == EdgeKind::Sequence && (from.is_some() || to.is_some()) {
-        Some(gateway_route(from, to, source, target))
-    } else {
-        None
-    };
-    let plan = super::orthogonal::route(doc, geom, e, source, target, preferred, previous)?;
+    // Stage one selects free, forward-facing node ports; stage two finds an
+    // obstacle-free path for each pair. Compare actual route costs, including
+    // bends, instead of locking in the first node side before path planning.
+    let mut best: Option<(super::orthogonal::Plan, Attach, Attach)> = None;
+    let mut error = None;
+    let sources = super::ports::alternatives::for_end(doc, geom, ports, index, true);
+    let targets = super::ports::alternatives::for_end(doc, geom, ports, index, false);
+    for source in sources {
+        for &target in &targets {
+            let from = gateway(doc.nodes[ai].kind).then_some(source);
+            let to = gateway(doc.nodes[bi].kind).then_some(target);
+            let preferred = if e.kind == EdgeKind::Sequence && (from.is_some() || to.is_some()) {
+                Some(gateway_route(from, to, source, target))
+            } else {
+                None
+            };
+            match super::orthogonal::route(doc, geom, e, source, target, preferred, previous) {
+                Ok(plan)
+                    if best
+                        .as_ref()
+                        .is_none_or(|(current, _, _)| plan.cost < current.cost - 0.01) =>
+                {
+                    best = Some((plan, source, target))
+                }
+                Err(reason) => error = Some(reason),
+                _ => (),
+            }
+        }
+    }
+    let (plan, source, _target) = best.ok_or_else(|| {
+        error.unwrap_or_else(|| {
+            format!(
+                "no obstacle-free orthogonal BPMN route for {} -> {}",
+                e.from, e.to
+            )
+        })
+    })?;
     let bridges = super::orthogonal::bridges(&plan.points, previous);
     let (path, masks) = path_with_bridges(&plan.points, &bridges);
     for mask in masks {
