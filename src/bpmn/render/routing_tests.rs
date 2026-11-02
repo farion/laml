@@ -229,10 +229,23 @@ fn all_order_edges_have_unique_node_anchors_and_clear_paths() {
     let (days_x, days_y, days_vertical) = label("2 days");
     assert!(
         days_vertical
-            && (days_x - timer_node.x).abs() < 20.0
-            && days_y > timer_node.y
-            && days_y < timer_node.y + 90.0,
-        "timer caption belongs beside its outgoing line near the event"
+            && days_x < timer_node.x
+            && timer_node.x - days_x < 20.0
+            && days_y > note.y + note.h / 2.0 + 30.0
+            && days_y < timer_node.y + 145.0,
+        "timer caption belongs on the uncrowded side below the annotation"
+    );
+    let (order_x, order_y, _) = label("order");
+    let (answer_x, answer_y, _) = label("answer");
+    assert!(
+        order_x > node("Shop.Received").x + node("Shop.Received").w / 2.0 + 25.0
+            && order_y > node("Customer.Submit").y + node("Customer.Submit").h / 2.0 + 35.0,
+        "ordinary message labels should not hug either endpoint"
+    );
+    assert!(
+        answer_x < node("Shop.Reply").x - 45.0
+            && answer_y < node("Shop.Reply").y - node("Shop.Reply").h / 2.0 - 45.0,
+        "answer label should lie along the route, not on the send task"
     );
     let gateway = node("Shop.Decision");
     let (yes_x, yes_y, _) = label("yes");
@@ -274,23 +287,15 @@ fn all_order_edges_have_unique_node_anchors_and_clear_paths() {
         )),
         "last lane title must extend all the way to the pool's bottom border"
     );
-    let order = svg
-        .lines()
-        .find(|line| line.ends_with(">order</text>"))
-        .unwrap();
-    let label_y = order
-        .split("y=\"")
-        .nth(1)
-        .unwrap()
-        .split('"')
-        .next()
-        .unwrap()
-        .parse::<f64>()
-        .unwrap();
-    let p = &geom.pools[0];
+    let message = &previous[edge("Customer.Submit", "Shop.Received")].points;
     assert!(
-        label_y < p.y + p.h - 25.0 && label_y > p.y + 30.0 + 20.0,
-        "order label must clear pool border"
+        message
+            .windows(2)
+            .any(|leg| (leg[0].1 - leg[1].1).abs() < 0.01
+                && (order_y - leg[0].1).abs() < 25.0
+                && order_x > leg[0].0.min(leg[1].0)
+                && order_x < leg[0].0.max(leg[1].0)),
+        "order label should sit beside its own message line"
     );
 }
 

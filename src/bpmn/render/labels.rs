@@ -85,6 +85,23 @@ fn clear(
                 .any(|leg| segment_hits(leg[0], leg[1], box_at, 3.0))
     })
 }
+fn near_other_line(routes: &[Prior], edge: usize, rect: BoxAt) -> bool {
+    routes.iter().enumerate().any(|(i, route)| {
+        i != edge
+            && route.points.windows(2).any(|leg| {
+                let (a, b) = (leg[0], leg[1]);
+                if (a.0 - b.0).abs() < 0.05 {
+                    rect.y - rect.h / 2.0 < b.1.max(a.1)
+                        && rect.y + rect.h / 2.0 > a.1.min(b.1)
+                        && (a.0 - rect.x).abs() - rect.w / 2.0 < 24.0
+                } else {
+                    rect.x - rect.w / 2.0 < a.0.max(b.0)
+                        && rect.x + rect.w / 2.0 > a.0.min(b.0)
+                        && (a.1 - rect.y).abs() - rect.h / 2.0 < 24.0
+                }
+            })
+    })
+}
 fn choose(
     doc: &Document,
     geom: &Geometry,
@@ -96,6 +113,19 @@ fn choose(
 ) -> Result<Label, String> {
     let width = crate::text::measure(name, 12.0).unwrap_or(40.0).max(1.0);
     let points = &routes[index].points;
+    let route_length: f64 = points
+        .windows(2)
+        .map(|leg| (leg[1].0 - leg[0].0).abs() + (leg[1].1 - leg[0].1).abs())
+        .sum();
+    let source = doc
+        .nodes
+        .iter()
+        .find(|n| n.id == doc.edges[index].from)
+        .unwrap();
+    let near_source = matches!(
+        source.kind,
+        Kind::Boundary | Kind::Exclusive | Kind::Parallel | Kind::Inclusive | Kind::EventBased
+    );
     let mut best: Option<Label> = None;
     let mut traveled = 0.0;
     for leg in points.windows(2) {
@@ -130,8 +160,11 @@ fn choose(
                 half + 16.0,
                 half + 32.0,
                 half + 40.0,
+                half + 56.0,
+                half + 72.0,
                 length * 0.25,
                 length * 0.5,
+                length * 0.6,
                 length * 0.75,
             ] {
                 if along < half - 0.1 || along > length - half + 0.1 {
@@ -187,24 +220,29 @@ fn choose(
                     if !clear(doc, geom, routes, index, box_at, placed) {
                         continue;
                     }
-                    let source = &doc
-                        .nodes
-                        .iter()
-                        .find(|n| n.id == doc.edges[index].from)
-                        .unwrap();
-                    let priority = if matches!(
-                        source.kind,
-                        Kind::Boundary
-                            | Kind::Exclusive
-                            | Kind::Parallel
-                            | Kind::Inclusive
-                            | Kind::EventBased
-                    ) {
-                        3.0
+                    let progress = traveled + along;
+                    if !near_source
+                        && (progress < route_length.min(220.0) / 4.0
+                            || route_length - progress < route_length.min(220.0) / 4.0)
+                    {
+                        continue;
+                    }
+                    let distance = if near_source {
+                        progress * 3.0
                     } else {
-                        0.35
+                        (progress - route_length / 2.0).abs()
                     };
-                    let cost = (traveled + along) * priority
+                    let cost = distance
+                        + if source.kind == Kind::Boundary && !horizontal && !vertical {
+                            65.0
+                        } else {
+                            0.0
+                        }
+                        + if near_other_line(routes, index, box_at) {
+                            170.0
+                        } else {
+                            0.0
+                        }
                         + if vertical { 12.0 } else { 0.0 }
                         + if !horizontal && !vertical { 5.0 } else { 0.0 };
                     let candidate = Label {

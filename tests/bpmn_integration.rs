@@ -115,6 +115,30 @@ fn flow_label_orientation_can_be_auto_horizontal_or_vertical() {
 }
 
 #[test]
+fn short_labeled_sequence_stays_between_its_nodes() {
+    let source = "settings {\ntype: bpmn\n}\nsemantics {\nA --> B : next\n}";
+    let doc = bpmn::parse(source).unwrap();
+    let svg = bpmn::render(&doc, TextMode::System).unwrap();
+    let label = svg
+        .lines()
+        .find(|line| line.ends_with(">next</text>"))
+        .unwrap();
+    let x = label
+        .split("x=\"")
+        .nth(1)
+        .unwrap()
+        .split('"')
+        .next()
+        .unwrap()
+        .parse::<f64>()
+        .unwrap();
+    assert!(
+        x > 195.0 && x < 240.0,
+        "label should sit in the gap, not on either task"
+    );
+}
+
+#[test]
 fn annotation_is_not_data_or_sequence_flow() {
     let source =
         "settings {\ntype: bpmn\n}\nsemantics {\nA --> B\nnote Info(\"Check again\")\nInfo .. A\n}";
