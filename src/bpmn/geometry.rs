@@ -42,9 +42,12 @@ fn size(doc: &Document, node: &Node) -> (f64, f64) {
         | Kind::ReceiveTask
         | Kind::ScriptTask
         | Kind::ManualTask
-        | Kind::Collapsed
-        | Kind::Annotation => (
-            (crate::text::measure(&node.label, 14.0).unwrap_or(100.0) + 52.0).max(154.0),
+        | Kind::Collapsed => (
+            (crate::text::measure(&node.label, 14.0).unwrap_or(100.0) + 100.0).max(166.0),
+            70.0,
+        ),
+        Kind::Annotation => (
+            (crate::text::measure(&node.label, 13.0).unwrap_or(100.0) + 54.0).max(154.0),
             70.0,
         ),
         Kind::Start | Kind::End | Kind::Intermediate | Kind::Boundary => (54.0, 54.0),
@@ -64,6 +67,7 @@ fn size(doc: &Document, node: &Node) -> (f64, f64) {
     }
 }
 mod branch;
+mod notes;
 mod ranks;
 use ranks::ranks;
 fn node_index(doc: &Document, name: &str) -> Result<usize, String> {
@@ -319,12 +323,13 @@ pub(super) fn place(doc: &Document) -> Result<Geometry, String> {
             .ok_or_else(|| format!("boundary event {} has no owner", n.id))?;
         let o = boxes[owner];
         boxes[i] = BoxAt {
-            x: o.x + o.w * 0.28,
+            x: o.x + o.w / 2.0 - 20.0,
             y: o.y + o.h / 2.0,
             w: 38.0,
             h: 38.0,
         };
     }
+    notes::clear_boundary_exit(doc, &mut boxes);
     for (a, op, b) in &doc.layout {
         let (a, b) = (node_index(doc, a)?, node_index(doc, b)?);
         if doc.nodes[a].pool != doc.nodes[b].pool

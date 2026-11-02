@@ -2,18 +2,8 @@
 use super::ports::{Attach, Ports};
 use super::{Document, EdgeKind, Geometry, text};
 use crate::bpmn::{Edge, Side};
-use crate::syntax::FlowDirection;
 use std::fmt::Write;
 
-fn regular(b: super::super::geometry::BoxAt, side: Side) -> Attach {
-    let (x, y) = match side {
-        Side::Left => (b.x - b.w / 2.0, b.y),
-        Side::Right => (b.x + b.w / 2.0, b.y),
-        Side::Top => (b.x, b.y - b.h / 2.0),
-        Side::Bottom => (b.x, b.y + b.h / 2.0),
-    };
-    Attach { side, x, y }
-}
 fn stub(a: Attach) -> (f64, f64) {
     match a.side {
         Side::Left => (a.x - 23.0, a.y),
@@ -23,43 +13,13 @@ fn stub(a: Attach) -> (f64, f64) {
     }
 }
 fn gateway_route(
-    doc: &Document,
-    geom: &Geometry,
-    e: &Edge,
     from: Option<Attach>,
     to: Option<Attach>,
-) -> (String, f64, f64) {
-    let a = geom.nodes[doc.nodes.iter().position(|n| n.id == e.from).unwrap()];
-    let b = geom.nodes[doc.nodes.iter().position(|n| n.id == e.to).unwrap()];
-    let vertical = doc.direction == FlowDirection::TopToBottom;
-    let source = from.unwrap_or_else(|| {
-        regular(
-            a,
-            if vertical {
-                if b.y >= a.y { Side::Bottom } else { Side::Top }
-            } else if b.x >= a.x {
-                Side::Right
-            } else {
-                Side::Left
-            },
-        )
-    });
-    let target = to.unwrap_or_else(|| {
-        regular(
-            b,
-            if vertical {
-                if b.y >= a.y { Side::Top } else { Side::Bottom }
-            } else if b.x >= a.x {
-                Side::Left
-            } else {
-                Side::Right
-            },
-        )
-    });
-    let (sx, sy) = stub(source);
-    let (tx, ty) = stub(target);
-    // A branch above/below (or left/right in a vertical diagram) can leave
-    // the gateway in its outward direction and enter the task in one bend.
+    source: Attach,
+    target: Attach,
+) -> Vec<super::orthogonal::Point> {
+    // If both sides permit it, a branch needs only one bend. The shared
+    // planner checks clearance and supplies a detour when necessary.
     let corner = if from.is_some() && to.is_none() {
         match (source.side, target.side) {
             (Side::Top, Side::Left | Side::Right) if target.y < source.y - 2.0 => {
@@ -95,68 +55,67 @@ fn gateway_route(
     } else {
         None
     };
-    let clear = |corner: (f64, f64)| {
-        let points = [(source.x, source.y), corner, (target.x, target.y)];
-        points.windows(2).all(|leg| {
-            doc.nodes.iter().enumerate().all(|(i, node)| {
-                if node.id == e.from
-                    || node.id == e.to
-                    || node.pool
-                        != doc.nodes[doc.nodes.iter().position(|n| n.id == e.from).unwrap()].pool
-                {
-                    return true;
-                }
-                let b = geom.nodes[i];
-                let margin = 5.0;
-                if (leg[0].0 - leg[1].0).abs() < 0.01 {
-                    leg[0].0 <= b.x - b.w / 2.0 - margin
-                        || leg[0].0 >= b.x + b.w / 2.0 + margin
-                        || leg[0].1.max(leg[1].1) <= b.y - b.h / 2.0 - margin
-                        || leg[0].1.min(leg[1].1) >= b.y + b.h / 2.0 + margin
-                } else {
-                    leg[0].1 <= b.y - b.h / 2.0 - margin
-                        || leg[0].1 >= b.y + b.h / 2.0 + margin
-                        || leg[0].0.max(leg[1].0) <= b.x - b.w / 2.0 - margin
-                        || leg[0].0.min(leg[1].0) >= b.x + b.w / 2.0 + margin
-                }
-            })
-        })
-    };
-    let mut points = if let Some(corner) = corner.filter(|&corner| clear(corner)) {
-        vec![(source.x, source.y), corner, (target.x, target.y)]
-    } else {
-        let start_vertical = matches!(source.side, Side::Top | Side::Bottom);
-        let end_vertical = matches!(target.side, Side::Top | Side::Bottom);
-        let mut points = vec![(source.x, source.y), (sx, sy)];
-        match (start_vertical, end_vertical) {
-            (true, false) => points.push((tx, sy)),
-            (false, true) => points.push((sx, ty)),
-            (true, true) => {
-                let mid = (sy + ty) / 2.0;
-                points.extend([(sx, mid), (tx, mid)]);
-            }
-            (false, false) => {
-                let mid = (sx + tx) / 2.0;
-                points.extend([(mid, sy), (mid, ty)]);
-            }
-        }
-        points.extend([(tx, ty), (target.x, target.y)]);
-        points
-    };
-    points.dedup_by(|a, b| (a.0 - b.0).abs() < 0.01 && (a.1 - b.1).abs() < 0.01);
-    let mut path = String::new();
-    for (i, (x, y)) in points.iter().enumerate() {
-        write!(path, "{} {x:.1} {y:.1}", if i == 0 { "M" } else { " L" }).unwrap();
+    if let Some(corner) = corner {
+        return vec![(source.x, source.y), corner, (target.x, target.y)];
     }
-    let label_segment = points
-        .windows(2)
-        .filter(|pair| (pair[0].1 - pair[1].1).abs() < 0.01 && (pair[0].0 - pair[1].0).abs() > 28.0)
-        .max_by(|a, b| (a[0].0 - a[1].0).abs().total_cmp(&(b[0].0 - b[1].0).abs()));
-    let (label_x, label_y) = label_segment
-        .map_or(((sx + tx) / 2.0, (sy + ty) / 2.0 - 9.0), |pair| {
-            ((pair[0].0 + pair[1].0) / 2.0, pair[0].1 - 9.0)
+    let (s, t) = (stub(source), stub(target));
+    let vertical = |side| matches!(side, Side::Top | Side::Bottom);
+    let mut points = vec![(source.x, source.y), s];
+    match (vertical(source.side), vertical(target.side)) {
+        (true, false) => points.push((t.0, s.1)),
+        (false, true) => points.push((s.0, t.1)),
+        (true, true) => {
+            let mid = (s.1 + t.1) / 2.0;
+            points.extend([(s.0, mid), (t.0, mid)]);
+        }
+        (false, false) => {
+            let mid = (s.0 + t.0) / 2.0;
+            points.extend([(mid, s.1), (mid, t.1)]);
+        }
+    }
+    points.extend([t, (target.x, target.y)]);
+    points
+}
+fn path_with_bridges(
+    points: &[super::orthogonal::Point],
+    bridges: &[(usize, super::orthogonal::Point)],
+) -> (String, Vec<String>) {
+    let mut d = format!("M {:.1} {:.1}", points[0].0, points[0].1);
+    let mut masks = Vec::new();
+    for (segment, leg) in points.windows(2).enumerate() {
+        let (a, b) = (leg[0], leg[1]);
+        let length = (b.0 - a.0).abs() + (b.1 - a.1).abs();
+        if length < 0.1 {
+            continue;
+        }
+        let (dx, dy) = ((b.0 - a.0) / length, (b.1 - a.1) / length);
+        let mut crossings: Vec<_> = bridges
+            .iter()
+            .filter(|(i, _)| *i == segment)
+            .map(|(_, p)| *p)
+            .collect();
+        crossings.sort_by(|p, q| {
+            ((p.0 - a.0) * dx + (p.1 - a.1) * dy).total_cmp(&((q.0 - a.0) * dx + (q.1 - a.1) * dy))
         });
-    (path, label_x, label_y)
+        for p in crossings {
+            let pre = (p.0 - dx * 6.0, p.1 - dy * 6.0);
+            let post = (p.0 + dx * 6.0, p.1 + dy * 6.0);
+            let control = (p.0 - dy * 15.0, p.1 + dx * 15.0);
+            let arc = format!(
+                "M {:.1} {:.1} Q {:.1} {:.1} {:.1} {:.1}",
+                pre.0, pre.1, control.0, control.1, post.0, post.1
+            );
+            masks.push(arc);
+            write!(
+                d,
+                " L {:.1} {:.1} Q {:.1} {:.1} {:.1} {:.1}",
+                pre.0, pre.1, control.0, control.1, post.0, post.1
+            )
+            .unwrap();
+        }
+        write!(d, " L {:.1} {:.1}", b.0, b.1).unwrap();
+    }
+    (d, masks)
 }
 pub(super) fn edge(
     svg: &mut String,
@@ -165,141 +124,43 @@ pub(super) fn edge(
     e: &Edge,
     index: usize,
     ports: &Ports,
-) {
+    previous: &mut Vec<super::orthogonal::Prior>,
+) -> Result<(), String> {
+    let (source, target) = ports.ends[index];
+    let (source, target) = (source.unwrap(), target.unwrap());
     let ai = doc.nodes.iter().position(|n| n.id == e.from).unwrap();
     let bi = doc.nodes.iter().position(|n| n.id == e.to).unwrap();
-    let (a, b) = (geom.nodes[ai], geom.nodes[bi]);
-    let dx = b.x - a.x;
-    let dy = b.y - a.y;
-    let horizontal = dx.abs() > dy.abs() * 0.75 && e.kind != EdgeKind::Message;
-    let (x1, y1, x2, y2) = if horizontal {
-        let sign = dx.signum();
-        (
-            a.x + sign * a.w / 2.0,
-            a.y,
-            b.x - sign * b.w / 2.0 - sign * 4.0,
-            b.y,
-        )
-    } else {
-        let sign = dy.signum();
-        (
-            a.x,
-            a.y + sign * a.h / 2.0,
-            b.x,
-            b.y - sign * b.h / 2.0 - sign * 4.0,
+    let gateway = |kind| {
+        matches!(
+            kind,
+            crate::bpmn::Kind::Exclusive
+                | crate::bpmn::Kind::Parallel
+                | crate::bpmn::Kind::Inclusive
+                | crate::bpmn::Kind::EventBased
         )
     };
+    let from = gateway(doc.nodes[ai].kind).then_some(source);
+    let to = gateway(doc.nodes[bi].kind).then_some(target);
+    let preferred = if e.kind == EdgeKind::Sequence && (from.is_some() || to.is_some()) {
+        Some(gateway_route(from, to, source, target))
+    } else {
+        None
+    };
+    let plan = super::orthogonal::route(doc, geom, e, source, target, preferred, previous)?;
+    let bridges = super::orthogonal::bridges(&plan.points, previous);
+    let (path, masks) = path_with_bridges(&plan.points, &bridges);
+    for mask in masks {
+        writeln!(
+            svg,
+            "<path d=\"{mask}\" fill=\"none\" stroke=\"#f8fbff\" stroke-width=\"6\"/>"
+        )
+        .unwrap();
+    }
     let (dash, marker) = match e.kind {
         EdgeKind::Sequence => ("", "solid-arrow"),
         EdgeKind::Message => ("stroke-dasharray=\"8 5\"", "open-arrow"),
         EdgeKind::Data => ("stroke-dasharray=\"2 5\"", "open-arrow"),
         EdgeKind::Association => ("stroke-dasharray=\"4 4\"", ""),
-    };
-    let (mid_x, mid_y) = ((x1 + x2) / 2.0, (y1 + y2) / 2.0);
-    let blocked = horizontal
-        && (y1 - y2).abs() < 2.0
-        && doc.nodes.iter().enumerate().any(|(i, n)| {
-            if i == ai
-                || i == bi
-                || n.parent != doc.nodes[ai].parent
-                || n.pool != doc.nodes[ai].pool
-            {
-                return false;
-            }
-            let q = geom.nodes[i];
-            q.x + q.w / 2.0 > x1.min(x2)
-                && q.x - q.w / 2.0 < x1.max(x2)
-                && q.y - q.h / 2.0 < y1
-                && q.y + q.h / 2.0 > y1
-        });
-    let channel_clear = |y: f64| {
-        !doc.nodes.iter().enumerate().any(|(i, n)| {
-            if i == ai
-                || i == bi
-                || n.parent != doc.nodes[ai].parent
-                || n.pool != doc.nodes[ai].pool
-            {
-                return false;
-            }
-            let q = geom.nodes[i];
-            q.x + q.w / 2.0 > x1.min(x2)
-                && q.x - q.w / 2.0 < x1.max(x2)
-                && q.y - q.h / 2.0 - 8.0 < y
-                && q.y + q.h / 2.0 + 8.0 > y
-        })
-    };
-    let mut corridor = y1.max(y2) + a.h.max(b.h) / 2.0 + 55.0;
-    if !channel_clear(corridor) {
-        corridor = y1.min(y2) - a.h.max(b.h) / 2.0 - 55.0;
-        while !channel_clear(corridor) && corridor > 35.0 {
-            corridor -= 45.0;
-        }
-    }
-    let blocked_vertical = !horizontal
-        && e.kind != EdgeKind::Message
-        && doc.nodes.iter().enumerate().any(|(i, n)| {
-            if i == ai
-                || i == bi
-                || n.parent != doc.nodes[ai].parent
-                || n.pool != doc.nodes[ai].pool
-            {
-                return false;
-            }
-            let q = geom.nodes[i];
-            q.x - q.w / 2.0 < x1
-                && q.x + q.w / 2.0 > x1
-                && q.y + q.h / 2.0 > y1.min(y2)
-                && q.y - q.h / 2.0 < y1.max(y2)
-        });
-    let corridor_x = if blocked_vertical {
-        doc.nodes
-            .iter()
-            .enumerate()
-            .filter(|(i, n)| {
-                *i != ai
-                    && *i != bi
-                    && n.parent == doc.nodes[ai].parent
-                    && n.pool == doc.nodes[ai].pool
-            })
-            .map(|(i, _)| geom.nodes[i])
-            .filter(|q| q.y + q.h / 2.0 > y1.min(y2) && q.y - q.h / 2.0 < y1.max(y2))
-            .map(|q| q.x + q.w / 2.0 + 30.0)
-            .fold(x1.max(x2) + 30.0, f64::max)
-    } else {
-        mid_x
-    };
-    let gateway_ports = ports.ends[index];
-    let gateway_path = if e.kind == EdgeKind::Sequence
-        && (gateway_ports.0.is_some() || gateway_ports.1.is_some())
-    {
-        Some(gateway_route(
-            doc,
-            geom,
-            e,
-            gateway_ports.0,
-            gateway_ports.1,
-        ))
-    } else {
-        None
-    };
-    let path = if let Some((path, _, _)) = &gateway_path {
-        path.clone()
-    } else if blocked {
-        format!(
-            "M {x1:.1} {y1:.1} L {:.1} {y1:.1} L {:.1} {corridor:.1} L {:.1} {corridor:.1} L {:.1} {y2:.1} L {x2:.1} {y2:.1}",
-            x1 + 15.0,
-            x1 + 15.0,
-            x2 - 15.0,
-            x2 - 15.0
-        )
-    } else if horizontal {
-        format!("M {x1:.1} {y1:.1} L {mid_x:.1} {y1:.1} L {mid_x:.1} {y2:.1} L {x2:.1} {y2:.1}")
-    } else if blocked_vertical {
-        format!(
-            "M {x1:.1} {y1:.1} L {corridor_x:.1} {y1:.1} L {corridor_x:.1} {y2:.1} L {x2:.1} {y2:.1}"
-        )
-    } else {
-        format!("M {x1:.1} {y1:.1} L {x1:.1} {mid_y:.1} L {x2:.1} {mid_y:.1} L {x2:.1} {y2:.1}")
     };
     let arrow = if marker.is_empty() {
         String::new()
@@ -314,15 +175,18 @@ pub(super) fn edge(
     if e.kind == EdgeKind::Message {
         writeln!(
             svg,
-            "<circle cx=\"{x1:.1}\" cy=\"{y1:.1}\" r=\"4\" fill=\"white\" stroke=\"#263548\"/>"
+            "<circle cx=\"{:.1}\" cy=\"{:.1}\" r=\"4\" fill=\"white\" stroke=\"#263548\"/>",
+            source.x, source.y
         )
         .unwrap();
     }
     if let Some(label) = &e.label {
-        let (label_x, label_y) = gateway_path.as_ref().map_or(
-            (mid_x, if blocked { corridor - 9.0 } else { mid_y - 9.0 }),
-            |(_, x, y)| (*x, *y),
-        );
-        text(svg, label_x, label_y, label, 12.0);
+        text(svg, plan.label.0, plan.label.1, label, 12.0);
     }
+    previous.push(super::orthogonal::Prior {
+        points: plan.points,
+        kind: e.kind,
+        from: e.from.clone(),
+    });
+    Ok(())
 }

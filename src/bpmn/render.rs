@@ -1,7 +1,10 @@
 //! BPMN SVG renderer: participant bands, independent flow kinds and shape markers.
 use super::geometry::{BoxAt, Geometry, place};
 mod edges;
+mod orthogonal;
 mod ports;
+#[cfg(test)]
+mod routing_tests;
 use super::{Document, EdgeKind, Kind, Node};
 use crate::styles::{StyleSheet, Value};
 use crate::svg::TextMode;
@@ -67,11 +70,11 @@ fn shape(svg: &mut String, n: &Node, b: BoxAt, icon: Option<&str>) {
             if let Some(icon) = icon {
                 let typed = !matches!(n.kind, Kind::Task | Kind::Collapsed | Kind::Subprocess);
                 let icon_x = if typed {
-                    x + w / 2.0 - 33.0
+                    x + w / 2.0 - 28.0
                 } else {
-                    x - w / 2.0 + 12.0
+                    x - w / 2.0 + 10.0
                 };
-                phosphor(svg, icon, icon_x, y - h / 2.0 + 10.0, 22.0);
+                phosphor(svg, icon, icon_x, y - h / 2.0 + 9.0, 18.0);
             }
             match n.kind {
                 Kind::UserTask => {
@@ -121,7 +124,11 @@ fn shape(svg: &mut String, n: &Node, b: BoxAt, icon: Option<&str>) {
             if let Some(marker) = &n.marker {
                 event_marker(svg, marker, x, y, n.kind == Kind::End);
             }
-            text(svg, x, y + radius + 22.0, &n.label, 12.0);
+            if n.kind == Kind::Boundary {
+                text(svg, x + radius + 65.0, y + radius + 22.0, &n.label, 12.0);
+            } else {
+                text(svg, x, y + radius + 22.0, &n.label, 12.0);
+            }
         }
         Kind::Exclusive | Kind::Parallel | Kind::Inclusive | Kind::EventBased => {
             writeln!(svg,"<path class=\"bpmn-body\" d=\"M {x:.1} {:.1} L {:.1} {y:.1} L {x:.1} {:.1} L {:.1} {y:.1} Z\" fill=\"white\" stroke=\"#263548\" stroke-width=\"2\"/>",y-h/2.0,x+w/2.0,y+h/2.0,x-w/2.0).unwrap();
@@ -155,7 +162,13 @@ fn shape(svg: &mut String, n: &Node, b: BoxAt, icon: Option<&str>) {
     }
 }
 pub(super) fn validate_attachments(doc: &Document, geom: &Geometry) -> Result<(), String> {
-    ports::assign(doc, geom).map(|_| ())
+    let ports = ports::assign(doc, geom)?;
+    let mut previous = Vec::new();
+    let mut sink = String::new();
+    for (index, e) in doc.edges.iter().enumerate() {
+        edges::edge(&mut sink, doc, geom, e, index, &ports, &mut previous)?;
+    }
+    Ok(())
 }
 pub fn render(doc: &Document, mode: TextMode) -> Result<String, String> {
     render_with_styles(doc, &StyleSheet::default(), mode)
@@ -220,7 +233,11 @@ pub fn render_with_styles(
             .unwrap();
         }
         for band in &p.bands {
+            if !p.bands.iter().any(|b| b.id.is_some()) {
+                continue;
+            }
             if doc.direction == crate::syntax::FlowDirection::TopToBottom {
+                writeln!(svg,"<rect x=\"{:.1}\" y=\"{:.1}\" width=\"{:.1}\" height=\"52\" fill=\"#edf3fa\"/><path d=\"M {:.1} {:.1} H {:.1}\" stroke=\"#263548\"/>",band.y,p.y+30.0,band.h,band.y,p.y+82.0,band.y+band.h).unwrap();
                 writeln!(
                     svg,
                     "<path d=\"M {:.1} {:.1} V {:.1}\" stroke=\"#263548\" fill=\"none\"/>",
@@ -237,7 +254,7 @@ pub fn render_with_styles(
                     13.0,
                 );
             } else {
-                writeln!(svg,"<path d=\"M {:.1} {:.1} H {:.1}\" stroke=\"#263548\" fill=\"none\"/><text x=\"{:.1}\" y=\"{:.1}\" transform=\"rotate(-90 {:.1} {:.1})\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"13\">{}</text>",p.x,band.y,p.x+p.w,p.x+62.0,band.y+band.h/2.0,p.x+62.0,band.y+band.h/2.0,escape(&band.label)).unwrap();
+                writeln!(svg,"<rect x=\"{:.1}\" y=\"{:.1}\" width=\"96\" height=\"{:.1}\" fill=\"#edf3fa\"/><path d=\"M {:.1} {:.1} H {:.1} M {:.1} {:.1} V {:.1}\" stroke=\"#263548\" fill=\"none\"/><text x=\"{:.1}\" y=\"{:.1}\" transform=\"rotate(-90 {:.1} {:.1})\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"13\">{}</text>",p.x,band.y,band.h,p.x,band.y,p.x+p.w,p.x+96.0,band.y,p.y+p.h,p.x+48.0,band.y+band.h/2.0,p.x+48.0,band.y+band.h/2.0,escape(&band.label)).unwrap();
             }
         }
         writeln!(
@@ -261,8 +278,9 @@ pub fn render_with_styles(
         svg.push_str("</g>\n");
     }
     let ports = ports::assign(doc, &geom)?;
+    let mut previous = Vec::new();
     for (index, e) in doc.edges.iter().enumerate() {
-        edges::edge(&mut svg, doc, &geom, e, index, &ports);
+        edges::edge(&mut svg, doc, &geom, e, index, &ports, &mut previous)?;
     }
     for (n, &b) in doc
         .nodes

@@ -149,10 +149,8 @@ pub(super) fn assign(doc: &Document, geom: &Geometry) -> Result<Ports, String> {
         for side in [Side::Left, Side::Top, Side::Right, Side::Bottom] {
             let group: Vec<_> = chosen.iter().filter(|(_, _, s)| *s == side).collect();
             for (slot, (index, out, _)) in group.iter().enumerate() {
-                let t = if degree <= 4 {
+                let t = if degree <= 4 || group.len() == 1 {
                     0.0
-                } else if group.len() == 1 {
-                    0.18
                 } else {
                     let raw = -0.72 + slot as f64 * 1.44 / (group.len() - 1) as f64;
                     if raw.abs() < 0.02 { 0.08 } else { raw }
@@ -166,7 +164,125 @@ pub(super) fn assign(doc: &Document, geom: &Geometry) -> Result<Ports, String> {
             }
         }
     }
+    // Non-gateway shapes also need independent attachment positions: sequence,
+    // message and data/annotation lines must not silently share a node port.
+    for (node_index, node) in doc.nodes.iter().enumerate() {
+        if gateway(node.kind) {
+            continue;
+        }
+        let b = geom.nodes[node_index];
+        let mut sides: Vec<(usize, bool, Side)> = Vec::new();
+        for (index, e) in doc.edges.iter().enumerate() {
+            for (out, id, other) in [(true, &e.from, &e.to), (false, &e.to, &e.from)] {
+                if id != &node.id {
+                    continue;
+                }
+                let other_index = doc.nodes.iter().position(|n| &n.id == other).unwrap();
+                let q = geom.nodes[other_index];
+                let side = if node.kind == Kind::Annotation {
+                    Side::Left
+                } else if node.kind == Kind::Boundary {
+                    if q.y > b.y + b.h {
+                        Side::Bottom
+                    } else if q.x > b.x {
+                        Side::Right
+                    } else {
+                        Side::Left
+                    }
+                } else if e.kind == EdgeKind::Message {
+                    if node.pool != doc.nodes[other_index].pool
+                        && doc.direction == FlowDirection::TopToBottom
+                    {
+                        if q.x > b.x { Side::Right } else { Side::Left }
+                    } else if node.pool != doc.nodes[other_index].pool
+                        || (q.y - b.y).abs() > (q.x - b.x).abs()
+                    {
+                        if q.y > b.y { Side::Bottom } else { Side::Top }
+                    } else if q.x > b.x {
+                        Side::Right
+                    } else {
+                        Side::Left
+                    }
+                } else if e.kind == EdgeKind::Sequence {
+                    if doc.direction == FlowDirection::TopToBottom {
+                        if out { Side::Bottom } else { Side::Top }
+                    } else if (q.y - b.y).abs() > (q.x - b.x).abs() * 1.5 {
+                        if q.y > b.y { Side::Bottom } else { Side::Top }
+                    } else if out {
+                        Side::Right
+                    } else {
+                        Side::Left
+                    }
+                } else if (q.y - b.y).abs() > (q.x - b.x).abs() * 1.1 {
+                    if q.y > b.y { Side::Bottom } else { Side::Top }
+                } else if q.x > b.x {
+                    Side::Right
+                } else {
+                    Side::Left
+                };
+                sides.push((index, out, side));
+            }
+        }
+        for side in [Side::Left, Side::Top, Side::Right, Side::Bottom] {
+            let group: Vec<_> = sides.iter().filter(|(_, _, s)| *s == side).collect();
+            for (slot, (index, out, _)) in group.iter().enumerate() {
+                let t = if group.len() == 1 {
+                    0.0
+                } else {
+                    let spread = if node.attached.is_none()
+                        && doc
+                            .nodes
+                            .iter()
+                            .any(|n| n.attached.as_deref() == Some(&node.id))
+                        && side == Side::Bottom
+                    {
+                        0.25
+                    } else {
+                        0.48
+                    };
+                    -spread + slot as f64 * 2.0 * spread / (group.len() - 1) as f64
+                };
+                let attach = regular_point(node.kind, b, side, t);
+                if *out {
+                    ends[*index].0 = Some(attach);
+                } else {
+                    ends[*index].1 = Some(attach);
+                }
+            }
+        }
+    }
     Ok(Ports { ends })
+}
+fn regular_point(kind: Kind, b: super::super::geometry::BoxAt, side: Side, t: f64) -> Attach {
+    let (half_w, half_h) = match kind {
+        Kind::Data => (31.0, 39.0),
+        Kind::Store => (31.0, 31.0),
+        _ => (b.w / 2.0, b.h / 2.0),
+    };
+    let (x, y) = match side {
+        Side::Left => (b.x - half_w, b.y + t * (half_h - 8.0)),
+        Side::Right => (b.x + half_w, b.y + t * (half_h - 8.0)),
+        Side::Top => (b.x + t * (half_w - 8.0), b.y - half_h),
+        Side::Bottom => (
+            b.x + t * (half_w - 8.0),
+            b.y + if kind == Kind::Store { 39.0 } else { half_h },
+        ),
+    };
+    if matches!(
+        kind,
+        Kind::Start | Kind::End | Kind::Intermediate | Kind::Boundary
+    ) {
+        let r = b.w / 2.0;
+        let (x, y) = match side {
+            Side::Left => (b.x - r * (1.0 - t * t).sqrt(), b.y + r * t),
+            Side::Right => (b.x + r * (1.0 - t * t).sqrt(), b.y + r * t),
+            Side::Top => (b.x + r * t, b.y - r * (1.0 - t * t).sqrt()),
+            Side::Bottom => (b.x + r * t, b.y + r * (1.0 - t * t).sqrt()),
+        };
+        Attach { side, x, y }
+    } else {
+        Attach { side, x, y }
+    }
 }
 
 #[cfg(test)]
@@ -287,6 +403,7 @@ mod tests {
             })
             .collect();
         assert_eq!(points.len(), 5);
+        crate::bpmn::render(&doc, crate::svg::TextMode::System).unwrap();
         for (i, p) in points.iter().enumerate() {
             for q in points.iter().skip(i + 1) {
                 assert_ne!(p, q);
