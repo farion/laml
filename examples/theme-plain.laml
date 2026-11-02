@@ -1,0 +1,25 @@
+// Same source, six theme defaults; no explicit LSS paint overrides.
+settings {
+    theme: plain
+}
+semantics {
+    package Platform {
+        Service {
+            @input port Ingress
+        }
+        Archive
+        Service --> Archive : persist
+    }
+    Client
+    note Hint {
+        Validate before storing.
+    }
+    @request Client --> input : request
+    Hint .. relation[request]
+}
+layout {
+    Client < Platform.Service : gap=105
+    Platform.Service < Platform.Archive : gap=105
+    Hint above Client : gap=70
+    port[input] : side=left
+}

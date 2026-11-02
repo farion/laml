@@ -1,0 +1,7 @@
+Geist Sans Regular and Italic are bundled from the official vercel/geist-font repository.
+Upstream commit: a2357c1398c81d88ff84823a2f50af3152ee8733
+Source files:
+  fonts/Geist/otf/Geist-Regular.otf
+  fonts/Geist/otf/Geist-Italic.otf
+License source: OFL.txt
+Local license notice: GEIST-LICENSE.txt

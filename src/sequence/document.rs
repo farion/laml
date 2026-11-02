@@ -4,7 +4,11 @@ use super::*;
 use crate::lex::without_comment;
 
 pub fn parse(source: &str) -> Result<SequenceDiagram, ParseError> {
-    parse_inner(source, true)
+    let (source, theme, _, _, _) =
+        crate::theme::preprocess_settings(source).map_err(|message| error(1, message))?;
+    let mut diagram = parse_inner(&source, true)?;
+    diagram.theme = theme;
+    Ok(diagram)
 }
 
 pub(super) fn parse_partial(source: &str) -> Result<SequenceDiagram, ParseError> {

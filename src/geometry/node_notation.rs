@@ -17,6 +17,134 @@ pub(super) fn color(
     }
 }
 
+pub(super) fn palette(
+    kind: NodeKind,
+    sheet: &StyleSheet,
+    element: &Element<'_>,
+) -> Option<crate::theme::Palette> {
+    let base = match sheet.get(element, "base-color").map(|d| &d.value) {
+        Some(Value::Color(value)) => Some(value.as_str()),
+        _ => None,
+    };
+    let kind = if kind == NodeKind::Generic
+        && matches!(sheet.get(element, "shape").map(|d| &d.value), Some(Value::Keyword(shape)) if shape == "note")
+    {
+        NodeKind::Note
+    } else {
+        kind
+    };
+    (sheet.theme.modern() || base.is_some()).then(|| {
+        sheet
+            .theme
+            .colors(base.unwrap_or(sheet.theme.default_base(kind)))
+    })
+}
+
+pub(super) fn text_paint(
+    sheet: &StyleSheet,
+    element: &Element<'_>,
+    palette: Option<&crate::theme::Palette>,
+) -> String {
+    color(
+        sheet,
+        element,
+        "color",
+        palette.map_or(
+            if sheet.theme.dark() {
+                "#eef2f7"
+            } else {
+                "#17212e"
+            },
+            |p| p.text.as_str(),
+        ),
+    )
+}
+
+pub(super) fn fill_paint(
+    kind: NodeKind,
+    sheet: &StyleSheet,
+    element: &Element<'_>,
+    palette: Option<&crate::theme::Palette>,
+) -> String {
+    color(
+        sheet,
+        element,
+        "fill",
+        palette.map_or(
+            if sheet.theme.dark() {
+                "#181f2a"
+            } else if kind == NodeKind::Note {
+                "#fff8d6"
+            } else {
+                "#eff4fa"
+            },
+            |p| p.fill.as_str(),
+        ),
+    )
+}
+
+pub(super) fn border_paint(
+    sheet: &StyleSheet,
+    element: &Element<'_>,
+    palette: Option<&crate::theme::Palette>,
+) -> String {
+    color(
+        sheet,
+        element,
+        "border-color",
+        palette.map_or(
+            if sheet.theme.dark() {
+                "#9eafc3"
+            } else {
+                "#395373"
+            },
+            |p| p.border.as_str(),
+        ),
+    )
+}
+
+pub(super) struct PortPaint {
+    pub text: String,
+    pub fill: String,
+    pub border: String,
+    pub explicit_fill: bool,
+}
+
+pub(super) fn port_paint(
+    sheet: &StyleSheet,
+    element: &Element<'_>,
+    parent: Option<&crate::theme::Palette>,
+    parent_text: &str,
+) -> PortPaint {
+    let base = match sheet.get(element, "base-color").map(|d| &d.value) {
+        Some(Value::Color(value)) => Some(value.as_str()),
+        _ => None,
+    };
+    let palette = base.map(|base| sheet.theme.colors(base));
+    let paint = palette.as_ref().or(parent);
+    PortPaint {
+        text: color(
+            sheet,
+            element,
+            "color",
+            paint.map_or(parent_text, |p| p.text.as_str()),
+        ),
+        fill: color(
+            sheet,
+            element,
+            "fill",
+            paint.map_or("#eff4fa", |p| p.fill.as_str()),
+        ),
+        border: color(
+            sheet,
+            element,
+            "border-color",
+            paint.map_or("#395373", |p| p.border.as_str()),
+        ),
+        explicit_fill: sheet.get(element, "fill").is_some(),
+    }
+}
+
 pub(super) fn validate_ref_font(kind: NodeKind, size: f64) -> Result<(), String> {
     if kind == NodeKind::InteractionUse && size > 22.0 {
         return Err("interaction-use text cannot overlap its ref header".into());
@@ -79,6 +207,10 @@ pub(super) fn corner_radius(
         "corner-radius",
         if matches!(kind, NodeKind::State | NodeKind::ActivityAction) {
             14.0
+        } else if styles.theme.modern()
+            && matches!(kind, NodeKind::Generic | NodeKind::Note | NodeKind::Package)
+        {
+            8.0
         } else {
             0.0
         },

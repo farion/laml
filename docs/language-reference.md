@@ -35,6 +35,10 @@ Unqualified identifiers match `[A-Za-z_][A-Za-z0-9_]*`; nested package paths use
 | `direction` | `left-to-right`, `right-to-left`, `top-to-bottom`, `bottom-to-top` | `left-to-right` |
 | `naming-convention` | `uppercase-nodes-lowercase-relations` | Off |
 | `relation-label` | `near`, `along`, `inline` | `near` |
+| `theme` | `plain`, `modern`, `modern-mono`, `plain-dark`, `modern-dark`, `modern-mono-dark` | `modern` |
+| `background` | `opaque`, `transparent` | `opaque` (white for light, black for dark) |
+| `font-file` | Quoted path to a local OpenType/TrueType font | Bundled Geist for modern, Inter for plain |
+| `font-italic-file` | Optional quoted path to a matching italic font | Bundled italic face; absent for custom fonts |
 
 ```text
 settings {
@@ -159,7 +163,7 @@ Selectors include `*`, `.class`, `node.class`, `relation.class`, `node[ID]`, `re
 
 | Property | Value | Applies to |
 |---|---|---|
-| `fill`, `border-color` | Colour | Nodes |
+| `base-color`, `fill`, `border-color` | Colour (`base-color` cannot be `none`) | Nodes; `base-color` also on relations and supported sequence/BPMN parts |
 | `color` | Colour | Nodes and relations |
 | `padding`, `min-width`, `min-height`, `height`, `border-width`, `corner-radius` | Finite nonnegative number | Nodes |
 | `width` | Finite nonnegative number | Fixed node width or relation stroke width |
@@ -169,7 +173,7 @@ Selectors include `*`, `.class`, `node.class`, `relation.class`, `node[ID]`, `re
 | `symbol-rendering`, `icon-set`, `icon` | `text|icons`, `phosphor`, bundled regular icon name (`laml icons`) | Visibility glyphs and optional node icons |
 | `interface-notation` | `box`, `lollipop` | Named UML realization relations, with validated compact-interface eligibility |
 
-Colours are `rgb(r,g,b)` with integer channels 0–255, quoted `"#rrggbb"`, or `none`. Numeric values are unadorned pixels, without a `px` suffix. Unknown properties and invalid values are errors, even for unmatched selectors. Default node minimum size is 100 × 50, padding 12, and font size 14. Width and height, when set, are fixed sizes; a conflicting explicit minimum or a box too small for its text and padding fails.
+`base-color` provides a hue from which the theme derives fill, border and text; an explicit paint replaces only that paint. See [Themes and fonts](themes.md) for precedence, transparency and local font paths. Colours are `rgb(r,g,b)` with integer channels 0–255, quoted `"#rrggbb"`, or `none`. Numeric values are unadorned pixels, without a `px` suffix. Unknown properties and invalid values are errors, even for unmatched selectors. Default node minimum size is 100 × 50, padding 12, and font size 14. Width and height, when set, are fixed sizes; a conflicting explicit minimum or a box too small for its text and padding fails.
 
 An imported `.lamlstyle` file contains one `styling { ... }` section. Imports contribute rules at their position in the cascade and may contain nested imports. Paths resolve relative to the importing file and must remain within the diagram source's directory tree after symlink resolution. Missing files, escapes, and cycles are errors. LSS imports contain styling, not semantics or layout.
 
@@ -209,6 +213,6 @@ Follow the [sequence-diagram working guide](sequence-diagrams.md) for complete, 
 
 ## Output and routing
 
-The output extension selects SVG, PNG, or PDF. SVG defaults to `--svg-text=embedded`: Inter Regular is embedded, and text remains selectable. `--svg-text=system` keeps selectable SVG text but omits the font; the viewer may substitute a font. `--svg-text=paths` converts SVG text into nonselectable glyph outlines and does not preserve node-level `<title>` metadata. These options apply only to SVG output. PNG uses the SVG's CSS-pixel dimensions rounded to whole pixels, on a white background; the image is limited to 64 million pixels. PDF is vector output with embedded, selectable text; 96 SVG pixels map to one inch of PDF page size. Rectangular nodes may have rounded corners via `corner-radius`. Relations attach to box boundaries. The router prefers a straight route and searches a finite set of detours when blocked. Parallel relations use separate boundary ports; self-relations use exterior loops. At a supported crossing, the later-declared relation receives a bridge and the earlier relation a gap. If no safe routing or label placement is found, `build` fails without writing a replacement image: it does not emit bare crossings or silently ignore mandatory rules.
+The output extension selects SVG, PNG, or PDF. SVG defaults to `--svg-text=embedded`: the selected font is embedded and text remains selectable. `--svg-text=system` keeps selectable SVG text but omits the font; the viewer may substitute a font. `--svg-text=paths` converts SVG text into nonselectable glyph outlines and does not preserve node-level `<title>` metadata. These options apply only to SVG output. PNG uses the SVG's CSS-pixel dimensions rounded to whole pixels, on the theme canvas or with alpha when `background: transparent`; the image is limited to 64 million pixels. PDF is vector output with embedded, selectable text; 96 SVG pixels map to one inch of PDF page size. Rectangular nodes may have rounded corners via `corner-radius`. Relations attach to box boundaries. The router prefers a straight route and searches a finite set of detours when blocked. Parallel relations use separate boundary ports; self-relations use exterior loops. At a supported crossing, the later-declared relation receives a bridge and the earlier relation a gap. If no safe routing or label placement is found, `build` fails without writing a replacement image: it does not emit bare crossings or silently ignore mandatory rules.
 
 The installers and updater are described in the [README](../README.md). Normal `check` and `build` commands do not wait for the network: a cached version is shown if newer, and a background refresh runs at most once per 24 hours. Set `LAML_NO_UPDATE_CHECK=1` to opt out. See [Getting started](getting-started.md), the [class/object guide](class-object-diagrams.md), the [component guide](component-diagrams.md), the [deployment guide](deployment-diagrams.md), the [state guide](state-diagrams.md), the [activity guide](activity-diagrams.md), the [use-case guide](usecase-diagrams.md), the [package guide](package-diagrams.md), the [communication guide](communication-diagrams.md), the [language contract](language-definition.md), and the [buildable examples](../examples/).

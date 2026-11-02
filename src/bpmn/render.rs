@@ -187,6 +187,9 @@ pub fn render_with_styles(
     sheet: &StyleSheet,
     mode: TextMode,
 ) -> Result<String, String> {
+    let mut effective = sheet.clone();
+    effective.theme = doc.theme;
+    let sheet = &effective;
     super::style::validate_styles(doc, sheet)?;
     let geom = place(doc)?;
     let (width, height) = (geom.width, geom.height);
@@ -211,22 +214,61 @@ pub fn render_with_styles(
         svg.push_str("</metadata>\n");
     }
     for n in &doc.nodes {
-        let fill = super::style::value(sheet, n, "fill");
-        let border = super::style::value(sheet, n, "border-color");
-        if fill.is_some() || border.is_some() {
+        let base = match super::style::value(sheet, n, "base-color") {
+            Some(Value::Color(c)) => Some(c.as_str()),
+            _ => None,
+        };
+        let fallback = if sheet.theme.modern() || base.is_some() {
+            let seed = base.unwrap_or(match n.kind {
+                Kind::Annotation
+                | Kind::Exclusive
+                | Kind::Inclusive
+                | Kind::Parallel
+                | Kind::EventBased => "#d99520",
+                Kind::Data | Kind::Store => "#8394a7",
+                _ => sheet.theme.default_base(crate::syntax::NodeKind::Generic),
+            });
+            Some(sheet.theme.colors(seed))
+        } else {
+            None
+        };
+        let fill = match super::style::value(sheet, n, "fill") {
+            Some(Value::Color(c)) => Some(c.as_str()),
+            _ => fallback.as_ref().map(|p| p.fill.as_str()),
+        };
+        let border = match super::style::value(sheet, n, "border-color") {
+            Some(Value::Color(c)) => Some(c.as_str()),
+            _ => fallback.as_ref().map(|p| p.border.as_str()),
+        };
+        let text_color = match super::style::value(sheet, n, "color") {
+            Some(Value::Color(c)) => Some(c.as_str()),
+            _ => fallback.as_ref().map(|p| p.text.as_str()),
+        };
+        if fill.is_some() || border.is_some() || text_color.is_some() {
             write!(
                 svg,
                 "<style>[data-bpmn-id=\"{}\"] > .bpmn-body {{",
                 escape(&n.id)
             )
             .unwrap();
-            if let Some(Value::Color(c)) = fill {
+            // Annotation is an open bracket; filling it changes its notation.
+            if n.kind != Kind::Annotation
+                && let Some(c) = fill
+            {
                 write!(svg, "fill:{c};").unwrap();
             }
-            if let Some(Value::Color(c)) = border {
+            if let Some(c) = border {
                 write!(svg, "stroke:{c};").unwrap();
             }
             svg.push_str("}</style>\n");
+            if let Some(c) = text_color {
+                writeln!(
+                    svg,
+                    "<style>[data-bpmn-id=\"{}\"] text {{fill:{c};}}</style>",
+                    escape(&n.id)
+                )
+                .unwrap();
+            }
         }
     }
     for p in &geom.pools {

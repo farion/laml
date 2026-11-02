@@ -123,6 +123,7 @@ pub struct LaneRule {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SequenceDiagram {
+    pub theme: crate::theme::Theme,
     pub participants: Vec<Participant>,
     pub births: Vec<(String, usize)>,
     pub events: Vec<Event>,

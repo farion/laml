@@ -148,6 +148,10 @@ pub struct Settings {
     pub strict_case: bool,
     pub relation_label: LabelPlacement,
     pub diagram_type: DiagramType,
+    pub theme: crate::theme::Theme,
+    pub transparent: bool,
+    pub font_file: Option<String>,
+    pub font_italic_file: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

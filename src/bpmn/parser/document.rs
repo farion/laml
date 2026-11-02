@@ -96,10 +96,15 @@ pub fn is_bpmn_source(source: &str) -> bool {
     false
 }
 pub fn parse(source: &str) -> Result<Document, String> {
+    let (stripped, theme, _, _, _) = crate::theme::preprocess_settings(source)?;
+    let source = stripped.as_str();
     if !is_bpmn_source(source) {
         return Err("settings { type: bpmn } required".into());
     }
-    let mut doc = Document::default();
+    let mut doc = Document {
+        theme,
+        ..Document::default()
+    };
     let mut scopes: Vec<(String, Context)> = Vec::new();
     let mut stylesheet = String::new();
     let mut style_depth = 0usize;

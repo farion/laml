@@ -31,6 +31,7 @@ pub struct Rule {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct StyleSheet {
     pub rules: Vec<Rule>,
+    pub theme: crate::theme::Theme,
     ancestors: Vec<String>,
 }
 
@@ -93,7 +94,10 @@ fn err(path: &Path, line: usize, message: impl Into<String>) -> StyleError {
 pub fn load(diagram: &Diagram, source_path: &Path) -> Result<StyleSheet, StyleError> {
     let root = source_path.parent().unwrap_or_else(|| Path::new("."));
     let root = fs::canonicalize(root).map_err(|e| err(source_path, 0, e.to_string()))?;
-    let mut result = StyleSheet::default();
+    let mut result = StyleSheet {
+        theme: diagram.settings.theme,
+        ..StyleSheet::default()
+    };
     let mut stack = Vec::new();
     expand(
         &diagram.styling,
@@ -224,9 +228,13 @@ fn validate_value(property: &Property, path: &Path) -> Result<Value, StyleError>
         }
         "display" if matches!(value, "none" | "block") => Ok(Value::Keyword(value.to_string())),
         "display" => Err(err(path, property.line, "display must be none or block")),
-        "fill" | "color" | "border-color" => parse_color(value)
-            .map(Value::Color)
-            .map_err(|message| err(path, property.line, message)),
+        "fill" | "color" | "border-color" | "base-color" => {
+            let parsed = parse_color(value).map_err(|message| err(path, property.line, message))?;
+            if property.name == "base-color" && parsed == "none" {
+                return Err(err(path, property.line, "base-color must be an RGB color"));
+            }
+            Ok(Value::Color(parsed))
+        }
         "padding" | "min-width" | "min-height" | "width" | "height" | "font-size"
         | "border-width" | "corner-radius" => {
             let number = value
@@ -280,29 +288,47 @@ fn applicable(property: &str, element: &Element<'_>) -> bool {
             property,
             "color" | "font-size" | "display" | "symbol-rendering" | "icon-set"
         ),
-        Element::Port { .. } => matches!(property, "color" | "fill" | "border-color" | "display"),
+        Element::Port { .. } => matches!(
+            property,
+            "color" | "fill" | "border-color" | "base-color" | "display"
+        ),
         Element::Continuation { .. } | Element::Note { .. } => matches!(
             property,
-            "fill" | "color" | "border-color" | "border-width" | "font-size"
+            "fill" | "color" | "border-color" | "base-color" | "border-width" | "font-size"
         ),
         Element::Relation { .. } => matches!(
             property,
-            "color" | "width" | "font-size" | "display" | "interface-notation"
+            "color" | "base-color" | "width" | "font-size" | "display" | "interface-notation"
         ),
         Element::Lifeline { .. } | Element::Gate { .. } => {
             matches!(property, "color" | "width" | "font-size")
         }
         Element::Coregion { .. } | Element::Ordering => matches!(property, "color" | "width"),
-        Element::Annotation { .. } => matches!(property, "fill" | "color" | "width" | "font-size"),
+        Element::Annotation { .. } => matches!(
+            property,
+            "fill" | "color" | "base-color" | "width" | "font-size"
+        ),
         Element::Activation { .. } => {
             matches!(
                 property,
-                "fill" | "border-color" | "border-width" | "width" | "font-size" | "color"
+                "fill"
+                    | "border-color"
+                    | "base-color"
+                    | "border-width"
+                    | "width"
+                    | "font-size"
+                    | "color"
             )
         }
         Element::Fragment { .. } => matches!(
             property,
-            "fill" | "border-color" | "border-width" | "color" | "font-size" | "width"
+            "fill"
+                | "border-color"
+                | "base-color"
+                | "border-width"
+                | "color"
+                | "font-size"
+                | "width"
         ),
     }
 }

@@ -11,7 +11,7 @@ pub(super) fn backgrounds(svg: &mut String, boxes: &[BoxNode]) {
         writeln!(svg,"<rect x=\"{:.2}\" y=\"{:.2}\" width=\"{:.2}\" height=\"{:.2}\" rx=\"{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
             node.x,node.y,node.width,node.height,node.radius,node.fill,node.border_color,node.border_width).unwrap();
         writeln!(svg,"<line x1=\"{:.2}\" y1=\"{:.2}\" x2=\"{:.2}\" y2=\"{:.2}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
-            node.x,node.y+node.port_start,node.x+node.width,node.y+node.port_start,node.border_color,node.border_width).unwrap();
+            node.x,node.y+node.port_start,node.x+node.width,node.y+node.port_start,node.divider_color,node.border_width).unwrap();
     }
 }
 

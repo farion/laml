@@ -145,6 +145,7 @@ RequestDocuments --> Merge
   - [Profile](docs/diagrams/profile.md)
   - [BPMN process/collaboration subset](docs/diagrams/bpmn.md)
 - Automatic placement with mandatory corrections; BPMN currently supports relative ordering rules, not numeric gap/alignment options.
+- Six themes, including monochrome and dark variants; `modern` is the default. Override colors with LSS `base-color` or individual paints, use a transparent background, and supply local font files when needed. [Themes and fonts](docs/themes.md).
 - LSS styling with selectors, classes, local imports and per-element overrides.
 - SVG with selectable text by default, PNG and vector PDF.
 - `laml check` for source validation; `laml build` for measured geometry and image output.
@@ -154,4 +155,4 @@ RequestDocuments --> Merge
 
 ## License
 
-[MIT](LICENSE). Bundled fonts and optional icons have their own attribution: [Inter](assets/INTER-LICENSE.txt) and [Phosphor](assets/phosphor/README.md).
+[MIT](LICENSE). Bundled fonts and optional icons have their own attribution: [Inter](assets/INTER-LICENSE.txt), [Geist](assets/GEIST-LICENSE.txt) and [Phosphor](assets/phosphor/README.md).

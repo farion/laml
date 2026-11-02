@@ -96,7 +96,7 @@ fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError>
     let mut diagram = Diagram::default();
     let mut section = Section::Top;
     let mut seen = [false; 4];
-    let mut seen_settings = [false; 4];
+    let mut seen_settings = [false; 8];
     diagram.settings.diagram_type = prescan_type(source);
     for (index, original) in source.lines().enumerate() {
         let line = index + 1;

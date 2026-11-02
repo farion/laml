@@ -59,7 +59,7 @@ This image was built from the [complete source](../examples/gne-basic.laml).
 | `layout` | Mandatory placement, alignment and diagram-specific geometry. |
 | `styling` | Colors, sizes and shape styling via LSS selectors; local `.lamlstyle` files can be imported. |
 
-Elements named in `semantics` can be addressed in `layout` or `styling`. A relationship describes a connection, not a mandatory position. See [GNE](diagrams/gne.md) for common placement, routing, labels and styling, and the [syntax reference](language-reference.md) for all accepted forms.
+The default theme is `modern`; put `theme: plain` in the `settings` section for a more restrained appearance. [Themes and fonts](themes.md) explains the six variants, custom font files, color overrides and transparent exports. Elements named in `semantics` can be addressed in `layout` or `styling`. A relationship describes a connection, not a mandatory position. See [GNE](diagrams/gne.md) for common placement, routing, labels and styling, and the [syntax reference](language-reference.md) for all accepted forms.
 
 ## Design principles
 

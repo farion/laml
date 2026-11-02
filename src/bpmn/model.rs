@@ -62,6 +62,7 @@ pub struct Pool {
 }
 #[derive(Clone, Debug, Default)]
 pub struct Document {
+    pub theme: crate::theme::Theme,
     pub direction: crate::syntax::FlowDirection,
     pub nodes: Vec<Node>,
     pub edges: Vec<Edge>,

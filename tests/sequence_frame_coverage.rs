@@ -205,7 +205,11 @@ fn css_ancestor_scopes_an_annotation_inside_one_decomposition() {
         .collect();
     assert_eq!(actions.len(), 2);
     assert!(actions[0].contains("fill=\"#bbddff\""));
-    assert!(actions[1].contains("fill=\"white\""));
+    let default_fill = sheet
+        .theme
+        .colors(sheet.theme.default_base(laml::syntax::NodeKind::Note))
+        .fill;
+    assert!(actions[1].contains(&format!("fill=\"{default_fill}\"")));
 }
 
 #[test]

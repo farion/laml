@@ -5,7 +5,7 @@ use laml::layout::validate_ordering;
 use laml::parser::parse;
 use laml::route::route;
 use laml::styles::load;
-use laml::svg::{TextMode, render_with_mode};
+use laml::svg::{TextMode, render_with_theme};
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -70,10 +70,55 @@ fn run() -> Result<(), String> {
     laml::update::notify_in_background();
     let path = Path::new(&args[1]);
     let text = fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
-    if laml::bpmn::is_bpmn_source(&text) {
-        let document = laml::bpmn::parse(&text).map_err(|e| format!("{}:{e}", path.display()))?;
+    let (special_text, theme, transparent, font_file, font_italic_file) =
+        laml::theme::preprocess_settings(&text).map_err(|e| format!("{}:{e}", path.display()))?;
+    laml::text::with_fonts(
+        path,
+        theme.modern(),
+        font_file.as_deref(),
+        font_italic_file.as_deref(),
+        || {
+            compile_document(
+                &args,
+                path,
+                &text,
+                &special_text,
+                theme,
+                transparent,
+                mode,
+                output_arg,
+                text_arg.is_some(),
+            )
+        },
+    )?
+}
+
+#[allow(clippy::too_many_arguments)]
+fn compile_document(
+    args: &[String],
+    path: &Path,
+    text: &str,
+    special_text: &str,
+    theme: laml::theme::Theme,
+    transparent: bool,
+    mode: TextMode,
+    output_arg: Option<&String>,
+    svg_text_option: bool,
+) -> Result<(), String> {
+    let render_mode = if mode == TextMode::Paths {
+        TextMode::Embedded
+    } else {
+        mode
+    };
+    if laml::bpmn::is_bpmn_source(text) {
+        let document = laml::bpmn::parse(text).map_err(|e| format!("{}:{e}", path.display()))?;
         let styles = load(
             &laml::syntax::Diagram {
+                settings: laml::syntax::Settings {
+                    theme,
+                    transparent,
+                    ..Default::default()
+                },
                 styling: document.styling.clone(),
                 ..Default::default()
             },
@@ -103,16 +148,18 @@ fn run() -> Result<(), String> {
         if !matches!(format, "svg" | "png" | "pdf") {
             return Err("build output must end in .svg, .png or .pdf".into());
         }
-        if text_arg.is_some() && format != "svg" {
+        if svg_text_option && format != "svg" {
             return Err("--svg-text is only available for SVG output".into());
         }
-        let svg = laml::bpmn::render_with_styles(&document, &styles, mode)
+        let svg = laml::bpmn::render_with_styles(&document, &styles, render_mode)
             .map_err(|e| format!("{}: BPMN rendering failed: {e}", path.display()))?;
-        return write_image(&svg, &output, format);
+        return write_image(&svg, &output, format, theme, transparent, mode, &styles);
     }
-    if laml::communication::is_communication_source(&text) {
-        let document = laml::communication::parse(&text)
+    if laml::communication::is_communication_source(text) {
+        let mut document = laml::communication::parse(special_text)
             .map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?;
+        document.graph.settings.theme = theme;
+        document.graph.settings.transparent = transparent;
         let styles = load(&document.graph, path)
             .map_err(|e| format!("{}:{}: {}", e.path.display(), e.line, e.message))?;
         validate_ordering(&document.graph)
@@ -139,21 +186,26 @@ fn run() -> Result<(), String> {
         if !matches!(format, "svg" | "png" | "pdf") {
             return Err("build output must end in .svg, .png or .pdf".into());
         }
-        if text_arg.is_some() && format != "svg" {
+        if svg_text_option && format != "svg" {
             return Err("--svg-text is only available for SVG output".into());
         }
         let boxes = place(&document.graph, &styles)
             .map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?;
         let routes = route(&document.graph, &boxes, &styles)
             .map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?;
-        let svg = laml::communication::render(&document, &boxes, &routes, mode)
+        let svg = laml::communication::render(&document, &boxes, &routes, render_mode)
             .map_err(|e| format!("{}: communication rendering failed: {e}", path.display()))?;
-        return write_image(&svg, &output, format);
+        return write_image(&svg, &output, format, theme, transparent, mode, &styles);
     }
-    if laml::timing::is_timing_source(&text) {
-        let timing = laml::timing::parse(&text)
+    if laml::timing::is_timing_source(text) {
+        let timing = laml::timing::parse(text)
             .map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?;
         let style_input = laml::syntax::Diagram {
+            settings: laml::syntax::Settings {
+                theme,
+                transparent,
+                ..Default::default()
+            },
             styling: timing.styling.clone(),
             ..Default::default()
         };
@@ -185,17 +237,22 @@ fn run() -> Result<(), String> {
         if !matches!(format, "svg" | "png" | "pdf") {
             return Err("build output must end in .svg, .png or .pdf".into());
         }
-        if text_arg.is_some() && format != "svg" {
+        if svg_text_option && format != "svg" {
             return Err("--svg-text is only available for SVG output".into());
         }
-        let svg = laml::timing::render(&timing, &styles, mode)
+        let svg = laml::timing::render(&timing, &styles, render_mode)
             .map_err(|e| format!("{}: timing rendering failed: {e}", path.display()))?;
-        return write_image(&svg, &output, format);
+        return write_image(&svg, &output, format, theme, transparent, mode, &styles);
     }
-    if laml::sequence::is_sequence_source(&text) {
-        let sequence = laml::sequence::parse(&text)
+    if laml::sequence::is_sequence_source(text) {
+        let sequence = laml::sequence::parse(text)
             .map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?;
         let style_input = laml::syntax::Diagram {
+            settings: laml::syntax::Settings {
+                theme,
+                transparent,
+                ..Default::default()
+            },
             styling: sequence.styling.clone(),
             ..Default::default()
         };
@@ -222,26 +279,25 @@ fn run() -> Result<(), String> {
         if !matches!(format, "svg" | "png" | "pdf") {
             return Err("build output must end in .svg, .png or .pdf".into());
         }
-        if text_arg.is_some() && format != "svg" {
+        if svg_text_option && format != "svg" {
             return Err("--svg-text is only available for SVG output".into());
         }
-        let svg = laml::sequence::render::render_with_styles(&sequence, &styles, mode)
+        let svg = laml::sequence::render::render_with_styles(&sequence, &styles, render_mode)
             .map_err(|e| format!("{}: sequence rendering failed: {e}", path.display()))?;
-        return write_image(&svg, &output, format);
+        return write_image(&svg, &output, format, theme, transparent, mode, &styles);
     }
-    let overview = if laml::interaction_overview::is_overview_source(&text) {
-        Some(
-            laml::interaction_overview::parse(&text)
-                .map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?,
-        )
+    let overview = if laml::interaction_overview::is_overview_source(text) {
+        let mut doc = laml::interaction_overview::parse(special_text)
+            .map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?;
+        doc.graph.settings.theme = theme;
+        doc.graph.settings.transparent = transparent;
+        Some(doc)
     } else {
         None
     };
     let diagram = match &overview {
         Some(doc) => doc.graph.clone(),
-        None => {
-            parse(&text).map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?
-        }
+        None => parse(text).map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?,
     };
     let styles = load(&diagram, path)
         .map_err(|e| format!("{}:{}: {}", e.path.display(), e.line, e.message))?;
@@ -270,7 +326,7 @@ fn run() -> Result<(), String> {
     if !matches!(format, "svg" | "png" | "pdf") {
         return Err("build output must end in .svg, .png or .pdf".into());
     }
-    if text_arg.is_some() && format != "svg" {
+    if svg_text_option && format != "svg" {
         return Err("--svg-text is only available for SVG output".into());
     }
     let boxes = place(&diagram, &styles)
@@ -278,15 +334,41 @@ fn run() -> Result<(), String> {
     let routes = route(&diagram, &boxes, &styles)
         .map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?;
     let svg = if let Some(doc) = &overview {
-        laml::interaction_overview::render(doc, &boxes, &routes, mode)
+        laml::interaction_overview::render(doc, &boxes, &routes, render_mode)
     } else {
-        render_with_mode(&boxes, &routes, mode)
+        render_with_theme(&boxes, &routes, render_mode, theme)
     }
     .map_err(|e| format!("{}: SVG rendering failed: {e}", path.display()))?;
-    write_image(&svg, &output, format)
+    write_image(&svg, &output, format, theme, transparent, mode, &styles)
 }
 
-fn write_image(svg: &str, output: &Path, format: &str) -> Result<(), String> {
+fn write_image(
+    svg: &str,
+    output: &Path,
+    format: &str,
+    theme: laml::theme::Theme,
+    transparent: bool,
+    mode: TextMode,
+    styles: &laml::styles::StyleSheet,
+) -> Result<(), String> {
+    let protected: Vec<String> = styles
+        .rules
+        .iter()
+        .flat_map(|rule| rule.declarations.iter())
+        .filter_map(|decl| match &decl.value {
+            laml::styles::Value::Color(c) => Some(c.clone()),
+            _ => None,
+        })
+        .collect();
+    let svg = laml::theme::tint_svg_defaults(svg, theme, &protected);
+    let svg = laml::text::svg_fonts(&svg)?;
+    let svg = laml::theme::canvas(&svg, theme, transparent)?;
+    let svg = if mode == TextMode::Paths {
+        laml::export::outlines(&svg)?
+    } else {
+        svg
+    };
+    let svg = svg.as_str();
     let content = match format {
         "svg" => svg.as_bytes().to_vec(),
         "png" => laml::export::png(svg).map_err(|e| format!("{}: {e}", output.display()))?,

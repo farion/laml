@@ -9,7 +9,7 @@ pub(super) fn background(svg: &mut String, node: &BoxNode) {
     writeln!(svg,"<rect x=\"{:.2}\" y=\"{:.2}\" width=\"{:.2}\" height=\"{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
         node.x,node.y,node.width,node.height,node.fill,node.border_color,node.border_width).unwrap();
     writeln!(svg,"<path d=\"M{:.2},{separator:.2} H{:.2}\" stroke=\"{}\" stroke-width=\"{:.2}\" /><text x=\"{:.2}\" y=\"{:.2}\" font-family=\"Inter\" font-size=\"12\" fill=\"{}\">internal structure</text>",
-        node.x,node.x+node.width,node.border_color,node.border_width,node.x+node.padding+24.0,separator+17.0,node.color).unwrap();
+        node.x,node.x+node.width,node.divider_color,node.border_width,node.x+node.padding+24.0,separator+17.0,node.color).unwrap();
 }
 
 fn crosses(a: Point, b: Point, rect: (f64, f64, f64, f64)) -> bool {

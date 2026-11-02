@@ -23,7 +23,7 @@ pub fn validate_styles(doc: &Document, sheet: &StyleSheet) -> Result<(), String>
         for declaration in &rule.declarations {
             if !matches!(
                 declaration.name.as_str(),
-                "fill" | "border-color" | "icon" | "icon-set"
+                "fill" | "border-color" | "base-color" | "color" | "icon" | "icon-set"
             ) {
                 return Err(format!(
                     "BPMN styling property '{}' is not yet supported",

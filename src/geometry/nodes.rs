@@ -49,6 +49,8 @@ pub struct BoxNode {
     pub fill: String,
     pub color: String,
     pub border_color: String,
+    pub accent_color: String,
+    pub divider_color: String,
     pub border_width: f64,
     pub radius: f64,
     pub line: usize,
@@ -138,7 +140,8 @@ pub fn measure_node(
     super::node_notation::validate_composite_border(node.kind, diagram_type, styles, &element)?;
     let font_size = number(styles, &element, "font-size", 14.0);
     super::node_notation::validate_ref_font(node.kind, font_size)?;
-    let text_color = color(styles, &element, "color", "#17212e");
+    let palette = super::node_notation::palette(node.kind, styles, &element);
+    let text_color = super::node_notation::text_paint(styles, &element, palette.as_ref());
     let icons_requested = matches!(styles.get(&element, "symbol-rendering").map(|d| &d.value),
         Some(Value::Keyword(mode)) if mode == "icons");
     if icons_requested
@@ -179,6 +182,7 @@ pub fn measure_node(
         if matches!(scoped.get(&element, "display").map(|d| &d.value), Some(Value::Keyword(mode)) if mode == "none") {
             return None;
         }
+        let paint = super::node_notation::port_paint(&scoped, &element, palette.as_ref(), &text_color);
         Some(BoxPort {
             label: match &port.contract {
                 Some(PortContract::Provides(interface)) => format!("{} : provides {}", port.label, interface),
@@ -189,9 +193,10 @@ pub fn measure_node(
             x: 0.0,
             y: 0.0,
             activity_pin: port.activity_pin,
-            color: color(&scoped, &element, "color", &text_color),
-            fill: color(&scoped, &element, "fill", "#eff4fa"),
-            border_color: color(&scoped, &element, "border-color", "#395373"),
+            color: paint.text,
+            fill: paint.fill,
+            explicit_fill: paint.explicit_fill,
+            border_color: paint.border,
             id,
         })
     }).collect();
@@ -469,18 +474,24 @@ pub fn measure_node(
         fixed_height,
         font_size,
         padding,
-        fill: color(
-            styles,
-            &element,
-            "fill",
-            if node.kind == NodeKind::Note {
-                "#fff8d6"
-            } else {
-                "#eff4fa"
-            },
-        ),
+        fill: super::node_notation::fill_paint(node.kind, styles, &element, palette.as_ref()),
         color: text_color,
-        border_color: color(styles, &element, "border-color", "#395373"),
+        border_color: match palette.as_ref() {
+            Some(paint)
+                if shape == NodeShape::Note && styles.get(&element, "border-color").is_none() =>
+            {
+                paint.divider.clone()
+            }
+            _ => super::node_notation::border_paint(styles, &element, palette.as_ref()),
+        },
+        divider_color: palette.as_ref().map_or_else(
+            || super::node_notation::border_paint(styles, &element, None),
+            |paint| paint.divider.clone(),
+        ),
+        accent_color: palette
+            .as_ref()
+            .map_or("#395373", |paint| paint.border.as_str())
+            .into(),
         border_width: number(styles, &element, "border-width", 1.0),
         radius: super::node_notation::corner_radius(node.kind, styles, &element)?,
         line: node.line,

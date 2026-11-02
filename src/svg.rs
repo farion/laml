@@ -35,15 +35,29 @@ pub fn render_with_mode(
     routes: &[Route],
     mode: TextMode,
 ) -> Result<String, String> {
-    let svg = render_svg(boxes, routes, mode)?;
+    render_with_theme(boxes, routes, mode, crate::theme::Theme::Modern)
+}
+
+pub fn render_with_theme(
+    boxes: &[BoxNode],
+    routes: &[Route],
+    mode: TextMode,
+    theme: crate::theme::Theme,
+) -> Result<String, String> {
+    let svg = render_svg(boxes, routes, mode, theme)?;
     if mode == TextMode::Paths {
-        crate::export_metadata::preserve_svg_notice(&svg, crate::export::outlines(&svg)?)
+        crate::export::outlines(&svg)
     } else {
         Ok(svg)
     }
 }
 
-fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<String, String> {
+fn render_svg(
+    boxes: &[BoxNode],
+    routes: &[Route],
+    mode: TextMode,
+    theme: crate::theme::Theme,
+) -> Result<String, String> {
     composite::validate(boxes, routes)?;
     let (left, top, right, bottom) = bounds::measure(boxes, routes);
     let mut svg = String::new();
@@ -143,6 +157,16 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
             } else {
                 String::new()
             };
+            if theme.modern() {
+                let neutral = theme.colors(theme.default_base(NodeKind::Package));
+                let pill = if label.angle.abs() > 1e-9 {
+                    rotation.as_str()
+                } else {
+                    ""
+                };
+                writeln!(svg, "<rect data-edge-label-pill=\"true\" x=\"{:.2}\" y=\"{:.2}\" width=\"{:.2}\" height=\"{:.2}\" rx=\"6\" fill=\"{}\"{pill}/>",
+                    label.x-4.0,label.y-2.0,label.width+8.0,label.height+4.0,neutral.fill).unwrap();
+            }
             writeln!(svg,"<text x=\"{cx:.2}\" y=\"{:.2}\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\"{}>{}</text>",
                 cy+route.font_size*1.25*0.28,route.font_size,route.color,rotation,escape(&label.text)).unwrap();
         }
@@ -200,6 +224,10 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
                 node.x,node.y,node.x+node.width-fold,node.x+node.width,node.y+fold,
                 node.y+node.height,node.x,node.x+node.width-fold,node.y,node.y+fold,node.x+node.width,
                 node.fill,node.border_color,node.border_width).unwrap();
+            if theme.modern() && node.height > 18.0 {
+                writeln!(svg, "<path data-note-accent=\"true\" d=\"M{:.2},{:.2} V{:.2}\" stroke=\"{}\" stroke-width=\"5\" stroke-linecap=\"round\"/>",
+                    node.x+4.0,node.y+7.0,node.y+node.height-7.0,node.accent_color).unwrap();
+            }
         } else if node.shape == NodeShape::Ellipse {
             writeln!(svg,"<ellipse cx=\"{:.2}\" cy=\"{:.2}\" rx=\"{:.2}\" ry=\"{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
                 node.x+node.width/2.0,node.y+node.height/2.0,node.width/2.0,node.height/2.0,node.fill,node.border_color,node.border_width).unwrap();
@@ -278,14 +306,14 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
             let mut y =
                 node.y + node.padding + node.top_band + line_height * node.lines.len() as f64;
             writeln!(svg,"<line x1=\"{:.2}\" y1=\"{y:.2}\" x2=\"{:.2}\" y2=\"{y:.2}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
-                node.x, node.x+node.width, node.border_color, node.border_width).unwrap();
+                node.x, node.x+node.width, node.divider_color, node.border_width).unwrap();
             y += 4.0;
             for (part, row) in node.body.iter().zip(&node.body_styles) {
                 match part {
                     NodePart::Separator => {
                         y += 4.0;
                         writeln!(svg,"<line x1=\"{:.2}\" y1=\"{y:.2}\" x2=\"{:.2}\" y2=\"{y:.2}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
-                            node.x,node.x+node.width,node.border_color,node.border_width).unwrap();
+                            node.x,node.x+node.width,node.divider_color,node.border_width).unwrap();
                         y += 4.0;
                     }
                     NodePart::Member {
@@ -358,12 +386,22 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
             {
                 for separator in separators {
                     writeln!(svg, "<line x1=\"{:.2}\" y1=\"{separator:.2}\" x2=\"{:.2}\" y2=\"{separator:.2}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
-                        node.x, node.x + node.width, node.border_color, node.border_width).unwrap();
+                        node.x, node.x + node.width, node.divider_color, node.border_width).unwrap();
                 }
             }
             for port in &node.ports {
-                writeln!(svg, "<rect data-port-id=\"{}\" x=\"{:.2}\" y=\"{:.2}\" width=\"10\" height=\"10\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
-                    escape(&port.id), port.x-5.0, port.y-5.0, port.fill, port.border_color, node.border_width).unwrap();
+                if theme.modern() && node.kind == NodeKind::Generic {
+                    let fill = if port.explicit_fill {
+                        &port.fill
+                    } else {
+                        &port.border_color
+                    };
+                    writeln!(svg, "<circle data-port-id=\"{}\" cx=\"{:.2}\" cy=\"{:.2}\" r=\"5\" fill=\"{}\" stroke=\"{}\" stroke-width=\"2\" />",
+                        escape(&port.id),port.x,port.y,fill,node.fill).unwrap();
+                } else {
+                    writeln!(svg, "<rect data-port-id=\"{}\" x=\"{:.2}\" y=\"{:.2}\" width=\"10\" height=\"10\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
+                        escape(&port.id), port.x-5.0, port.y-5.0, port.fill, port.border_color, node.border_width).unwrap();
+                }
                 let (x, y, anchor) = match port.side {
                     crate::syntax::PortSide::Left => (
                         if matches!(node.shape, NodeShape::Ellipse | NodeShape::Diamond) {

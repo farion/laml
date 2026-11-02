@@ -19,10 +19,42 @@ pub(super) fn escape(text: &str) -> String {
 }
 
 fn color(styles: &StyleSheet, element: &Element<'_>, key: &str, default: &str) -> String {
-    match styles.get(element, key).map(|decl| &decl.value) {
-        Some(Value::Color(value)) => value.clone(),
-        _ => default.into(),
+    if let Some(Value::Color(value)) = styles.get(element, key).map(|decl| &decl.value) {
+        return value.clone();
     }
+    let base = match styles.get(element, "base-color").map(|decl| &decl.value) {
+        Some(Value::Color(value)) => Some(value.as_str()),
+        _ => None,
+    };
+    if styles.theme.modern() || base.is_some() || styles.theme.dark() {
+        let role = if matches!(element, Element::Note { .. } | Element::Annotation { .. }) {
+            crate::syntax::NodeKind::Note
+        } else {
+            crate::syntax::NodeKind::Generic
+        };
+        let paint = styles
+            .theme
+            .colors(base.unwrap_or(styles.theme.default_base(role)));
+        return match key {
+            "fill" if default != "none" => paint.fill,
+            "border-color" => paint.border,
+            "color"
+                if matches!(
+                    element,
+                    Element::Node { .. }
+                        | Element::Note { .. }
+                        | Element::Continuation { .. }
+                        | Element::Activation { .. }
+                        | Element::Annotation { .. }
+                ) =>
+            {
+                paint.text
+            }
+            "color" => styles.theme.edge().into(),
+            _ => default.into(),
+        };
+    }
+    default.into()
 }
 
 fn size(styles: &StyleSheet, element: &Element<'_>, key: &str, default: f64) -> f64 {

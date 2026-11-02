@@ -20,6 +20,6 @@ pub(super) fn draw(svg: &mut String, node: &BoxNode) {
     // Port bands already draw their own separator in the foreground.
     if node.ports.is_empty() {
         writeln!(svg,"<line x1=\"{:.2}\" y1=\"{:.2}\" x2=\"{:.2}\" y2=\"{:.2}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
-            node.x,node.y+node.port_start,node.x+node.width,node.y+node.port_start,node.border_color,node.border_width).unwrap();
+            node.x,node.y+node.port_start,node.x+node.width,node.y+node.port_start,node.divider_color,node.border_width).unwrap();
     }
 }

@@ -35,6 +35,7 @@ pub struct Tick {
 }
 #[derive(Clone, Debug)]
 pub struct Document {
+    pub theme: crate::theme::Theme,
     pub interaction: String,
     pub unit: Option<String>,
     pub lifelines: Vec<Lifeline>,
@@ -140,7 +141,9 @@ pub fn is_timing_source(source: &str) -> bool {
 }
 
 pub fn parse(source: &str) -> Result<Document, ParseError> {
-    let (source, styling) = crate::sequence::styling::extract(source)?;
+    let (stripped, theme, _, _, _) =
+        crate::theme::preprocess_settings(source).map_err(|message| error(1, message))?;
+    let (source, styling) = crate::sequence::styling::extract(&stripped)?;
     let mut section = "";
     let mut seen = [false; 3];
     let mut ty = false;
@@ -378,6 +381,7 @@ pub fn parse(source: &str) -> Result<Document, ParseError> {
     }
     ticks.sort_by(|a, b| a.time.total_cmp(&b.time));
     Ok(Document {
+        theme,
         interaction,
         unit,
         lifelines,

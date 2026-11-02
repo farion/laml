@@ -12,6 +12,7 @@ pub struct BoxPort {
     pub y: f64,
     pub color: String,
     pub fill: String,
+    pub explicit_fill: bool,
     pub border_color: String,
 }
 

@@ -30,12 +30,9 @@ use executions::{DrawnExecution, OpenExecution};
 use geometry::{frame_right, head_label, label_width_at, lanes, x_of};
 use std::fmt::Write;
 use styles::escape;
-
 const HEADER_Y: f64 = 32.0;
 const HEADER_HEIGHT: f64 = 48.0;
-
 type Separator = (String, f64);
-
 struct OpenFrame {
     operator: String,
     id: Option<String>,
@@ -45,7 +42,6 @@ struct OpenFrame {
     incoming_execution: Vec<OpenExecution>,
     messages: Vec<usize>,
 }
-
 struct DrawnFrame {
     operator: String,
     id: Option<String>,
@@ -72,6 +68,9 @@ pub fn render_with_styles(
     sheet: &StyleSheet,
     mode: TextMode,
 ) -> Result<String, String> {
+    let mut effective = sheet.clone();
+    effective.theme = diagram.theme;
+    let sheet = &effective;
     let (centers, widths, base_canvas_width) = lanes(diagram, sheet)?;
     let canvas_width =
         geometry::canvas_width(diagram, sheet, &centers, &widths, base_canvas_width)?;

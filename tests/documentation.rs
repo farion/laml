@@ -14,11 +14,27 @@ fn text_blocks(guide: &str) -> Vec<String> {
         .collect()
 }
 
-fn assert_preview_matches(root: &Path, path: &Path, svg: &str) {
+fn assert_preview_matches(root: &Path, path: &Path, _svg: &str) {
     let name = path.file_stem().unwrap().to_str().unwrap();
     let preview = root.join("docs/images").join(format!("{name}.png"));
     let expected = resvg::tiny_skia::Pixmap::decode_png(&fs::read(&preview).unwrap()).unwrap();
-    let actual = resvg::tiny_skia::Pixmap::decode_png(&png(svg).unwrap()).unwrap();
+    let destination =
+        std::env::temp_dir().join(format!("laml-preview-{}-{name}.png", std::process::id()));
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_laml"))
+        .env("LAML_NO_UPDATE_CHECK", "1")
+        .arg("build")
+        .arg(path)
+        .arg(&destination)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}: {}",
+        path.display(),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let actual = resvg::tiny_skia::Pixmap::decode_png(&fs::read(&destination).unwrap()).unwrap();
+    fs::remove_file(destination).unwrap();
     assert_eq!(
         (expected.width(), expected.height()),
         (actual.width(), actual.height())
@@ -166,38 +182,11 @@ fn every_published_example_checks_and_builds() {
             )
             .unwrap_or_else(|e| panic!("{}: {e}", path.display()));
             assert!(svg.starts_with("<svg "), "{}", path.display());
-            let output = png(&svg).unwrap();
-            assert!(output.starts_with(b"\x89PNG"));
+            assert!(png(&svg).unwrap().starts_with(b"\x89PNG"));
             let name = path.file_stem().unwrap().to_str().unwrap();
             let preview = root.join("docs/images").join(format!("{name}.png"));
             if preview.exists() {
-                let expected =
-                    resvg::tiny_skia::Pixmap::decode_png(&fs::read(&preview).unwrap()).unwrap();
-                let actual = resvg::tiny_skia::Pixmap::decode_png(&output).unwrap();
-                assert_eq!(
-                    (expected.width(), expected.height()),
-                    (actual.width(), actual.height())
-                );
-                let changed = expected
-                    .pixels()
-                    .iter()
-                    .zip(actual.pixels())
-                    .filter(|(a, b)| {
-                        [
-                            a.red().abs_diff(b.red()),
-                            a.green().abs_diff(b.green()),
-                            a.blue().abs_diff(b.blue()),
-                            a.alpha().abs_diff(b.alpha()),
-                        ]
-                        .into_iter()
-                        .any(|difference| difference > 16)
-                    })
-                    .count();
-                assert!(
-                    changed * 1000 <= expected.pixels().len() * 3,
-                    "{} is out of sync with its sequence source",
-                    preview.display()
-                );
+                assert_preview_matches(root, &path, &svg);
             }
             continue;
         }
@@ -220,36 +209,8 @@ fn every_published_example_checks_and_builds() {
         let preview_path = root.join("docs/images").join(format!("{name}.png"));
         let preview =
             fs::read(&preview_path).unwrap_or_else(|e| panic!("{}: {e}", preview_path.display()));
-        let expected = resvg::tiny_skia::Pixmap::decode_png(&preview).unwrap();
-        let actual = resvg::tiny_skia::Pixmap::decode_png(&png(&svg).unwrap()).unwrap();
-        assert_eq!(
-            (expected.width(), expected.height()),
-            (actual.width(), actual.height()),
-            "{}",
-            path.display()
-        );
-        // Cross-platform rasterizers can round a few antialiased edge pixels
-        // differently; large visible changes must still update the screenshot.
-        let changed = expected
-            .pixels()
-            .iter()
-            .zip(actual.pixels())
-            .filter(|(a, b)| {
-                [
-                    a.red().abs_diff(b.red()),
-                    a.green().abs_diff(b.green()),
-                    a.blue().abs_diff(b.blue()),
-                    a.alpha().abs_diff(b.alpha()),
-                ]
-                .into_iter()
-                .any(|difference| difference > 16)
-            })
-            .count();
-        assert!(
-            changed * 1000 <= expected.pixels().len() * 3,
-            "{} is out of sync with its LAML source ({changed} changed pixels)",
-            preview_path.display()
-        );
+        assert!(preview.starts_with(b"\x89PNG"));
+        assert_preview_matches(root, &path, &svg);
     }
 }
 

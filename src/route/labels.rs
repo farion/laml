@@ -97,6 +97,8 @@ pub(super) fn segment_hits_rect(a: Point, b: Point, x: f64, y: f64, w: f64, h: f
         color: String::new(),
         border_color: String::new(),
         border_width: 0.0,
+        accent_color: String::new(),
+        divider_color: String::new(),
         radius: 0.0,
         line: 0,
     };

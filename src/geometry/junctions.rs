@@ -53,18 +53,22 @@ pub(super) fn measure(
         }
         .into());
     }
-    let fill = match sheet.get(&element, "fill").map(|d| &d.value) {
-        Some(Value::Color(value)) => value.clone(),
-        _ => "#ffffff".into(),
-    };
-    let color = match sheet.get(&element, "color").map(|d| &d.value) {
-        Some(Value::Color(value)) => value.clone(),
-        _ => "#17212e".into(),
-    };
-    let border_color = match sheet.get(&element, "border-color").map(|d| &d.value) {
-        Some(Value::Color(value)) => value.clone(),
-        _ => "#395373".into(),
-    };
+    let palette = super::node_notation::palette(node.kind, sheet, &element);
+    let fill = super::node_notation::color(
+        sheet,
+        &element,
+        "fill",
+        palette.as_ref().map_or(
+            if sheet.theme.dark() {
+                "#181f2a"
+            } else {
+                "#ffffff"
+            },
+            |paint| paint.fill.as_str(),
+        ),
+    );
+    let color = super::node_notation::text_paint(sheet, &element, palette.as_ref());
+    let border_color = super::node_notation::border_paint(sheet, &element, palette.as_ref());
     let border_width = match sheet.get(&element, "border-width").map(|d| &d.value) {
         Some(Value::Number(value)) => *value,
         _ => 1.0,
@@ -181,6 +185,8 @@ pub(super) fn measure(
         color,
         border_color,
         border_width,
+        accent_color: String::new(),
+        divider_color: String::new(),
         radius: 0.0,
         line: node.line,
     })

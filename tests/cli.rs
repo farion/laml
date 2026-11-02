@@ -57,7 +57,8 @@ fn build_example_produces_svg_with_selectable_text_and_embedded_font() {
     assert!(svg.contains("<svg "));
     assert!(svg.contains("data:font/otf;base64,"));
     assert_eq!(svg.matches("<polyline ").count(), 11);
-    assert_eq!(svg.matches("<rect ").count(), 12);
+    assert_eq!(svg.matches("data-edge-label-pill=\"true\"").count(), 11);
+    assert_eq!(svg.matches("<rect ").count(), 24); // 12 nodes, 11 label pills, canvas
     assert!(svg.contains("<text "));
     fs::remove_dir_all(dir).unwrap();
 }

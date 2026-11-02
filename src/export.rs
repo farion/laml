@@ -1,20 +1,28 @@
 //! SVG normalization and vector/raster exports. All formats share one layout.
 
-use crate::text::{FONT, ITALIC_FONT};
 use resvg::{tiny_skia, usvg};
 
 fn tree(svg: &str) -> Result<usvg::Tree, String> {
     let mut options = usvg::Options::default();
     // Resolve exactly the same bundled face used for measuring and for SVG.
     // Do not rely on fonts installed on the exporting machine.
-    options.fontdb_mut().load_font_data(FONT.to_vec());
-    options.fontdb_mut().load_font_data(ITALIC_FONT.to_vec());
+    crate::text::with_face(false, |font, _| {
+        options.fontdb_mut().load_font_data(font.to_vec())
+    })?;
+    if let Ok(()) = crate::text::with_face(true, |font, _| {
+        options.fontdb_mut().load_font_data(font.to_vec())
+    }) {
+        // Some custom fonts intentionally supply only a regular face.
+    }
     usvg::Tree::from_str(svg, &options).map_err(|e| format!("cannot parse generated SVG: {e}"))
 }
 
 pub fn outlines(svg: &str) -> Result<String, String> {
     let document = tree(svg)?;
-    Ok(document.to_string(&usvg::WriteOptions::default()))
+    crate::export_metadata::preserve_svg_notice(
+        svg,
+        document.to_string(&usvg::WriteOptions::default()),
+    )
 }
 
 pub fn png(svg: &str) -> Result<Vec<u8>, String> {
@@ -26,7 +34,15 @@ pub fn png(svg: &str) -> Result<Vec<u8>, String> {
     }
     let mut pixmap = tiny_skia::Pixmap::new(size.width(), size.height())
         .ok_or("PNG canvas cannot be allocated")?;
-    pixmap.fill(tiny_skia::Color::WHITE);
+    // Keep the original public export API white unless transparency was
+    // explicitly requested; the CLI marks transparent output on the SVG root.
+    if !svg.contains("data-laml-transparent=\"true\"") {
+        pixmap.fill(if svg.contains("data-laml-canvas=\"#000000\"") {
+            tiny_skia::Color::BLACK
+        } else {
+            tiny_skia::Color::WHITE
+        });
+    }
     resvg::render(
         &document,
         tiny_skia::Transform::identity(),

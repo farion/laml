@@ -13,7 +13,11 @@ pub(super) fn style(relation: &RelationDecl, sheet: &StyleSheet) -> (String, f64
     };
     let color = match sheet.get(&element, "color").map(|d| &d.value) {
         Some(Value::Color(c)) => c.clone(),
-        _ => "#395373".into(),
+        _ => match sheet.get(&element, "base-color").map(|d| &d.value) {
+            Some(Value::Color(c)) => sheet.theme.colors(c).border,
+            _ if sheet.theme == crate::theme::Theme::Plain => "#395373".into(),
+            _ => sheet.theme.edge().into(),
+        },
     };
     (color, number("width", 2.0), number("font-size", 14.0))
 }
