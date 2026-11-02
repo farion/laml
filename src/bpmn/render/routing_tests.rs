@@ -94,6 +94,13 @@ fn all_order_edges_have_unique_node_anchors_and_clear_paths() {
         2,
         "arrival should connect straight into its primary task port"
     );
+    let timer = &previous[edge("Shop.Deadline", "Shop.Escalate")].points;
+    assert_eq!(
+        timer.len(),
+        2,
+        "boundary timer must enter Escalate without a dogleg"
+    );
+    assert!((timer[0].0 - timer[1].0).abs() < 0.01);
     assert_eq!(
         previous[edge("Shop.Decision", "Shop.Decline")].points.len(),
         3,
@@ -127,14 +134,21 @@ fn all_order_edges_have_unique_node_anchors_and_clear_paths() {
     }
     assert_eq!(
         svg.lines()
-            .filter(|line| line.contains("fill=\"#edf3fa\""))
+            .filter(|line| line.contains("width=\"30\"") && line.contains("fill=\"#f8fbff\""))
             .count(),
         2,
-        "only the two Shop lanes need a shaded lane title strip"
+        "both Shop lane title strips must use the pool background color"
     );
+    let shop = &geom.pools[1];
+    let last = shop.bands.last().unwrap();
     assert!(
-        svg.contains("width=\"30\""),
-        "lane title strips should match title height"
+        svg.contains(&format!(
+            "<rect x=\"{:.1}\" y=\"{:.1}\" width=\"30\" height=\"{:.1}\" fill=\"#f8fbff\"",
+            shop.x,
+            last.y,
+            shop.y + shop.h - last.y
+        )),
+        "last lane title must extend all the way to the pool's bottom border"
     );
     let order = svg
         .lines()
@@ -154,4 +168,39 @@ fn all_order_edges_have_unique_node_anchors_and_clear_paths() {
         label_y < p.y + p.h - 25.0 && label_y > p.y + 30.0 + 20.0,
         "order label must clear pool border"
     );
+}
+
+#[test]
+fn vertical_lane_titles_reach_the_right_pool_border() {
+    let doc = bpmn::parse(include_str!("../../../examples/bpmn-vertical.laml")).unwrap();
+    let geom = super::super::geometry::place(&doc).unwrap();
+    let svg = bpmn::render(&doc, TextMode::System).unwrap();
+    let shop = geom.pools.iter().find(|p| p.label == "Shop").unwrap();
+    let last = shop.bands.last().unwrap();
+    assert!(
+        svg.contains(&format!(
+            "<rect x=\"{:.1}\" y=\"{:.1}\" width=\"{:.1}\" height=\"30\" fill=\"#f8fbff\"",
+            last.y,
+            shop.y + 30.0,
+            shop.x + shop.w - last.y
+        )),
+        "final horizontal lane title must reach the pool's right border"
+    );
+    assert!(svg.contains(&format!(
+        "M {:.1} {:.1} H {:.1}",
+        last.y,
+        shop.y + 60.0,
+        shop.x + shop.w
+    )));
+    for band in &shop.bands {
+        assert!(
+            svg.contains(&format!(
+                "M {:.1} {:.1} V {:.1}",
+                band.y,
+                shop.y + 30.0,
+                shop.y + shop.h
+            )),
+            "lane dividers must not cut through the pool title"
+        );
+    }
 }

@@ -230,17 +230,27 @@ pub fn render_with_styles(
             p.x + p.w
         )
         .unwrap();
-        for band in &p.bands {
+        for (band_index, band) in p.bands.iter().enumerate() {
             if !p.bands.iter().any(|b| b.id.is_some()) {
                 continue;
             }
+            let last = band_index + 1 == p.bands.len();
+            let span = if last {
+                if doc.direction == crate::syntax::FlowDirection::TopToBottom {
+                    p.x + p.w - band.y
+                } else {
+                    p.y + p.h - band.y
+                }
+            } else {
+                band.h
+            };
             if doc.direction == crate::syntax::FlowDirection::TopToBottom {
-                writeln!(svg,"<rect x=\"{:.1}\" y=\"{:.1}\" width=\"{:.1}\" height=\"30\" fill=\"#edf3fa\"/><path d=\"M {:.1} {:.1} H {:.1}\" stroke=\"#263548\"/>",band.y,p.y+30.0,band.h,band.y,p.y+60.0,band.y+band.h).unwrap();
+                writeln!(svg,"<rect x=\"{:.1}\" y=\"{:.1}\" width=\"{:.1}\" height=\"30\" fill=\"#f8fbff\"/><path d=\"M {:.1} {:.1} H {:.1}\" stroke=\"#263548\"/>",band.y,p.y+30.0,span,band.y,p.y+60.0,band.y+span).unwrap();
                 writeln!(
                     svg,
                     "<path d=\"M {:.1} {:.1} V {:.1}\" stroke=\"#263548\" fill=\"none\"/>",
                     band.y,
-                    p.y,
+                    p.y + 30.0,
                     p.y + p.h
                 )
                 .unwrap();
@@ -252,7 +262,7 @@ pub fn render_with_styles(
                     13.0,
                 );
             } else {
-                writeln!(svg,"<rect x=\"{:.1}\" y=\"{:.1}\" width=\"30\" height=\"{:.1}\" fill=\"#edf3fa\"/><path d=\"M {:.1} {:.1} V {:.1}\" stroke=\"#263548\" fill=\"none\"/><text x=\"{:.1}\" y=\"{:.1}\" transform=\"rotate(-90 {:.1} {:.1})\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"13\">{}</text>",p.x,band.y,band.h,p.x+30.0,band.y,band.y+band.h,p.x+15.0,band.y+band.h/2.0,p.x+15.0,band.y+band.h/2.0,escape(&band.label)).unwrap();
+                writeln!(svg,"<rect x=\"{:.1}\" y=\"{:.1}\" width=\"30\" height=\"{:.1}\" fill=\"#f8fbff\"/><path d=\"M {:.1} {:.1} V {:.1}\" stroke=\"#263548\" fill=\"none\"/><text x=\"{:.1}\" y=\"{:.1}\" transform=\"rotate(-90 {:.1} {:.1})\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"13\">{}</text>",p.x,band.y,span,p.x+30.0,band.y,band.y+span,p.x+15.0,band.y+band.h/2.0,p.x+15.0,band.y+band.h/2.0,escape(&band.label)).unwrap();
                 if band.y > p.y + 30.5 {
                     writeln!(
                         svg,
@@ -265,6 +275,9 @@ pub fn render_with_styles(
                 }
             }
         }
+        // Bands reach the pool's outer edge; repaint the outer stroke last so
+        // their fills cannot erase the final border pixels.
+        writeln!(svg,"<rect x=\"{:.1}\" y=\"{:.1}\" width=\"{:.1}\" height=\"{:.1}\" fill=\"none\" stroke=\"#263548\" stroke-width=\"2\"/>",p.x,p.y,p.w,p.h).unwrap();
         writeln!(
             svg,
             "<text x=\"{:.1}\" y=\"{:.1}\" font-family=\"Inter\" font-size=\"13\">{}</text>",

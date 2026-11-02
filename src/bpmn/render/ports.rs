@@ -284,6 +284,53 @@ pub(super) fn assign(doc: &Document, geom: &Geometry) -> Result<Ports, String> {
             }
         }
     }
+    // A boundary flow descending into a task may dock off-center on the
+    // task's top edge. Aligning both anchors removes a cosmetic dogleg without
+    // moving either node or stealing an attachment from a second flow.
+    for (index, edge) in doc.edges.iter().enumerate() {
+        if edge.kind != EdgeKind::Sequence {
+            continue;
+        }
+        let (Some(source), Some(target)) = ends[index] else {
+            continue;
+        };
+        if source.side != Side::Bottom || target.side != Side::Top || source.y >= target.y - 8.0 {
+            continue;
+        }
+        let Some(to) = doc.nodes.iter().position(|n| n.id == edge.to) else {
+            continue;
+        };
+        if !matches!(
+            doc.nodes[to].kind,
+            Kind::Task
+                | Kind::UserTask
+                | Kind::ServiceTask
+                | Kind::SendTask
+                | Kind::ReceiveTask
+                | Kind::ScriptTask
+                | Kind::ManualTask
+                | Kind::Collapsed
+                | Kind::Subprocess
+        ) {
+            continue;
+        }
+        let b = geom.nodes[to];
+        if (source.x - b.x).abs() > b.w / 2.0 - 14.0 {
+            continue;
+        }
+        if ends.iter().enumerate().any(|(other, (_, attachment))| {
+            other != index
+                && doc.edges[other].to == edge.to
+                && attachment.is_some_and(|a| a.side == Side::Top && (a.x - source.x).abs() < 12.0)
+        }) {
+            continue;
+        }
+        ends[index].1 = Some(Attach {
+            side: Side::Top,
+            x: source.x,
+            y: target.y,
+        });
+    }
     Ok(Ports { ends })
 }
 fn regular_point(kind: Kind, b: super::super::geometry::BoxAt, side: Side, t: f64) -> Attach {
