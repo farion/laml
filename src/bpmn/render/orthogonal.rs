@@ -5,14 +5,17 @@ use super::{Document, Geometry};
 use crate::bpmn::{Edge, EdgeKind, Kind, Side};
 
 pub(super) type Point = (f64, f64);
+#[derive(Clone)]
 pub(super) struct Prior {
     pub points: Vec<Point>,
     pub kind: EdgeKind,
     pub from: String,
+    pub to: String,
 }
 pub(super) struct Plan {
     pub points: Vec<Point>,
     pub cost: f64,
+    pub crossings: usize,
 }
 fn stub(p: Attach, length: f64) -> Point {
     match p.side {
@@ -94,8 +97,9 @@ fn score(
     e: &Edge,
     points: &[Point],
     previous: &[Prior],
-) -> Option<f64> {
+) -> Option<(usize, f64)> {
     let mut cost = 0.0;
+    let mut crossings = 0;
     let short_end = |id: &str| {
         doc.nodes
             .iter()
@@ -185,7 +189,18 @@ fn score(
         }
         for prior in previous {
             for old in prior.points.windows(2) {
-                let margin = if matches!(e.kind, EdgeKind::Data | EdgeKind::Association)
+                let shares_node = prior.from == e.from
+                    || prior.from == e.to
+                    || prior.to == e.from
+                    || prior.to == e.to;
+                let margin = if e.kind == EdgeKind::Data
+                    && prior.kind == EdgeKind::Data
+                    && shares_node
+                {
+                    // Distinct adjacent ports on the same task may be closer
+                    // than independent data connectors elsewhere in the diagram.
+                    11.0
+                } else if matches!(e.kind, EdgeKind::Data | EdgeKind::Association)
                     && matches!(prior.kind, EdgeKind::Data | EdgeKind::Association)
                 {
                     23.0
@@ -207,13 +222,14 @@ fn score(
                     return None;
                 }
                 if crossing(a, b, old[0], old[1]).is_some() {
+                    crossings += 1;
                     cost += 120.0;
                 }
             }
         }
     }
     cost += (points.len().saturating_sub(2)) as f64 * 100.0;
-    Some(cost)
+    Some((crossings, cost))
 }
 pub(super) fn route(
     doc: &Document,
@@ -294,21 +310,26 @@ pub(super) fn route(
             candidates.push(vec![first, s, (x, s.1), (x, y), (t.0, y), t, last]);
         }
     }
-    let (cost, best) = candidates
+    let (crossings, cost, best) = candidates
         .into_iter()
         .enumerate()
         .filter_map(|(i, points)| {
             let points = compact(points);
-            score(doc, geom, e, &points, previous).map(|cost| (cost + i as f64 * 0.001, points))
+            score(doc, geom, e, &points, previous)
+                .map(|(crossings, cost)| (crossings, cost + i as f64 * 0.001, points))
         })
-        .min_by(|a, b| a.0.total_cmp(&b.0))
+        .min_by(|a, b| a.0.cmp(&b.0).then(a.1.total_cmp(&b.1)))
         .ok_or_else(|| {
             format!(
                 "no obstacle-free orthogonal BPMN route for {} -> {}",
                 e.from, e.to
             )
         })?;
-    Ok(Plan { points: best, cost })
+    Ok(Plan {
+        points: best,
+        cost,
+        crossings,
+    })
 }
 pub(super) fn bridges(points: &[Point], previous: &[Prior]) -> Vec<(usize, Point)> {
     let mut result = Vec::new();

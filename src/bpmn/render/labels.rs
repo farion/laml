@@ -102,6 +102,31 @@ fn near_other_line(routes: &[Prior], edge: usize, rect: BoxAt) -> bool {
             })
     })
 }
+fn close_to_related_note(doc: &Document, geom: &Geometry, index: usize, box_at: BoxAt) -> bool {
+    let Some(source) = doc.nodes.iter().find(|n| n.id == doc.edges[index].from) else {
+        return false;
+    };
+    if source.kind != Kind::Boundary {
+        return false;
+    }
+    let Some(owner) = source.attached.as_deref() else {
+        return false;
+    };
+    doc.nodes
+        .iter()
+        .enumerate()
+        .filter(|(_, n)| n.kind == Kind::Annotation)
+        .any(|(i, n)| {
+            let related = doc.edges.iter().any(|e| {
+                e.kind == crate::bpmn::EdgeKind::Association
+                    && ((e.from == n.id && e.to == owner) || (e.to == n.id && e.from == owner))
+            });
+            let note = geom.nodes[i];
+            related
+                && (box_at.x - note.x).abs() < (box_at.w + note.w) / 2.0 + 40.0
+                && (box_at.y - note.y).abs() < (box_at.h + note.h) / 2.0 + 10.0
+        })
+}
 fn choose(
     doc: &Document,
     geom: &Geometry,
@@ -233,6 +258,11 @@ fn choose(
                         (progress - route_length / 2.0).abs()
                     };
                     let cost = distance
+                        + if close_to_related_note(doc, geom, index, box_at) {
+                            400.0
+                        } else {
+                            0.0
+                        }
                         + if source.kind == Kind::Boundary && !horizontal && !vertical {
                             65.0
                         } else {

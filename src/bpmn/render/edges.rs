@@ -161,9 +161,11 @@ pub(super) fn edge(
             };
             match super::orthogonal::route(doc, geom, e, source, target, preferred, previous) {
                 Ok(plan)
-                    if best
-                        .as_ref()
-                        .is_none_or(|(current, _, _)| plan.cost < current.cost - 0.01) =>
+                    if best.as_ref().is_none_or(|(current, _, _)| {
+                        plan.crossings < current.crossings
+                            || (plan.crossings == current.crossings
+                                && plan.cost < current.cost - 0.01)
+                    }) =>
                 {
                     best = Some((plan, source, target))
                 }
@@ -217,6 +219,7 @@ pub(super) fn edge(
         points: plan.points,
         kind: e.kind,
         from: e.from.clone(),
+        to: e.to.clone(),
     });
     Ok(())
 }

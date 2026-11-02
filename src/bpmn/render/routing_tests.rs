@@ -1,5 +1,5 @@
 //! Integration checks for the BPMN routing contract using real example geometry.
-use super::{Geometry, edges, ports};
+use super::{Geometry, plan, ports};
 use crate::bpmn::{self, Document, EdgeKind, Kind};
 use crate::svg::TextMode;
 
@@ -9,13 +9,44 @@ fn setup() -> (Document, Geometry) {
     (doc, geom)
 }
 #[test]
+fn renamed_order_nodes_still_avoid_archive_timer_crossing() {
+    let source = include_str!("../../../examples/bpmn-order.laml")
+        .replace("Review", "Inspect")
+        .replace("Archive", "Vault")
+        .replace("Policy", "Memo");
+    let doc = bpmn::parse(&source).unwrap();
+    let geom = super::super::geometry::place(&doc).unwrap();
+    let ports = ports::assign(&doc, &geom).unwrap();
+    let (_, routes) = plan::all(&doc, &geom, &ports).unwrap();
+    let data = doc
+        .edges
+        .iter()
+        .position(|e| e.from == "Shop.Inspect" && e.to == "Shop.Vault")
+        .unwrap();
+    let timer = doc
+        .edges
+        .iter()
+        .position(|e| e.from == "Shop.Deadline")
+        .unwrap();
+    let task = geom.nodes[doc
+        .nodes
+        .iter()
+        .position(|n| n.id == "Shop.Inspect")
+        .unwrap()];
+    assert!((routes[data].points[0].0 - (task.x - task.w / 2.0)).abs() < 0.1);
+    assert!(routes[data].points[0].1 > task.y);
+    assert!(
+        super::orthogonal::bridges(&routes[data].points, std::slice::from_ref(&routes[timer]))
+            .is_empty()
+    );
+}
+#[test]
 fn all_order_edges_have_unique_node_anchors_and_clear_paths() {
     let (doc, geom) = setup();
     let ports = ports::assign(&doc, &geom).unwrap();
-    let mut previous = Vec::new();
+    let (_, previous) = plan::all(&doc, &geom, &ports).unwrap();
     for (i, e) in doc.edges.iter().enumerate() {
-        edges::edge(&mut String::new(), &doc, &geom, e, i, &ports, &mut previous).unwrap();
-        let points = &previous.last().unwrap().points;
+        let points = &previous[i].points;
         if points.len() > 2 {
             for (segment, leg) in points.windows(2).enumerate() {
                 let id = if segment == 0 { &e.from } else { &e.to };
@@ -138,6 +169,23 @@ fn all_order_edges_have_unique_node_anchors_and_clear_paths() {
         "the lower branch should not cross the split-to-Decline flow"
     );
     let archive = &previous[edge("Shop.Review", "Shop.Archive")].points;
+    let review = geom.nodes[doc
+        .nodes
+        .iter()
+        .position(|n| n.id == "Shop.Review")
+        .unwrap()];
+    assert!(
+        (archive[0].0 - (review.x - review.w / 2.0)).abs() < 0.01 && archive[0].1 > review.y + 10.0,
+        "the data association should try a separate lower-left task anchor"
+    );
+    assert!(
+        super::orthogonal::bridges(
+            archive,
+            &[previous[edge("Shop.Deadline", "Shop.Escalate")].clone()]
+        )
+        .is_empty(),
+        "Archive data must not cross the timer flow"
+    );
     let store = geom.nodes[doc
         .nodes
         .iter()
@@ -204,7 +252,10 @@ fn all_order_edges_have_unique_node_anchors_and_clear_paths() {
         bracket_x,
         note.y + note.h / 2.0 - 6.0
     )));
-    assert!(svg.contains(" Q "), "crossings need bridge humps");
+    assert!(
+        !svg.contains(" Q "),
+        "the order example should route without bridge crossings"
+    );
     let label = |name: &str| {
         let line = svg
             .lines()
