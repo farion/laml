@@ -46,10 +46,17 @@ fn size(doc: &Document, node: &Node) -> (f64, f64) {
             (crate::text::measure(&node.label, 14.0).unwrap_or(100.0) + 100.0).max(166.0),
             70.0,
         ),
-        Kind::Annotation => (
-            (crate::text::measure(&node.label, 13.0).unwrap_or(100.0) + 54.0).max(154.0),
-            70.0,
-        ),
+        Kind::Annotation => {
+            let lines: Vec<_> = node.label.split('\n').collect();
+            let text_width = lines
+                .iter()
+                .map(|line| crate::text::measure(line, 13.0).unwrap_or(0.0))
+                .fold(0.0_f64, f64::max);
+            (
+                (text_width + 30.0).max(44.0),
+                (lines.len() as f64 * 16.0 + 22.0).max(38.0),
+            )
+        }
         Kind::Start | Kind::End | Kind::Intermediate | Kind::Boundary => (54.0, 54.0),
         Kind::Exclusive | Kind::Parallel | Kind::Inclusive | Kind::EventBased => (70.0, 70.0),
         Kind::Data | Kind::Store => (72.0, 78.0),

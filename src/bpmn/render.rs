@@ -149,7 +149,14 @@ fn shape(svg: &mut String, n: &Node, b: BoxAt, icon: Option<&str>) {
         }
         Kind::Annotation => {
             writeln!(svg,"<path class=\"bpmn-body\" d=\"M {:.1} {:.1} H {:.1} V {:.1} H {:.1}\" fill=\"none\" stroke=\"#263548\" stroke-width=\"1.6\"/>",x-w/2.0+15.0,y-h/2.0+6.0,x-w/2.0,y+h/2.0-6.0,x-w/2.0+15.0).unwrap();
-            text(svg, x + 8.0, y + 5.0, &n.label, 13.0);
+            let lines = n.label.split('\n').count();
+            text(
+                svg,
+                x + 8.0,
+                y + 5.0 - (lines - 1) as f64 * 7.8,
+                &n.label,
+                13.0,
+            );
         }
         Kind::Data => {
             writeln!(svg,"<path class=\"bpmn-body\" d=\"M {:.1} {:.1} h 49 l 13 13 v 60 h -62 Z M {:.1} {:.1} v 13 h 13\" fill=\"white\" stroke=\"#263548\" stroke-width=\"1.8\"/>",x-31.0,y-39.0,x+18.0,y-39.0).unwrap();
