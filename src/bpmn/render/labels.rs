@@ -4,7 +4,7 @@
 use super::super::geometry::BoxAt;
 use super::orthogonal::{Point, Prior};
 use super::{Document, Geometry, escape};
-use crate::bpmn::{Kind, LabelOrientation};
+use crate::bpmn::{EdgeKind, Kind, LabelOrientation};
 use std::fmt::Write;
 
 #[derive(Clone, Copy)]
@@ -101,6 +101,19 @@ fn near_other_line(routes: &[Prior], edge: usize, rect: BoxAt) -> bool {
                 }
             })
     })
+}
+fn message_border_cost(doc: &Document, geom: &Geometry, index: usize, rect: BoxAt) -> f64 {
+    if doc.edges[index].kind != EdgeKind::Message
+        || doc.direction != crate::syntax::FlowDirection::TopToBottom
+    {
+        return 0.0;
+    }
+    geom.pools
+        .iter()
+        .filter(|p| rect.y > p.y && rect.y < p.y + p.h)
+        .flat_map(|p| [p.x, p.x + p.w])
+        .map(|border| (26.0 - ((rect.x - border).abs() - rect.w / 2.0)).max(0.0) * 16.0)
+        .sum()
 }
 fn close_to_related_note(doc: &Document, geom: &Geometry, index: usize, box_at: BoxAt) -> bool {
     let Some(source) = doc.nodes.iter().find(|n| n.id == doc.edges[index].from) else {
@@ -258,6 +271,7 @@ fn choose(
                         (progress - route_length / 2.0).abs()
                     };
                     let cost = distance
+                        + message_border_cost(doc, geom, index, box_at)
                         + if close_to_related_note(doc, geom, index, box_at) {
                             400.0
                         } else {

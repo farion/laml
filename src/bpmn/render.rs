@@ -56,7 +56,7 @@ fn event_marker(svg: &mut String, marker: &str, x: f64, y: f64, throwing: bool) 
         _ => {}
     }
 }
-fn shape(svg: &mut String, n: &Node, b: BoxAt, icon: Option<&str>) {
+fn shape(svg: &mut String, n: &Node, b: BoxAt, icon: Option<&str>, caption_above: bool) {
     let (x, y, w, h) = (b.x, b.y, b.w, b.h);
     match n.kind {
         Kind::Task
@@ -127,7 +127,12 @@ fn shape(svg: &mut String, n: &Node, b: BoxAt, icon: Option<&str>) {
                 event_marker(svg, marker, x, y, n.kind == Kind::End);
             }
             if n.kind != Kind::Boundary {
-                text(svg, x, y + radius + 22.0, &n.label, 12.0);
+                let caption_y = if caption_above {
+                    y - radius - 12.0
+                } else {
+                    y + radius + 22.0
+                };
+                text(svg, x, caption_y, &n.label, 12.0);
             }
         }
         Kind::Exclusive | Kind::Parallel | Kind::Inclusive | Kind::EventBased => {
@@ -299,7 +304,7 @@ pub fn render_with_styles(
         .filter(|(n, _)| n.kind == Kind::Subprocess)
     {
         writeln!(svg, "<g data-bpmn-id=\"{}\">", escape(&n.id)).unwrap();
-        shape(&mut svg, n, b, super::style::icon(sheet, n));
+        shape(&mut svg, n, b, super::style::icon(sheet, n), false);
         svg.push_str("</g>\n");
     }
     let ports = ports::assign(doc, &geom)?;
@@ -312,7 +317,13 @@ pub fn render_with_styles(
         .filter(|(n, _)| n.kind != Kind::Subprocess)
     {
         writeln!(svg, "<g data-bpmn-id=\"{}\">", escape(&n.id)).unwrap();
-        shape(&mut svg, n, b, super::style::icon(sheet, n));
+        let caption_above = doc.direction == crate::syntax::FlowDirection::TopToBottom
+            && n.kind == Kind::Start
+            && doc
+                .edges
+                .iter()
+                .any(|edge| edge.kind == super::EdgeKind::Sequence && edge.from == n.id);
+        shape(&mut svg, n, b, super::style::icon(sheet, n), caption_above);
         svg.push_str("</g>\n");
     }
     labels::render(&mut svg, doc, &geom, &routes)?;

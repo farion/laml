@@ -8,6 +8,7 @@ pub(super) fn place_group(
     boxes: &mut [BoxAt],
     left: f64,
     top: f64,
+    header: f64,
 ) -> (f64, f64) {
     let vertical = doc.direction == crate::syntax::FlowDirection::TopToBottom;
     let max_rank = indices.iter().map(|&i| ranks[i]).max().unwrap_or(0);
@@ -36,8 +37,8 @@ pub(super) fn place_group(
             if vertical { w } else { h }
         })
         .fold(70.0_f64, f64::max);
-    let first_center = top + 30.0 + if vertical { 24.0 } else { 0.0 } + first_height / 2.0;
-    let mut row_bottom = vec![top + 30.0; max_rank + 1];
+    let first_center = top + header + if vertical { 24.0 } else { 0.0 } + first_height / 2.0;
+    let mut row_bottom = vec![top + header; max_rank + 1];
     let mut occupied = vec![false; max_rank + 1];
     let mut height = 100.0_f64;
     for &i in indices {
@@ -82,11 +83,11 @@ pub(super) fn place_group(
             .iter()
             .map(|&i| boxes[i].y + boxes[i].w / 2.0)
             .fold(f64::NEG_INFINITY, f64::max);
-        let shift = top + 30.0 + 24.0 - min;
+        let shift = top + header + 24.0 - min;
         for &i in indices {
             boxes[i].y += shift;
         }
-        height = (max - min) + 30.0 + 48.0;
+        height = (max - min) + header + 48.0;
     } else {
         height = indices
             .iter()

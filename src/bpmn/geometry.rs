@@ -145,7 +145,14 @@ pub(super) fn place(doc: &Document) -> Result<Geometry, String> {
             .as_ref()
             .and_then(|id| doc.pools.iter().find(|p| &p.id == id));
         let mut bands = Vec::new();
-        let mut band_top = top + if pool.is_some() { 30.0 } else { 0.0 };
+        // In top-to-bottom diagrams the pool title stays above the pool;
+        // it must not reserve a second, empty strip at the pool's left.
+        let mut band_top = top
+            + if pool.is_some() && doc.direction != crate::syntax::FlowDirection::TopToBottom {
+                30.0
+            } else {
+                0.0
+            };
         let lane_ids: Vec<Option<String>> = if let Some(p) = pool {
             let mut ids: Vec<_> = p.lanes.iter().map(|l| Some(l.id.clone())).collect();
             if p.lanes.is_empty()
@@ -189,6 +196,13 @@ pub(super) fn place(doc: &Document) -> Result<Geometry, String> {
                 &mut boxes,
                 if pool.is_some() { 175.0 } else { 95.0 },
                 band_top,
+                if doc.direction == crate::syntax::FlowDirection::TopToBottom
+                    && pool.is_none_or(|p| p.lanes.is_empty())
+                {
+                    0.0
+                } else {
+                    30.0
+                },
             );
             width = width.max(w + if pool.is_some() { 105.0 } else { 45.0 });
             let label = pool
@@ -230,7 +244,7 @@ pub(super) fn place(doc: &Document) -> Result<Geometry, String> {
         }
         top += pool_height
             + if doc.direction == crate::syntax::FlowDirection::TopToBottom {
-                64.0
+                96.0
             } else {
                 32.0
             };
@@ -261,6 +275,7 @@ pub(super) fn place(doc: &Document) -> Result<Geometry, String> {
             &mut boxes,
             base.x - base.w / 2.0 + 70.0,
             base.y - base.h / 2.0 + 30.0,
+            30.0,
         );
     }
     for (i, n) in doc
