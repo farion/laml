@@ -63,6 +63,97 @@ pub(super) fn spine_center(
     }
     best.map(|(_, center)| center)
 }
+/// Avoid a split-to-branch route cutting across another branch's path into
+/// the same join. Reorder only free automatic rows within one semantic lane;
+/// authored layout and docking rules keep precedence.
+pub(super) fn uncross_merges(doc: &Document, indices: &[usize], boxes: &mut [BoxAt]) {
+    for &join in indices {
+        if !gateway(doc.nodes[join].kind) {
+            continue;
+        }
+        let incoming: Vec<_> = doc
+            .edges
+            .iter()
+            .filter(|e| e.kind == EdgeKind::Sequence && e.to == doc.nodes[join].id)
+            .filter_map(|e| doc.nodes.iter().position(|n| n.id == e.from))
+            .filter(|i| indices.contains(i))
+            .collect();
+        if incoming.len() < 3 {
+            continue;
+        }
+        for &branch in &incoming {
+            let Some(split) = doc
+                .edges
+                .iter()
+                .filter(|e| e.kind == EdgeKind::Sequence && e.to == doc.nodes[branch].id)
+                .filter_map(|e| doc.nodes.iter().position(|n| n.id == e.from))
+                .find(|&i| {
+                    gateway(doc.nodes[i].kind)
+                        && !indices.contains(&i)
+                        && doc
+                            .edges
+                            .iter()
+                            .filter(|edge| {
+                                edge.kind == EdgeKind::Sequence && edge.from == doc.nodes[i].id
+                            })
+                            .count()
+                            >= 2
+                })
+            else {
+                continue;
+            };
+            let axis = boxes[split].x;
+            if axis < 1.0 || boxes[split].y >= boxes[branch].y || axis >= boxes[join].x {
+                continue;
+            }
+            for &other in &incoming {
+                if other == branch
+                    || boxes[other].x >= axis
+                    || boxes[other].y >= boxes[branch].y - 1.0
+                    || doc.edges.iter().any(|e| {
+                        e.kind == EdgeKind::Sequence
+                            && e.from == doc.nodes[split].id
+                            && e.to == doc.nodes[other].id
+                    })
+                {
+                    continue;
+                }
+                let touches = |id: &str| {
+                    doc.layout.iter().any(|(a, _, b)| {
+                        id == a
+                            || id.ends_with(&format!(".{a}"))
+                            || id == b
+                            || id.ends_with(&format!(".{b}"))
+                    })
+                };
+                if touches(&doc.nodes[other].id)
+                    || touches(&doc.nodes[branch].id)
+                    || doc.flow_layout.iter().any(|r| {
+                        r.to == doc.nodes[join].id
+                            && (r.from == doc.nodes[other].id || r.from == doc.nodes[branch].id)
+                            && r.to_side.is_some()
+                    })
+                {
+                    continue;
+                }
+                let new_y = boxes[branch].y + (boxes[branch].h + boxes[other].h) / 2.0 + 45.0;
+                let moved = BoxAt {
+                    y: new_y,
+                    ..boxes[other]
+                };
+                if indices.iter().any(|&j| {
+                    j != other
+                        && (boxes[j].x - moved.x).abs() < (boxes[j].w + moved.w) / 2.0 + 8.0
+                        && (boxes[j].y - moved.y).abs() < (boxes[j].h + moved.h) / 2.0 + 8.0
+                }) {
+                    continue;
+                }
+                boxes[other] = moved;
+                break;
+            }
+        }
+    }
+}
 /// Align a join and its downstream spine without moving its incoming branches.
 /// In particular, a cross-rank join need not inherit the first branch's row.
 pub(super) fn center_merges(

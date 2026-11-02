@@ -129,9 +129,14 @@ fn all_order_edges_have_unique_node_anchors_and_clear_paths() {
     assert_eq!(
         escalation.len(),
         3,
-        "choose the task's bottom port instead of a short right-hand dogleg"
+        "the lower merge branch needs just one bend"
     );
-    assert!((escalation[0].0 - escalation[1].0).abs() < 0.01);
+    assert!((escalation[0].1 - escalation[1].1).abs() < 0.01);
+    assert!(
+        super::orthogonal::bridges(escalation, &previous[..edge("Shop.Escalate", "Shop.Merge")])
+            .is_empty(),
+        "the lower branch should not cross the split-to-Decline flow"
+    );
     let archive = &previous[edge("Shop.Review", "Shop.Archive")].points;
     let store = geom.nodes[doc
         .nodes
@@ -144,12 +149,35 @@ fn all_order_edges_have_unique_node_anchors_and_clear_paths() {
         "enter the store from its free right side instead of adding a tiny terminal kink"
     );
     let node = |id: &str| geom.nodes[doc.nodes.iter().position(|n| n.id == id).unwrap()];
+    assert!(
+        node("Shop.Decline").y < node("Shop.Escalate").y,
+        "the split target should precede the other merge branch vertically"
+    );
     assert_eq!(
         node("Shop.Merge").y,
-        (node("Shop.Pack").y + node("Shop.Decline").y) / 2.0
+        (node("Shop.Pack").y + node("Shop.Escalate").y) / 2.0
     );
     assert!(
-        node("Shop.Escalate").x + node("Shop.Escalate").w / 2.0 + 8.0 < node("Shop.Decision").x
+        previous[edge("Shop.Decision", "Shop.Decline")]
+            .points
+            .last()
+            .unwrap()
+            .1
+            < node("Shop.Escalate").y - node("Shop.Escalate").h / 2.0
+    );
+    assert_eq!(
+        ports.ends[edge("Shop.Decline", "Shop.Merge")]
+            .1
+            .unwrap()
+            .side,
+        crate::bpmn::Side::Left
+    );
+    assert_eq!(
+        ports.ends[edge("Shop.Escalate", "Shop.Merge")]
+            .1
+            .unwrap()
+            .side,
+        crate::bpmn::Side::Bottom
     );
     let policy = doc
         .nodes
@@ -263,6 +291,50 @@ fn all_order_edges_have_unique_node_anchors_and_clear_paths() {
     assert!(
         label_y < p.y + p.h - 25.0 && label_y > p.y + 30.0 + 20.0,
         "order label must clear pool border"
+    );
+}
+
+#[test]
+fn automatic_uncrossing_depends_on_topology_not_example_names() {
+    let source = include_str!("../../../examples/bpmn-order.laml")
+        .replace("Escalate", "Followup")
+        .replace("Decline", "Reject")
+        .replace("Decision", "Split")
+        .replace("Merge", "Join");
+    let doc = bpmn::parse(&source).unwrap();
+    let geom = super::super::geometry::place(&doc).unwrap();
+    let node = |id: &str| geom.nodes[doc.nodes.iter().position(|n| n.id == id).unwrap()];
+    assert!(node("Shop.Followup").y > node("Shop.Reject").y);
+    let ports = ports::assign(&doc, &geom).unwrap();
+    let edge = |from: &str, to: &str| {
+        doc.edges
+            .iter()
+            .position(|e| e.from == from && e.to == to)
+            .unwrap()
+    };
+    assert_eq!(
+        ports.ends[edge("Shop.Reject", "Shop.Join")].1.unwrap().side,
+        crate::bpmn::Side::Left
+    );
+    assert_eq!(
+        ports.ends[edge("Shop.Followup", "Shop.Join")]
+            .1
+            .unwrap()
+            .side,
+        crate::bpmn::Side::Bottom
+    );
+    bpmn::render(&doc, TextMode::System).unwrap();
+
+    let constrained = format!(
+        "{}\nlayout {{\nEscalate above Decline\n}}",
+        include_str!("../../../examples/bpmn-order.laml")
+    );
+    let doc = bpmn::parse(&constrained).unwrap();
+    let geom = super::super::geometry::place(&doc).unwrap();
+    let node = |id: &str| geom.nodes[doc.nodes.iter().position(|n| n.id == id).unwrap()];
+    assert!(
+        node("Shop.Escalate").y < node("Shop.Decline").y,
+        "authored relative layout must outrank crossing minimization"
     );
 }
 

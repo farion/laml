@@ -153,6 +153,7 @@ fn place_group(
             }
         }
     }
+    branch::uncross_merges(doc, indices, boxes);
     branch::center_merges(doc, indices, ranks, boxes);
     height = indices
         .iter()
