@@ -28,6 +28,21 @@ pub struct Point {
     pub x: f64,
     pub y: f64,
 }
+/// Image-space bridge side, independent of relation traversal direction.
+/// Predominantly horizontal crossings arch upward; vertical ones arch left.
+pub(crate) fn bridge_normal(unit: Point) -> Point {
+    let mut normal = Point {
+        x: unit.y,
+        y: -unit.x,
+    };
+    if (unit.x.abs() >= unit.y.abs() && normal.y > 0.0)
+        || (unit.x.abs() < unit.y.abs() && normal.x > 0.0)
+    {
+        normal.x = -normal.x;
+        normal.y = -normal.y;
+    }
+    normal
+}
 #[derive(Clone, Debug)]
 pub struct Label {
     pub text: String,

@@ -76,7 +76,7 @@ layout {
 | `gap=120` | Minimum empty space between boxes. |
 | `align=center`, `align=top` or `align=left` | Align on the perpendicular axis; left/right placement accepts `top`, `center`, `bottom`; above/below accepts `left`, `center`, `right`. |
 
-Parallel relations get separate routes; supported crossings draw a bridge, as above. Impossible placement or unsafe routing fails during `build`.
+Parallel relations get separate routes; supported crossings draw a bridge, as above. The bridge arches upward on predominantly horizontal relations (including the diagonal shown), or leftward on predominantly vertical ones, regardless of arrow direction. Impossible placement or unsafe routing fails during `build`.
 
 ## Shapes, containers and styling
 

@@ -37,6 +37,36 @@ fn later_relation_gets_a_bridge_and_earlier_gets_a_small_gap() {
 }
 
 #[test]
+fn crossing_showcase_bridge_rises_above_its_chord() {
+    for source in [
+        include_str!("../examples/crossing.laml").to_string(),
+        include_str!("../examples/crossing.laml").replace("second: B -> C", "second: C -> B"),
+    ] {
+        let (routes, svg) = draw(&source);
+        let bridged = routes.iter().find(|r| !r.bridges.is_empty()).unwrap();
+        let bridge = &bridged.bridges[0];
+        let pair = &bridged.points[bridge.segment..=bridge.segment + 1];
+        let length = (pair[1].x - pair[0].x).hypot(pair[1].y - pair[0].y);
+        let center_y = pair[0].y + (pair[1].y - pair[0].y) * bridge.distance / length;
+        let control_y: f64 = svg
+            .split(" Q")
+            .nth(1)
+            .unwrap()
+            .split_whitespace()
+            .next()
+            .unwrap()
+            .split(',')
+            .nth(1)
+            .unwrap()
+            .parse()
+            .unwrap();
+        assert!(
+            control_y < center_y - 2.0,
+            "bridge must arch upward regardless of arrow direction"
+        );
+    }
+}
+#[test]
 fn crlf_source_preserves_crossing_geometry() {
     let source = include_str!("../examples/crossing.laml").replace("\r\n", "\n");
     let crlf = source.replace('\n', "\r\n");

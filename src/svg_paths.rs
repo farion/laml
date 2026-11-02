@@ -1,6 +1,6 @@
 //! SVG path fragments for routes with bridge humps and underpass gaps.
 
-use crate::route::{Bridge, Point, Route};
+use crate::route::{Bridge, Point, Route, bridge_normal};
 
 #[derive(Clone, Copy)]
 enum Event<'a> {
@@ -33,10 +33,7 @@ pub fn fragments(route: &Route) -> Result<Vec<String>, String> {
             x: (pair[1].x - pair[0].x) / length,
             y: (pair[1].y - pair[0].y) / length,
         };
-        let normal = Point {
-            x: unit.y,
-            y: -unit.x,
-        };
+        let normal = bridge_normal(unit);
         let mut events: Vec<(f64, f64, Event<'_>)> = route
             .bridges
             .iter()
@@ -127,6 +124,30 @@ mod tests {
         let paths = fragments(&r).unwrap();
         assert_eq!(paths.len(), 1);
         assert!(paths[0].contains("L92.00,0.00 Q100.00,-16.00 108.00,0.00"));
+    }
+    #[test]
+    fn bridge_side_does_not_reverse_with_arrow_direction() {
+        for (from, to, control) in [
+            (p(0.0, 0.0), p(200.0, 0.0), "Q100.00,-16.00"),
+            (p(200.0, 0.0), p(0.0, 0.0), "Q100.00,-16.00"),
+            (p(0.0, 0.0), p(0.0, 200.0), "Q-16.00,100.00"),
+            (p(0.0, 200.0), p(0.0, 0.0), "Q-16.00,100.00"),
+        ] {
+            let mut route = sample();
+            route.points = vec![from, to];
+            route.bridges.push(Bridge {
+                segment: 0,
+                distance: 100.0,
+                radius: 8.0,
+                height: 8.0,
+            });
+            assert!(fragments(&route).unwrap()[0].contains(control));
+        }
+        let diagonal = bridge_normal(p(-1.0_f64 / 2.0_f64.sqrt(), 1.0_f64 / 2.0_f64.sqrt()));
+        assert!(
+            diagonal.y < 0.0 && diagonal.x < 0.0,
+            "the descending-left crossing in the showcase must arc upward"
+        );
     }
     #[test]
     fn underpass_is_two_disconnected_subpaths() {

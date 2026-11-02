@@ -93,17 +93,16 @@ fn render_svg(boxes: &[BoxNode], routes: &[Route], mode: TextMode) -> Result<Str
             let dx = pair[1].x - pair[0].x;
             let dy = pair[1].y - pair[0].y;
             let length = dx.hypot(dy);
-            let center = Point {
-                x: pair[0].x + dx * bridge.distance / length,
-                y: pair[0].y + dy * bridge.distance / length,
+            let along = bridge.distance / length;
+            let normal = crate::route::bridge_normal(Point {
+                x: dx / length,
+                y: dy / length,
+            });
+            let apex = Point {
+                x: pair[0].x + dx * along + normal.x * bridge.height * 2.0,
+                y: pair[0].y + dy * along + normal.y * bridge.height * 2.0,
             };
-            include_point(
-                Point {
-                    x: center.x + dy / length * bridge.height * 2.0,
-                    y: center.y - dx / length * bridge.height * 2.0,
-                },
-                &mut bounds,
-            );
+            include_point(apex, &mut bounds);
         }
         for label in route.label.iter().chain(route.end_labels.iter()) {
             include_point(

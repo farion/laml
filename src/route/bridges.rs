@@ -3,7 +3,7 @@
 //! form a bare intersection. Unsupported angles/spacing reject the candidate.
 
 use super::geometry::{crosses, shared_port_touch};
-use super::{Bridge, Gap, Label, Point, Route};
+use super::{Bridge, Gap, Label, Point, Route, bridge_normal};
 use crate::geometry::BoxNode;
 
 pub(super) struct BridgePlan {
@@ -23,10 +23,7 @@ fn length(a: Point, b: Point) -> f64 {
     (a.x - b.x).hypot(a.y - b.y)
 }
 fn arc_point(center: Point, direction: Point, radius: f64, height: f64, t: f64) -> Point {
-    let normal = Point {
-        x: direction.y,
-        y: -direction.x,
-    };
+    let normal = bridge_normal(direction);
     Point {
         x: center.x
             + direction.x * (2.0 * radius * (t - 0.5))
@@ -327,7 +324,7 @@ mod tests {
         assert!(planned.avoids_region(&second, 150.0, 150.0, 10.0, 10.0));
         assert_eq!(planned.events[0].1.segment, 0);
         assert_eq!(planned.events[0].2.segment, 0);
-        assert!((planned.events[0].2.distance - 108.0).abs() < 1e-6);
+        assert!((planned.events[0].2.distance - 92.0).abs() < 1e-6);
         assert!(planned.events[0].2.half <= 15.0);
     }
     #[test]
