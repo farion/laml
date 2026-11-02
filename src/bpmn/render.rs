@@ -222,22 +222,20 @@ pub fn render_with_styles(
     }
     for p in &geom.pools {
         writeln!(svg,"<rect x=\"{:.1}\" y=\"{:.1}\" width=\"{:.1}\" height=\"{:.1}\" fill=\"#f8fbff\" stroke=\"#263548\" stroke-width=\"2\"/>",p.x,p.y,p.w,p.h).unwrap();
-        if doc.direction == crate::syntax::FlowDirection::TopToBottom {
-            writeln!(
-                svg,
-                "<path d=\"M {:.1} {:.1} H {:.1}\" stroke=\"#263548\"/>",
-                p.x,
-                p.y + 30.0,
-                p.x + p.w
-            )
-            .unwrap();
-        }
+        writeln!(
+            svg,
+            "<path d=\"M {:.1} {:.1} H {:.1}\" stroke=\"#263548\"/>",
+            p.x,
+            p.y + 30.0,
+            p.x + p.w
+        )
+        .unwrap();
         for band in &p.bands {
             if !p.bands.iter().any(|b| b.id.is_some()) {
                 continue;
             }
             if doc.direction == crate::syntax::FlowDirection::TopToBottom {
-                writeln!(svg,"<rect x=\"{:.1}\" y=\"{:.1}\" width=\"{:.1}\" height=\"52\" fill=\"#edf3fa\"/><path d=\"M {:.1} {:.1} H {:.1}\" stroke=\"#263548\"/>",band.y,p.y+30.0,band.h,band.y,p.y+82.0,band.y+band.h).unwrap();
+                writeln!(svg,"<rect x=\"{:.1}\" y=\"{:.1}\" width=\"{:.1}\" height=\"30\" fill=\"#edf3fa\"/><path d=\"M {:.1} {:.1} H {:.1}\" stroke=\"#263548\"/>",band.y,p.y+30.0,band.h,band.y,p.y+60.0,band.y+band.h).unwrap();
                 writeln!(
                     svg,
                     "<path d=\"M {:.1} {:.1} V {:.1}\" stroke=\"#263548\" fill=\"none\"/>",
@@ -249,12 +247,22 @@ pub fn render_with_styles(
                 text(
                     &mut svg,
                     band.y + band.h / 2.0,
-                    p.y + 54.0,
+                    p.y + 50.0,
                     &band.label,
                     13.0,
                 );
             } else {
-                writeln!(svg,"<rect x=\"{:.1}\" y=\"{:.1}\" width=\"96\" height=\"{:.1}\" fill=\"#edf3fa\"/><path d=\"M {:.1} {:.1} H {:.1} M {:.1} {:.1} V {:.1}\" stroke=\"#263548\" fill=\"none\"/><text x=\"{:.1}\" y=\"{:.1}\" transform=\"rotate(-90 {:.1} {:.1})\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"13\">{}</text>",p.x,band.y,band.h,p.x,band.y,p.x+p.w,p.x+96.0,band.y,p.y+p.h,p.x+48.0,band.y+band.h/2.0,p.x+48.0,band.y+band.h/2.0,escape(&band.label)).unwrap();
+                writeln!(svg,"<rect x=\"{:.1}\" y=\"{:.1}\" width=\"30\" height=\"{:.1}\" fill=\"#edf3fa\"/><path d=\"M {:.1} {:.1} V {:.1}\" stroke=\"#263548\" fill=\"none\"/><text x=\"{:.1}\" y=\"{:.1}\" transform=\"rotate(-90 {:.1} {:.1})\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"13\">{}</text>",p.x,band.y,band.h,p.x+30.0,band.y,band.y+band.h,p.x+15.0,band.y+band.h/2.0,p.x+15.0,band.y+band.h/2.0,escape(&band.label)).unwrap();
+                if band.y > p.y + 30.5 {
+                    writeln!(
+                        svg,
+                        "<path d=\"M {:.1} {:.1} H {:.1}\" stroke=\"#263548\"/>",
+                        p.x,
+                        band.y,
+                        p.x + p.w
+                    )
+                    .unwrap();
+                }
             }
         }
         writeln!(

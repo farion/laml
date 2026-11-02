@@ -204,7 +204,14 @@ pub(super) fn assign(doc: &Document, geom: &Geometry) -> Result<Ports, String> {
                         Side::Left
                     }
                 } else if e.kind == EdgeKind::Sequence {
-                    if doc.direction == FlowDirection::TopToBottom {
+                    if !out
+                        && doc.direction != FlowDirection::TopToBottom
+                        && gateway(doc.nodes[other_index].kind)
+                        && b.x > q.x
+                        && ends[index].0.is_some_and(|port| port.side == Side::Bottom)
+                    {
+                        Side::Left
+                    } else if doc.direction == FlowDirection::TopToBottom {
                         if out { Side::Bottom } else { Side::Top }
                     } else if (q.y - b.y).abs() > (q.x - b.x).abs() * 1.5 {
                         if q.y > b.y { Side::Bottom } else { Side::Top }
@@ -225,9 +232,35 @@ pub(super) fn assign(doc: &Document, geom: &Geometry) -> Result<Ports, String> {
         }
         for side in [Side::Left, Side::Top, Side::Right, Side::Bottom] {
             let group: Vec<_> = sides.iter().filter(|(_, _, s)| *s == side).collect();
+            let primary = if group.len() == 2
+                && group
+                    .iter()
+                    .filter(|(i, _, _)| doc.edges[*i].kind == EdgeKind::Sequence)
+                    .count()
+                    == 1
+            {
+                group
+                    .iter()
+                    .position(|(i, _, _)| doc.edges[*i].kind == EdgeKind::Sequence)
+            } else {
+                None
+            };
             for (slot, (index, out, _)) in group.iter().enumerate() {
-                let t = if group.len() == 1 {
+                let t = if group.len() == 1 || primary == Some(slot) {
                     0.0
+                } else if primary.is_some() {
+                    let other = if *out {
+                        &doc.edges[*index].to
+                    } else {
+                        &doc.edges[*index].from
+                    };
+                    let q = geom.nodes[doc.nodes.iter().position(|n| &n.id == other).unwrap()];
+                    let delta = if matches!(side, Side::Left | Side::Right) {
+                        q.y - b.y
+                    } else {
+                        q.x - b.x
+                    };
+                    if delta >= 0.0 { 0.52 } else { -0.52 }
                 } else {
                     let spread = if node.attached.is_none()
                         && doc

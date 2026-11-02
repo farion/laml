@@ -100,7 +100,13 @@ fn path_with_bridges(
         for p in crossings {
             let pre = (p.0 - dx * 6.0, p.1 - dy * 6.0);
             let post = (p.0 + dx * 6.0, p.1 + dy * 6.0);
-            let control = (p.0 - dy * 15.0, p.1 + dx * 15.0);
+            // Bridge humps are stable in image coordinates, not traversal order:
+            // horizontal crossings arc upward; vertical crossings arc left.
+            let control = if dx.abs() > dy.abs() {
+                (p.0, p.1 - 15.0)
+            } else {
+                (p.0 - 15.0, p.1)
+            };
             let arc = format!(
                 "M {:.1} {:.1} Q {:.1} {:.1} {:.1} {:.1}",
                 pre.0, pre.1, control.0, control.1, post.0, post.1
@@ -189,4 +195,26 @@ pub(super) fn edge(
         from: e.from.clone(),
     });
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::path_with_bridges;
+    #[test]
+    fn bridges_arc_up_or_left_regardless_of_flow_direction() {
+        for points in [[(0.0, 50.0), (100.0, 50.0)], [(100.0, 50.0), (0.0, 50.0)]] {
+            assert!(
+                path_with_bridges(&points, &[(0, (50.0, 50.0))])
+                    .0
+                    .contains("Q 50.0 35.0")
+            );
+        }
+        for points in [[(50.0, 0.0), (50.0, 100.0)], [(50.0, 100.0), (50.0, 0.0)]] {
+            assert!(
+                path_with_bridges(&points, &[(0, (50.0, 50.0))])
+                    .0
+                    .contains("Q 35.0 50.0")
+            );
+        }
+    }
 }

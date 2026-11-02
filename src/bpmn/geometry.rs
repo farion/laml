@@ -66,6 +66,7 @@ fn size(doc: &Document, node: &Node) -> (f64, f64) {
         }
     }
 }
+mod aisles;
 mod branch;
 mod notes;
 mod ranks;
@@ -144,11 +145,12 @@ fn place_group(
                 boxes[i].y = center;
             }
         }
-        height = indices
-            .iter()
-            .map(|&i| boxes[i].y + boxes[i].h / 2.0 + 70.0 - top)
-            .fold(height, f64::max);
     }
+    branch::center_merges(doc, indices, ranks, boxes);
+    height = indices
+        .iter()
+        .map(|&i| boxes[i].y + boxes[i].h / 2.0 + 70.0 - top)
+        .fold(height, f64::max);
     let width = x[max_rank] - left + widths[max_rank] / 2.0 + 70.0;
     (width, height)
 }
@@ -329,6 +331,7 @@ pub(super) fn place(doc: &Document) -> Result<Geometry, String> {
             h: 38.0,
         };
     }
+    aisles::clear_lower_branches(doc, &mut boxes);
     notes::clear_boundary_exit(doc, &mut boxes);
     for (a, op, b) in &doc.layout {
         let (a, b) = (node_index(doc, a)?, node_index(doc, b)?);

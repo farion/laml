@@ -83,8 +83,59 @@ fn all_order_edges_have_unique_node_anchors_and_clear_paths() {
             );
         }
     }
+    let edge = |from: &str, to: &str| {
+        doc.edges
+            .iter()
+            .position(|e| e.from == from && e.to == to)
+            .unwrap()
+    };
+    assert_eq!(
+        previous[edge("Shop.Received", "Shop.Review")].points.len(),
+        2,
+        "arrival should connect straight into its primary task port"
+    );
+    assert_eq!(
+        previous[edge("Shop.Decision", "Shop.Decline")].points.len(),
+        3,
+        "the no branch needs only one bend when its aisle is clear"
+    );
+    assert_eq!(
+        previous[edge("Shop.Pack", "Shop.Merge")].points.len(),
+        3,
+        "pack should need only one bend into the centered join"
+    );
+    let node = |id: &str| geom.nodes[doc.nodes.iter().position(|n| n.id == id).unwrap()];
+    assert_eq!(
+        node("Shop.Merge").y,
+        (node("Shop.Pack").y + node("Shop.Decline").y) / 2.0
+    );
+    assert!(
+        node("Shop.Escalate").x + node("Shop.Escalate").w / 2.0 + 8.0 < node("Shop.Decision").x
+    );
     let svg = bpmn::render(&doc, TextMode::System).unwrap();
     assert!(svg.contains(" Q "), "crossings need bridge humps");
+    for pool in &geom.pools {
+        assert!(
+            svg.contains(&format!(
+                "M {:.1} {:.1} H {:.1}",
+                pool.x,
+                pool.y + 30.0,
+                pool.x + pool.w
+            )),
+            "all pools need an identical 30px title divider"
+        );
+    }
+    assert_eq!(
+        svg.lines()
+            .filter(|line| line.contains("fill=\"#edf3fa\""))
+            .count(),
+        2,
+        "only the two Shop lanes need a shaded lane title strip"
+    );
+    assert!(
+        svg.contains("width=\"30\""),
+        "lane title strips should match title height"
+    );
     let order = svg
         .lines()
         .find(|line| line.ends_with(">order</text>"))
