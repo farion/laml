@@ -75,6 +75,8 @@ fn size(doc: &Document, node: &Node) -> (f64, f64) {
 }
 mod aisles;
 mod branch;
+mod group;
+use group::place_group;
 mod notes;
 mod ranks;
 use ranks::ranks;
@@ -92,75 +94,6 @@ fn node_index(doc: &Document, name: &str) -> Result<usize, String> {
             "layout element '{name}' is ambiguous or unknown; use its qualified ID"
         ))
     }
-}
-fn place_group(
-    doc: &Document,
-    indices: &[usize],
-    ranks: &[usize],
-    boxes: &mut [BoxAt],
-    left: f64,
-    top: f64,
-) -> (f64, f64) {
-    let max_rank = indices.iter().map(|&i| ranks[i]).max().unwrap_or(0);
-    let mut x = vec![left; max_rank + 1];
-    let widths: Vec<_> = (0..=max_rank)
-        .map(|rank| {
-            indices
-                .iter()
-                .filter(|&&i| ranks[i] == rank)
-                .map(|&i| size(doc, &doc.nodes[i]).0)
-                .fold(70.0_f64, f64::max)
-        })
-        .collect();
-    for rank in 1..=max_rank {
-        x[rank] = x[rank - 1] + widths[rank - 1] / 2.0 + widths[rank] / 2.0 + 80.0;
-    }
-    let first_height = indices
-        .iter()
-        .map(|&i| size(doc, &doc.nodes[i]).1)
-        .fold(70.0_f64, f64::max);
-    let first_center = top + 30.0 + first_height / 2.0;
-    let mut row_bottom = vec![top + 30.0; max_rank + 1];
-    let mut occupied = vec![false; max_rank + 1];
-    let mut height = 100.0_f64;
-    for &i in indices {
-        let rank = ranks[i];
-        let (w, h) = size(doc, &doc.nodes[i]);
-        let y = if occupied[rank] {
-            row_bottom[rank] + h / 2.0
-        } else {
-            first_center
-        };
-        occupied[rank] = true;
-        boxes[i] = BoxAt {
-            x: x[rank],
-            y,
-            w,
-            h,
-        };
-        row_bottom[rank] = y + h / 2.0 + 45.0;
-        height = height.max(row_bottom[rank] - top + 25.0);
-    }
-    if let Some(center) = branch::spine_center(doc, indices, ranks, boxes) {
-        for &i in indices {
-            if indices.iter().filter(|&&j| ranks[j] == ranks[i]).count() == 1
-                && doc.edges.iter().any(|e| {
-                    e.kind == super::EdgeKind::Sequence
-                        && (e.from == doc.nodes[i].id || e.to == doc.nodes[i].id)
-                })
-            {
-                boxes[i].y = center;
-            }
-        }
-    }
-    branch::uncross_merges(doc, indices, boxes);
-    branch::center_merges(doc, indices, ranks, boxes);
-    height = indices
-        .iter()
-        .map(|&i| boxes[i].y + boxes[i].h / 2.0 + 70.0 - top)
-        .fold(height, f64::max);
-    let width = x[max_rank] - left + widths[max_rank] / 2.0 + 70.0;
-    (width, height)
 }
 fn oriented<'a>(doc: &Document, op: &'a str) -> &'a str {
     if doc.direction != crate::syntax::FlowDirection::TopToBottom {
@@ -278,7 +211,12 @@ pub(super) fn place(doc: &Document) -> Result<Geometry, String> {
             });
             band_top += h.max(125.0);
         }
-        let pool_height = band_top - top + if pool.is_some() { 16.0 } else { 0.0 };
+        let pool_height = band_top - top
+            + if pool.is_some() && doc.direction != crate::syntax::FlowDirection::TopToBottom {
+                16.0
+            } else {
+                0.0
+            };
         canvas_width = canvas_width.max(width + 40.0);
         if let Some(p) = pool {
             pools.push(PoolBox {
@@ -290,7 +228,12 @@ pub(super) fn place(doc: &Document) -> Result<Geometry, String> {
                 bands,
             });
         }
-        top += pool_height + 32.0;
+        top += pool_height
+            + if doc.direction == crate::syntax::FlowDirection::TopToBottom {
+                64.0
+            } else {
+                32.0
+            };
     }
     for (i, n) in doc
         .nodes
@@ -385,7 +328,14 @@ pub(super) fn place(doc: &Document) -> Result<Geometry, String> {
                 .iter()
                 .enumerate()
                 .filter(|(_, n)| n.pool.as_ref() == Some(id) && &n.lane == lane)
-                .map(|(i, _)| boxes[i].y + boxes[i].h / 2.0 + 35.0)
+                .map(|(i, _)| {
+                    boxes[i].y
+                        + if doc.direction == crate::syntax::FlowDirection::TopToBottom {
+                            boxes[i].w / 2.0 + 24.0
+                        } else {
+                            boxes[i].h / 2.0 + 35.0
+                        }
+                })
                 .fold(pools[pi].bands[bi].y + pools[pi].bands[bi].h, f64::max);
             let delta = (bottom - pools[pi].bands[bi].y - pools[pi].bands[bi].h).max(0.0);
             if delta < 0.1 {
@@ -421,7 +371,14 @@ pub(super) fn place(doc: &Document) -> Result<Geometry, String> {
             .iter()
             .enumerate()
             .filter(|(_, n)| n.pool.as_ref() == Some(id))
-            .map(|(i, _)| boxes[i].x + boxes[i].w / 2.0 + 50.0)
+            .map(|(i, _)| {
+                boxes[i].x
+                    + if doc.direction == crate::syntax::FlowDirection::TopToBottom {
+                        boxes[i].h / 2.0 + 50.0
+                    } else {
+                        boxes[i].w / 2.0 + 50.0
+                    }
+            })
             .fold(0.0_f64, f64::max);
         pools[pi].w = pools[pi].w.max(right - pools[pi].x);
     }

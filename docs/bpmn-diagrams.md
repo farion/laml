@@ -68,7 +68,7 @@ Review -(message@Cancellation:"Cancel")-> Cancel
 
 ## Layout and icons
 
-Automatic layout is left-to-right. Pools appear one below another, lanes are ordered to put a lane containing a start event first. `direction: top-to-bottom` under `settings` rotates the automatic flow while keeping all node labels upright: pools become side-by-side and lanes become columns. The [complete vertical source](../examples/bpmn-vertical.laml) produces this image:
+Automatic layout is left-to-right. Pools appear one below another, lanes are ordered to put a lane containing a start event first. `direction: top-to-bottom` under `settings` rotates the automatic flow while keeping all node labels upright: pools become side-by-side and lanes become columns. Column width is measured from the actual widths of its nodes; nodes are centered inside the usable lane area, beyond its header. Message flows between side-by-side pools use the aisle rather than tracing a pool border. The [complete vertical source](../examples/bpmn-vertical.laml) produces this image:
 
 ![Top-to-bottom BPMN collaboration with vertical lanes](images/bpmn-vertical.png)
 

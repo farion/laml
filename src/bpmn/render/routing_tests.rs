@@ -8,6 +8,7 @@ fn setup() -> (Document, Geometry) {
     let geom = super::super::geometry::place(&doc).unwrap();
     (doc, geom)
 }
+mod vertical;
 #[test]
 fn renamed_order_nodes_still_avoid_archive_timer_crossing() {
     let source = include_str!("../../../examples/bpmn-order.laml")

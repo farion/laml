@@ -129,6 +129,20 @@ fn score(
         }
         cost += length;
         if e.kind == EdgeKind::Message
+            && doc.direction == crate::syntax::FlowDirection::TopToBottom
+            && (a.0 - b.0).abs() < 0.05
+        {
+            for pool in &geom.pools {
+                if a.1.min(b.1) < pool.y + pool.h - 5.0
+                    && a.1.max(b.1) > pool.y + 30.0
+                    && a.0 > pool.x - 5.0
+                    && a.0 < pool.x + pool.w + 5.0
+                {
+                    cost += 1500.0;
+                }
+            }
+        }
+        if e.kind == EdgeKind::Message
             && doc.direction != crate::syntax::FlowDirection::TopToBottom
             && (a.1 - b.1).abs() < 0.05
         {
