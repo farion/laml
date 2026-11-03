@@ -13,6 +13,7 @@ struct DescriptorPaint<'a> {
     color: &'a str,
     stroke: f64,
     font: f64,
+    modern: bool,
 }
 
 fn descriptor(
@@ -27,6 +28,7 @@ fn descriptor(
         color,
         stroke,
         font,
+        modern,
     } = paint;
     let tab = label_width_at(title, font)? + 22.0;
     if tab + 12.0 > width {
@@ -34,8 +36,22 @@ fn descriptor(
     }
     let right = left + tab;
     let tab_height = descriptor_height(font);
-    writeln!(svg, "<path d=\"M{left:.2},{top:.2} H{right:.2} v{:.2} l-9,9 H{left:.2} Z\" fill=\"white\" stroke=\"{}\" stroke-width=\"{stroke:.2}\" data-frame-descriptor=\"{}\" />",
-        tab_height - 9.0, escape(color), escape(title)).unwrap();
+    let shape = if modern {
+        format!(
+            "M{:.2},{top:.2} H{right:.2} v{:.2} l-9,9 H{left:.2} V{:.2} Q{left:.2},{top:.2} {:.2},{top:.2} Z",
+            left + 7.0,
+            tab_height - 9.0,
+            top + 7.0,
+            left + 7.0
+        )
+    } else {
+        format!(
+            "M{left:.2},{top:.2} H{right:.2} v{:.2} l-9,9 H{left:.2} Z",
+            tab_height - 9.0
+        )
+    };
+    writeln!(svg, "<path d=\"{shape}\" fill=\"white\" stroke=\"{}\" stroke-width=\"{stroke:.2}\" data-frame-descriptor=\"{}\" />",
+        escape(color), escape(title)).unwrap();
     writeln!(svg, "<text x=\"{:.2}\" y=\"{:.2}\" font-family=\"Inter\" font-size=\"{font:.2}\" fill=\"{}\">{}</text>",
         left + 8.0, top + font + 4.0, escape(color), escape(title)).unwrap();
     Ok(tab)
@@ -54,7 +70,8 @@ pub(super) fn fragment(
 ) -> Result<(), String> {
     let target = operator_name(&frame.operator);
     let paint = styles::fragment(sheet, target, frame.id.as_deref());
-    writeln!(svg, "<rect x=\"{left:.2}\" y=\"{:.2}\" width=\"{width:.2}\" height=\"{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" data-fragment-operator=\"{}\" data-fragment-id=\"{}\" />",
+    let radius = if sheet.theme.modern() { 7.0 } else { 0.0 };
+    writeln!(svg, "<rect x=\"{left:.2}\" y=\"{:.2}\" width=\"{width:.2}\" height=\"{:.2}\" rx=\"{radius:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" data-fragment-operator=\"{}\" data-fragment-id=\"{}\" />",
         frame.top, frame.bottom - frame.top, paint.fill, paint.border, paint.border_width,
         escape(target), escape(frame.id.as_deref().unwrap_or(""))).unwrap();
     let tab = descriptor(
@@ -67,6 +84,7 @@ pub(super) fn fragment(
             color: &paint.border,
             stroke: paint.border_width,
             font: paint.font_size,
+            modern: sheet.theme.modern(),
         },
     )?;
     if !frame.guard.is_empty() {
@@ -101,7 +119,8 @@ pub(super) fn reference(
     let top = y - 22.0;
     let paint = styles::fragment(sheet, "ref", None);
     let height = reference_height(sheet);
-    writeln!(svg, "<rect x=\"{left:.2}\" y=\"{top:.2}\" width=\"{width:.2}\" height=\"{height:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
+    let radius = if sheet.theme.modern() { 7.0 } else { 0.0 };
+    writeln!(svg, "<rect x=\"{left:.2}\" y=\"{top:.2}\" width=\"{width:.2}\" height=\"{height:.2}\" rx=\"{radius:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
         paint.fill, paint.border, paint.border_width).unwrap();
     descriptor(
         svg,
@@ -113,6 +132,7 @@ pub(super) fn reference(
             color: &paint.border,
             stroke: paint.border_width,
             font: paint.font_size,
+            modern: sheet.theme.modern(),
         },
     )?;
     writeln!(svg, "<text x=\"{:.2}\" y=\"{:.2}\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\">{}</text>",

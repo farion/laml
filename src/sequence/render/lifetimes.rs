@@ -143,7 +143,8 @@ pub(super) fn draw_heads(
             *bottom,
         )? {
             let Some(head_y) = segment.head else { continue };
-            writeln!(svg, "<rect x=\"{x:.2}\" y=\"{head_y:.2}\" width=\"{:.2}\" height=\"{header_height:.2}\" fill=\"{}\" stroke=\"{}\" data-participant=\"{}\" />",
+            let radius = if sheet.theme.modern() { 8.0 } else { 0.0 };
+            writeln!(svg, "<rect x=\"{x:.2}\" y=\"{head_y:.2}\" width=\"{:.2}\" height=\"{header_height:.2}\" rx=\"{radius:.2}\" fill=\"{}\" stroke=\"{}\" data-participant=\"{}\" />",
                 widths[i], paint.fill, paint.border, styles::escape(&participant.id)).unwrap();
             styled_text(
                 svg,

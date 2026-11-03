@@ -101,18 +101,7 @@ fn expanded_gap_moves_following_notes_continuations_and_fragment_boundary() {
         .find(|line| line.contains("data-fragment-operator=\"alt\""))
         .unwrap();
     let first = coordinate(&svg, "first", "receive");
-    let note_y: f64 = note
-        .split(" d=\"M")
-        .nth(1)
-        .unwrap()
-        .split(',')
-        .nth(1)
-        .unwrap()
-        .split_whitespace()
-        .next()
-        .unwrap()
-        .parse()
-        .unwrap();
+    let note_y = attr(note, "y");
     assert!(note_y > first);
     assert!(attr(cont, "y") > note_y);
     assert!(attr(frame, "y") + attr(frame, "height") > attr(cont, "y"));

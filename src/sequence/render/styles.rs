@@ -37,6 +37,9 @@ fn color(styles: &StyleSheet, element: &Element<'_>, key: &str, default: &str) -
             .colors(base.unwrap_or(styles.theme.default_base(role)));
         return match key {
             "fill" if default != "none" => paint.fill,
+            "border-color" if matches!(element, Element::Note { .. }) && styles.theme.modern() => {
+                paint.divider
+            }
             "border-color" => paint.border,
             "color"
                 if matches!(
@@ -168,6 +171,15 @@ pub(super) fn continuation(styles: &StyleSheet, id: &str) -> BoxPaint {
         border_width: size(styles, &element, "border-width", 1.0),
         font_size: size(styles, &element, "font-size", 14.0),
     }
+}
+
+pub(super) fn note_accent(styles: &StyleSheet, id: &str) -> String {
+    let element = Element::Note { id };
+    let base = match styles.get(&element, "base-color").map(|decl| &decl.value) {
+        Some(Value::Color(base)) => base.as_str(),
+        _ => styles.theme.default_base(crate::syntax::NodeKind::Note),
+    };
+    styles.theme.colors(base).border
 }
 
 pub(super) fn note(styles: &StyleSheet, id: &str) -> BoxPaint {

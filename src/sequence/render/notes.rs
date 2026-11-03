@@ -138,10 +138,19 @@ pub(super) fn draw(
         } else {
             left(diagram, centers, anchors, placement, width)?
         };
-        let fold = 12.0;
-        writeln!(svg, "<path d=\"M{x:.2},{top:.2} h{:.2} l{fold:.2},{fold:.2} v{:.2} h-{width:.2} Z M{:.2},{top:.2} v{fold:.2} h{fold:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" data-note=\"{}\" />",
-            width - fold, height - fold, x + width - fold,
-            escape(&paint.fill), escape(&paint.border), paint.border_width, escape(&note.id)).unwrap();
+        if sheet.theme.modern() {
+            let radius = 8.0;
+            writeln!(svg, "<rect x=\"{x:.2}\" y=\"{top:.2}\" width=\"{width:.2}\" height=\"{height:.2}\" rx=\"{radius:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" data-note=\"{}\" />",
+                escape(&paint.fill), escape(&paint.border), paint.border_width, escape(&note.id)).unwrap();
+            writeln!(svg, "<clipPath id=\"laml-seq-note-{index}\"><rect x=\"{x:.2}\" y=\"{top:.2}\" width=\"{width:.2}\" height=\"{height:.2}\" rx=\"{radius:.2}\" /></clipPath>").unwrap();
+            writeln!(svg, "<rect x=\"{x:.2}\" y=\"{top:.2}\" width=\"6\" height=\"{height:.2}\" fill=\"{}\" clip-path=\"url(#laml-seq-note-{index})\" data-sequence-note-accent=\"{}\" />",
+                styles::note_accent(sheet, &note.id), escape(&note.id)).unwrap();
+        } else {
+            let fold = 12.0;
+            writeln!(svg, "<path d=\"M{x:.2},{top:.2} h{:.2} l{fold:.2},{fold:.2} v{:.2} h-{width:.2} Z M{:.2},{top:.2} v{fold:.2} h{fold:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" data-note=\"{}\" />",
+                width - fold, height - fold, x + width - fold,
+                escape(&paint.fill), escape(&paint.border), paint.border_width, escape(&note.id)).unwrap();
+        }
         for (line, value) in note.text.split('\n').enumerate() {
             writeln!(svg, "<text x=\"{:.2}\" y=\"{:.2}\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\">{}</text>",
                 x + 16.0, top + 11.0 + paint.font_size + line as f64 * paint.font_size * 1.25,

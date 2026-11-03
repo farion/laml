@@ -56,7 +56,14 @@ pub(super) fn draw(
         let lane = from_x.max(to_x) + 25.0 + index as f64 * 9.0;
         writeln!(svg, "<path d=\"M{from_x:.2},{from_y:.2} H{lane:.2} V{to_y:.2} H{to_x:.2}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\" stroke-dasharray=\"2 3\" data-general-ordering=\"true\" />",
             paint.color, paint.width).unwrap();
-        arrows::draw(svg, (to_x, to_y), (to_x - lane, 0.0), true, &paint.color);
+        arrows::draw(
+            svg,
+            (to_x, to_y),
+            (to_x - lane, 0.0),
+            true,
+            &paint.color,
+            sheet.theme.modern(),
+        );
     }
     Ok(())
 }

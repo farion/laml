@@ -38,6 +38,7 @@ pub(super) fn draw(
                 (-44.0, 0.0),
                 m.kind == MessageKind::Sync || m.filled_reply,
                 &paint.color,
+                sheet.theme.modern(),
             );
         }
     } else {
@@ -49,6 +50,7 @@ pub(super) fn draw(
                 (end - start, receive_y - y),
                 m.kind == MessageKind::Sync || m.filled_reply,
                 &paint.color,
+                sheet.theme.modern(),
             );
         }
     }
@@ -81,14 +83,18 @@ pub(super) fn draw(
             (start + end) / 2.0
         };
         let lines = label.split('\n').count();
-        styled_text(
-            svg,
-            x,
-            (y + receive_y) / 2.0 - 9.0 - paint.font_size * 1.25 * (lines - 1) as f64,
-            label,
-            paint.font_size,
-            &paint.color,
-        );
+        let baseline = (y + receive_y) / 2.0 - 9.0 - paint.font_size * 1.25 * (lines - 1) as f64;
+        if sheet.theme.modern() {
+            let width = label_width_at(label, paint.font_size)? + 10.0;
+            let height = paint.font_size * 1.25 * (lines - 1) as f64 + paint.font_size * 1.2 + 4.0;
+            let fill = sheet
+                .theme
+                .colors(sheet.theme.default_base(crate::syntax::NodeKind::Package))
+                .fill;
+            writeln!(svg, "<rect data-message-pill=\"true\" x=\"{:.2}\" y=\"{:.2}\" width=\"{width:.2}\" height=\"{height:.2}\" rx=\"6\" fill=\"{fill}\" />",
+                x-width/2.0,baseline-paint.font_size-2.0).unwrap();
+        }
+        styled_text(svg, x, baseline, label, paint.font_size, &paint.color);
     }
     Ok(())
 }

@@ -101,7 +101,7 @@ layout {
 
 ![Note beside the API and an invariant beside its activation](../images/showcase-sequence.png)
 
-[Complete source](../../examples/showcase-sequence.laml). Name a note in `semantics` and place it in `layout`; `right of` places it beside a participant without a connector. For time and duration annotations, see the [annotation example](../../examples/sequence-annotations.laml).
+[Complete source](../../examples/showcase-sequence.laml). With the default `modern` theme, participant heads, activations and fragment frames have softened corners; message labels use subtle pills, and notes use the same full-height accent card as generic diagrams. `plain` retains the previous outlines. Name a note in `semantics` and place it in `layout`; `right of` places it beside a participant without a connector. For time and duration annotations, see the [annotation example](../../examples/sequence-annotations.laml).
 
 | Fragment | Use |
 |---|---|

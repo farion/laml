@@ -228,7 +228,17 @@ pub(super) fn corner_radius(
         if matches!(kind, NodeKind::State | NodeKind::ActivityAction) {
             14.0
         } else if styles.theme.modern()
-            && matches!(kind, NodeKind::Generic | NodeKind::Note | NodeKind::Package)
+            && !matches!(
+                kind,
+                NodeKind::InteractionUse
+                    | NodeKind::ActivityObject
+                    | NodeKind::UseCase
+                    | NodeKind::UseCaseActor
+                    | NodeKind::UseCaseSystem
+                    | NodeKind::DeploymentNode
+                    | NodeKind::Device
+                    | NodeKind::ExecutionEnvironment
+            )
         {
             8.0
         } else {

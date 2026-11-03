@@ -260,7 +260,7 @@ fn generic_shapes_route_to_visible_ellipse_and_diamond_outlines() {
 }
 
 #[test]
-fn notes_render_folded_shape_and_annotate_nodes_in_both_uml_types() {
+fn modern_notes_render_as_accent_cards_and_annotate_nodes_in_both_uml_types() {
     for (kind, named) in [
         ("class", "class Kunde"),
         ("object", "object kunde1(of=Kunde)"),
@@ -272,7 +272,8 @@ fn notes_render_folded_shape_and_annotate_nodes_in_both_uml_types() {
         let svg = image(&source);
         assert!(svg.contains("Nur aktive Kunden"));
         assert!(svg.contains("stroke-dasharray=\"6 4\""));
-        assert!(svg.contains("<path d=\"M"));
+        assert!(svg.contains("data-note-card=\"true\""));
+        assert!(svg.contains("data-note-accent=\"true\""));
         assert!(export::png(&svg).is_ok());
     }
     let bad = "settings {\ntype: class\n}\nsemantics {\nA\nB\nA .. B\n}\n";

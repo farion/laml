@@ -447,7 +447,7 @@ fn reference_frame_draws_label_without_loading_another_file() {
     let svg = render(&diagram, TextMode::System).unwrap();
     assert!(svg.contains("data-frame-descriptor=\"ref\""));
     assert!(svg.contains("Check inventory"));
-    assert!(svg.contains("height=\"50.00\" fill=\"none\""));
+    assert!(svg.contains("height=\"50.00\" rx=\"7.00\" fill=\"none\""));
 }
 
 #[test]

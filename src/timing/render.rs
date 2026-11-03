@@ -223,8 +223,9 @@ pub fn render(doc: &Document, sheet: &StyleSheet, mode: TextMode) -> Result<Stri
     let title = format!("sd {}", doc.interaction);
     let right = (end_x + 28.0).max(left + measure(&title, 13.0)? + 24.0);
     let bottom = axis_y + 58.0;
+    let radius = if sheet.theme.modern() { 8.0 } else { 0.0 };
     let frame = format!(
-        "<g data-interaction=\"{}\"><rect x=\"{left:.2}\" y=\"24\" width=\"{:.2}\" height=\"{:.2}\" fill=\"none\" stroke=\"#395373\" /><text x=\"{:.2}\" y=\"43\" font-family=\"Inter\" font-size=\"13\" fill=\"#17212e\">{}</text></g>\n",
+        "<g data-interaction=\"{}\"><rect x=\"{left:.2}\" y=\"24\" width=\"{:.2}\" height=\"{:.2}\" rx=\"{radius:.2}\" fill=\"none\" stroke=\"#395373\" /><text x=\"{:.2}\" y=\"43\" font-family=\"Inter\" font-size=\"13\" fill=\"#17212e\">{}</text></g>\n",
         escape(&doc.interaction),
         right - left,
         bottom - 24.0,

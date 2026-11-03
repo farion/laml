@@ -53,7 +53,7 @@ pub struct BoxNode {
     pub divider_color: String,
     pub border_width: f64,
     pub radius: f64,
-    /// GNE note cards use the rectangular contour; UML/plain notes retain the fold.
+    /// Modern notes use the rectangular contour; plain notes retain the fold.
     pub note_card: bool,
     pub line: usize,
 }
@@ -491,9 +491,7 @@ pub fn measure_node(
         accent_color: super::node_notation::accent_paint(palette.as_ref()),
         border_width: number(styles, &element, "border-width", 1.0),
         radius: super::node_notation::corner_radius(node.kind, styles, &element)?,
-        note_card: diagram_type == DiagramType::Generic
-            && shape == NodeShape::Note
-            && styles.theme.modern(),
+        note_card: shape == NodeShape::Note && styles.theme.modern(),
         line: node.line,
     })
 }
