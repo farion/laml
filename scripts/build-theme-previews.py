@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Build transparent modern and modern-dark PNGs for every .laml example.
+"""Build transparent modern/light and modern-dark PNGs for every example.
 
 Usage: python3 scripts/build-theme-previews.py [path/to/laml]
-Temporary source files are created beside the original, preserving relative
-style imports and fonts. The original sources are never changed.
+Temporary sources sit beside the originals so imports and fonts stay relative.
+The original sources are never changed.
 """
 
+import colorsys
 from pathlib import Path
 import re
 import subprocess
@@ -19,53 +20,47 @@ SETTINGS = re.compile(r"(?m)^settings\s*\{")
 PROPERTY = re.compile(r"(?m)^\s*(theme|background)\s*:[^\n]*\n?")
 STYLE_RULE = re.compile(r"(?m)^([ \t]+)([^{}\n]+)\{([^{}]*)\}")
 FILL = re.compile(r"(?m)^\s*fill\s*:\s*([^\n]+)")
+HEX_PAINT = re.compile(r'(?m)^(\s*(?:color|border-color)\s*:\s*")(#[0-9a-fA-F]{6})')
+STROKE = re.compile(r'(?m)^(\s*color\s*:\s*")(#[0-9a-fA-F]{6})')
 
 
-def light_fill(value: str) -> bool:
+def rgb_of(value: str) -> list[int] | None:
     value = value.strip().strip('"')
     if re.fullmatch(r"#[0-9a-fA-F]{6}", value):
-        rgb = [int(value[i:i + 2], 16) for i in (1, 3, 5)]
-    elif match := re.fullmatch(r"rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)", value):
-        rgb = [int(channel) for channel in match.groups()]
-    else:
-        return False
-    return sum(rgb) / 3 > 180
+        return [int(value[i:i + 2], 16) for i in (1, 3, 5)]
+    if match := re.fullmatch(r"rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)", value):
+        return [int(channel) for channel in match.groups()]
+    return None
 
 
-def contrast_for_dark_theme(source: str) -> str:
-    # Explicit light LSS fills remain light in dark themes. Give those shapes
-    # their matching dark text; otherwise dark-theme default text disappears.
-    def readable(match: re.Match[str]) -> str:
+def brighten(paint: re.Match[str]) -> str:
+    rgb = rgb_of(paint[2])
+    if sum(rgb) / 3 >= 145:
+        return paint[0]
+    lighter = "#" + "".join(f"{round(0.45 * c + 0.55 * 255):02x}" for c in rgb)
+    return paint[1] + lighter
+
+
+def adapt_dark_paints(source: str) -> str:
+    # Explicit LSS paints take precedence over theme defaults. Adapt them in
+    # temporary dark sources instead of publishing pale boxes on a dark page.
+    def recolor(match: re.Match[str]) -> str:
         indent, selector, declarations = match.groups()
-        if not selector.strip().startswith(("node", "note", "fragment", "continuation")):
-            return match.group()
+        kind = selector.strip()
         fill = FILL.search(declarations)
-        if not fill or not light_fill(fill[1]) or re.search(r"(?m)^\s*color\s*:", declarations):
-            return match.group()
-        return f"{indent}{selector}{{{declarations}{indent}    color: \"#243040\"\n{indent}}}"
-
-    source = STYLE_RULE.sub(readable, source)
-
-    def readable_strokes(match: re.Match[str]) -> str:
-        indent, selector, declarations = match.groups()
-        if not (selector.strip().startswith("relation") or " lifeline" in selector):
-            return match.group()
-
-        def lighten(color: re.Match[str]) -> str:
-            rgb = [int(color[2][i:i + 2], 16) for i in (1, 3, 5)]
-            if sum(rgb) / 3 >= 145:
-                return color[0]
-            lighter = "#" + "".join(f"{round(0.45 * c + 0.55 * 255):02x}" for c in rgb)
-            return color[1] + lighter
-
-        declarations = re.sub(
-            r'(?m)^(\s*color\s*:\s*")(#[0-9a-fA-F]{6})',
-            lighten,
-            declarations,
-        )
+        if kind.startswith(("node", "note", "fragment", "continuation")) and fill:
+            rgb = rgb_of(fill[1])
+            if rgb and sum(rgb) / 3 > 180:
+                hue, _, saturation = colorsys.rgb_to_hls(*(c / 255 for c in rgb))
+                shade = colorsys.hls_to_rgb(hue, 0.17, min(saturation, 0.42))
+                dark = "#" + "".join(f"{round(c * 255):02x}" for c in shade)
+                declarations = declarations.replace(fill[1], f'"{dark}"', 1)
+                declarations = HEX_PAINT.sub(brighten, declarations)
+        if kind.startswith("relation") or " lifeline" in kind:
+            declarations = STROKE.sub(brighten, declarations)
         return f"{indent}{selector}{{{declarations}}}"
 
-    return STYLE_RULE.sub(readable_strokes, source)
+    return STYLE_RULE.sub(recolor, source)
 
 
 def variant(source: str, theme: str) -> str:
@@ -73,13 +68,13 @@ def variant(source: str, theme: str) -> str:
     match = SETTINGS.search(source)
     if match is None:
         result = "settings {\n" + overrides + "}\n" + source
-        return contrast_for_dark_theme(result) if theme == "modern-dark" else result
-    end = source.find("}", match.end())
-    if end < 0:
-        raise ValueError("unterminated settings block")
-    body = PROPERTY.sub("", source[match.end():end])
-    result = source[:match.end()] + "\n" + overrides + body.lstrip("\n") + source[end:]
-    return contrast_for_dark_theme(result) if theme == "modern-dark" else result
+    else:
+        end = source.find("}", match.end())
+        if end < 0:
+            raise ValueError("unterminated settings block")
+        body = PROPERTY.sub("", source[match.end():end])
+        result = source[:match.end()] + "\n" + overrides + body.lstrip("\n") + source[end:]
+    return adapt_dark_paints(result) if theme == "modern-dark" else result
 
 
 def main() -> int:

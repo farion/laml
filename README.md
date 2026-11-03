@@ -200,7 +200,7 @@ Six themes come in three light/dark pairs. The previews below have **transparent
 
 [Modern mono source](examples/theme-modern-mono.laml) · [Modern mono dark source](examples/theme-modern-mono-dark.laml)
 
-To render any example for both GitHub appearances, run `python3 scripts/build-theme-previews.py` after `cargo build --release`. This writes `docs/images/<name>-modern.png` and `docs/images/<name>-modern-dark.png` for every `.laml` source without changing that source. The dark export gives explicit pale fills readable dark text and brightens explicit dark relation strokes in its temporary source. GitHub selects the image with `<picture>` and `prefers-color-scheme`; the original example still builds normally with its own settings.
+To render any example for both GitHub appearances, run `python3 scripts/build-theme-previews.py` after `cargo build --release`. This writes `docs/images/<name>-modern.png` and `docs/images/<name>-modern-dark.png` for every `.laml` source without changing that source. The dark export darkens explicit pale fills and brightens their dark borders and relation strokes in its temporary source, so authored light styling remains legible. GitHub selects the image with `<picture>` and `prefers-color-scheme`; the original example still builds normally with its own settings.
 
 ## Features
 
