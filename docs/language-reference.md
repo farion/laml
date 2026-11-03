@@ -1,6 +1,6 @@
 # LAML language reference
 
-A `.laml` file describes one diagram. `laml build FILE.laml [OUTPUT.svg|OUTPUT.png|OUTPUT.pdf] [--svg-text=embedded|system|paths]` produces one image or reports an error; the default output path replaces `.laml` with `.svg`. `laml check FILE.laml` validates syntax, references, imported styles, and directional placement cycles without building geometry or an image. `laml --version` reports the installed version; `laml update` explicitly downloads a verified newer release and updates the current executable.
+A `.laml` file describes one diagram. `laml import SOURCE [OUTPUT] [--from=FORMAT] [--force]` converts Mermaid, PlantUML or Structurizr sources into `.laml` files; [import syntax and examples](importing.md). `laml build FILE.laml [OUTPUT.svg|OUTPUT.png|OUTPUT.pdf] [--svg-text=embedded|system|paths]` produces one image or reports an error; the default output path replaces `.laml` with `.svg`. `laml check FILE.laml` validates syntax, references, imported styles, and directional placement cycles without building geometry or an image. `laml --version` reports the installed version; `laml update` explicitly downloads a verified newer release and updates the current executable.
 
 ## Document shape and identifiers
 

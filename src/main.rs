@@ -20,13 +20,14 @@ fn main() {
 }
 
 fn usage() -> String {
-    "usage: laml [--version | update | mcp | icons [FILTER] | check FILE.laml | build FILE.laml [OUTPUT.svg|OUTPUT.png|OUTPUT.pdf] [--svg-text=embedded|system|paths]]".into()
+    "usage: laml [--version | update | mcp | icons [FILTER] | import SOURCE [OUTPUT] [--from=mermaid|plantuml|structurizr-dsl|structurizr-json] [--force] | check FILE.laml | build FILE.laml [OUTPUT.svg|OUTPUT.png|OUTPUT.pdf] [--svg-text=embedded|system|paths]]".into()
 }
 
 fn run() -> Result<(), String> {
     let args: Vec<_> = env::args().skip(1).collect();
     match args.as_slice() {
         [command] if command == "mcp" => return mcp::run(),
+        [command, ..] if command == "import" => return laml::import::cli::run(&args[1..]),
         [version] if version == "--version" => {
             println!("laml {}", laml::update::VERSION);
             return Ok(());

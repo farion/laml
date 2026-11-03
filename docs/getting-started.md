@@ -16,6 +16,8 @@ irm https://raw.githubusercontent.com/farion/laml/main/scripts/install.ps1 | iex
 
 The installer checks downloaded archives against `SHA256SUMS`. For environments requiring signed provenance, apply your organization's verification policy before executing downloaded scripts. On Windows, open a new terminal after installation. Verify the installation with `laml --version`; run `laml update` when you choose to install a newer release.
 
+For diagrams already written in Mermaid, PlantUML or Structurizr, [import them as editable LAML sources](importing.md).
+
 ## First diagram
 
 Save this as `first.laml` (also available as [a complete source file](../examples/gne-basic.laml)):

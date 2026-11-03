@@ -17,6 +17,7 @@ Layout and Markup Language
 - [Basic examples](#basic-examples)
 - [Themes](#themes)
 - [Features and diagram types](#features)
+- [Import existing diagrams](#import-existing-diagrams)
 - [AI agents via MCP](#ai-agents-via-mcp)
 - [License](#license)
 
@@ -262,9 +263,22 @@ LAML supports **20 diagram types**: Generic node-edge, 14 UML types, four C4 lev
 - LSS styling with selectors, classes, local imports and per-element overrides.
 - SVG with selectable text by default, PNG and vector PDF.
 - `laml check` for source validation; `laml build` for measured geometry and image output.
+- `laml import` converts Mermaid, PlantUML and Structurizr diagram sources into editable LAML. [Import guide](docs/importing.md).
 - All 1,512 bundled Phosphor regular icons are discoverable with `laml icons [FILTER]`.
 
 [Language reference](docs/language-reference.md) · [Behavioral contract](docs/language-definition.md)
+
+## Import existing diagrams
+
+Convert Mermaid flowcharts, class and sequence diagrams; PlantUML class and sequence diagrams; or Structurizr C4 views into `.laml` source. For example:
+
+```sh
+laml import architecture.mmd
+laml build architecture.laml architecture.svg
+laml import workspace.dsl diagrams/
+```
+
+Structurizr produces one `.laml` file per view. The importer retains the source file and reports constructs requiring a separate mapping. See [import commands and supported syntax](docs/importing.md). These commands require a LAML binary containing `laml import`.
 
 ## AI agents via MCP
 
