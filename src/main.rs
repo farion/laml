@@ -1,5 +1,7 @@
 //! CLI for validation and SVG, PNG, and PDF builds.
 
+mod mcp;
+
 use laml::geometry::place;
 use laml::layout::validate_ordering;
 use laml::parser::parse;
@@ -18,12 +20,13 @@ fn main() {
 }
 
 fn usage() -> String {
-    "usage: laml [--version | update | icons [FILTER] | check FILE.laml | build FILE.laml [OUTPUT.svg|OUTPUT.png|OUTPUT.pdf] [--svg-text=embedded|system|paths]]".into()
+    "usage: laml [--version | update | mcp | icons [FILTER] | check FILE.laml | build FILE.laml [OUTPUT.svg|OUTPUT.png|OUTPUT.pdf] [--svg-text=embedded|system|paths]]".into()
 }
 
 fn run() -> Result<(), String> {
     let args: Vec<_> = env::args().skip(1).collect();
     match args.as_slice() {
+        [command] if command == "mcp" => return mcp::run(),
         [version] if version == "--version" => {
             println!("laml {}", laml::update::VERSION);
             return Ok(());

@@ -48,7 +48,7 @@ irm https://raw.githubusercontent.com/farion/laml/main/scripts/install.ps1 | iex
 
 Installers select the platform, verify the downloaded archive against `SHA256SUMS`, and install without administrator privileges. Checksums are not digital signatures; inspect downloaded scripts before piping them to a shell if required by your security policy. Alternatively, use the archives from the published releases.
 
-**Next:** [Getting started — first build, core concepts, and all diagram types](docs/getting-started.md).
+**Next:** [Getting started — first build, core concepts, and all diagram types](docs/getting-started.md). To create and render diagrams from a local coding agent, see [OpenCode and Claude Code via MCP](docs/mcp.md) (requires a LAML build with `laml mcp`).
 
 ## Basic examples
 
