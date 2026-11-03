@@ -60,7 +60,12 @@ fn entry_points_link_to_all_diagram_guides() {
         .0;
     assert!(readme.starts_with("# LAML\n\nLayout and Markup Language\n"));
     for name in ["generic", "uml", "bpmn", "c4"] {
-        assert!(readme.contains(&format!("docs/images/badge-{name}.svg")));
+        for suffix in ["", "-dark"] {
+            let filename = format!("docs/images/badge-{name}{suffix}.svg");
+            assert!(readme.contains(&filename));
+            let badge = fs::read_to_string(root.join(filename)).unwrap();
+            assert!(badge.contains("M0 0h12v40H0z"), "{name}{suffix}: inset accent");
+        }
     }
     assert_eq!(features.matches("- [").count(), GUIDES.len() + 5);
     for heading in ["Generic", "UML", "C4", "BPMN"] {

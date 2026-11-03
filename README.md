@@ -2,7 +2,12 @@
 
 Layout and Markup Language
 
-[![Generic diagrams](docs/images/badge-generic.svg)](docs/diagrams/gne.md) [![UML diagrams](docs/images/badge-uml.svg)](#uml) [![BPMN diagrams](docs/images/badge-bpmn.svg)](#bpmn) [![C4 diagrams](docs/images/badge-c4.svg)](#c4)
+<p>
+  <a href="docs/diagrams/gne.md"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/badge-generic-dark.svg"><img src="docs/images/badge-generic.svg" alt="Generic diagrams"></picture></a>
+  <a href="#uml"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/badge-uml-dark.svg"><img src="docs/images/badge-uml.svg" alt="UML diagrams"></picture></a>
+  <a href="#bpmn"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/badge-bpmn-dark.svg"><img src="docs/images/badge-bpmn.svg" alt="BPMN diagrams"></picture></a>
+  <a href="#c4"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/badge-c4-dark.svg"><img src="docs/images/badge-c4.svg" alt="C4 diagrams"></picture></a>
+</p>
 
 ## LAML - Diagrams for People
 
