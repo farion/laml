@@ -1,4 +1,3 @@
-#[allow(unused_imports)]
 mod tests {
     use laml::{parser, syntax::DiagramType};
 
@@ -62,6 +61,54 @@ mod tests {
             parser::parse(&context.replace(
                 "    Customer -> Shop : Places orders",
                 "    UnknownNode\n    Customer -> Shop : Places orders"
+            ))
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn banking_examples_render_classic_c4_notation() {
+        use laml::{
+            geometry::place,
+            route::route,
+            styles::load,
+            svg::{TextMode, c4::render},
+        };
+        use std::path::Path;
+        for view in ["container", "component"] {
+            let path = format!("examples/c4-banking-{view}.laml");
+            let source = std::fs::read_to_string(&path).unwrap();
+            let graph = parser::parse(&source).unwrap();
+            let styles = load(&graph, Path::new(&path)).unwrap();
+            let boxes = place(&graph, &styles).unwrap();
+            let routes = route(&graph, &boxes, &styles).unwrap();
+            let svg = render(
+                &boxes,
+                &routes,
+                TextMode::System,
+                graph.settings.theme,
+                &graph,
+            )
+            .unwrap();
+            assert!(svg.contains("View:"));
+            assert!(svg.contains("Key:"));
+            assert!(svg.contains("stroke-dasharray"));
+            assert!(svg.contains("<ellipse"));
+            assert!(svg.contains("[Container:"));
+        }
+    }
+
+    #[test]
+    fn rejects_invalid_c4_appearances() {
+        let source = include_str!("../examples/c4-banking-container.laml");
+        assert!(
+            parser::parse(&source.replace("appearance=\"browser\"", "appearance=\"wheel\""))
+                .is_err()
+        );
+        assert!(
+            parser::parse(&source.replace(
+                "appearance=\"browser\"",
+                "appearance=\"browser\"; appearance=\"folder\""
             ))
             .is_err()
         );

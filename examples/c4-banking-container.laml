@@ -1,0 +1,35 @@
+// Adapted from the publicly documented Internet Banking System C4 example.
+// Simon Brown, c4model.com/example/ — CC BY 4.0. Descriptions are paraphrased.
+settings {
+    type: c4-container
+    scope: Banking
+}
+semantics {
+    person Customer(label="Personal Banking Customer"; description="Uses online banking")
+    system Banking(label="Internet Banking System"; description="Digital banking for customers") {
+        container Assets(label="Static Content"; technology="HTML, CSS, JavaScript"; appearance="folder"; description="Delivers browser assets")
+        container UI(label="UI"; technology="Angular"; appearance="browser"; description="Displays balances and payments")
+        container Backend(label="Backend"; technology="Java / Spring"; appearance="terminal"; description="Exposes banking APIs")
+        container Statements(label="Statement Store"; technology="Amazon S3"; appearance="bucket"; description="Stores PDF statements")
+        container Database(label="Database"; technology="MySQL"; appearance="database"; description="Stores customer and account data")
+    }
+    external system Core(label="Core Banking System"; description="Processes accounts and transactions")
+
+    Customer -> Banking.Assets : Loads the UI from
+    Customer -> Banking.UI : Views accounts using
+    Banking.Assets -> Banking.UI : Delivers web assets to
+    @api(technology="JSON/HTTPS") Banking.UI -> Banking.Backend : Calls banking APIs
+    @statements(technology="S3 API") Banking.Backend -> Banking.Statements : Writes PDF statements to
+    @records(technology="MySQL") Banking.Backend -> Banking.Database : Reads and writes account data in
+    @core Banking.Backend -> Core : Calls banking API
+}
+layout {
+    Banking.Assets < Banking.UI : align=center; gap=90
+    Banking.UI ^ Banking.Backend : align=center; gap=95
+    Banking.Statements < Banking.Database : align=center; gap=140
+    Banking.Backend ^ Banking.Database : align=center; gap=100
+    Customer ^ Banking.UI : align=center; gap=100
+    Banking.Backend < Core : align=center; gap=500
+    relation[core].source : side=right
+    relation[core].target : side=left
+}

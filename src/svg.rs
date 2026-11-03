@@ -8,6 +8,7 @@ use base64::Engine;
 use std::fmt::Write;
 mod activity;
 mod bounds;
+pub mod c4;
 mod compact;
 mod component_container;
 mod composite;
@@ -46,7 +47,7 @@ pub fn render_with_theme(
     mode: TextMode,
     theme: crate::theme::Theme,
 ) -> Result<String, String> {
-    let svg = render_svg(boxes, routes, mode, theme)?;
+    let svg = render_svg(boxes, routes, mode, theme, None)?;
     if mode == TextMode::Paths {
         crate::export::outlines(&svg)
     } else {
@@ -59,11 +60,15 @@ fn render_svg(
     routes: &[Route],
     mode: TextMode,
     theme: crate::theme::Theme,
+    c4_diagram: Option<&crate::syntax::Diagram>,
 ) -> Result<String, String> {
     composite::validate(boxes, routes)?;
     let (left, top, right, bottom) = bounds::measure(boxes, routes);
     let mut svg = String::new();
-    writeln!(svg, "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{:.2}\" height=\"{:.2}\" viewBox=\"{left:.2} {top:.2} {:.2} {:.2}\">", right-left,bottom-top,right-left,bottom-top).unwrap();
+    let top_margin = if c4_diagram.is_some() { 54.0 } else { 0.0 };
+    let bottom_margin = if c4_diagram.is_some() { 68.0 } else { 0.0 };
+    let side_margin = if c4_diagram.is_some() { 20.0 } else { 0.0 };
+    writeln!(svg, "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{:.2}\" height=\"{:.2}\" viewBox=\"{:.2} {:.2} {:.2} {:.2}\">", right-left+side_margin*2.0,bottom-top+top_margin+bottom_margin,left-side_margin,top-top_margin,right-left+side_margin*2.0,bottom-top+top_margin+bottom_margin).unwrap();
     svg.push_str("<defs>");
     if mode == TextMode::Embedded {
         let font = base64::engine::general_purpose::STANDARD.encode(FONT);
@@ -94,11 +99,21 @@ fn render_svg(
         svg.push_str(&escape(crate::export_metadata::PHOSPHOR_LICENSE));
         svg.push_str("</metadata>\n");
     }
+    if let Some(diagram) = c4_diagram {
+        c4::heading(&mut svg, diagram, left, top);
+    }
     for node in boxes
         .iter()
         .filter(|node| matches!(node.kind, NodeKind::Package | NodeKind::Profile))
     {
-        package::background(&mut svg, node)?;
+        if c4_diagram
+            .and_then(|d| d.nodes.iter().find(|n| n.id == node.id))
+            .is_some_and(|n| n.classes.iter().any(|c| c == "c4Boundary"))
+        {
+            c4::boundary(&mut svg, node);
+        } else {
+            package::background(&mut svg, node)?;
+        }
     }
     for node in boxes
         .iter()
@@ -237,6 +252,11 @@ fn render_svg(
             compact::junction(&mut svg, node);
         } else if node.kind == NodeKind::CompositeRole {
             composite::role(&mut svg, node);
+        } else if c4_diagram
+            .and_then(|d| d.nodes.iter().find(|n| n.id == node.id))
+            .is_some_and(|n| c4::shape(&mut svg, node, &n.classes))
+        {
+            // C4 element outlines and icons are drawn in a dedicated notation layer.
         } else if node.shape == NodeShape::Note {
             note::draw(&mut svg, node, index);
         } else if node.shape == NodeShape::Ellipse {
@@ -302,8 +322,17 @@ fn render_svg(
             } else {
                 (deployment::center(node), "middle")
             };
-            writeln!(svg,"<text x=\"{text_x:.2}\" y=\"{baseline:.2}\" text-anchor=\"{anchor}\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\"{}>{}</text>",
-                node.font_size,node.color,
+            let c4_element = c4_diagram
+                .and_then(|d| d.nodes.iter().find(|n| n.id == node.id))
+                .is_some_and(|n| n.classes.iter().any(|c| c.starts_with("c4")));
+            let c4_font = if c4_element && i == 1 {
+                node.font_size * 0.78
+            } else {
+                node.font_size
+            };
+            writeln!(svg,"<text x=\"{text_x:.2}\" y=\"{baseline:.2}\" text-anchor=\"{anchor}\" font-family=\"Inter\" font-size=\"{c4_font:.2}\" fill=\"{}\"{}{}>{}</text>",
+                node.color,
+                if c4_element && i == 0 { " font-weight=\"bold\"" } else { "" },
                 if node.abstract_node && i + 1 == node.lines.len() { " font-style=\"italic\"" } else { "" },escape(line)).unwrap();
             if node.kind == NodeKind::Object && i + 1 == node.lines.len() {
                 let width = measure(line, node.font_size)?;
@@ -461,6 +490,9 @@ fn render_svg(
                     qualifier.font_size,route.color,escape(line)).unwrap();
             }
         }
+    }
+    if c4_diagram.is_some() {
+        c4::legend(&mut svg, left, bottom, theme);
     }
     svg.push_str("</svg>\n");
     Ok(svg)

@@ -5,6 +5,8 @@ use crate::lex::{
 };
 use crate::parser::{self, ParseError};
 use crate::syntax::{Diagram, DiagramType};
+mod relation;
+mod style;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Level {
@@ -75,7 +77,7 @@ fn parse_attributes(text: &str, line: usize) -> Result<(&str, Attributes<'_>), P
         let key = key.trim();
         if !matches!(
             key,
-            "label" | "description" | "technology" | "style-classes"
+            "label" | "description" | "technology" | "style-classes" | "appearance"
         ) || attrs.iter().any(|(old, _)| *old == key)
         {
             return Err(err(
@@ -209,13 +211,50 @@ fn element(
         capitalize(kind).to_string()
     };
     let display = if let Some(tech) = technology {
-        format!("{label} [{tag}: {tech}]\n{description}")
+        format!("{label}\n[{tag}: {tech}]\n{description}")
     } else {
-        format!("{label} [{tag}]\n{description}")
+        format!("{label}\n[{tag}]\n{description}")
     };
+    let appearance = attr(&attrs, "appearance");
+    if appearance
+        .is_some_and(|a| !matches!(a, "browser" | "database" | "bucket" | "folder" | "terminal"))
+        || appearance.is_some() && kind != "container"
+    {
+        return Err(err(
+            line,
+            "appearance requires a container and browser|database|bucket|folder|terminal",
+        ));
+    }
+    let mut classes = vec![match kind {
+        "person" => "c4Person",
+        "system" => "c4System",
+        "container" => "c4Container",
+        _ => "c4Component",
+    }];
+    if external {
+        classes.push("c4External");
+    }
+    if block {
+        classes.push("c4Boundary");
+    }
+    if let Some(shape) = appearance {
+        classes.push(match shape {
+            "browser" => "c4Browser",
+            "database" => "c4Database",
+            "bucket" => "c4Bucket",
+            "folder" => "c4Folder",
+            _ => "c4Terminal",
+        });
+    }
     let mut extras = format!("label={}", quote(&display));
-    if let Some(classes) = attr(&attrs, "style-classes") {
-        extras.push_str(&format!("; style-classes={classes}"));
+    if let Some(user_classes) = attr(&attrs, "style-classes") {
+        extras.push_str(&format!(
+            "; style-classes={},{}",
+            classes.join(","),
+            user_classes
+        ));
+    } else {
+        extras.push_str(&format!("; style-classes={}", classes.join(",")));
     }
     let owner = kind == level.owner() && id == scope;
     let output = if block {
@@ -224,26 +263,6 @@ fn element(
         format!("{id}({extras})")
     };
     Ok((output, id.into(), owner))
-}
-
-fn relation_with_technology(text: &str, line: usize) -> Result<String, ParseError> {
-    let (head, body) = text
-        .split_once(char::is_whitespace)
-        .ok_or_else(|| err(line, "C4 relation needs endpoints"))?;
-    let (name, attrs) = parse_attributes(head, line)?;
-    if !name.starts_with('@')
-        || !valid_identifier(&name[1..])
-        || attrs.len() != 1
-        || attrs[0].0 != "technology"
-    {
-        return Err(err(line, "relation accepts only @id(technology=\"...\")"));
-    }
-    let (ends, label) = split_once_top_level(body, ':')
-        .ok_or_else(|| err(line, "C4 relation with technology needs a label"))?;
-    if label.trim().is_empty() {
-        return Err(err(line, "C4 relation needs a label"));
-    }
-    Ok(format!("{name} {ends}: {} ({})", label.trim(), attrs[0].1))
 }
 
 fn capitalize(kind: &str) -> &str {
@@ -363,7 +382,7 @@ pub fn parse(source: &str) -> Result<Diagram, ParseError> {
                     && text.contains(" -> ")
                     && text.contains("(technology=")
                 {
-                    out = relation_with_technology(text, line)?;
+                    out = relation::relation_with_technology(text, line)?;
                 } else if level == Level::Code
                     && in_scope
                     && (head.starts_with("class ")
@@ -390,7 +409,7 @@ pub fn parse(source: &str) -> Result<Diagram, ParseError> {
             "C4 diagram requires exactly one declared scope element",
         ));
     }
-    let diagram = parser::parse_document(&transformed, false)?;
+    let mut diagram = parser::parse_document(&transformed, false)?;
     if level == Level::Code
         && !diagram
             .nodes
@@ -432,5 +451,11 @@ pub fn parse(source: &str) -> Result<Diagram, ParseError> {
     if level == Level::Code && diagram.settings.diagram_type != DiagramType::Class {
         return Err(err(1, "c4-code needs the class renderer"));
     }
+    if level != Level::Code {
+        for relation in &mut diagram.relations {
+            relation.appearance.dashed = true;
+        }
+    }
+    style::apply(&mut diagram)?;
     Ok(diagram)
 }

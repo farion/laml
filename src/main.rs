@@ -335,6 +335,8 @@ fn compile_document(
         .map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?;
     let svg = if let Some(doc) = &overview {
         laml::interaction_overview::render(doc, &boxes, &routes, render_mode)
+    } else if laml::c4::is_c4_source(text) {
+        laml::svg::c4::render(&boxes, &routes, render_mode, theme, &diagram)
     } else {
         render_with_theme(&boxes, &routes, render_mode, theme)
     }

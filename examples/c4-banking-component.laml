@@ -1,0 +1,32 @@
+// Adapted from the Internet Banking System C4 component example.
+// Simon Brown, c4model.com/example/ — CC BY 4.0. Descriptions are paraphrased.
+settings {
+    type: c4-component
+    scope: Backend
+}
+semantics {
+    container UI(label="UI"; technology="Angular"; appearance="browser"; description="Shows banking features")
+    container Backend(label="Backend"; technology="Java / Spring"; appearance="terminal"; description="Provides banking APIs") {
+        component SignIn(label="Sign In API"; technology="Spring MVC"; description="Handles customer sign-in")
+        component Accounts(label="Accounts Summary API"; technology="Spring MVC"; description="Exposes account balances")
+        component Security(label="Security Component"; technology="Spring Bean"; description="Verifies identities and tokens")
+        component Adapter(label="Core Banking Adapter"; technology="Spring Bean"; description="Connects to core banking")
+    }
+    container Database(label="Database"; technology="MySQL"; appearance="database"; description="Stores access records")
+    external system Core(label="Core Banking System"; description="Processes accounts and transactions")
+
+    @signin(technology="JSON/HTTPS") UI -> Backend.SignIn : Signs customers in via
+    @accounts(technology="JSON/HTTPS") UI -> Backend.Accounts : Requests balances via
+    Backend.SignIn -> Backend.Security : Validates credentials with
+    Backend.Accounts -> Backend.Adapter : Fetches balances through
+    Backend.Adapter -> Core : Calls core banking API
+    Backend.Security -> Database : Stores access records in
+}
+layout {
+    Backend.SignIn < Backend.Accounts : align=center; gap=115
+    Backend.SignIn ^ Backend.Security : align=center; gap=105
+    Backend.Accounts ^ Backend.Adapter : align=center; gap=105
+    UI ^ Backend.SignIn : align=center; gap=115
+    Backend.Adapter < Core : align=center; gap=230
+    Backend.Security ^ Database : align=center; gap=170
+}

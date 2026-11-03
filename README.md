@@ -77,24 +77,27 @@ styling {
 
 ![Four-layer architecture diagram](docs/images/architecture.png)
 
-### C4: from system context to code
+### C4: a system boundary, containers and technologies
 
 ```laml
-// Selected lines from examples/c4-context.laml
+// Selected lines from examples/c4-banking-container.laml
 settings {
-    type: c4-context
-    scope: Shop
+    type: c4-container
+    scope: Banking
 }
 semantics {
+    system Banking(label="Internet Banking System"; description="Digital banking for customers") {
+        container UI(label="UI"; technology="Angular"; appearance="browser"; description="Displays balances and payments")
+        // […]
+        container Database(label="Database"; technology="MySQL"; appearance="database"; description="Stores customer and account data")
+    }
     // […]
-    Customer -> Shop : Places orders
-    Shop -> Payment : Requests payment authorization
 }
 ```
 
-![C4 system context with customer, online shop and payment provider](docs/images/c4-context.png)
+![C4 Internet Banking container view with person, browser, terminal, stores and an external system](docs/images/c4-banking-container.png)
 
-[Full context source](examples/c4-context.laml) · [C4 guide with all four levels and images](docs/c4-diagrams.md)
+[Full container source](examples/c4-banking-container.laml) · [Related component view](examples/c4-banking-component.laml) · [C4 guide with all four levels](docs/c4-diagrams.md). Adapted from Simon Brown's [Internet Banking System example](https://c4model.com/example/) (CC BY 4.0).
 
 ### Class diagram: UML relationships
 
