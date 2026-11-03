@@ -49,6 +49,34 @@ fn modern_arrows_end_at_circle_edge_instead_of_its_center() {
 }
 
 #[test]
+fn plain_arrows_end_at_square_border_in_light_and_dark() {
+    for theme in ["plain", "plain-dark"] {
+        let source = format!(
+            "settings {{\ntheme: {theme}\n}}\nsemantics {{\nA {{\nport In\n}}\nB\nB --> A::In\n}}\nlayout {{\nB < A : gap=140\nport[A::In] : side=left\n}}\n"
+        );
+        let (svg, boxes, routes) = image(&source);
+        let port = &boxes[0].ports[0];
+        assert!((routes[0].points.last().unwrap().x - port.x).abs() < 1e-6);
+        let arrow = svg
+            .lines()
+            .find(|line| line.contains("marker-end=\"url(#arrow)\""))
+            .unwrap();
+        let edge = port.x - 5.0 - boxes[0].border_width / 2.0;
+        assert!(
+            arrow.contains(&format!("{edge:.2},{:.2}", port.y)),
+            "{theme}: {arrow}"
+        );
+        assert!(
+            !arrow.contains(&format!("{:.2},{:.2}\"", port.x, port.y)),
+            "{theme}: arrow still meets the port center: {arrow}"
+        );
+        assert!(svg.contains("data-port-id=\"A::In\""));
+        assert!(laml::export::png(&svg).is_ok());
+        assert!(laml::export::pdf(&svg).is_ok());
+    }
+}
+
+#[test]
 fn modern_generic_note_is_rounded_without_fold_and_has_flush_full_height_accent() {
     let source = "semantics {\nnote Memo {\nImportant\n}\n}\n";
     let (svg, boxes, _) = image(source);
