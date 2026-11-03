@@ -9,6 +9,17 @@ Layout and Markup Language
   <a href="#c4"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/badge-c4-dark.svg"><img src="docs/images/badge-c4.svg" alt="C4 diagrams"></picture></a>
 </p>
 
+## Contents
+
+- [What is LAML?](#what-is-laml)
+- [Why LAML?](#why-laml)
+- [Installing & getting started](#installing--getting-started)
+- [Basic examples](#basic-examples)
+- [Themes](#themes)
+- [Features and diagram types](#features)
+- [AI agents via MCP](#ai-agents-via-mcp)
+- [License](#license)
+
 ## LAML - Diagrams for People
 
 LAML turns a `.laml` file into an SVG, PNG or vector PDF diagram. Describe the elements, add only the placement rules that matter, and style the result independently.
@@ -254,6 +265,26 @@ LAML supports **20 diagram types**: Generic node-edge, 14 UML types, four C4 lev
 - All 1,512 bundled Phosphor regular icons are discoverable with `laml icons [FILTER]`.
 
 [Language reference](docs/language-reference.md) · [Behavioral contract](docs/language-definition.md)
+
+## AI agents via MCP
+
+LAML includes a **local MCP server** in the CLI binary. A coding agent starts `laml mcp` over stdio; LAML does not open a network port or require a LAML account. The agent writes `.laml` files in its own workspace, then uses the same compiler as the CLI to check and build them. MCP does **not** create a diagram from a prompt by itself: the agent selects a diagram type, reads its notation, writes the source, and renders it.
+
+The six tools cover discovery (`laml_types`), syntax (`laml_guide`, `laml_example`), diagram-specific relationships (`laml_relations`), quick source validation (`laml_check`), and SVG/PNG/PDF output with measured layout and routing validation (`laml_build`). **`laml_check` is not a substitute for `laml_build`** when validating the finished diagram.
+
+For example, register the server in your project with OpenCode:
+
+```sh
+opencode mcp add laml -- laml mcp
+```
+
+Or with Claude Code:
+
+```sh
+claude mcp add --transport stdio laml -- laml mcp
+```
+
+Then ask the agent to save a `.laml` file in the project and build an SVG. The agent needs access to the files it reads and writes. Although the LAML server runs locally, your chosen agent/model may send source content or tool results to an external provider. See the [MCP guide](docs/mcp.md) for configuration, workflow and access boundaries; the installed binary must support `laml mcp`.
 
 ## License
 

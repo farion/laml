@@ -2,7 +2,7 @@
 
 LAML ships a local MCP server in the same binary as the CLI. It runs on stdio: the agent starts `laml mcp` as a child process; no listening port, account, or extra service is needed. Install a version of LAML that includes the `mcp` command first. An older installed `laml` binary will not acquire MCP support merely because you configure an agent.
 
-The server announces LAML's capabilities and exposes four tools:
+The server announces LAML's capabilities and exposes six tools:
 
 - `laml_types`: discover diagram types and the authoring workflow.
 - `laml_guide(topic)`: read the bundled guide for `gne`, any UML type, `bpmn`, or one of the four C4 types; `getting-started` covers shared syntax.

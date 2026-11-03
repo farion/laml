@@ -51,6 +51,40 @@ fn entry_points_link_to_all_diagram_guides() {
     let readme = fs::read_to_string(root.join("README.md")).unwrap();
     let started = fs::read_to_string(root.join("docs/getting-started.md")).unwrap();
     assert!(readme.contains("docs/getting-started.md"));
+    let contents = readme
+        .split_once("## Contents\n")
+        .unwrap()
+        .1
+        .split_once("## LAML - Diagrams for People")
+        .unwrap()
+        .0;
+    for heading in [
+        "What is LAML?",
+        "Why LAML?",
+        "Installing & getting started",
+        "Basic examples",
+        "Themes",
+        "Features",
+        "AI agents via MCP",
+        "License",
+    ] {
+        assert!(
+            contents.contains(&format!("(#{})", heading_anchor(heading))),
+            "missing TOC link to {heading}"
+        );
+        assert!(readme.contains(&format!("## {heading}\n")));
+    }
+    for tool in [
+        "laml_types",
+        "laml_guide",
+        "laml_example",
+        "laml_relations",
+        "laml_check",
+        "laml_build",
+    ] {
+        assert!(readme.contains(tool), "README must describe {tool}");
+    }
+    assert!(readme.contains("docs/mcp.md"));
     let features = readme
         .split_once("## Features")
         .unwrap()
