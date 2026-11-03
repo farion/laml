@@ -64,6 +64,14 @@ fn architecture_dependencies_route_without_changing_original_node_layout() {
         let orders = node("Shop.Orders");
         let payments = node("Payments");
         let common = node("Common");
+        assert!(
+            orders.y >= api.y + api.height + 36.0 - 1e-6,
+            "{theme}: keep breathing room below API"
+        );
+        assert!(
+            common.y >= payments.y + payments.height + 36.0 - 1e-6,
+            "{theme}: keep breathing room below Payments"
+        );
         let import = &routes[1].points;
         let access = &routes[2].points;
         let merge = &routes[3].points;

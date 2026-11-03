@@ -442,10 +442,18 @@ pub fn place(
                     && ys[b] < ys[a] + boxes[a].height - 1e-6
             });
         if let Some((a, b)) = collision {
+            let automatic_gap = if diagram.settings.diagram_type
+                == crate::syntax::DiagramType::Package
+                && diagram.layout.is_empty()
+            {
+                36.0
+            } else {
+                24.0
+            };
             let candidate = Minimum {
                 a,
                 b,
-                distance: boxes[a].height + 24.0,
+                distance: boxes[a].height + automatic_gap,
                 line: boxes[b].line,
             };
             y.push(candidate);
