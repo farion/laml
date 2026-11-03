@@ -1,6 +1,6 @@
 # C4 diagrams
 
-LAML supports the four static C4 zoom levels with `type: c4-context`, `c4-container`, `c4-component`, and `c4-code`. Each file produces one image from its own source. There is no hidden architecture repository, automatic synchronisation between levels, code introspection, or process simulation. A C4 *container* is an application or data store, not necessarily a Docker container. C4 itself is notation-independent; the source forms below are LAML's notation for those views.
+LAML on `main` supports the four static C4 zoom levels with `type: c4-context`, `c4-container`, `c4-component`, and `c4-code`. The latest tagged binary predates these diagrams; build from `main` until a C4 release is published. Each file produces one image from its own source. There is no hidden architecture repository, automatic synchronisation between levels, code introspection, or process simulation. A C4 *container* is an application or data store, not necessarily a Docker container. C4 itself is notation-independent; the source forms below are LAML's notation for those views.
 
 ## Internet Banking across four levels
 

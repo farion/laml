@@ -97,7 +97,7 @@ semantics {
 
 ![C4 Internet Banking container view with a customer, browser, backend, data stores and external systems](docs/images/c4-banking-container.png)
 
-[Full container source](examples/c4-banking-container.laml) · [Context, component and code views](docs/c4-diagrams.md). Adapted from Simon Brown's [Internet Banking System example](https://c4model.com/example/) (CC BY 4.0).
+[Full container source](examples/c4-banking-container.laml) · [Context, component and code views](docs/c4-diagrams.md). **C4 support is currently on `main`; the latest tagged binary does not include it yet.** Adapted from Simon Brown's [Internet Banking System example](https://c4model.com/example/) (CC BY 4.0).
 
 ### Class diagram: UML relationships
 
