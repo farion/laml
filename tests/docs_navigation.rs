@@ -98,7 +98,10 @@ fn entry_points_link_to_all_diagram_guides() {
             let filename = format!("docs/images/badge-{name}{suffix}.svg");
             assert!(readme.contains(&filename));
             let badge = fs::read_to_string(root.join(filename)).unwrap();
-            assert!(badge.contains("M0 0h12v40H0z"), "{name}{suffix}: inset accent");
+            assert!(
+                badge.contains("M0 0h12v40H0z"),
+                "{name}{suffix}: inset accent"
+            );
         }
     }
     assert_eq!(features.matches("- [").count(), GUIDES.len() + 5);
@@ -231,7 +234,10 @@ fn every_diagram_guide_starts_with_code_image_and_complete_source() {
             "{name}: basic code must build the shown image"
         );
         for picture in guide.split("<picture>").skip(1) {
-            let block = picture.split("</picture>").next().expect("missing picture end");
+            let block = picture
+                .split("</picture>")
+                .next()
+                .expect("missing picture end");
             let light = block
                 .split_once("<img src=\"")
                 .and_then(|(_, tail)| tail.split('"').next())

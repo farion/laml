@@ -118,7 +118,11 @@ fn dark_showcases_do_not_keep_large_light_theme_panels() {
     for name in ["showcase-sequence", "showcase-class"] {
         let path = root.join(format!("docs/images/{name}-modern-dark.png"));
         let image = resvg::tiny_skia::Pixmap::decode_png(&fs::read(&path).unwrap()).unwrap();
-        let opaque = image.pixels().iter().filter(|pixel| pixel.alpha() > 245).count();
+        let opaque = image
+            .pixels()
+            .iter()
+            .filter(|pixel| pixel.alpha() > 245)
+            .count();
         let pale = image
             .pixels()
             .iter()
@@ -129,7 +133,11 @@ fn dark_showcases_do_not_keep_large_light_theme_panels() {
                     && pixel.blue() > 215
             })
             .count();
-        assert!(pale * 100 < opaque * 2, "{} still has light panels", path.display());
+        assert!(
+            pale * 100 < opaque * 2,
+            "{} still has light panels",
+            path.display()
+        );
     }
 }
 

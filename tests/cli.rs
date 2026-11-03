@@ -92,9 +92,11 @@ fn bare_relative_input_builds_in_current_directory() {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
-    assert!(fs::read_to_string(dir.join("core.svg"))
-        .unwrap()
-        .contains("<svg "));
+    assert!(
+        fs::read_to_string(dir.join("core.svg"))
+            .unwrap()
+            .contains("<svg ")
+    );
     fs::remove_dir_all(dir).unwrap();
 }
 
