@@ -68,7 +68,7 @@ irm https://raw.githubusercontent.com/farion/laml/main/scripts/install.ps1 | iex
 
 Installers select the platform, check the downloaded archive against `SHA256SUMS`, and install in your user directory. For environments requiring signed provenance, apply your organization's verification policy before running downloaded scripts. Release archives are also available for manual installation.
 
-**Next:** [Getting started — first build, core concepts, and all diagram types](docs/getting-started.md). To create and render diagrams from a local coding agent, see [OpenCode and Claude Code via MCP](docs/mcp.md) (requires a LAML build with `laml mcp`).
+**Next:** [Getting started — first build, core concepts, and all diagram types](docs/getting-started.md). To create and render diagrams from a local coding agent, see [OpenCode and Claude Code via MCP](docs/mcp.md).
 
 ## Basic examples
 
@@ -278,7 +278,7 @@ laml build architecture.laml architecture.svg
 laml import workspace.dsl diagrams/
 ```
 
-Structurizr produces one `.laml` file per view. The importer retains the source file and reports constructs requiring a separate mapping. See [import commands and supported syntax](docs/importing.md). These commands require a LAML binary containing `laml import`.
+Structurizr produces one `.laml` file per view. The importer retains the source file and reports constructs requiring a separate mapping. See [import commands and supported syntax](docs/importing.md). The output is editable and can be built as SVG, PNG or PDF.
 
 ## AI agents via MCP
 
@@ -298,7 +298,7 @@ Or with Claude Code:
 claude mcp add --transport stdio laml -- laml mcp
 ```
 
-Then ask the agent to save a `.laml` file in the project and build an SVG. The agent needs access to the files it reads and writes. Although the LAML server runs locally, your chosen agent/model may send source content or tool results to an external provider. See the [MCP guide](docs/mcp.md) for configuration, workflow and access boundaries; the installed binary must support `laml mcp`.
+Then ask the agent to save a `.laml` file in the project and build an SVG. The agent needs access to the files it reads and writes. Although the LAML server runs locally, your chosen agent/model may send source content or tool results to an external provider. See the [MCP guide](docs/mcp.md) for configuration, workflow and access boundaries.
 
 ## License
 

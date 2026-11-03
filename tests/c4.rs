@@ -32,7 +32,7 @@ mod tests {
 
     #[test]
     fn rejects_missing_scope_and_wrong_zoom_level() {
-        let context = include_str!("../examples/c4-context.laml");
+        let context = include_str!("../examples/c4-context.laml").replace("\r\n", "\n");
         assert!(parser::parse(&context.replace("    scope: Shop\n", "")).is_err());
         assert!(parser::parse(&context.replace("scope: Shop", "scope: Unknown")).is_err());
         assert!(parser::parse(&context.replace("system Shop", "container Shop")).is_err());

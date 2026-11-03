@@ -86,6 +86,7 @@ fn mono_theme_defaults_are_grayscale_across_diagram_types() {
         include_str!("../examples/timing-basic.laml"),
     ] {
         let source = source
+            .replace("\r\n", "\n")
             .replacen("settings {", "settings {\ntheme: modern-mono", 1)
             .replace("theme: modern\n", "");
         let svg = String::from_utf8(build(&dir, &source, "svg").unwrap()).unwrap();
