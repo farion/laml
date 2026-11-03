@@ -47,6 +47,29 @@ fn package_diagram_has_nested_groups_and_distinct_dependency_keywords() {
 }
 
 #[test]
+fn quickstart_dependency_leaves_nested_package_horizontally() {
+    let source = include_str!("../examples/package-quickstart.laml");
+    for theme in ["modern", "modern-dark"] {
+        let source = source.replace("type: package", &format!("type: package\ntheme: {theme}"));
+        let diagram = parse(&source).unwrap();
+        let sheet = load(&diagram, Path::new("examples/package-quickstart.laml")).unwrap();
+        let boxes = place(&diagram, &sheet).unwrap();
+        let routes = route(&diagram, &boxes, &sheet).unwrap();
+        let points = &routes[0].points;
+        assert_eq!(
+            points.len(),
+            2,
+            "{theme}: dependency should run directly right"
+        );
+        assert!(points[1].x > points[0].x);
+        assert!(
+            (points[1].y - points[0].y).abs() < 1e-6,
+            "{theme}: sloped dependency"
+        );
+    }
+}
+
+#[test]
 fn unmarked_dependency_is_not_a_package_import() {
     let diagram = parse(&source("package A\npackage B\nA ..> B")).unwrap();
     assert_eq!(diagram.relations.len(), 1);

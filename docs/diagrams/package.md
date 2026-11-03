@@ -13,6 +13,9 @@ semantics {
     package Payments
     Shop.Orders ..> Payments
 }
+layout {
+    Shop.Orders < Payments : align=center; gap=130
+}
 ```
 
 <picture>
@@ -20,7 +23,7 @@ semantics {
   <img src="../images/package-quickstart-modern.png" alt="Nested Shop package with a dependency on Payments">
 </picture>
 
-[Complete source](../../examples/package-quickstart.laml). Braces enclose a package; `Shop.Orders` addresses its nested package. `..>` is a dependency.
+[Complete source](../../examples/package-quickstart.laml). Braces enclose a package; `Shop.Orders` addresses its nested package. `..>` is a dependency. The placement rule aligns the two package centers so the dependency runs horizontally.
 
 ## Imports, access and merge
 

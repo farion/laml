@@ -8,3 +8,6 @@ semantics {
     package Payments
     Shop.Orders ..> Payments
 }
+layout {
+    Shop.Orders < Payments : align=center; gap=130
+}
