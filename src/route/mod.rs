@@ -2,7 +2,6 @@
 //! crossing.
 
 use crate::geometry::BoxNode;
-use crate::styles::StyleSheet;
 use crate::syntax::{Diagram, EndPosition, PortSide};
 
 mod attachments;
@@ -17,12 +16,15 @@ mod outline_clearance;
 mod parallel;
 mod preferred;
 mod qualifiers;
+mod ranking;
 mod route_labels;
+mod router;
 mod self_loops;
 mod side_rules;
-use geometry::{center, member_port, port, route_is_clear};
+use geometry::{center, member_port, port};
 use preferred::{forced_port, horizontal_connection, named_port_candidates, normal_at_port};
 pub use qualifiers::QualifierBox;
+pub use router::route;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Point {
@@ -309,190 +311,4 @@ fn candidates(
             Some(points)
         })
         .collect()
-}
-pub fn route(
-    diagram: &Diagram,
-    boxes: &[BoxNode],
-    sheet: &StyleSheet,
-) -> Result<Vec<Route>, RouteError> {
-    let visible = crate::geometry::visible_diagram(diagram, sheet)
-        .map_err(|(line, message)| RouteError { line, message })?;
-    let diagram = &visible;
-    let mut routed = Vec::new();
-    for (index, relation) in diagram.relations.iter().enumerate() {
-        let owner = |id: &str| {
-            boxes
-                .iter()
-                .position(|b| b.has_endpoint(id))
-                .expect("parsed relation endpoint")
-        };
-        let from = owner(&relation.from);
-        let to = owner(&relation.to);
-        if from == to && (relation.from != boxes[from].id || relation.to != boxes[to].id) {
-            return Err(RouteError {
-                line: relation.line,
-                message: format!(
-                    "relation '{}' ({} -> {}) connects two members of one node; use separate nodes or an exterior self-relation",
-                    relation.name.as_deref().unwrap_or("unnamed"),
-                    relation.from,
-                    relation.to
-                ),
-            });
-        }
-        let (color, width, font_size) = edge_style::style(relation, sheet);
-        if matches!(
-            diagram.settings.diagram_type,
-            crate::syntax::DiagramType::Composite | crate::syntax::DiagramType::Profile
-        ) && (color == "none" || width < 1.0)
-        {
-            return Err(RouteError {
-                line: relation.line,
-                message: "composite connector stroke must remain visible".into(),
-            });
-        }
-        let options = if from == to {
-            let rank = diagram.relations[..index]
-                .iter()
-                .filter(|r| r.from == relation.from && r.to == relation.to)
-                .count();
-            if rank >= 4 {
-                return Err(RouteError {
-                    line: relation.line,
-                    message: format!(
-                        "relation '{}' ({} -> {}): more than four self-relations need distinct loop ports; use fewer loops or separate nodes",
-                        relation.name.as_deref().unwrap_or("unnamed"),
-                        relation.from,
-                        relation.to
-                    ),
-                });
-            }
-            side_rules::loop_options(
-                diagram,
-                index,
-                &boxes[from],
-                self_loops::candidates(&boxes[from], rank),
-            )
-        } else {
-            let offset =
-                parallel::offset(diagram, index, boxes, from, to, sheet).map_err(|message| {
-                    RouteError {
-                        line: relation.line,
-                        message,
-                    }
-                })?;
-            candidates(diagram, index, from, to, boxes, &routed, offset)
-        };
-        let label_rule = diagram
-            .relation_layout
-            .iter()
-            .find(|rule| relation.name.as_deref() == Some(rule.name.as_str()));
-        let end_rules = [
-            crate::syntax::EndPosition::Source,
-            crate::syntax::EndPosition::Target,
-        ]
-        .map(|end| {
-            diagram.relation_end_layout.iter().find(|rule| {
-                relation.name.as_deref() == Some(rule.name.as_str()) && rule.end == end
-            })
-        });
-        let placement = label_rule.map_or(diagram.settings.relation_label, |rule| rule.placement);
-        let label_line = label_rule.map_or(relation.line, |rule| rule.line);
-        let mut choice = None;
-        let mut label_error = None;
-        for mut points in options {
-            let qualifier_boxes = match qualifiers::attach(
-                relation,
-                &mut points,
-                boxes,
-                from,
-                to,
-                font_size,
-                &routed,
-            ) {
-                Ok(boxes) => boxes,
-                Err(message) => {
-                    label_error = Some(message);
-                    continue;
-                }
-            };
-            if !route_is_clear(&points, boxes, &routed) {
-                continue;
-            }
-            let Some(plan) = bridges::plan(&points, boxes, &routed, from, to, width) else {
-                continue;
-            };
-            if qualifier_boxes
-                .iter()
-                .any(|q| !plan.avoids_region(&points, q.x, q.y, q.width, q.height))
-            {
-                label_error = Some("qualifier conflicts with required bridge".into());
-                continue;
-            }
-            let (label, end_labels, label_gap) = match route_labels::select(
-                relation,
-                &points,
-                boxes,
-                &routed,
-                &plan,
-                &qualifier_boxes,
-                placement,
-                font_size,
-                width,
-                end_rules,
-            ) {
-                Ok(labels) => labels,
-                Err(message) => {
-                    label_error = Some(message);
-                    continue;
-                }
-            };
-            choice = Some((points, qualifier_boxes, label, end_labels, label_gap, plan));
-            break;
-        }
-        let (points, qualifier_boxes, label, end_labels, label_gap, plan) =
-            choice.ok_or_else(|| {
-                let label_failed = label_error.is_some();
-                let reason = label_error.unwrap_or_else(|| {
-                    "no safe path around nodes, other connections, and crossings".into()
-                });
-                let identity = relation.name.as_deref().unwrap_or("unnamed");
-                let advice = if let Some(name) = relation.name.as_deref() {
-                    format!(
-                        "Increase the gap between the connected elements or set relation[{name}].source : side=left (or choose a suitable target side)"
-                    )
-                } else {
-                    "Increase the gap between the connected elements or name the relation to select its attachment sides".into()
-                };
-                RouteError {
-                    line: if label_failed && label_rule.is_some() {
-                        label_line
-                    } else {
-                        relation.line
-                    },
-                    message: format!(
-                        "relation '{identity}' ({} -> {}): {reason}. {advice}",
-                        relation.from, relation.to
-                    ),
-                }
-            })?;
-        let new_bridges = plan.apply(&mut routed);
-        routed.push(Route {
-            points,
-            qualifiers: qualifier_boxes,
-            bridges: new_bridges,
-            gaps: label_gap.into_iter().collect(),
-            label,
-            end_labels,
-            from,
-            to,
-            color,
-            width,
-            font_size,
-            bidirectional: relation.kind == crate::RelationKind::Bidirectional,
-            marker_end: relation.kind != crate::RelationKind::Undirected,
-            appearance: relation.appearance,
-        });
-    }
-    attachments::route_attachments(diagram, boxes, sheet, &mut routed)?;
-    Ok(routed)
 }

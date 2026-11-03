@@ -14,3 +14,10 @@ semantics {
     Shop.Orders ..> Common <<access>>
     Shop.Pricing ..> Common <<merge>>
 }
+layout {
+    Shop.API ^ Shop.Pricing : align=center; gap=28
+    Shop.Pricing ^ Shop.Orders : align=center; gap=28
+    Shop.API < Payments : align=center; gap=45
+    Shop.Orders < Common : align=center; gap=45
+    Payments ^ Common : align=center; gap=85
+}

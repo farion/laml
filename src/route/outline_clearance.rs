@@ -3,7 +3,7 @@ use super::Point;
 use crate::geometry::{BoxNode, NodeShape};
 
 pub(super) fn hugs(a: Point, b: Point, node: &BoxNode) -> bool {
-    if node.shape != NodeShape::Rectangle {
+    if !matches!(node.shape, NodeShape::Rectangle | NodeShape::Note) {
         return false;
     }
     let overlap = |a: f64, b: f64, low: f64, high: f64| {

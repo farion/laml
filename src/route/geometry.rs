@@ -334,7 +334,9 @@ pub(super) fn route_is_clear(points: &[Point], boxes: &[BoxNode], previous: &[Ro
                 )
             } else {
                 intersection(pair[0], pair[1], node)
-                    || (node.deployment && super::outline_clearance::hugs(pair[0], pair[1], node))
+                    || (matches!(node.kind, crate::syntax::NodeKind::Package) && !node.c4_boundary
+                        || node.deployment)
+                        && super::outline_clearance::hugs(pair[0], pair[1], node)
             }
         }) {
             return false;

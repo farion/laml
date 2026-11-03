@@ -47,6 +47,52 @@ fn package_diagram_has_nested_groups_and_distinct_dependency_keywords() {
 }
 
 #[test]
+fn architecture_dependencies_are_short_and_clear_of_payments() {
+    for theme in ["modern", "modern-dark"] {
+        let source =
+            ARCHITECTURE.replace("type: package", &format!("type: package\ntheme: {theme}"));
+        let diagram = parse(&source).unwrap();
+        let sheet = load(&diagram, Path::new("examples/package-architecture.laml")).unwrap();
+        let boxes = place(&diagram, &sheet).unwrap();
+        let routes = route(&diagram, &boxes, &sheet).unwrap();
+        let node = |id: &str| boxes.iter().find(|box_node| box_node.id == id).unwrap();
+        let api = node("Shop.API");
+        let orders = node("Shop.Orders");
+        let payments = node("Payments");
+        let common = node("Common");
+        let import = &routes[1].points;
+        let access = &routes[2].points;
+        let merge = &routes[3].points;
+        assert_eq!(
+            import.len(),
+            2,
+            "{theme}: import needs a straight rightward line"
+        );
+        assert_eq!(
+            access.len(),
+            2,
+            "{theme}: access needs a straight rightward line"
+        );
+        assert!((import[0].x - api.x - api.width).abs() < 1e-6);
+        assert!((import[1].x - payments.x).abs() < 1e-6);
+        assert!((import[0].y - import[1].y).abs() < 1e-6);
+        assert!((access[0].x - orders.x - orders.width).abs() < 1e-6);
+        assert!((access[1].x - common.x).abs() < 1e-6);
+        assert!((access[0].y - access[1].y).abs() < 1e-6);
+        assert!((api.y + api.height / 2.0 - payments.y - payments.height / 2.0).abs() < 1e-6);
+        assert_eq!(merge.len(), 3, "{theme}: merge needs one bend");
+        assert!(
+            merge[0].y > payments.y + payments.height + 4.0,
+            "{theme}: merge must run below Payments"
+        );
+        assert!(
+            routes.iter().all(|route| route.bridges.is_empty()),
+            "{theme}: dependencies must avoid crossings"
+        );
+    }
+}
+
+#[test]
 fn quickstart_dependency_leaves_nested_package_horizontally() {
     let source = include_str!("../examples/package-quickstart.laml");
     for theme in ["modern", "modern-dark"] {

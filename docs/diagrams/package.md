@@ -42,7 +42,7 @@ semantics {
   <img src="../images/package-architecture-modern.png" alt="Nested packages with import, access and merge">
 </picture>
 
-[Complete source](../../examples/package-architecture.laml).
+[Complete source](../../examples/package-architecture.laml). Its `layout` aligns API with Payments and Orders with Common, then places Pricing between them. Import and access run directly right; merge bends once below Payments.
 
 | Form | Drawing |
 |---|---|

@@ -91,6 +91,25 @@ fn folded_note_uses_diagonal_stroke_for_ports_and_obstacles() {
     ));
 }
 #[test]
+fn unrelated_dependency_cannot_run_on_package_outline() {
+    let diagram =
+        crate::parser::parse("settings {\ntype: package\n}\nsemantics {\npackage Payments\n}\n")
+            .unwrap();
+    let boxes = crate::geometry::place(&diagram, &crate::styles::StyleSheet::default()).unwrap();
+    let node = &boxes[0];
+    let along = [
+        p(node.x - 12.0, node.y + node.height),
+        p(node.x + node.width + 12.0, node.y + node.height),
+    ];
+    let clear = [
+        p(along[0].x, along[0].y + 8.0),
+        p(along[1].x, along[1].y + 8.0),
+    ];
+    assert!(!route_is_clear(&along, &boxes, &[]));
+    assert!(route_is_clear(&clear, &boxes, &[]));
+}
+
+#[test]
 fn collinear_overdraw_is_rejected() {
     assert!(crosses(
         p(0.0, 0.0),

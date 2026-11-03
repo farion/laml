@@ -154,9 +154,11 @@ pub(super) fn normal_at_port(points: &[Point], side: PortSide, source: bool) -> 
 
 #[cfg(test)]
 mod candidate_tests {
+    use super::super::geometry::route_is_clear;
     use super::super::*;
     use crate::geometry::place;
     use crate::parser::parse;
+    use crate::styles::StyleSheet;
 
     #[test]
     fn shifted_ports_keep_bent_detours_orthogonal_on_both_axes() {
