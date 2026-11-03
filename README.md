@@ -1,5 +1,9 @@
 # LAML
 
+Layout and Markup Language
+
+[![Generic diagrams](docs/images/badge-generic.svg)](docs/diagrams/gne.md) [![UML diagrams](docs/images/badge-uml.svg)](#uml) [![BPMN diagrams](docs/images/badge-bpmn.svg)](#bpmn) [![C4 diagrams](docs/images/badge-c4.svg)](#c4)
+
 ## LAML - Diagrams for People
 
 LAML turns a `.laml` file into an SVG, PNG or vector PDF diagram. Describe the elements, add only the placement rules that matter, and style the result independently.
@@ -149,24 +153,43 @@ RequestDocuments --> Merge
 
 ## Features
 
-- **20 diagram types** (GNE, four C4 levels, 14 UML types and BPMN):
-  - [Generic node-edge (GNE)](docs/diagrams/gne.md)
-  - [C4 system context, container, component and code](docs/c4-diagrams.md)
-  - [Class](docs/diagrams/class.md)
-  - [Object](docs/diagrams/object.md)
-  - [Component](docs/diagrams/component.md)
-  - [Deployment](docs/diagrams/deployment.md)
-  - [State](docs/diagrams/state.md)
-  - [Activity](docs/diagrams/activity.md)
-  - [Use case](docs/diagrams/usecase.md)
-  - [Package](docs/diagrams/package.md)
-  - [Sequence](docs/diagrams/sequence.md)
-  - [Communication](docs/diagrams/communication.md)
-  - [Interaction overview](docs/diagrams/interaction-overview.md)
-  - [Timing](docs/diagrams/timing.md)
-  - [Composite structure](docs/diagrams/composite.md)
-  - [Profile](docs/diagrams/profile.md)
-  - [BPMN process/collaboration subset](docs/diagrams/bpmn.md)
+LAML supports **20 diagram types**: Generic node-edge, 14 UML types, four C4 levels and BPMN.
+
+### Generic
+
+- [Generic node-edge (GNE)](docs/diagrams/gne.md)
+
+### UML
+
+- [Class](docs/diagrams/class.md)
+- [Object](docs/diagrams/object.md)
+- [Component](docs/diagrams/component.md)
+- [Deployment](docs/diagrams/deployment.md)
+- [State](docs/diagrams/state.md)
+- [Activity](docs/diagrams/activity.md)
+- [Use case](docs/diagrams/usecase.md)
+- [Package](docs/diagrams/package.md)
+- [Sequence](docs/diagrams/sequence.md)
+- [Communication](docs/diagrams/communication.md)
+- [Interaction overview](docs/diagrams/interaction-overview.md)
+- [Timing](docs/diagrams/timing.md)
+- [Composite structure](docs/diagrams/composite.md)
+- [Profile](docs/diagrams/profile.md)
+
+### C4
+
+- [System context](docs/c4-diagrams.md#system-context)
+- [Container](docs/c4-diagrams.md#container)
+- [Component](docs/c4-diagrams.md#component)
+- [Code](docs/c4-diagrams.md#code)
+
+### BPMN
+
+- [Process](docs/bpmn-diagrams.md#first-process)
+- [Collaboration](docs/bpmn-diagrams.md#collaboration-lanes-and-messages)
+
+### Layout, styling and output
+
 - Automatic placement with mandatory corrections; BPMN currently supports relative ordering rules, not numeric gap/alignment options.
 - Six themes, including monochrome and dark variants; `modern` is the default. Override colors with LSS `base-color` or individual paints, use a transparent background, and supply local font files when needed. [Themes and fonts](docs/themes.md).
 - LSS styling with selectors, classes, local imports and per-element overrides.

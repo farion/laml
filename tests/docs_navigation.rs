@@ -58,18 +58,31 @@ fn entry_points_link_to_all_diagram_guides() {
         .split_once("## License")
         .unwrap()
         .0;
-    assert_eq!(features.matches("  - [").count(), GUIDES.len() + 1);
-    assert!(features.contains("docs/c4-diagrams.md"));
+    assert!(readme.starts_with("# LAML\n\nLayout and Markup Language\n"));
+    for name in ["generic", "uml", "bpmn", "c4"] {
+        assert!(readme.contains(&format!("docs/images/badge-{name}.svg")));
+    }
+    assert_eq!(features.matches("- [").count(), GUIDES.len() + 5);
+    for heading in ["Generic", "UML", "C4", "BPMN"] {
+        assert!(features.contains(&format!("### {heading}\n")));
+    }
+    for level in ["system-context", "container", "component", "code"] {
+        assert!(features.contains(&format!("docs/c4-diagrams.md#{level}")));
+    }
+    assert!(features.contains("docs/bpmn-diagrams.md#first-process"));
+    assert!(features.contains("docs/bpmn-diagrams.md#collaboration-lanes-and-messages"));
     assert!(started.contains("c4-diagrams.md"));
     for name in GUIDES {
         assert!(
             started.contains(&format!("diagrams/{name}.md")),
             "getting started must link to {name}"
         );
-        assert!(
-            features.contains(&format!("docs/diagrams/{name}.md")),
-            "README features must link to {name}"
-        );
+        if *name != "bpmn" {
+            assert!(
+                features.contains(&format!("docs/diagrams/{name}.md")),
+                "README features must link to {name}"
+            );
+        }
     }
 }
 
