@@ -16,7 +16,10 @@ layout {
 }
 ```
 
-![Gateway depends on Orders](../images/component-quickstart.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/component-quickstart-modern-dark.png">
+  <img src="../images/component-quickstart-modern.png" alt="Gateway depends on Orders">
+</picture>
 
 [Complete source](../../examples/component-quickstart.laml). `..>` draws a dependency; `layout` requires the components to keep their separation.
 
@@ -33,7 +36,10 @@ semantics {
 }
 ```
 
-![Required and provided component interfaces](../images/component-basic.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/component-basic-modern-dark.png">
+  <img src="../images/component-basic-modern.png" alt="Required and provided component interfaces">
+</picture>
 
 [Complete source](../../examples/component-basic.laml). `..>` points to a required interface box; `..|>` is a provided realization. The source chooses `interface-notation: lollipop` for the provided interface.
 
@@ -53,7 +59,10 @@ semantics {
 }
 ```
 
-![Component with typed ports and internal connectors](../images/component-internal.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/component-internal-modern-dark.png">
+  <img src="../images/component-internal-modern.png" alt="Component with typed ports and internal connectors">
+</picture>
 
 [Complete source](../../examples/component-internal.laml).
 
@@ -78,7 +87,10 @@ styling {
 }
 ```
 
-![Component with a lollipop and socket](../images/component-interfaces.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/component-interfaces-modern-dark.png">
+  <img src="../images/component-interfaces-modern.png" alt="Component with a lollipop and socket">
+</picture>
 
 [Complete source](../../examples/component-interfaces.laml). The compact forms are selected on named interface relations; typed ports remain independently addressable.
 

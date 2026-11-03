@@ -8,19 +8,31 @@ These four buildable examples demonstrate the C4 visual vocabulary: named scope 
 
 [Context source](../examples/c4-banking-context.laml) · [Container source](../examples/c4-banking-container.laml) · [Component source](../examples/c4-banking-component.laml) · [Code source](../examples/c4-banking-code.laml)
 
-![C4 banking context with customer, online banking, core banking and email provider](images/c4-banking-context.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/c4-banking-context-modern-dark.png">
+  <img src="images/c4-banking-context-modern.png" alt="C4 banking context with customer, online banking, core banking and email provider">
+</picture>
 
-![C4 banking container diagram showing a person, browser UI, backend, data stores and two external systems](images/c4-banking-container.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/c4-banking-container-modern-dark.png">
+  <img src="images/c4-banking-container-modern.png" alt="C4 banking container diagram showing a person, browser UI, backend, data stores and two external systems">
+</picture>
 
-![C4 banking component diagram showing backend APIs, components and connected systems](images/c4-banking-component.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/c4-banking-component-modern-dark.png">
+  <img src="images/c4-banking-component-modern.png" alt="C4 banking component diagram showing backend APIs, components and connected systems">
+</picture>
 
-![C4 code diagram of the core banking adapter](images/c4-banking-code.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/c4-banking-code-modern-dark.png">
+  <img src="images/c4-banking-code-modern.png" alt="C4 code diagram of the core banking adapter">
+</picture>
 
 The context, container and component views adapt Simon Brown's [Internet Banking System C4 example](https://c4model.com/example/) under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Descriptions and layout are LAML adaptations, not copies of the original diagram files. The component view shows both the scoped Backend and its enclosing Internet Banking System; its component inventory is intentionally curated. The code view is a new illustrative LAML continuation, **not** a claim about the original example's implementation.
 
 ## System context
 
-[Complete source](../examples/c4-context.laml) · [Rendered image](images/c4-context.png)
+[Complete source](../examples/c4-context.laml) · [Rendered image](images/c4-context-modern.png)
 
 ```laml
 settings {
@@ -40,31 +52,43 @@ layout {
 }
 ```
 
-![C4 context for an online shop](images/c4-context.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/c4-context-modern-dark.png">
+  <img src="images/c4-context-modern.png" alt="C4 context for an online shop">
+</picture>
 
 The scoped software system is a box; people and directly connected external systems are supporting elements. The view intentionally omits technology details.
 
 ## Container
 
-[Complete source](../examples/c4-container.laml) · [Rendered image](images/c4-container.png)
+[Complete source](../examples/c4-container.laml) · [Rendered image](images/c4-container-modern.png)
 
-![C4 container view with a web app, API and database](images/c4-container.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/c4-container-modern-dark.png">
+  <img src="images/c4-container-modern.png" alt="C4 container view with a web app, API and database">
+</picture>
 
 `scope: Shop` identifies the single `system Shop(...) { ... }` boundary. The block contains `container` declarations, each with a required `technology` and `description`. People and external systems remain outside it. Relations can use qualified endpoints such as `Shop.Web` and `Shop.API`. The named edge `@submit(technology="HTTPS") Shop.Web -> Shop.API : Sends order` shows the protocol visibly as `Sends order (HTTPS)`.
 
 ## Component
 
-[Complete source](../examples/c4-component.laml) · [Rendered image](images/c4-component.png)
+[Complete source](../examples/c4-component.laml) · [Rendered image](images/c4-component-modern.png)
 
-![C4 component view of the order API](images/c4-component.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/c4-component-modern-dark.png">
+  <img src="images/c4-component-modern.png" alt="C4 component view of the order API">
+</picture>
 
 `scope: API` selects one `container API(...) { ... }` boundary containing `component` declarations. You may optionally enclose it and its peer containers in one `system Name { ... }` boundary, as in the banking example; the scope remains the container ID, and references use the full path (`Banking.Backend.SignIn`). Each component has a description and technology. Peer containers, people and external systems may be shown as supporting elements. This is a C4 component, **not** a UML component with required/provided ports.
 
 ## Code
 
-[Complete source](../examples/c4-code.laml) · [Rendered image](images/c4-code.png)
+[Complete source](../examples/c4-code.laml) · [Rendered image](images/c4-code-modern.png)
 
-![C4 code view of the order service](images/c4-code.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/c4-code-modern-dark.png">
+  <img src="images/c4-code-modern.png" alt="C4 code view of the order service">
+</picture>
 
 `scope: Orders` selects a `component Orders(...) { ... }` boundary. Inside it, `class`, `interface`, `enum` and `datatype` declarations use the existing UML class notation, including members and class relationships. This level is optional in C4; LAML does not derive it from source code or assert that the depicted classes exist in a repository.
 

@@ -31,6 +31,7 @@ pub fn with_fonts<T>(
     fn local(source: &Path, file: &str) -> Result<Vec<u8>, String> {
         let root = source
             .parent()
+            .filter(|parent| !parent.as_os_str().is_empty())
             .unwrap_or_else(|| Path::new("."))
             .canonicalize()
             .map_err(|e| e.to_string())?;

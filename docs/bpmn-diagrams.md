@@ -20,7 +20,10 @@ semantics {
 }
 ```
 
-![BPMN process with an exclusive branch and join](images/bpmn-basic.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/bpmn-basic-modern-dark.png">
+  <img src="images/bpmn-basic-modern.png" alt="BPMN process with an exclusive branch and join">
+</picture>
 
 A bare identifier first encountered inside `semantics` creates an ordinary task. Optional `( ... )` text and attributes belong to the element at its *first* occurrence; later occurrences reference that element and cannot redefine it. `:ja` and `:nein` belong to the outgoing arrows. `<X>` draws an exclusive gateway, `<+>` a parallel gateway and `<O>` an inclusive gateway. `@Complete` and `@Merge` give gateways stable addresses; omitting a split's ID lets LAML derive one from the source line. An event-based gateway is `<event>` and must lead to catching intermediate events or receive tasks, not condition labels. Gateways are not freely replaceable icons.
 
@@ -28,7 +31,10 @@ A bare identifier first encountered inside `semantics` creates an ordinary task.
 
 The [complete collaboration source](../examples/bpmn-order.laml) and its image show two pools, two lanes, a boundary timer, task types, a data object and store, plus a collapsed subprocess:
 
-![BPMN collaboration with lanes and message flows](images/bpmn-order.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/bpmn-order-modern-dark.png">
+  <img src="images/bpmn-order-modern.png" alt="BPMN collaboration with lanes and message flows">
+</picture>
 
 ```text
 pool Customer("Customer") {
@@ -64,13 +70,19 @@ Review -(message@Cancellation:"Cancel")-> Cancel
 
 `+Check("Pack items")` draws a **collapsed** subprocess; `Check("Pack items") { ... }` draws its inner flow in a visibly **expanded** frame. These are alternative depictions, not two declarations of the same ID. Outer flows connect to the subprocess border, never directly to its inner nodes. See [`examples/bpmn-subprocess.laml`](../examples/bpmn-subprocess.laml):
 
-![Expanded BPMN subprocess](images/bpmn-subprocess.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/bpmn-subprocess-modern-dark.png">
+  <img src="images/bpmn-subprocess-modern.png" alt="Expanded BPMN subprocess">
+</picture>
 
 ## Layout and icons
 
 Automatic layout is left-to-right. Pools appear one below another, lanes are ordered to put a lane containing a start event first. `direction: top-to-bottom` under `settings` rotates the automatic flow while keeping all node labels upright: pools become side-by-side and lanes become columns. Column width is measured from the actual widths of its nodes; nodes are centered inside the usable lane area, beyond its header. A pool without lanes does not reserve a phantom lane header. Message flows between side-by-side pools use the aisle rather than tracing a pool border; their labels keep clearance from both borders. In this direction, a start-event caption sits above the event when its outgoing sequence flow runs below. The [complete vertical source](../examples/bpmn-vertical.laml) produces this image:
 
-![Top-to-bottom BPMN collaboration with vertical lanes](images/bpmn-vertical.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/bpmn-vertical-modern-dark.png">
+  <img src="images/bpmn-vertical-modern.png" alt="Top-to-bottom BPMN collaboration with vertical lanes">
+</picture>
 
 A minimal mandatory correction uses distinct node addresses:
 

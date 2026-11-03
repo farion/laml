@@ -8,7 +8,10 @@ Layout and Markup Language
 
 LAML turns a `.laml` file into an SVG, PNG or vector PDF diagram. Describe the elements, add only the placement rules that matter, and style the result independently.
 
-![Architecture diagram with a vertically arranged decision flow](docs/images/showcase-generic.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/showcase-generic-modern-dark.png">
+  <img src="docs/images/showcase-generic-modern.png" alt="Architecture diagram with a vertically arranged decision flow">
+</picture>
 
 [Source for this image](examples/showcase-generic.laml) · [Getting started](docs/getting-started.md)
 
@@ -79,7 +82,10 @@ styling {
 
 [Open the complete source](examples/architecture.laml) to build the image.
 
-![Four-layer architecture diagram](docs/images/architecture.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/architecture-modern-dark.png">
+  <img src="docs/images/architecture-modern.png" alt="Four-layer architecture diagram">
+</picture>
 
 ### C4: a system boundary, containers and technologies
 
@@ -99,7 +105,10 @@ semantics {
 }
 ```
 
-![C4 Internet Banking container view with a customer, browser, backend, data stores and external systems](docs/images/c4-banking-container.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/c4-banking-container-modern-dark.png">
+  <img src="docs/images/c4-banking-container-modern.png" alt="C4 Internet Banking container view with a customer, browser, backend, data stores and external systems">
+</picture>
 
 [Full container source](examples/c4-banking-container.laml) · [Context, component and code views](docs/c4-diagrams.md). **C4 support is currently on `main`; the latest tagged binary does not include it yet.** Adapted from Simon Brown's [Internet Banking System example](https://c4model.com/example/) (CC BY 4.0).
 
@@ -115,7 +124,10 @@ semantics {
 }
 ```
 
-![Compact class diagram with Customer, Order, Line and Pricing](docs/images/showcase-class.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/showcase-class-modern-dark.png">
+  <img src="docs/images/showcase-class-modern.png" alt="Compact class diagram with Customer, Order, Line and Pricing">
+</picture>
 
 [Full class source](examples/showcase-class.laml) · [Class guide](docs/diagrams/class.md)
 
@@ -133,7 +145,10 @@ semantics {
 }
 ```
 
-![Compact sequence diagram with activation bars, fragments, a note and destruction crosses](docs/images/showcase-sequence.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/showcase-sequence-modern-dark.png">
+  <img src="docs/images/showcase-sequence-modern.png" alt="Compact sequence diagram with activation bars, fragments, a note and destruction crosses">
+</picture>
 
 [Full showcase source](examples/showcase-sequence.laml) · [Sequence guide](docs/diagrams/sequence.md).
 
@@ -147,9 +162,45 @@ Approve --> <X>@Merge --> Done
 RequestDocuments --> Merge
 ```
 
-![BPMN process with an exclusive decision](docs/images/bpmn-basic.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/bpmn-basic-modern-dark.png">
+  <img src="docs/images/bpmn-basic-modern.png" alt="BPMN process with an exclusive decision">
+</picture>
 
 [Complete BPMN source](examples/bpmn-basic.laml) · [BPMN guide and coverage limits](docs/bpmn-diagrams.md).
+
+## Themes
+
+Six themes come in three light/dark pairs. The previews below have **transparent backgrounds** and switch with GitHub's light or dark appearance. Theme colors are chosen at build time; transparency alone does not recolor an image. The [theme guide](docs/themes.md) compares all six themes and explains fonts, `base-color`, and LSS overrides.
+
+### Plain · Plain dark
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/theme-plain-dark.png">
+  <img src="docs/images/theme-plain.png" alt="Plain theme example: connected service, archive and client">
+</picture>
+
+[Plain source](examples/theme-plain.laml) · [Plain dark source](examples/theme-plain-dark.laml)
+
+### Modern · Modern dark
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/theme-modern-dark.png">
+  <img src="docs/images/theme-modern.png" alt="Modern theme example: connected service, archive and client">
+</picture>
+
+[Modern source](examples/theme-modern.laml) · [Modern dark source](examples/theme-modern-dark.laml)
+
+### Modern mono · Modern mono dark
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/theme-modern-mono-dark.png">
+  <img src="docs/images/theme-modern-mono.png" alt="Modern monochrome theme example: connected service, archive and client">
+</picture>
+
+[Modern mono source](examples/theme-modern-mono.laml) · [Modern mono dark source](examples/theme-modern-mono-dark.laml)
+
+To render any example for both GitHub appearances, run `python3 scripts/build-theme-previews.py` after `cargo build --release`. This writes `docs/images/<name>-modern.png` and `docs/images/<name>-modern-dark.png` for every `.laml` source without changing that source. The dark export gives explicit pale fills readable dark text and brightens explicit dark relation strokes in its temporary source. GitHub selects the image with `<picture>` and `prefers-color-scheme`; the original example still builds normally with its own settings.
 
 ## Features
 

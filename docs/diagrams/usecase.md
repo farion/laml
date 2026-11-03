@@ -15,7 +15,10 @@ semantics {
 }
 ```
 
-![Customer actor connected to a use case inside the Shop boundary](../images/usecase-quickstart.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/usecase-quickstart-modern-dark.png">
+  <img src="../images/usecase-quickstart-modern.png" alt="Customer actor connected to a use case inside the Shop boundary">
+</picture>
 
 [Complete source](../../examples/usecase-quickstart.laml). Declare use cases inside a `system` boundary; connect external actors with `--` and a qualified use-case ID.
 
@@ -35,7 +38,10 @@ semantics {
 }
 ```
 
-![Included payment, optional discount and actor generalization](../images/usecase-order.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/usecase-order-modern-dark.png">
+  <img src="../images/usecase-order-modern.png" alt="Included payment, optional discount and actor generalization">
+</picture>
 
 [Complete source](../../examples/usecase-order.laml).
 

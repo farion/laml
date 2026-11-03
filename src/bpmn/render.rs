@@ -327,7 +327,7 @@ pub fn render_with_styles(
                     super::type_sizes::BAND,
                 );
             } else {
-                writeln!(svg,"<rect x=\"{:.1}\" y=\"{:.1}\" width=\"30\" height=\"{:.1}\" fill=\"#f8fbff\"/><path d=\"M {:.1} {:.1} V {:.1}\" stroke=\"#263548\" fill=\"none\"/><text x=\"{:.1}\" y=\"{:.1}\" transform=\"rotate(-90 {:.1} {:.1})\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"15\">{}</text>",p.x,band.y,span,p.x+30.0,band.y,band.y+span,p.x+15.0,band.y+band.h/2.0,p.x+15.0,band.y+band.h/2.0,escape(&band.label)).unwrap();
+                writeln!(svg,"<rect x=\"{:.1}\" y=\"{:.1}\" width=\"30\" height=\"{:.1}\" fill=\"#f8fbff\"/><path d=\"M {:.1} {:.1} V {:.1}\" stroke=\"#263548\" fill=\"none\"/><text x=\"{:.1}\" y=\"{:.1}\" transform=\"rotate(-90 {:.1} {:.1})\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"15\" fill=\"#182330\">{}</text>",p.x,band.y,span,p.x+30.0,band.y,band.y+span,p.x+15.0,band.y+band.h/2.0,p.x+15.0,band.y+band.h/2.0,escape(&band.label)).unwrap();
                 if band.y > p.y + 30.5 {
                     writeln!(
                         svg,
@@ -345,7 +345,7 @@ pub fn render_with_styles(
         writeln!(svg,"<rect x=\"{:.1}\" y=\"{:.1}\" width=\"{:.1}\" height=\"{:.1}\" fill=\"none\" stroke=\"#263548\" stroke-width=\"2\"/>",p.x,p.y,p.w,p.h).unwrap();
         writeln!(
             svg,
-            "<text x=\"{:.1}\" y=\"{:.1}\" font-family=\"Inter\" font-size=\"15\">{}</text>",
+            "<text x=\"{:.1}\" y=\"{:.1}\" font-family=\"Inter\" font-size=\"15\" fill=\"#182330\">{}</text>",
             p.x + 10.0,
             p.y + 20.0,
             escape(&p.label)

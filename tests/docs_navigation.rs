@@ -137,17 +137,22 @@ fn every_diagram_guide_starts_with_code_image_and_complete_source() {
             .find("## Basic example")
             .expect("missing basic example");
         let code = guide[basic..].find("```laml").expect("missing basic code") + basic;
-        let image = guide[basic..].find("![").expect("missing basic image") + basic;
+        let image = guide[basic..]
+            .find("<picture>")
+            .expect("missing responsive basic image")
+            + basic;
         assert!(code < image, "{name}: code must precede image");
         let snippet = guide[code + "```laml".len()..].split("```").next().unwrap();
         let first_image = guide[image..]
-            .split_once("](")
-            .and_then(|(_, tail)| tail.split(')').next())
+            .split_once("<img src=\"")
+            .and_then(|(_, tail)| tail.split('"').next())
             .unwrap();
         let filename = Path::new(first_image)
             .file_stem()
             .unwrap()
             .to_str()
+            .unwrap()
+            .strip_suffix("-modern")
             .unwrap();
         let source = fs::read_to_string(root.join(format!("examples/{filename}.laml"))).unwrap();
         assert_eq!(
@@ -155,15 +160,33 @@ fn every_diagram_guide_starts_with_code_image_and_complete_source() {
             source_lines(&source),
             "{name}: basic code must build the shown image"
         );
-        for image_link in guide.split("![").skip(1) {
-            let path = image_link
-                .split_once("](")
-                .and_then(|(_, tail)| tail.split(')').next())
-                .expect("malformed image");
-            let filename = Path::new(path).file_stem().unwrap().to_str().unwrap();
+        for picture in guide.split("<picture>").skip(1) {
+            let block = picture.split("</picture>").next().expect("missing picture end");
+            let light = block
+                .split_once("<img src=\"")
+                .and_then(|(_, tail)| tail.split('"').next())
+                .expect("missing light image");
+            let dark = block
+                .split_once("srcset=\"")
+                .and_then(|(_, tail)| tail.split('"').next())
+                .expect("missing dark image");
+            assert_eq!(dark, light.replace("-modern.png", "-modern-dark.png"));
+            for path in [light, dark] {
+                assert!(
+                    root.join("docs/diagrams").join(path).is_file(),
+                    "{name}: missing {path}"
+                );
+            }
+            let filename = Path::new(light)
+                .file_stem()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .strip_suffix("-modern")
+                .unwrap();
             assert!(
                 guide.contains(&format!("../../examples/{filename}.laml")),
-                "{name}: {path} needs a link to its full source"
+                "{name}: {light} needs a link to its full source"
             );
         }
     }

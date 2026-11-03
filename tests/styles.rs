@@ -44,6 +44,13 @@ fn parse_diagram(styling: &str) -> laml::syntax::Diagram {
 }
 
 #[test]
+fn bare_filename_uses_current_directory_for_style_root() {
+    let diagram = parse_diagram("");
+    let sheet = load(&diagram, Path::new("vdg-core-classes.laml")).unwrap();
+    assert!(sheet.rules.is_empty());
+}
+
+#[test]
 fn universal_defaults_lose_to_type_selectors_even_when_declared_later() {
     let f = Fixture::new();
     let diagram = parse_diagram("node {\ncolor: rgb(1, 2, 3)\n}\n* {\ncolor: rgb(4, 5, 6)\n}");

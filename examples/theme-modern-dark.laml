@@ -1,6 +1,7 @@
 // Same source, six theme defaults; no explicit LSS paint overrides.
 settings {
     theme: modern-dark
+    background: transparent
 }
 semantics {
     package Platform {

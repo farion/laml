@@ -30,7 +30,7 @@ styling {
 }
 ```
 
-A participant declaration draws its head and dashed lifeline; it does not open an execution bar. `API+` opens a bar; `API-` closes it. Messages arriving at or leaving an active execution attach to its visible edge on the side of the other endpoint. The short `<--` reply resolves the last unambiguous open call; write `response: Client <-- API : 200 OK` when its endpoints need to be explicit. The `layout` rule keeps full participant heads at least 80 pixels apart. Message order provides a stable row tie-break; it does **not** assert that independent events on different lifelines have a temporal order. The source of [sequence-basic.laml](../examples/sequence-basic.laml) and its [rendered image](images/sequence-basic.png) provide a shorter variation.
+A participant declaration draws its head and dashed lifeline; it does not open an execution bar. `API+` opens a bar; `API-` closes it. Messages arriving at or leaving an active execution attach to its visible edge on the side of the other endpoint. The short `<--` reply resolves the last unambiguous open call; write `response: Client <-- API : 200 OK` when its endpoints need to be explicit. The `layout` rule keeps full participant heads at least 80 pixels apart. Message order provides a stable row tie-break; it does **not** assert that independent events on different lifelines have a temporal order. The source of [sequence-basic.laml](../examples/sequence-basic.laml) and its [rendered image](images/sequence-basic-modern.png) provide a shorter variation.
 
 ## Messages and lifetimes
 

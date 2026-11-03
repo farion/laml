@@ -17,7 +17,10 @@ semantics {
 }
 ```
 
-![Initial state, two states and a final state](../images/state-quickstart.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/state-quickstart-modern-dark.png">
+  <img src="../images/state-quickstart-modern.png" alt="Initial state, two states and a final state">
+</picture>
 
 [Complete source](../../examples/state-quickstart.laml). `-->` draws a transition; the text after `:` appears beside it.
 
@@ -39,7 +42,10 @@ semantics {
 }
 ```
 
-![Guarded choice and state entry/do/exit behavior](../images/state-basic.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/state-basic-modern-dark.png">
+  <img src="../images/state-basic-modern.png" alt="Guarded choice and state entry/do/exit behavior">
+</picture>
 
 [Complete source](../../examples/state-basic.laml). Guards label choice exits; `entry`, `do`, and `exit` appear inside a state.
 
@@ -58,7 +64,10 @@ state Processing {
 }
 ```
 
-![State containing a nested region](../images/state-composite.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/state-composite-modern-dark.png">
+  <img src="../images/state-composite-modern.png" alt="State containing a nested region">
+</picture>
 
 [Composite source](../../examples/state-composite.laml). A state may contain one visible nested region.
 
@@ -67,7 +76,10 @@ state Processing {
 @ping Open --> Open : ping / keepAlive()
 ```
 
-![State self-loop routed outside Open](../images/state-loop.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/state-loop-modern-dark.png">
+  <img src="../images/state-loop-modern.png" alt="State self-loop routed outside Open">
+</picture>
 
 [Complete self-loop source](../../examples/state-loop.laml). A self-transition uses `A --> A` and routes outside the state.
 

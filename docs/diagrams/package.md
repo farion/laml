@@ -15,7 +15,10 @@ semantics {
 }
 ```
 
-![Nested Shop package with a dependency on Payments](../images/package-quickstart.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/package-quickstart-modern-dark.png">
+  <img src="../images/package-quickstart-modern.png" alt="Nested Shop package with a dependency on Payments">
+</picture>
 
 [Complete source](../../examples/package-quickstart.laml). Braces enclose a package; `Shop.Orders` addresses its nested package. `..>` is a dependency.
 
@@ -31,7 +34,10 @@ semantics {
 }
 ```
 
-![Nested packages with import, access and merge](../images/package-architecture.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/package-architecture-modern-dark.png">
+  <img src="../images/package-architecture-modern.png" alt="Nested packages with import, access and merge">
+</picture>
 
 [Complete source](../../examples/package-architecture.laml).
 

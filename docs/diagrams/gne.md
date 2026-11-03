@@ -18,7 +18,10 @@ styling {
 }
 ```
 
-![Browser requests the API](../images/gne-basic.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/gne-basic-modern-dark.png">
+  <img src="../images/gne-basic-modern.png" alt="Browser requests the API">
+</picture>
 
 [Complete source for this image](../../examples/gne-basic.laml). Build with `laml build examples/gne-basic.laml`. GNE is the default: no `type` setting is needed. The relation gives an automatic placement preference; the layout rule requires a minimum gap and aligned centers.
 
@@ -47,7 +50,10 @@ semantics {
 }
 ```
 
-![Parallel relations and an exterior self-loop](../images/parallel-loops.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/parallel-loops-modern-dark.png">
+  <img src="../images/parallel-loops-modern.png" alt="Parallel relations and an exterior self-loop">
+</picture>
 
 [Complete source](../../examples/parallel-loops.laml). Named relations can be styled individually; multiple connections use separate routes.
 
@@ -65,7 +71,10 @@ layout {
 }
 ```
 
-![Crossing with a bridge](../images/crossing.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/crossing-modern-dark.png">
+  <img src="../images/crossing-modern.png" alt="Crossing with a bridge">
+</picture>
 
 [Complete source for this image](../../examples/crossing.laml).
 
@@ -108,7 +117,10 @@ styling {
 }
 ```
 
-![Generic graph with package, ports and styled shapes](../images/showcase-generic.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/showcase-generic-modern-dark.png">
+  <img src="../images/showcase-generic-modern.png" alt="Generic graph with package, ports and styled shapes">
+</picture>
 
 [Complete source for this image](../../examples/showcase-generic.laml). `node.class` selects a styling class; `node[ID]` selects one element. Generic shapes include `rectangle`, `ellipse`, `diamond` and `note`. In modern themes, a GNE note is a rounded card with a flush, full-height left accent, not a folded-paper icon; `plain` keeps the folded note. Modern arrowheads meet the visible edge of generic port dots instead of being covered by them. Packages group contained elements; members and ports can be addressed by relations.
 
@@ -138,7 +150,10 @@ styling {
 }
 ```
 
-![Four-layer architecture with classes and imported styling](../images/architecture.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/architecture-modern-dark.png">
+  <img src="../images/architecture-modern.png" alt="Four-layer architecture with classes and imported styling">
+</picture>
 
 [Full diagram source](../../examples/architecture.laml) · [Imported style file](../../examples/architecture.lamlstyle). `direction` guides unconstrained placement; it does not override mandatory layout. Imports resolve relative to the source file.
 
@@ -167,7 +182,10 @@ styling {
 }
 ```
 
-![Generic node with folder icon and member visibility glyph](../images/generic-icons.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/generic-icons-modern-dark.png">
+  <img src="../images/generic-icons-modern.png" alt="Generic node with folder icon and member visibility glyph">
+</picture>
 
 [Complete source](../../examples/generic-icons.laml). `symbol-rendering: text` overrides icon rendering for one named member.
 
@@ -184,7 +202,10 @@ layout {
 }
 ```
 
-![Inline and along-path relation labels](../images/label-modes.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/label-modes-modern-dark.png">
+  <img src="../images/label-modes-modern.png" alt="Inline and along-path relation labels">
+</picture>
 
 [Complete source](../../examples/label-modes.laml).
 

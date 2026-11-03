@@ -18,7 +18,10 @@ layout {
 }
 ```
 
-![Two devices, a contained artifact and a communication path](../images/deployment-quickstart.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/deployment-quickstart-modern-dark.png">
+  <img src="../images/deployment-quickstart-modern.png" alt="Two devices, a contained artifact and a communication path">
+</picture>
 
 [Complete source](../../examples/deployment-quickstart.laml). The artifact is drawn inside its device; `--` connects devices with a communication path.
 
@@ -38,7 +41,10 @@ semantics {
 }
 ```
 
-![Deployment and manifestation beside contained runtime](../images/deployment-basic.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/deployment-basic-modern-dark.png">
+  <img src="../images/deployment-basic-modern.png" alt="Deployment and manifestation beside contained runtime">
+</picture>
 
 [Complete source](../../examples/deployment-basic.laml). `<<deploy>>` points to a deployment target; `<<manifest>>` points to the component realized by an artifact.
 
@@ -59,7 +65,10 @@ semantics {
 }
 ```
 
-![Nested deployment topology](../images/deployment-topology.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/deployment-topology-modern-dark.png">
+  <img src="../images/deployment-topology-modern.png" alt="Nested deployment topology">
+</picture>
 
 [Complete source](../../examples/deployment-topology.laml).
 
@@ -74,6 +83,9 @@ executionEnvironment JVM
 @deployment BillingJar ..> JVM <<deploy>>
 ```
 
-![Artifact manifested from a component and deployed on a JVM](../images/deployment-manifest.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/deployment-manifest-modern-dark.png">
+  <img src="../images/deployment-manifest-modern.png" alt="Artifact manifested from a component and deployed on a JVM">
+</picture>
 
 [Complete source](../../examples/deployment-manifest.laml). Manifestation points to a component; deployment points to a node or execution environment. Use [GNE](gne.md) for shared placement and styling. [Full deployment syntax](../language-reference.md#deployment-diagrams).

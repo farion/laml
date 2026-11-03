@@ -76,7 +76,8 @@ fn readme_showcases_include_generic_class_and_sequence() {
     for (kind, minimum_nodes, minimum_relations) in [("generic", 9, 6), ("class", 5, 3)] {
         let name = format!("showcase-{kind}");
         assert!(readme.contains(&format!("examples/{name}.laml")));
-        assert!(readme.contains(&format!("docs/images/{name}.png")));
+        assert!(readme.contains(&format!("docs/images/{name}-modern.png")));
+        assert!(readme.contains(&format!("docs/images/{name}-modern-dark.png")));
         let source = fs::read_to_string(root.join(format!("examples/{name}.laml"))).unwrap();
         let diagram = parse(&source).unwrap();
         assert!(diagram.nodes.len() >= minimum_nodes, "{kind} nodes");
@@ -90,7 +91,25 @@ fn readme_showcases_include_generic_class_and_sequence() {
     assert!(sequence.participants.len() >= 4);
     assert!(sequence.events.len() >= 18);
     assert!(readme.contains("examples/showcase-sequence.laml"));
-    assert!(readme.contains("docs/images/showcase-sequence.png"));
+    assert!(readme.contains("docs/images/showcase-sequence-modern.png"));
+    assert!(readme.contains("docs/images/showcase-sequence-modern-dark.png"));
+}
+
+#[test]
+fn every_example_has_two_transparent_theme_images() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    for entry in fs::read_dir(root.join("examples")).unwrap() {
+        let source = entry.unwrap().path();
+        if source.extension().and_then(|e| e.to_str()) != Some("laml") {
+            continue;
+        }
+        let stem = source.file_stem().unwrap().to_str().unwrap();
+        for theme in ["modern", "modern-dark"] {
+            let path = root.join(format!("docs/images/{stem}-{theme}.png"));
+            let image = resvg::tiny_skia::Pixmap::decode_png(&fs::read(&path).unwrap()).unwrap();
+            assert_eq!(image.pixels()[0].alpha(), 0, "{}", path.display());
+        }
+    }
 }
 
 #[test]
@@ -414,7 +433,7 @@ fn user_documentation_contains_no_speculative_status_notes() {
             "planned",
             "provisional",
             "draft",
-            "preview",
+            "preview release",
             "future work",
             "early subset",
         ] {

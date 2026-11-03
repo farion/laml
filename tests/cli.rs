@@ -64,6 +64,41 @@ fn build_example_produces_svg_with_selectable_text_and_embedded_font() {
 }
 
 #[test]
+fn bare_relative_input_builds_in_current_directory() {
+    let dir = temp_dir();
+    fs::write(
+        dir.join("core.laml"),
+        "settings {\ntype: class\nfont-file: \"Inter.otf\"\n}\nsemantics {\nclass Vehicle\n}\nstyling {\nimport \"shared.lamlstyle\"\n}\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("shared.lamlstyle"),
+        "styling {\nnode[Vehicle] {\nfill: rgb(240, 240, 240)\n}\n}\n",
+    )
+    .unwrap();
+    fs::copy(
+        concat!(env!("CARGO_MANIFEST_DIR"), "/assets/Inter-Regular.otf"),
+        dir.join("Inter.otf"),
+    )
+    .unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_laml"))
+        .current_dir(&dir)
+        .env("LAML_NO_UPDATE_CHECK", "1")
+        .args(["build", "core.laml", "core.svg"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(fs::read_to_string(dir.join("core.svg"))
+        .unwrap()
+        .contains("<svg "));
+    fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
 fn parallel_routes_render_as_distinct_paths() {
     let dir = temp_dir();
     let source = dir.join("parallel.laml");

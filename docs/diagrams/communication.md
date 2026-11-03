@@ -19,7 +19,10 @@ layout {
 }
 ```
 
-![Two participants exchanging numbered messages on one link](../images/communication-quickstart.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/communication-quickstart-modern-dark.png">
+  <img src="../images/communication-quickstart-modern.png" alt="Two participants exchanging numbered messages on one link">
+</picture>
 
 [Complete source](../../examples/communication-quickstart.laml). Declare a link with `--`; numbered messages can travel in either direction on it. `interaction` names the enclosing frame.
 
@@ -38,7 +41,10 @@ semantics {
 }
 ```
 
-![Three participants and nested message numbers](../images/communication-order.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/communication-order-modern-dark.png">
+  <img src="../images/communication-order-modern.png" alt="Three participants and nested message numbers">
+</picture>
 
 [Complete source](../../examples/communication-order.laml). Declare links before their messages. Message numbers are explicitly written, not inferred from the drawing.
 

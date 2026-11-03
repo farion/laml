@@ -92,7 +92,12 @@ fn err(path: &Path, line: usize, message: impl Into<String>) -> StyleError {
 /// Load styles in source order. Imports must remain inside the source file's
 /// directory tree (including after following symlinks); no remote imports.
 pub fn load(diagram: &Diagram, source_path: &Path) -> Result<StyleSheet, StyleError> {
-    let root = source_path.parent().unwrap_or_else(|| Path::new("."));
+    // A bare filename has an empty parent, not None. Canonicalizing "" fails
+    // even though the source file itself was read successfully from the cwd.
+    let root = source_path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
     let root = fs::canonicalize(root).map_err(|e| err(source_path, 0, e.to_string()))?;
     let mut result = StyleSheet {
         theme: diagram.settings.theme,

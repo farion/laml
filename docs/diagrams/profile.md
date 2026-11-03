@@ -18,7 +18,10 @@ layout {
 }
 ```
 
-![Tracked stereotype extends the UML Class metaclass](../images/profile-quickstart.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/profile-quickstart-modern-dark.png">
+  <img src="../images/profile-quickstart-modern.png" alt="Tracked stereotype extends the UML Class metaclass">
+</picture>
 
 [Complete source](../../examples/profile-quickstart.laml). A profile owns stereotypes. `--^>` draws the filled-triangle extension from a stereotype to a metaclass.
 
@@ -35,7 +38,10 @@ semantics {
 }
 ```
 
-![Profile, metaclass reference and application to a package](../images/profile-audit.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/profile-audit-modern-dark.png">
+  <img src="../images/profile-audit-modern.png" alt="Profile, metaclass reference and application to a package">
+</picture>
 
 [Complete source](../../examples/profile-audit.laml).
 

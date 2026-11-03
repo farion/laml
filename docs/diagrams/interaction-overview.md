@@ -20,7 +20,10 @@ semantics {
 }
 ```
 
-![Two interaction uses in a Checkout frame](../images/interaction-overview-basic.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/interaction-overview-basic-modern-dark.png">
+  <img src="../images/interaction-overview-basic-modern.png" alt="Two interaction uses in a Checkout frame">
+</picture>
 
 [Complete source for this image](../../examples/interaction-overview-basic.laml). Each `interaction-use` is a `ref` frame; directed control flows connect the frames between initial and final vertices.
 
@@ -43,7 +46,10 @@ semantics {
 }
 ```
 
-![Purchase with decision, guarded paths and merge](../images/interaction-overview-purchase.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/interaction-overview-purchase-modern-dark.png">
+  <img src="../images/interaction-overview-purchase-modern.png" alt="Purchase with decision, guarded paths and merge">
+</picture>
 
 [Complete source](../../examples/interaction-overview-purchase.laml). `decision` branches on guards; `merge` reunites the paths.
 
@@ -57,6 +63,9 @@ Reserve --> Complete
 Charge --> Complete
 ```
 
-![Parallel interaction uses with fork and join](../images/interaction-overview-parallel.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/interaction-overview-parallel-modern-dark.png">
+  <img src="../images/interaction-overview-parallel-modern.png" alt="Parallel interaction uses with fork and join">
+</picture>
 
 [Complete source](../../examples/interaction-overview-parallel.laml). `fork` and `join` delimit parallel paths. Common placement: [GNE](gne.md). [Full syntax](../language-reference.md#interaction-overview-diagrams).

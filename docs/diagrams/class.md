@@ -20,7 +20,10 @@ layout {
 }
 ```
 
-![Customer and Order with an association](../images/class-quickstart.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/class-quickstart-modern-dark.png">
+  <img src="../images/class-quickstart-modern.png" alt="Customer and Order with an association">
+</picture>
 
 [Complete source for this image](../../examples/class-quickstart.laml). `"1"` and `"0..*"` label the association ends; `layout` fixes the boxes' minimum separation.
 
@@ -42,7 +45,10 @@ semantics {
 }
 ```
 
-![Class compartments, end roles and a note on the association](../images/class-basic.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/class-basic-modern-dark.png">
+  <img src="../images/class-basic-modern.png" alt="Class compartments, end roles and a note on the association">
+</picture>
 
 [Complete source](../../examples/class-basic.laml). `--` separates attributes and operations; `Regel .. relation[orders]` attaches a note to the named association.
 
@@ -66,7 +72,10 @@ semantics {
 }
 ```
 
-![Classes, packages, templates and relationships](../images/showcase-class.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/showcase-class-modern-dark.png">
+  <img src="../images/showcase-class-modern.png" alt="Classes, packages, templates and relationships">
+</picture>
 
 [Complete source](../../examples/showcase-class.laml). The excerpt illustrates notation; the complete source supplies declarations and layout.
 
@@ -91,7 +100,10 @@ styling {
 }
 ```
 
-![Compact interface notation](../images/class-lollipops.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/class-lollipops-modern-dark.png">
+  <img src="../images/class-lollipops-modern.png" alt="Compact interface notation">
+</picture>
 
 [Complete source](../../examples/class-lollipops.laml). Each compact interface symbol stays level with its provider, so its connector is horizontal.
 
@@ -108,7 +120,10 @@ package Vertrieb {
 }
 ```
 
-![Nested packages with scoped classes](../images/class-packages.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/class-packages-modern-dark.png">
+  <img src="../images/class-packages-modern.png" alt="Nested packages with scoped classes">
+</picture>
 
 [Complete package source](../../examples/class-packages.laml). Without an explicit placement rule, a nested package linked from a sibling may stack below it so the child connection is vertical. Use `Vertrieb.Kunde` to refer to a class from outside the package.
 
@@ -119,7 +134,10 @@ class StringRepository
 @bind StringRepository ..> Repository <<bind(T->String)>>
 ```
 
-![Template binding](../images/class-binding.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/class-binding-modern-dark.png">
+  <img src="../images/class-binding-modern.png" alt="Template binding">
+</picture>
 
 [Complete binding source](../../examples/class-binding.laml). A named `association` can join three classifiers:
 
@@ -131,7 +149,10 @@ Patient -- Verordnet
 Medikament -- Verordnet
 ```
 
-![Three-arm association](../images/class-nary.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/class-nary-modern-dark.png">
+  <img src="../images/class-nary-modern.png" alt="Three-arm association">
+</picture>
 
 [Complete association source](../../examples/class-nary.laml). An unpositioned n-ary diamond aligns with the middle participant; its arms prefer horizontal and vertical runs over diagonals. Explicit layout rules still take precedence.
 
@@ -142,7 +163,10 @@ Medikament -- Verordnet
 @orders Kunde qualifier(id:UUID,region:String) -- qualifier(nr:Integer) Auftrag
 ```
 
-![Qualifier boxes on both association ends](../images/class-qualifiers.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/class-qualifiers-modern-dark.png">
+  <img src="../images/class-qualifiers-modern.png" alt="Qualifier boxes on both association ends">
+</picture>
 
 [Complete qualifier source](../../examples/class-qualifiers.laml). `qualifier(...)` attaches named, typed attributes to the adjacent association end.
 
@@ -155,6 +179,9 @@ association class Auftrag {
 Auftrag .. relation[orders]
 ```
 
-![Association class attached to a named association](../images/class-association-class.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../images/class-association-class-modern-dark.png">
+  <img src="../images/class-association-class-modern.png" alt="Association class attached to a named association">
+</picture>
 
 [Complete association-class source](../../examples/class-association-class.laml). Give the binary association an ID so its association class can attach to it. Shared placement and styling: [GNE](gne.md). More syntax: [language reference](../language-reference.md#class-and-object-diagrams).
