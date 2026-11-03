@@ -15,7 +15,9 @@ mod deployment;
 mod escape;
 mod interaction_use;
 mod markers;
+mod note;
 mod package;
+mod route_ends;
 mod state;
 mod usecase;
 use escape::escape;
@@ -83,7 +85,7 @@ fn render_svg(
         }
         svg.push_str("</style>\n");
     }
-    markers::definitions(&mut svg);
+    markers::definitions(&mut svg, theme);
     if boxes
         .iter()
         .any(|node| !node.icons.is_empty() || node.body_styles.iter().any(|row| row.icon.is_some()))
@@ -114,6 +116,7 @@ fn render_svg(
     state::backgrounds(&mut svg, boxes);
     usecase::background(&mut svg, boxes);
     for route in routes {
+        let (visual_start, visual_end) = route_ends::marker_tips(route, boxes, theme);
         let start = markers::marker(route.appearance.start, true);
         let end = markers::marker(route.appearance.end, false);
         let start_marker = if start.is_empty() {
@@ -132,15 +135,30 @@ fn render_svg(
             ""
         };
         if route.bridges.is_empty() && route.gaps.is_empty() {
+            let last = route.points.len().saturating_sub(1);
             let points: Vec<String> = route
                 .points
                 .iter()
-                .map(|p| format!("{:.2},{:.2}", p.x, p.y))
+                .enumerate()
+                .map(|(i, p)| {
+                    let point = if i == 0 {
+                        visual_start.unwrap_or(*p)
+                    } else if i == last {
+                        visual_end.unwrap_or(*p)
+                    } else {
+                        *p
+                    };
+                    format!("{:.2},{:.2}", point.x, point.y)
+                })
                 .collect();
             writeln!(svg,"<polyline points=\"{}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"{dash}{end_marker}{start_marker} />",
                 points.join(" "), route.color, route.width).unwrap();
         } else {
-            let fragments = crate::svg_paths::fragments(route)?;
+            let fragments = if visual_start.is_none() && visual_end.is_none() {
+                crate::svg_paths::fragments(route)?
+            } else {
+                crate::svg_paths::fragments_with_ends(route, visual_start, visual_end)?
+            };
             let last = fragments.len() - 1;
             for (i, path) in fragments.iter().enumerate() {
                 writeln!(svg,"<path d=\"{}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"{dash}{}{} />",
@@ -171,9 +189,10 @@ fn render_svg(
                 cy+route.font_size*1.25*0.28,route.font_size,route.color,rotation,escape(&label.text)).unwrap();
         }
     }
-    for node in boxes
+    for (index, node) in boxes
         .iter()
-        .filter(|node| !matches!(node.kind, NodeKind::Package | NodeKind::Profile))
+        .enumerate()
+        .filter(|(_, node)| !matches!(node.kind, NodeKind::Package | NodeKind::Profile))
     {
         writeln!(
             svg,
@@ -219,15 +238,7 @@ fn render_svg(
         } else if node.kind == NodeKind::CompositeRole {
             composite::role(&mut svg, node);
         } else if node.shape == NodeShape::Note {
-            let fold = 12.0_f64.min(node.width / 4.0).min(node.height / 4.0);
-            writeln!(svg,"<path d=\"M{:.2},{:.2} H{:.2} L{:.2},{:.2} V{:.2} H{:.2} Z M{:.2},{:.2} V{:.2} H{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
-                node.x,node.y,node.x+node.width-fold,node.x+node.width,node.y+fold,
-                node.y+node.height,node.x,node.x+node.width-fold,node.y,node.y+fold,node.x+node.width,
-                node.fill,node.border_color,node.border_width).unwrap();
-            if theme.modern() && node.height > 18.0 {
-                writeln!(svg, "<path data-note-accent=\"true\" d=\"M{:.2},{:.2} V{:.2}\" stroke=\"{}\" stroke-width=\"5\" stroke-linecap=\"round\"/>",
-                    node.x+4.0,node.y+7.0,node.y+node.height-7.0,node.accent_color).unwrap();
-            }
+            note::draw(&mut svg, node, index);
         } else if node.shape == NodeShape::Ellipse {
             writeln!(svg,"<ellipse cx=\"{:.2}\" cy=\"{:.2}\" rx=\"{:.2}\" ry=\"{:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
                 node.x+node.width/2.0,node.y+node.height/2.0,node.width/2.0,node.height/2.0,node.fill,node.border_color,node.border_width).unwrap();

@@ -102,7 +102,9 @@ pub(super) fn position(diagram: &Diagram, boxes: &mut [BoxNode]) {
                     (
                         current.x
                             + (current.width
-                                - if current.shape == NodeShape::Note && port.side == PortSide::Top
+                                - if current.shape == NodeShape::Note
+                                    && !current.note_card
+                                    && port.side == PortSide::Top
                                 {
                                     16.0
                                 } else {

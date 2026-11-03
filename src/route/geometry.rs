@@ -1,7 +1,6 @@
 use super::labels::segment_hits_rect;
 use super::{Point, Route};
 use crate::geometry::{BoxNode, NodeShape};
-
 fn compact_radius(node: &BoxNode) -> Option<f64> {
     match node.kind {
         crate::syntax::NodeKind::Association | crate::syntax::NodeKind::Junction => Some(12.0),
@@ -18,7 +17,6 @@ fn compact_radius(node: &BoxNode) -> Option<f64> {
         _ => None,
     }
 }
-
 pub(super) fn center(node: &BoxNode) -> Point {
     Point {
         x: node.x + compact_radius(node).unwrap_or(node.width / 2.0),
@@ -55,7 +53,11 @@ pub(super) fn member_port(node: &BoxNode, member: &str, towards: Point) -> Optio
     None
 }
 fn note_fold(node: &BoxNode) -> f64 {
-    12.0_f64.min(node.width / 4.0).min(node.height / 4.0)
+    if node.note_card {
+        0.0
+    } else {
+        12.0_f64.min(node.width / 4.0).min(node.height / 4.0)
+    }
 }
 
 pub(super) fn port(node: &BoxNode, towards: Point) -> Point {
@@ -456,7 +458,7 @@ mod tests {
     #[test]
     fn folded_note_uses_diagonal_stroke_for_ports_and_obstacles() {
         let diagram = crate::parser::parse(
-            "semantics {\nMemo\n}\nstyling {\nnode[Memo] {\nshape: note\n}\n}\n",
+            "settings {\ntheme: plain\n}\nsemantics {\nMemo\n}\nstyling {\nnode[Memo] {\nshape: note\n}\n}\n",
         )
         .unwrap();
         let styles =

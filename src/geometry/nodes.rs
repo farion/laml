@@ -53,6 +53,8 @@ pub struct BoxNode {
     pub divider_color: String,
     pub border_width: f64,
     pub radius: f64,
+    /// GNE note cards use the rectangular contour; UML/plain notes retain the fold.
+    pub note_card: bool,
     pub line: usize,
 }
 
@@ -476,24 +478,22 @@ pub fn measure_node(
         padding,
         fill: super::node_notation::fill_paint(node.kind, styles, &element, palette.as_ref()),
         color: text_color,
-        border_color: match palette.as_ref() {
-            Some(paint)
-                if shape == NodeShape::Note && styles.get(&element, "border-color").is_none() =>
-            {
-                paint.divider.clone()
-            }
-            _ => super::node_notation::border_paint(styles, &element, palette.as_ref()),
-        },
+        border_color: super::node_notation::shape_border_paint(
+            shape == NodeShape::Note,
+            styles,
+            &element,
+            palette.as_ref(),
+        ),
         divider_color: palette.as_ref().map_or_else(
             || super::node_notation::border_paint(styles, &element, None),
             |paint| paint.divider.clone(),
         ),
-        accent_color: palette
-            .as_ref()
-            .map_or("#395373", |paint| paint.border.as_str())
-            .into(),
+        accent_color: super::node_notation::accent_paint(palette.as_ref()),
         border_width: number(styles, &element, "border-width", 1.0),
         radius: super::node_notation::corner_radius(node.kind, styles, &element)?,
+        note_card: diagram_type == DiagramType::Generic
+            && shape == NodeShape::Note
+            && styles.theme.modern(),
         line: node.line,
     })
 }

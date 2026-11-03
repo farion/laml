@@ -4,12 +4,12 @@ use laml::{
     parser::parse,
     route::route,
     styles::load,
-    svg::render,
+    svg::{TextMode, render_with_theme},
 };
 
 #[test]
 fn folded_note_ports_attach_to_stroke_not_missing_corner() {
-    let source = "semantics {\nMemo(label=\"Memo\") {\nport Top\nport Out\n}\nSink\nMemo::Top --> Sink\nMemo::Out --> Sink\n}\nlayout {\nMemo < Sink : gap=200\nport[Memo::Top] : side=top\nport[Memo::Out] : side=right\n}\nstyling {\nnode[Memo] {\nshape: note\n}\n}\n";
+    let source = "settings {\ntheme: plain\n}\nsemantics {\nMemo(label=\"Memo\") {\nport Top\nport Out\n}\nSink\nMemo::Top --> Sink\nMemo::Out --> Sink\n}\nlayout {\nMemo < Sink : gap=200\nport[Memo::Top] : side=top\nport[Memo::Out] : side=right\n}\nstyling {\nnode[Memo] {\nshape: note\n}\n}\n";
     let diagram = parse(source).unwrap();
     let styles = load(&diagram, std::path::Path::new("examples/architecture.laml")).unwrap();
     let boxes = place(&diagram, &styles).unwrap();
@@ -24,7 +24,8 @@ fn folded_note_ports_attach_to_stroke_not_missing_corner() {
     assert!((out.x - boxes[0].x - boxes[0].width).abs() < 1e-6);
     assert!(out.y >= boxes[0].y + fold);
     let routes = route(&diagram, &boxes, &styles).unwrap();
-    let svg = render(&boxes, &routes).unwrap();
+    let svg =
+        render_with_theme(&boxes, &routes, TextMode::Embedded, diagram.settings.theme).unwrap();
     assert!(svg.contains("data-port-id=\"Memo::Top\""));
     assert!(export::png(&svg).is_ok());
     assert!(export::pdf(&svg).is_ok());

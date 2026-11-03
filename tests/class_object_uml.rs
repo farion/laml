@@ -51,8 +51,8 @@ fn uml_rejects_relationship_glyphs_that_misstate_the_element_kinds() {
         "settings {\ntype: class\n}\nsemantics {\nclass C\ninterface API\nC ..|> API\n}\n";
     assert!(image(realization).contains("marker-end=\"url(#triangle)\""));
     let navigable = image("settings {\ntype: class\n}\nsemantics {\nA\nB\nA --> B\n}\n");
-    assert!(navigable.contains("M0,0 L10,4 L0,8\" fill=\"none\""));
-    assert!(navigable.contains("markerWidth=\"12\" markerHeight=\"8\" refX=\"10\""));
+    assert!(navigable.contains("M0,0 L12,5 L0,10\" fill=\"none\""));
+    assert!(navigable.contains("markerWidth=\"14\" markerHeight=\"10\" refX=\"12\""));
     // `..|>` can also denote a generic UML Realization; an interface is not required.
     let generic_realization = "settings {\ntype: class\n}\nsemantics {\nA\nB\nA ..|> B\n}\n";
     assert!(image(generic_realization).contains("marker-end=\"url(#triangle)\""));

@@ -110,7 +110,7 @@ styling {
 
 ![Generic graph with package, ports and styled shapes](../images/showcase-generic.png)
 
-[Complete source for this image](../../examples/showcase-generic.laml). `node.class` selects a styling class; `node[ID]` selects one element. Generic shapes include `rectangle`, `ellipse`, `diamond` and `note`. Packages group contained elements; members and ports can be addressed by relations.
+[Complete source for this image](../../examples/showcase-generic.laml). `node.class` selects a styling class; `node[ID]` selects one element. Generic shapes include `rectangle`, `ellipse`, `diamond` and `note`. In modern themes, a GNE note is a rounded card with a flush, full-height left accent, not a folded-paper icon; `plain` keeps the folded note. Modern arrowheads meet the visible edge of generic port dots instead of being covered by them. Packages group contained elements; members and ports can be addressed by relations.
 
 | Selector or property | Use |
 |---|---|

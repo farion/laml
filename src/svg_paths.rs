@@ -21,8 +21,18 @@ fn append_line(path: &mut String, point: Point) {
 /// from appearing at either side of the gap; only the whole relation's first
 /// and last fragments receive semantic arrowheads.
 pub fn fragments(route: &Route) -> Result<Vec<String>, String> {
+    fragments_with_ends(route, None, None)
+}
+
+pub fn fragments_with_ends(
+    route: &Route,
+    start: Option<Point>,
+    end: Option<Point>,
+) -> Result<Vec<String>, String> {
     let mut paths = Vec::new();
-    let first = route.points.first().ok_or("empty route")?;
+    let first = start
+        .or_else(|| route.points.first().copied())
+        .ok_or("empty route")?;
     let mut current = format!("M{:.2},{:.2}", first.x, first.y);
     for (segment, pair) in route.points.windows(2).enumerate() {
         let length = (pair[1].x - pair[0].x).hypot(pair[1].y - pair[0].y);
@@ -81,7 +91,14 @@ pub fn fragments(route: &Route) -> Result<Vec<String>, String> {
             }
             cursor = end;
         }
-        append_line(&mut current, pair[1]);
+        append_line(
+            &mut current,
+            if segment + 2 == route.points.len() {
+                end.unwrap_or(pair[1])
+            } else {
+                pair[1]
+            },
+        );
     }
     paths.push(current);
     Ok(paths)
@@ -148,6 +165,27 @@ mod tests {
             diagonal.y < 0.0 && diagonal.x < 0.0,
             "the descending-left crossing in the showcase must arc upward"
         );
+    }
+    #[test]
+    fn visual_port_tips_preserve_bridge_and_gap_positions() {
+        let mut r = sample();
+        r.gaps.push(Gap {
+            segment: 0,
+            distance: 90.0,
+            half: 8.0,
+        });
+        r.bridges.push(Bridge {
+            segment: 0,
+            distance: 150.0,
+            radius: 8.0,
+            height: 8.0,
+        });
+        let paths = fragments_with_ends(&r, Some(p(6.0, 0.0)), Some(p(194.0, 0.0))).unwrap();
+        assert_eq!(paths.len(), 2);
+        assert!(paths[0].starts_with("M6.00,0.00"));
+        assert!(paths[0].ends_with("L82.00,0.00"));
+        assert!(paths[1].contains("Q150.00,-16.00"));
+        assert!(paths[1].ends_with("L194.00,0.00"));
     }
     #[test]
     fn underpass_is_two_disconnected_subpaths() {

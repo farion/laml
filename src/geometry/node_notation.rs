@@ -83,6 +83,26 @@ pub(super) fn fill_paint(
     )
 }
 
+pub(super) fn accent_paint(palette: Option<&crate::theme::Palette>) -> String {
+    palette
+        .map_or("#395373", |paint| paint.border.as_str())
+        .into()
+}
+
+pub(super) fn shape_border_paint(
+    note: bool,
+    sheet: &StyleSheet,
+    element: &Element<'_>,
+    palette: Option<&crate::theme::Palette>,
+) -> String {
+    match palette {
+        Some(paint) if note && sheet.get(element, "border-color").is_none() => {
+            paint.divider.clone()
+        }
+        _ => border_paint(sheet, element, palette),
+    }
+}
+
 pub(super) fn border_paint(
     sheet: &StyleSheet,
     element: &Element<'_>,

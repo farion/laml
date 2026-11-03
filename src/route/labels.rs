@@ -100,6 +100,7 @@ pub(super) fn segment_hits_rect(a: Point, b: Point, x: f64, y: f64, w: f64, h: f
         accent_color: String::new(),
         divider_color: String::new(),
         radius: 0.0,
+        note_card: false,
         line: 0,
     };
     intersection(a, b, &node)

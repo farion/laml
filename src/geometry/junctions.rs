@@ -188,6 +188,7 @@ pub(super) fn measure(
         accent_color: String::new(),
         divider_color: String::new(),
         radius: 0.0,
+        note_card: false,
         line: node.line,
     })
 }
