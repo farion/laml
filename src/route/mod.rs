@@ -13,6 +13,7 @@ mod geometry;
 mod junction_arms;
 mod labels;
 mod outline_clearance;
+mod package_outline;
 mod parallel;
 mod preferred;
 mod qualifiers;

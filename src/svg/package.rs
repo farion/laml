@@ -1,26 +1,10 @@
 //! Package tab, frame, and measured heading behind contained graph relations.
 use crate::geometry::BoxNode;
-use crate::text::measure;
 use std::fmt::Write;
 
 pub(super) fn background(svg: &mut String, node: &BoxNode) -> Result<(), String> {
     let step = node.font_size * 1.25;
-    let tab_height = if node.is_container {
-        node.padding + step * node.lines.len() as f64 + 4.0
-    } else {
-        14.0
-    };
-    let title_width = node
-        .lines
-        .iter()
-        .try_fold(0.0_f64, |max, line| -> Result<f64, String> {
-            Ok(max.max(measure(line, node.font_size)?))
-        })?;
-    let tab_width = if node.is_container {
-        (title_width + node.padding * 2.0 + 12.0).min(node.width - 8.0)
-    } else {
-        32.0_f64.min(node.width - 8.0)
-    };
+    let (tab_width, tab_height) = crate::geometry::package_outline::tab(node)?;
     let (x, y, right, bottom) = (node.x, node.y, node.x + node.width, node.y + node.height);
     let r = node.radius.min(tab_height / 3.0).min(tab_width / 3.0);
     let outline = if r > 0.0 {

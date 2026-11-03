@@ -48,7 +48,16 @@ pub(super) fn horizontal_connection(a: &BoxNode, b: &BoxNode) -> Option<Vec<Poin
     } else {
         return None;
     };
-    let top = (left.y + 4.0).max(right.y + 4.0);
+    let solid_top = |node: &BoxNode| {
+        if node.kind == crate::syntax::NodeKind::Package && !node.c4_boundary {
+            node.y
+                + crate::geometry::package_outline::tab(node).map_or(14.0, |(_, height)| height)
+                + 4.0
+        } else {
+            node.y + 4.0
+        }
+    };
+    let top = solid_top(left).max(solid_top(right));
     let bottom = (left.y + left.height - 4.0).min(right.y + right.height - 4.0);
     if top > bottom {
         return None;

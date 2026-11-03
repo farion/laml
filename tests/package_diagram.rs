@@ -67,24 +67,48 @@ fn architecture_dependencies_route_without_changing_original_node_layout() {
         let import = &routes[1].points;
         let access = &routes[2].points;
         let merge = &routes[3].points;
-        assert_eq!(
-            import.len(),
-            4,
-            "{theme}: import should make only two bends"
-        );
-        assert!((import[0].x - api.x - api.width / 2.0).abs() < 1e-6);
+        assert_eq!(import.len(), 2, "{theme}: import must be straight");
+        assert!((import[0].x - api.x - api.width).abs() < 1e-6);
+        assert!((import[1].x - payments.x).abs() < 1e-6);
+        assert!((import[0].y - import[1].y).abs() < 1e-6);
         assert!(
-            (import[0].y - api.y).abs() < 1e-6,
-            "{theme}: import must start on API"
+            (api.y + api.height / 2.0 - payments.y - payments.height / 2.0).abs() < 1e-6,
+            "{theme}: automatic placement should lift Payments beside API"
         );
-        assert_eq!(access.len(), 2, "{theme}: access should go directly right");
+        assert_eq!(access.len(), 2, "{theme}: access must be straight");
         assert!((access[0].x - orders.x - orders.width).abs() < 1e-6);
         assert!((access[1].x - common.x).abs() < 1e-6);
         assert!((access[0].y - access[1].y).abs() < 1e-6);
-        assert_eq!(merge.len(), 5, "{theme}: merge needs only a short corridor");
-        assert!(merge[2].y > payments.y + payments.height + 4.0);
-        assert!(merge[2].y < common.y - 4.0);
-        assert!((merge[4].y - common.y).abs() < 1e-6);
+        assert_eq!(merge.len(), 3, "{theme}: merge needs only one bend");
+        assert!(merge[1].y > payments.y + payments.height + 4.0);
+        assert!((merge[0].x - node("Shop.Pricing").x - node("Shop.Pricing").width).abs() < 1e-6);
+        assert!((merge[2].x - common.x - common.width / 2.0).abs() < 1e-6);
+        assert!(
+            (merge[2].y - common.y - 14.0).abs() < 1e-6,
+            "{theme}: merge should meet Common's visible body, not the tab's bounding box"
+        );
+        let near = |a: f64, b: f64| (a - b).abs() < 1e-6;
+        let touches_outline = |n: &laml::geometry::BoxNode, p: laml::route::Point| {
+            let body_top = n.y + 14.0;
+            (near(p.x, n.x) && p.y >= n.y && p.y <= n.y + n.height)
+                || (near(p.x, n.x + n.width) && p.y >= body_top && p.y <= n.y + n.height)
+                || (near(p.y, n.y) && p.x >= n.x && p.x <= n.x + 32.0)
+                || (near(p.y, body_top) && p.x >= n.x + 32.0 && p.x <= n.x + n.width)
+                || (near(p.y, n.y + n.height) && p.x >= n.x && p.x <= n.x + n.width)
+                || (near(p.x, n.x + 32.0) && p.y >= n.y && p.y <= body_top)
+        };
+        for relation in &routes {
+            assert!(
+                touches_outline(&boxes[relation.from], relation.points[0]),
+                "{theme}: source '{}' has a visible gap",
+                boxes[relation.from].id
+            );
+            assert!(
+                touches_outline(&boxes[relation.to], *relation.points.last().unwrap()),
+                "{theme}: target '{}' has a visible gap",
+                boxes[relation.to].id
+            );
+        }
         let label = routes[3].label.as_ref().unwrap();
         assert!(
             label.x + label.width + 4.0 < payments.x,

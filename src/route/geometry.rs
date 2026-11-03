@@ -61,6 +61,12 @@ fn note_fold(node: &BoxNode) -> f64 {
 }
 
 pub(super) fn port(node: &BoxNode, towards: Point) -> Point {
+    if node.kind == crate::syntax::NodeKind::Package
+        && !node.c4_boundary
+        && let Some(hit) = super::package_outline::port(node, towards)
+    {
+        return hit;
+    }
     let c = center(node);
     if node.kind == crate::syntax::NodeKind::UseCaseActor {
         return Point {
@@ -99,6 +105,9 @@ pub(super) fn port(node: &BoxNode, towards: Point) -> Point {
     }
 }
 pub(super) fn intersection(a: Point, b: Point, node: &BoxNode) -> bool {
+    if node.kind == crate::syntax::NodeKind::Package && !node.c4_boundary {
+        return super::package_outline::intersects(a, b, node);
+    }
     let c = center(node);
     let rx = if let Some(radius) = compact_radius(node) {
         radius

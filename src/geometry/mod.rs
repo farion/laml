@@ -10,6 +10,7 @@ mod lollipop;
 mod members;
 mod node_notation;
 mod nodes;
+pub(crate) mod package_outline;
 mod port_contours;
 mod ports;
 mod usecase;

@@ -126,8 +126,11 @@ fn relation_alignments(
             // A named port or member has its own measured attachment position.
             if relation.from != from.id
                 || relation.to != to.id
-                || from.kind != NodeKind::Generic
-                || to.kind != NodeKind::Generic
+                || !matches!(from.kind, NodeKind::Generic | NodeKind::Package)
+                || (from.kind == NodeKind::Package
+                    && diagram.settings.diagram_type != crate::syntax::DiagramType::Package)
+                || from.kind != to.kind
+                || (parent.is_some() && from.kind == NodeKind::Package)
             {
                 return None;
             }
@@ -152,6 +155,68 @@ fn relation_alignments(
             })
         })
         .collect()
+}
+
+// In a package frame, a right-hand child need not sit directly in the row of
+// its incoming sibling when that blocks another sibling's outward relation.
+// Use the space between the two left-hand rows, never an authored position.
+fn open_package_lanes(diagram: &Diagram, local: &mut [BoxNode], parent: Option<&str>) {
+    if diagram.settings.diagram_type != crate::syntax::DiagramType::Package
+        || parent.is_none()
+        || !diagram.layout.is_empty()
+    {
+        return;
+    }
+    let parent = parent.unwrap();
+    let center = |node: &BoxNode| node.y + node.height / 2.0;
+    for right in 0..local.len() {
+        if local[right].kind != NodeKind::Package
+            || local[right].is_container
+            || diagram
+                .layout
+                .iter()
+                .any(|rule| rule.first == local[right].id || rule.second == local[right].id)
+        {
+            continue;
+        }
+        let candidate = (0..local.len())
+            .filter(|&i| {
+                local[i].kind == NodeKind::Package
+                    && local[i].x + local[i].width + 16.0 < local[right].x
+            })
+            .flat_map(|upper| (0..local.len()).map(move |lower| (upper, lower)))
+            .find(|&(upper, lower)| {
+                if upper == lower
+                    || (local[upper].x - local[lower].x).abs() > 4.0
+                    || center(&local[upper]) + local[upper].height / 2.0
+                        >= center(&local[lower]) - local[lower].height / 2.0 + 4.0
+                {
+                    return false;
+                }
+                let joined = diagram.relations.iter().any(|relation| {
+                    relation.from == local[lower].id && relation.to == local[right].id
+                });
+                let outward = diagram.relations.iter().any(|relation| {
+                    relation.from == local[upper].id
+                        && direct_owner(diagram, &relation.to, Some(parent)).is_none()
+                });
+                joined && outward
+            });
+        if let Some((upper, lower)) = candidate {
+            let proposed =
+                (center(&local[upper]) + center(&local[lower])) / 2.0 - local[right].height / 2.0;
+            let clear = local.iter().enumerate().all(|(i, node)| {
+                i == right
+                    || node.x + node.width + 8.0 <= local[right].x
+                    || local[right].x + local[right].width + 8.0 <= node.x
+                    || proposed + local[right].height + 8.0 <= node.y
+                    || node.y + node.height + 8.0 <= proposed
+            });
+            if clear {
+                local[right].y = proposed;
+            }
+        }
+    }
 }
 
 fn scope(
@@ -253,6 +318,7 @@ fn scope(
         .collect();
     let preferred = relation_alignments(diagram, boxes, &local, parent);
     constraints::place(&graph, &mut local, styles, &preferred)?;
+    open_package_lanes(diagram, &mut local, parent);
     if local.is_empty() {
         return Ok(());
     }
