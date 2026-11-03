@@ -95,7 +95,83 @@ mod tests {
             assert!(svg.contains("stroke-dasharray"));
             assert!(svg.contains("<ellipse"));
             assert!(svg.contains("[Container:"));
+            if view == "component" {
+                assert!(svg.contains("Component View: Internet Banking System - Backend"));
+                let outer = boxes.iter().find(|n| n.id == "Banking").unwrap();
+                let inner = boxes.iter().find(|n| n.id == "Banking.Backend").unwrap();
+                assert!(outer.c4_boundary && inner.c4_boundary);
+                assert!(inner.x > outer.x && inner.x + inner.width < outer.x + outer.width);
+                for name in ["signin", "notify"] {
+                    let i = graph
+                        .relations
+                        .iter()
+                        .position(|r| r.name.as_deref() == Some(name))
+                        .unwrap();
+                    assert_eq!(routes[i].points.len(), 2, "{name} should route directly");
+                }
+            }
         }
+    }
+
+    #[test]
+    fn all_four_banking_levels_render_without_truncated_text() {
+        use laml::{
+            geometry::place,
+            route::route,
+            styles::load,
+            svg::{TextMode, c4::render},
+        };
+        use std::path::Path;
+        for view in ["context", "container", "component", "code"] {
+            let path = format!("examples/c4-banking-{view}.laml");
+            let graph = parser::parse(&std::fs::read_to_string(&path).unwrap()).unwrap();
+            let styles = load(&graph, Path::new(&path)).unwrap();
+            let boxes = place(&graph, &styles).unwrap();
+            let routes = route(&graph, &boxes, &styles).unwrap();
+            let svg = render(
+                &boxes,
+                &routes,
+                TextMode::System,
+                graph.settings.theme,
+                &graph,
+            )
+            .unwrap();
+            assert!(svg.contains("View: "), "{view}");
+            assert!(svg.contains("Internet Banking System") || view == "code");
+        }
+    }
+
+    #[test]
+    fn c4_descriptions_are_not_silently_ellipsized() {
+        use laml::{geometry::place, styles::load};
+        use std::path::Path;
+        let source = format!(
+            "{}\nstyling {{\n    node[Banking] {{\n        width: 270\n    }}\n}}\n",
+            include_str!("../examples/c4-banking-context.laml").replace(
+                "Offers online banking",
+                "Offers secure online banking for customers with many accounts"
+            )
+        );
+        let graph = parser::parse(&source).unwrap();
+        let styles = load(&graph, Path::new("examples/c4-banking-context.laml")).unwrap();
+        let error = place(&graph, &styles).unwrap_err();
+        assert!(error.message.contains("truncated"), "{error:?}");
+    }
+
+    #[test]
+    fn rejects_bad_nested_system_scope() {
+        let source = include_str!("../examples/c4-banking-component.laml");
+        assert!(parser::parse(&source.replace("scope: Backend", "scope: Missing")).is_err());
+        assert!(
+            parser::parse(&source.replace("system Banking(", "external system Banking(")).is_err()
+        );
+        assert!(
+            parser::parse(&source.replace(
+                "        container Backend(",
+                "        external system Backend("
+            ))
+            .is_err()
+        );
     }
 
     #[test]

@@ -18,7 +18,7 @@ pub(super) fn heading(svg: &mut String, diagram: &Diagram, left: f64, top: f64) 
     let owner = diagram
         .nodes
         .iter()
-        .find(|n| n.classes.iter().any(|c| c == "c4Boundary"))
+        .rfind(|n| n.classes.iter().any(|c| c == "c4Boundary"))
         .or_else(|| {
             diagram.nodes.iter().find(|n| {
                 n.classes
@@ -36,6 +36,14 @@ pub(super) fn heading(svg: &mut String, diagram: &Diagram, left: f64, top: f64) 
         .lines()
         .next()
         .unwrap_or(&owner.id);
+    let parent = owner
+        .parent
+        .as_deref()
+        .and_then(|id| diagram.nodes.iter().find(|n| n.id == id));
+    let parent_name = parent
+        .and_then(|p| p.label.as_deref())
+        .and_then(|s| s.lines().next());
+    let title = parent_name.map_or_else(|| name.to_string(), |p| format!("{p} - {name}"));
     let ty = if diagram.settings.diagram_type == crate::syntax::DiagramType::Class {
         "Code"
     } else if owner.classes.iter().any(|c| c == "c4Container") {
@@ -50,7 +58,16 @@ pub(super) fn heading(svg: &mut String, diagram: &Diagram, left: f64, top: f64) 
     } else {
         "#1b3345"
     };
-    writeln!(svg, "<text x=\"{left:.2}\" y=\"{:.2}\" font-family=\"Inter\" font-size=\"20\" font-weight=\"bold\" fill=\"{ink}\">{} View: {}</text>", top-23.0, ty, escape(name)).unwrap();
+    writeln!(svg, "<text x=\"{left:.2}\" y=\"{:.2}\" font-family=\"Inter\" font-size=\"20\" font-weight=\"bold\" fill=\"{ink}\">{} View: {}</text>", top-23.0, ty, escape(&title)).unwrap();
+}
+
+pub(super) fn font_size(node: &BoxNode, index: usize) -> f64 {
+    node.font_size
+        * match index {
+            0 => 1.12,
+            1 => 0.75,
+            _ => 0.94,
+        }
 }
 
 pub(super) fn legend(svg: &mut String, left: f64, bottom: f64, theme: crate::theme::Theme) {
@@ -63,8 +80,8 @@ pub(super) fn boundary(svg: &mut String, node: &BoxNode) {
         escape(&node.id),escape(&node.label),node.x,node.y,node.width,node.height,node.fill,node.border_color,node.border_width).unwrap();
     let name = node.lines.first().map_or("", String::as_str);
     let kind = node.lines.get(1).map_or("", String::as_str);
-    writeln!(svg,"<text x=\"{:.2}\" y=\"{:.2}\" font-family=\"Inter\" font-size=\"15\" font-weight=\"bold\" fill=\"{}\">{}</text>",node.x+12.0,node.y+node.height-30.0,node.color,escape(name)).unwrap();
-    writeln!(svg,"<text x=\"{:.2}\" y=\"{:.2}\" font-family=\"Inter\" font-size=\"11\" fill=\"{}\">{}</text></g>",node.x+12.0,node.y+node.height-13.0,node.color,escape(kind)).unwrap();
+    writeln!(svg,"<text x=\"{:.2}\" y=\"{:.2}\" font-family=\"Inter\" font-size=\"18\" font-weight=\"bold\" fill=\"{}\">{}</text>",node.x+12.0,node.y+node.height-30.0,node.color,escape(name)).unwrap();
+    writeln!(svg,"<text x=\"{:.2}\" y=\"{:.2}\" font-family=\"Inter\" font-size=\"12\" fill=\"{}\">{}</text></g>",node.x+12.0,node.y+node.height-13.0,node.color,escape(kind)).unwrap();
 }
 
 pub(super) fn shape(svg: &mut String, node: &BoxNode, classes: &[String]) -> bool {

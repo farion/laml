@@ -1,6 +1,7 @@
 //! First geometry stage: measure rectangular nodes and satisfy hard rules.
 //! Collision resolution is bounded. Complex routes may still fail explicitly.
 
+mod c4_frame;
 pub(crate) mod composite;
 mod constraints;
 mod containers;
@@ -83,6 +84,21 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
         })
         .collect::<Result<_, _>>()?;
     for (source, drawn) in diagram.nodes.iter().zip(&boxes) {
+        if source.classes.iter().any(|class| {
+            matches!(
+                class.as_str(),
+                "c4Person" | "c4System" | "c4Container" | "c4Component" | "c4Boundary"
+            )
+        }) && source
+            .label
+            .as_deref()
+            .is_some_and(|label| label.split('\n').ne(drawn.lines.iter().map(String::as_str)))
+        {
+            return Err(GeometryError {
+                line: source.line,
+                message: "C4 element text would be truncated; increase its size or shorten its description".into(),
+            });
+        }
         if diagram.settings.diagram_type == crate::syntax::DiagramType::Composite
             && drawn
                 .ports

@@ -36,6 +36,8 @@ pub struct BoxNode {
     pub abstract_node: bool,
     pub kind: NodeKind,
     pub is_container: bool,
+    /// C4 frames draw their captions at the bottom, not in a package tab.
+    pub c4_boundary: bool,
     pub deployment: bool,
     pub shape: NodeShape,
     pub x: f64,
@@ -59,19 +61,6 @@ pub struct BoxNode {
 }
 
 impl BoxNode {
-    pub fn contains_package_content(&self, x: f64, y: f64, width: f64, height: f64) -> bool {
-        self.is_container
-            && x >= self.x + 1.0
-            && x + width <= self.x + self.width - 1.0
-            && y >= self.y
-                + if !matches!(self.kind, NodeKind::Package | NodeKind::Profile) {
-                    self.port_start
-                } else {
-                    self.padding + self.font_size * 1.25 * self.lines.len() as f64 + 4.0
-                }
-            && y + height <= self.y + self.height - 1.0
-    }
-
     pub fn matches_member(&self, part: &NodePart, target: &str) -> bool {
         match part {
             NodePart::Member { id: Some(id), .. } => id == target,
@@ -466,6 +455,7 @@ pub fn measure_node(
         abstract_node: node.abstract_node,
         kind: node.kind,
         is_container: matches!(node.kind, NodeKind::Package | NodeKind::Profile),
+        c4_boundary: node.classes.iter().any(|class| class == "c4Boundary"),
         deployment: diagram_type == DiagramType::Deployment,
         shape,
         x: 0.0,

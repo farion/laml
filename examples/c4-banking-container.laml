@@ -11,9 +11,10 @@ semantics {
         container UI(label="UI"; technology="Angular"; appearance="browser"; description="Displays balances and payments")
         container Backend(label="Backend"; technology="Java / Spring"; appearance="terminal"; description="Exposes banking APIs")
         container Statements(label="Statement Store"; technology="Amazon S3"; appearance="bucket"; description="Stores PDF statements")
-        container Database(label="Database"; technology="MySQL"; appearance="database"; description="Stores customer and account data")
+        container Database(label="Database"; technology="MySQL"; appearance="database"; description="Stores customer\\nand account data")
     }
     external system Core(label="Core Banking System"; description="Processes accounts and transactions")
+    external system Mail(label="AWS Simple Email Service"; description="Delivers outgoing email")
 
     Customer -> Banking.Assets : Loads the UI from
     Customer -> Banking.UI : Views accounts using
@@ -22,6 +23,7 @@ semantics {
     @statements(technology="S3 API") Banking.Backend -> Banking.Statements : Writes PDF statements to
     @records(technology="MySQL") Banking.Backend -> Banking.Database : Reads and writes account data in
     @core Banking.Backend -> Core : Calls banking API
+    @email Banking.Backend -> Mail : Sends email
 }
 layout {
     Banking.Assets < Banking.UI : align=center; gap=90
@@ -29,7 +31,9 @@ layout {
     Banking.Statements < Banking.Database : align=center; gap=140
     Banking.Backend ^ Banking.Database : align=center; gap=100
     Customer ^ Banking.UI : align=center; gap=100
-    Banking.Backend < Core : align=center; gap=500
+    Banking.Backend < Core : align=center; gap=350
+    Banking.UI < Mail : align=center; gap=400
+    relation[email] : label=along
     relation[core].source : side=right
     relation[core].target : side=left
 }

@@ -1,0 +1,20 @@
+// Adapted from Simon Brown's Internet Banking System C4 example.
+// c4model.com/example/ — CC BY 4.0. Descriptions and layout are LAML adaptations.
+settings {
+    type: c4-context
+    scope: Banking
+}
+semantics {
+    person Customer(label="Personal Banking Customer"; description="Views accounts and pays bills")
+    system Banking(label="Internet Banking System"; description="Offers online banking")
+    external system Core(label="Core Banking System"; description="Maintains accounts and transactions")
+    external system Mail(label="AWS Simple Email Service"; description="Delivers customer messages")
+    Customer -> Banking : Uses online banking
+    Banking -> Core : Requests account information
+    Banking -> Mail : Sends customer messages
+}
+layout {
+    Customer < Banking : align=center; gap=100
+    Banking < Core : align=center; gap=140
+    Core ^ Mail : align=center; gap=95
+}

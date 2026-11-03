@@ -5,6 +5,7 @@ use crate::lex::{
 };
 use crate::parser::{self, ParseError};
 use crate::syntax::{Diagram, DiagramType};
+mod element;
 mod relation;
 mod style;
 
@@ -115,165 +116,6 @@ fn quote(value: &str) -> String {
     )
 }
 
-fn element(
-    text: &str,
-    line: usize,
-    level: Level,
-    scope: &str,
-    inside: bool,
-    block: bool,
-) -> Result<(String, String, bool), ParseError> {
-    let (kind, tail, external) = if let Some(tail) = text.strip_prefix("external system ") {
-        ("system", tail, true)
-    } else if let Some(tail) = text.strip_prefix("external person ") {
-        ("person", tail, true)
-    } else if let Some(tail) = text.strip_prefix("person ") {
-        ("person", tail, false)
-    } else if let Some(tail) = text.strip_prefix("system ") {
-        ("system", tail, false)
-    } else if let Some(tail) = text.strip_prefix("container ") {
-        ("container", tail, false)
-    } else if let Some(tail) = text.strip_prefix("component ") {
-        ("component", tail, false)
-    } else {
-        return Err(err(line, "expected a C4 element declaration"));
-    };
-    let (id, attrs) = parse_attributes(tail, line)?;
-    if !valid_identifier(id) {
-        return Err(err(line, "invalid C4 element identifier"));
-    }
-    if level == Level::Code && !(kind == "component" && id == scope) {
-        return Err(err(
-            line,
-            "c4-code declares code elements only within the scoped component",
-        ));
-    }
-    if block != (kind == level.owner() && id == scope && level != Level::Context) {
-        return Err(err(line, "only the C4 scope may contain an element block"));
-    }
-    if inside {
-        if !(matches!(level, Level::Container) && kind == "container"
-            || matches!(level, Level::Component) && kind == "component"
-            || matches!(level, Level::Code) && kind == "component" && id == scope)
-        {
-            return Err(err(line, "element is not permitted inside this C4 scope"));
-        }
-    } else if kind == level.owner() && id == scope {
-        if external {
-            return Err(err(line, "C4 scope cannot be external"));
-        }
-    } else if !matches!(kind, "person" | "system" | "container")
-        || kind == "container" && level != Level::Component
-    {
-        return Err(err(line, "unsupported supporting element at this C4 level"));
-    } else if kind == "container" && !inside && level == Level::Component && !external {
-        // A container outside the scoped container is another container of the system.
-    } else if kind == "system" && !external {
-        return Err(err(
-            line,
-            "supporting systems must be declared 'external system'",
-        ));
-    }
-    if level == Level::Context
-        && (kind != "system" || id != scope)
-        && kind != "person"
-        && kind != "system"
-    {
-        return Err(err(line, "context supports only people and systems"));
-    }
-    if level == Level::Context && block {
-        return Err(err(line, "context scope is a system box, not a boundary"));
-    }
-    if level == Level::Container && inside && kind != "container"
-        || level == Level::Component && inside && kind != "component"
-    {
-        return Err(err(line, "wrong C4 element inside scope"));
-    }
-    if level == Level::Code && inside {
-        return Err(err(
-            line,
-            "c4-code contains code elements, not nested components",
-        ));
-    }
-    let description =
-        attr(&attrs, "description").ok_or_else(|| err(line, "C4 element requires description"))?;
-    let technology = attr(&attrs, "technology");
-    if matches!(kind, "container" | "component") && technology.is_none() {
-        return Err(err(line, "C4 container/component requires technology"));
-    }
-    if matches!(kind, "person" | "system") && technology.is_some() {
-        return Err(err(line, "technology belongs to containers and components"));
-    }
-    let label = attr(&attrs, "label").unwrap_or(id);
-    let tag = if external {
-        format!("External {}", capitalize(kind))
-    } else {
-        capitalize(kind).to_string()
-    };
-    let display = if let Some(tech) = technology {
-        format!("{label}\n[{tag}: {tech}]\n{description}")
-    } else {
-        format!("{label}\n[{tag}]\n{description}")
-    };
-    let appearance = attr(&attrs, "appearance");
-    if appearance
-        .is_some_and(|a| !matches!(a, "browser" | "database" | "bucket" | "folder" | "terminal"))
-        || appearance.is_some() && kind != "container"
-    {
-        return Err(err(
-            line,
-            "appearance requires a container and browser|database|bucket|folder|terminal",
-        ));
-    }
-    let mut classes = vec![match kind {
-        "person" => "c4Person",
-        "system" => "c4System",
-        "container" => "c4Container",
-        _ => "c4Component",
-    }];
-    if external {
-        classes.push("c4External");
-    }
-    if block {
-        classes.push("c4Boundary");
-    }
-    if let Some(shape) = appearance {
-        classes.push(match shape {
-            "browser" => "c4Browser",
-            "database" => "c4Database",
-            "bucket" => "c4Bucket",
-            "folder" => "c4Folder",
-            _ => "c4Terminal",
-        });
-    }
-    let mut extras = format!("label={}", quote(&display));
-    if let Some(user_classes) = attr(&attrs, "style-classes") {
-        extras.push_str(&format!(
-            "; style-classes={},{}",
-            classes.join(","),
-            user_classes
-        ));
-    } else {
-        extras.push_str(&format!("; style-classes={}", classes.join(",")));
-    }
-    let owner = kind == level.owner() && id == scope;
-    let output = if block {
-        format!("package {id}({extras}) {{")
-    } else {
-        format!("{id}({extras})")
-    };
-    Ok((output, id.into(), owner))
-}
-
-fn capitalize(kind: &str) -> &str {
-    match kind {
-        "person" => "Person",
-        "system" => "Software System",
-        "container" => "Container",
-        _ => "Component",
-    }
-}
-
 pub fn parse(source: &str) -> Result<Diagram, ParseError> {
     let mut level = None;
     let mut scope = None;
@@ -306,9 +148,10 @@ pub fn parse(source: &str) -> Result<Diagram, ParseError> {
     let scope = scope.ok_or_else(|| err(1, "C4 diagrams require settings scope: Identifier"))?;
     let mut transformed = String::new();
     let mut section = "";
-    let mut in_scope = false;
+    let mut containers: Vec<(String, &str)> = Vec::new();
     let mut class_body = false;
     let mut owner_count = 0;
+    let mut enclosing_count = 0;
     let mut declared = std::collections::HashSet::new();
     for (index, raw) in source.lines().enumerate() {
         let line = index + 1;
@@ -337,8 +180,8 @@ pub fn parse(source: &str) -> Result<Diagram, ParseError> {
             if text == "}" {
                 if class_body {
                     class_body = false;
-                } else if in_scope {
-                    in_scope = false;
+                } else if !containers.is_empty() {
+                    containers.pop();
                 } else {
                     section = "";
                 }
@@ -362,20 +205,37 @@ pub fn parse(source: &str) -> Result<Diagram, ParseError> {
                 .iter()
                 .any(|prefix| head.starts_with(prefix));
                 if c4_element {
+                    let parent_kind = containers.last().map(|(_, kind)| *kind);
                     let (replacement, id, owner) =
-                        element(head, line, level, &scope, in_scope, block)?;
-                    if !declared.insert(if in_scope {
-                        format!("{scope}.{id}")
+                        element::element(head, line, level, &scope, parent_kind, block)?;
+                    let parent_path = containers
+                        .iter()
+                        .map(|(id, _)| id.as_str())
+                        .collect::<Vec<_>>()
+                        .join(".");
+                    let qualified = if parent_path.is_empty() {
+                        id.clone()
                     } else {
-                        id
-                    }) {
+                        format!("{parent_path}.{id}")
+                    };
+                    if !declared.insert(qualified) {
                         return Err(err(line, "duplicate C4 element"));
                     }
                     if owner {
                         owner_count += 1;
                     }
                     if block {
-                        in_scope = true;
+                        let kind = if head.starts_with("system ") {
+                            "system"
+                        } else if head.starts_with("container ") {
+                            "container"
+                        } else {
+                            "component"
+                        };
+                        if kind == "system" && level == Level::Component {
+                            enclosing_count += 1;
+                        }
+                        containers.push((id, kind));
                     }
                     out = replacement;
                 } else if text.starts_with('@')
@@ -384,7 +244,9 @@ pub fn parse(source: &str) -> Result<Diagram, ParseError> {
                 {
                     out = relation::relation_with_technology(text, line)?;
                 } else if level == Level::Code
-                    && in_scope
+                    && containers
+                        .last()
+                        .is_some_and(|(id, kind)| id == &scope && *kind == "component")
                     && (head.starts_with("class ")
                         || head.starts_with("interface ")
                         || head.starts_with("enum ")
@@ -394,7 +256,9 @@ pub fn parse(source: &str) -> Result<Diagram, ParseError> {
                     class_body = block;
                 } else if !text.contains(" -> ")
                     && !text.starts_with('@')
-                    && !(level == Level::Code && in_scope && crate::lex::find_arrow(text).is_some())
+                    && !(level == Level::Code
+                        && containers.last().is_some_and(|(id, _)| id == &scope)
+                        && crate::lex::find_arrow(text).is_some())
                 {
                     return Err(err(line, "unknown C4 element or relation"));
                 }
@@ -403,18 +267,40 @@ pub fn parse(source: &str) -> Result<Diagram, ParseError> {
         transformed.push_str(&out);
         transformed.push('\n');
     }
-    if owner_count != 1 {
+    if owner_count != 1 || enclosing_count > 1 {
         return Err(err(
             1,
-            "C4 diagram requires exactly one declared scope element",
+            "C4 diagram requires one scope and at most one enclosing system",
         ));
     }
     let mut diagram = parser::parse_document(&transformed, false)?;
+    let scoped_id = diagram
+        .nodes
+        .iter()
+        .find(|node| node.id == scope || node.id.ends_with(&format!(".{scope}")))
+        .map(|node| node.id.clone())
+        .ok_or_else(|| err(1, "C4 scope not found"))?;
+    if enclosing_count == 1
+        && !diagram.nodes.iter().any(|node| {
+            node.id == scoped_id
+                && node.parent.as_ref().is_some_and(|id| {
+                    diagram
+                        .nodes
+                        .iter()
+                        .any(|p| &p.id == id && p.classes.iter().any(|c| c == "c4System"))
+                })
+        })
+    {
+        return Err(err(
+            1,
+            "scoped container must be inside its enclosing system",
+        ));
+    }
     if level == Level::Code
         && !diagram
             .nodes
             .iter()
-            .any(|n| n.parent.as_deref() == Some(scope.as_str()))
+            .any(|n| n.parent.as_deref() == Some(scoped_id.as_str()))
     {
         return Err(err(
             1,
@@ -425,7 +311,7 @@ pub fn parse(source: &str) -> Result<Diagram, ParseError> {
         && !diagram
             .nodes
             .iter()
-            .any(|n| n.parent.as_deref() == Some(scope.as_str()))
+            .any(|n| n.parent.as_deref() == Some(scoped_id.as_str()))
     {
         return Err(err(1, "C4 scope must contain at least one element"));
     }
@@ -439,7 +325,7 @@ pub fn parse(source: &str) -> Result<Diagram, ParseError> {
                     "C4 relationships must be directed and labelled",
                 ));
             }
-            let belongs = |id: &str| id == scope || id.starts_with(&format!("{scope}."));
+            let belongs = |id: &str| id == scoped_id || id.starts_with(&format!("{scoped_id}."));
             if !belongs(&relation.from) && !belongs(&relation.to) {
                 return Err(err(
                     relation.line,

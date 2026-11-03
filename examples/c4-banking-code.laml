@@ -1,0 +1,31 @@
+// LAML code-level continuation of the banking component example.
+// This is an illustrative class view, not source-code extraction.
+settings {
+    type: c4-code
+    scope: Adapter
+}
+semantics {
+    component Adapter(label="Core Banking Adapter"; technology="Java"; description="Maps bank APIs to the core system") {
+        interface CoreBankingClient {
+            +getAccounts(customerId: String): AccountResponse
+        }
+        class BankingAdapter {
+            +fetchAccounts(customerId: String): AccountList
+        }
+        class AccountMapper {
+            +map(response: AccountResponse): AccountList
+        }
+        class Account {
+            +iban: String
+            +balance: Decimal
+        }
+        BankingAdapter ..|> CoreBankingClient
+        BankingAdapter --> AccountMapper : transforms responses
+        AccountMapper --> Account : constructs
+    }
+}
+layout {
+    Adapter.CoreBankingClient < Adapter.BankingAdapter : gap=100
+    Adapter.BankingAdapter < Adapter.AccountMapper : gap=100
+    Adapter.AccountMapper ^ Adapter.Account : align=center; gap=90
+}

@@ -325,8 +325,8 @@ fn render_svg(
             let c4_element = c4_diagram
                 .and_then(|d| d.nodes.iter().find(|n| n.id == node.id))
                 .is_some_and(|n| n.classes.iter().any(|c| c.starts_with("c4")));
-            let c4_font = if c4_element && i == 1 {
-                node.font_size * 0.78
+            let c4_font = if c4_element {
+                c4::font_size(node, i)
             } else {
                 node.font_size
             };

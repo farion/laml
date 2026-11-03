@@ -146,6 +146,7 @@ pub(super) fn measure(
         abstract_node: false,
         kind: node.kind,
         is_container: false,
+        c4_boundary: false,
         deployment: false,
         shape: if matches!(
             node.kind,

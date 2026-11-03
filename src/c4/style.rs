@@ -17,32 +17,40 @@ pub(super) fn apply(diagram: &mut Diagram) -> Result<(), ParseError> {
             color: "{green}"
             border-color: "{green}"
             border-width: 2
-            min-width: 270
-            padding: 20
+            min-width: 300
+            min-height: 125
+            font-size: 16
+            padding: 22
         }}
         node.c4System {{
             fill: "{fill}"
             color: "{blue}"
             border-color: "{blue}"
             border-width: 2
-            min-width: 230
-            padding: 20
+            min-width: 270
+            min-height: 125
+            font-size: 16
+            padding: 22
         }}
         node.c4Container {{
             fill: "{fill}"
             color: "{blue}"
             border-color: "{blue}"
             border-width: 2
-            min-width: 215
-            padding: 20
+            min-width: 245
+            min-height: 125
+            font-size: 16
+            padding: 22
         }}
         node.c4Component {{
             fill: "{fill}"
             color: "{blue}"
             border-color: "{blue}"
             border-width: 2
-            min-width: 210
-            padding: 20
+            min-width: 265
+            min-height: 125
+            font-size: 16
+            padding: 22
         }}
         node.c4Boundary {{
             fill: "{inner}"
