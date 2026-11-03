@@ -31,7 +31,8 @@ Unqualified identifiers match `[A-Za-z_][A-Za-z0-9_]*`; nested package paths use
 
 | Name | Values | Default |
 |---|---|---|
-| `type` | `class`, `object`, `component`, `composite`, `profile`, `deployment`, `state`, `activity`, `usecase`, `package`, `communication`, `interaction-overview`, `timing`, `sequence`, `bpmn` (omitted for generic node-edge) | Generic graph |
+| `type` | `class`, `object`, `component`, `composite`, `profile`, `deployment`, `state`, `activity`, `usecase`, `package`, `communication`, `interaction-overview`, `timing`, `sequence`, `bpmn`, `c4-context`, `c4-container`, `c4-component`, `c4-code` (omitted for generic node-edge) | Generic graph |
+| `scope` | C4 element identifier; required for all four C4 levels | Not set |
 | `direction` | `left-to-right`, `right-to-left`, `top-to-bottom`, `bottom-to-top` | `left-to-right` |
 | `naming-convention` | `uppercase-nodes-lowercase-relations` | Off |
 | `relation-label` | `near`, `along`, `inline` | `near` |
@@ -65,6 +66,10 @@ A node's identifier is used by relations and layout. `label="..."` replaces the 
 Generic relations use `->`, `<-`, `<->`, and undirected `--`. For example, `A -> B : MQTT`, `A <- B`, and `A <-> B` are valid relation declarations; `A <- B` is directed from B to A. A relation is unnamed unless prefixed by `@id`, as with `@mqtt A -> B : MQTT`; a prefix can also contain `style-classes=...` with or without a name. The older `mqtt:` spelling is accepted for existing sources. Text after the final `:` is its visible label. A relation name is required to target that relation with a `relation[name]` selector or layout rule. Unknown endpoints and duplicate relation names are errors. Multiple relations may share endpoints; each needs a distinct route and port. Up to four exterior self-loops per node can be routed; more are rejected.
 
 Directed relations give source-order *preferences* for automatic placement, not hard rules. A later relation that closes a preference cycle remains in the diagram but loses that automatic directional preference. Bidirectional relations express no preferred direction. Mandatory layout rules always take precedence over preferences.
+
+## C4 diagrams
+
+Use `type: c4-context|c4-container|c4-component|c4-code` and a matching `scope: Identifier`. The scoped element is a `system`, `system { ... }`, `container { ... }`, or `component { ... }`, respectively. People, systems, containers and components use `description="..."`; containers and components also require `technology="..."`. Named directed relationships can include `technology="..."` to show a protocol, for example `@send(technology="HTTPS") Shop.Web -> Shop.API : Sends order`. At the code level, the scoped component contains existing UML class/interface/enum/datatype declarations and relationships. C4 syntax is adapted to the generic graph or UML class renderer, with checked scope and element kinds; no cross-file model is stored. [Four complete examples with images](c4-diagrams.md).
 
 ## Class and object diagrams
 

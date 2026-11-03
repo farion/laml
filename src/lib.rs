@@ -7,6 +7,7 @@
 //! must never be discarded this way.
 
 pub mod bpmn;
+pub mod c4;
 pub mod communication;
 pub mod export;
 mod export_metadata;

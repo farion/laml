@@ -65,6 +65,9 @@ enum Section {
 }
 
 pub fn parse(source: &str) -> Result<Diagram, ParseError> {
+    if crate::c4::is_c4_source(source) {
+        return crate::c4::parse(source);
+    }
     match prescan_type(source) {
         DiagramType::Communication => {
             return Err(error(
@@ -92,7 +95,7 @@ pub fn parse_stylesheet(source: &str) -> Result<Vec<StyleEntry>, ParseError> {
     Ok(parse_document(source, true)?.styling)
 }
 
-fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError> {
+pub(crate) fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, ParseError> {
     let mut diagram = Diagram::default();
     let mut section = Section::Top;
     let mut seen = [false; 4];

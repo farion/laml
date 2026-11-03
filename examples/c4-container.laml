@@ -1,0 +1,22 @@
+settings {
+    type: c4-container
+    scope: Shop
+}
+semantics {
+    person Customer(label="Customer"; description="Places orders online")
+    system Shop(label="Online Shop"; description="Handles orders and payments") {
+        container Web(label="Web App"; technology="React"; description="Captures orders")
+        container API(label="Order API"; technology="Rust"; description="Validates orders")
+        container Database(label="Order DB"; technology="PostgreSQL"; description="Stores orders")
+    }
+    external system Payment(label="Payment Provider"; description="Processes payments")
+    Customer -> Shop.Web : Places orders
+    @submit(technology="HTTPS") Shop.Web -> Shop.API : Sends order
+    Shop.API -> Shop.Database : Stores order
+    Shop.API -> Payment : Requests payment authorization
+}
+layout {
+    Shop.Web < Shop.API : align=center; gap=90
+    Shop.API < Shop.Database : align=center; gap=90
+    Shop.API ^ Payment : align=center; gap=90
+}

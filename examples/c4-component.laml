@@ -1,0 +1,22 @@
+settings {
+    type: c4-component
+    scope: API
+}
+semantics {
+    container Web(label="Web App"; technology="React"; description="Captures orders")
+    container API(label="Order API"; technology="Rust"; description="Validates orders") {
+        component Handler(label="HTTP Handler"; technology="Rust"; description="Accepts requests")
+        component Orders(label="Order Service"; technology="Rust"; description="Coordinates orders")
+        component Repository(label="Repository"; technology="SQLx"; description="Stores orders")
+    }
+    external system Payment(label="Payment Provider"; description="Processes payments")
+    Web -> API.Handler : Submits order
+    API.Handler -> API.Orders : Requests validation
+    API.Orders -> API.Repository : Saves order
+    API.Orders -> Payment : Requests authorization
+}
+layout {
+    API.Handler < API.Orders : align=center; gap=90
+    API.Orders < API.Repository : align=center; gap=90
+    API.Orders ^ Payment : align=center; gap=90
+}

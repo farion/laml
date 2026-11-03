@@ -1,0 +1,23 @@
+settings {
+    type: c4-code
+    scope: Orders
+}
+semantics {
+    component Orders(label="Order Service"; technology="Rust"; description="Coordinates orders") {
+        interface OrderRepository {
+            +save(order: Order)
+        }
+        class OrderService {
+            +place(order: Order)
+        }
+        class Order {
+            +number: String
+        }
+        OrderService ..> OrderRepository : writes through
+        OrderService --> Order : validates
+    }
+}
+layout {
+    Orders.OrderRepository < Orders.OrderService : gap=100
+    Orders.OrderService < Orders.Order : gap=100
+}

@@ -1,0 +1,15 @@
+settings {
+    type: c4-context
+    scope: Shop
+}
+semantics {
+    person Customer(label="Customer"; description="Places orders online")
+    system Shop(label="Online Shop"; description="Handles orders and payments")
+    external system Payment(label="Payment Provider"; description="Processes card payments")
+    Customer -> Shop : Places orders
+    Shop -> Payment : Requests payment authorization
+}
+layout {
+    Customer < Shop : align=center; gap=90
+    Shop < Payment : align=center; gap=90
+}

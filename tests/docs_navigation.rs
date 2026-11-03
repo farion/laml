@@ -58,7 +58,9 @@ fn entry_points_link_to_all_diagram_guides() {
         .split_once("## License")
         .unwrap()
         .0;
-    assert_eq!(features.matches("  - [").count(), GUIDES.len());
+    assert_eq!(features.matches("  - [").count(), GUIDES.len() + 1);
+    assert!(features.contains("docs/c4-diagrams.md"));
+    assert!(started.contains("c4-diagrams.md"));
     for name in GUIDES {
         assert!(
             started.contains(&format!("diagrams/{name}.md")),
@@ -74,7 +76,11 @@ fn entry_points_link_to_all_diagram_guides() {
 #[test]
 fn user_guide_links_resolve_locally() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let mut pages = vec![root.join("README.md"), root.join("docs/getting-started.md")];
+    let mut pages = vec![
+        root.join("README.md"),
+        root.join("docs/getting-started.md"),
+        root.join("docs/c4-diagrams.md"),
+    ];
     pages.extend(
         GUIDES
             .iter()

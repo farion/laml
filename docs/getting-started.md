@@ -94,6 +94,10 @@ The lines in the middle column are **syntax excerpts**, not complete files. Foll
 | Timing | `state User at 2 : WaitCard` | [Timing](diagrams/timing.md) |
 | Composite structure | `part store(of=Store)` | [Composite structure](diagrams/composite.md) |
 | Profile | `profile Audit {` followed by `stereotype Tracked` on the next line | [Profile](diagrams/profile.md) |
+| C4 system context | `type: c4-context` and `scope: Shop` | [C4 guide](c4-diagrams.md) |
+| C4 container | `type: c4-container` and `container Web(...)` | [C4 guide](c4-diagrams.md) |
+| C4 component | `type: c4-component` and `component Orders(...)` | [C4 guide](c4-diagrams.md) |
+| C4 code | `type: c4-code` and `class Order { ... }` | [C4 guide](c4-diagrams.md) |
 | BPMN process/collaboration | `Review <X> Approve:yes ; Reject:no` | [BPMN](diagrams/bpmn.md) |
 
 For the complete syntax and defaults, use the [language reference](language-reference.md). For compiler behavior, use the [language contract](language-definition.md).

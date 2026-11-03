@@ -10,7 +10,7 @@ LAML turns a `.laml` file into an SVG, PNG or vector PDF diagram. Describe the e
 
 ## What is LAML?
 
-LAML is a diagram language and compiler for architecture drawings, 14 UML diagram types and a checked subset of BPMN process/collaboration diagrams. Its source separates **semantics** (what connects), **layout** (where things must go), and **styling** (how they look). It produces an image from the current source; it does not need a drawing editor or previous layout state.
+LAML is a diagram language and compiler for architecture drawings, the four C4 zoom levels, 14 UML diagram types and a checked subset of BPMN process/collaboration diagrams. Its source separates **semantics** (what connects), **layout** (where things must go), and **styling** (how they look). It produces an image from the current source; it does not need a drawing editor or previous layout state.
 
 ## Why LAML?
 
@@ -77,6 +77,25 @@ styling {
 
 ![Four-layer architecture diagram](docs/images/architecture.png)
 
+### C4: from system context to code
+
+```laml
+// Selected lines from examples/c4-context.laml
+settings {
+    type: c4-context
+    scope: Shop
+}
+semantics {
+    // […]
+    Customer -> Shop : Places orders
+    Shop -> Payment : Requests payment authorization
+}
+```
+
+![C4 system context with customer, online shop and payment provider](docs/images/c4-context.png)
+
+[Full context source](examples/c4-context.laml) · [C4 guide with all four levels and images](docs/c4-diagrams.md)
+
 ### Class diagram: UML relationships
 
 ```laml
@@ -127,8 +146,9 @@ RequestDocuments --> Merge
 
 ## Features
 
-- **16 diagram types** (GNE, 14 UML types and BPMN):
+- **20 diagram types** (GNE, four C4 levels, 14 UML types and BPMN):
   - [Generic node-edge (GNE)](docs/diagrams/gne.md)
+  - [C4 system context, container, component and code](docs/c4-diagrams.md)
   - [Class](docs/diagrams/class.md)
   - [Object](docs/diagrams/object.md)
   - [Component](docs/diagrams/component.md)
