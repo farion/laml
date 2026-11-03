@@ -5,6 +5,20 @@ use laml::{
 use std::fs;
 use std::path::Path;
 
+#[test]
+fn release_packages_bundled_font_notices() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let workflow = fs::read_to_string(root.join(".github/workflows/release.yml")).unwrap();
+    for name in ["INTER-LICENSE.txt", "GEIST-LICENSE.txt", "GEIST-SOURCE.txt"] {
+        assert!(root.join("assets").join(name).is_file());
+        assert_eq!(
+            workflow.matches(&format!("assets/{name}")).count(),
+            2,
+            "{name} must be in Unix and Windows archives"
+        );
+    }
+}
+
 fn text_blocks(guide: &str) -> Vec<String> {
     guide
         .replace("\r\n", "\n")

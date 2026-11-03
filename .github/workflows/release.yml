@@ -104,7 +104,7 @@ jobs:
           set -euo pipefail
           name="laml-${GITHUB_REF_NAME}-${TARGET}"
           mkdir -p "stage/${name}" dist
-          cp target/release/laml README.md LICENSE assets/INTER-LICENSE.txt "stage/${name}/"
+          cp target/release/laml README.md LICENSE assets/INTER-LICENSE.txt assets/GEIST-LICENSE.txt assets/GEIST-SOURCE.txt "stage/${name}/"
           cp assets/phosphor/LICENSE "stage/${name}/PHOSPHOR-LICENSE.txt"
           cp assets/phosphor/README.md "stage/${name}/PHOSPHOR-README.md"
           mkdir -p "stage/${name}/assets/phosphor"
@@ -121,7 +121,7 @@ jobs:
           $name = "laml-$env:GITHUB_REF_NAME-$env:TARGET"
           $folder = "stage/$name"
           New-Item -ItemType Directory -Path $folder, 'dist' -Force | Out-Null
-          Copy-Item target/release/laml.exe, README.md, LICENSE, assets/INTER-LICENSE.txt -Destination $folder
+          Copy-Item target/release/laml.exe, README.md, LICENSE, assets/INTER-LICENSE.txt, assets/GEIST-LICENSE.txt, assets/GEIST-SOURCE.txt -Destination $folder
           Copy-Item assets/phosphor/LICENSE -Destination "$folder/PHOSPHOR-LICENSE.txt"
           Copy-Item assets/phosphor/README.md -Destination "$folder/PHOSPHOR-README.md"
           New-Item -ItemType Directory -Path "$folder/assets/phosphor" -Force | Out-Null
