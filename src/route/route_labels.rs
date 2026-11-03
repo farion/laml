@@ -17,6 +17,7 @@ pub(super) fn select(
     font_size: f64,
     width: f64,
     rules: [Option<&RelationEndRule>; 2],
+    package_pill: bool,
 ) -> Result<(Option<Label>, Vec<Label>, Option<Gap>), String> {
     let markers = side_rules::label_clearance(relation, width);
     let options = match relation.display_label() {
@@ -44,6 +45,28 @@ pub(super) fn select(
     };
     let mut reason = None;
     for (label, gap) in options {
+        // The modern package label's visible pill extends beyond its text box.
+        // Reject a placement that would paint over another package outline.
+        if package_pill
+            && label.as_ref().is_some_and(|text| {
+                let (x, y, w, h) = (
+                    text.x - 4.0,
+                    text.y - 2.0,
+                    text.width + 8.0,
+                    text.height + 4.0,
+                );
+                boxes.iter().any(|node| {
+                    !node.contains_package_content(x, y, w, h)
+                        && x < node.x + node.width
+                        && x + w > node.x
+                        && y < node.y + node.height
+                        && y + h > node.y
+                })
+            })
+        {
+            reason = Some("relation label pill overlaps a package".into());
+            continue;
+        }
         if label.as_ref().is_some_and(|text| {
             qualifiers
                 .iter()
@@ -122,6 +145,7 @@ mod tests {
             14.0,
             2.0,
             [None, None],
+            false,
         )
         .unwrap();
         let title = title.unwrap();
@@ -139,6 +163,7 @@ mod tests {
                     14.0,
                     2.0,
                     [None, None],
+                    false,
                 )
                 .is_ok()
             );

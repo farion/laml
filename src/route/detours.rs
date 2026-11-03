@@ -5,7 +5,7 @@ use super::{
 };
 use crate::geometry::BoxNode;
 
-fn tracks(boxes: &[BoxNode], horizontal: bool, middle: f64) -> Vec<f64> {
+fn tracks(boxes: &[BoxNode], horizontal: bool, middle: f64, gap_midpoints: bool) -> Vec<f64> {
     let mut values = Vec::new();
     for node in boxes {
         let (low, high) = if horizontal {
@@ -14,6 +14,39 @@ fn tracks(boxes: &[BoxNode], horizontal: bool, middle: f64) -> Vec<f64> {
             (node.y, node.y + node.height)
         };
         values.extend([low - 24.0, high + 24.0]);
+    }
+    // A route can pass between two disjoint boxes even if another box,
+    // elsewhere on the diagram, overlaps their gap on this axis. Keep the
+    // midpoint as a candidate and let the full obstacle check decide.
+    if gap_midpoints {
+        for (i, first) in boxes
+            .iter()
+            .enumerate()
+            .filter(|(_, node)| !node.is_container)
+        {
+            for second in boxes.iter().skip(i + 1).filter(|node| !node.is_container) {
+                let (first_low, first_high, second_low, second_high) = if horizontal {
+                    (
+                        first.x,
+                        first.x + first.width,
+                        second.x,
+                        second.x + second.width,
+                    )
+                } else {
+                    (
+                        first.y,
+                        first.y + first.height,
+                        second.y,
+                        second.y + second.height,
+                    )
+                };
+                for (end, start) in [(first_high, second_low), (second_high, first_low)] {
+                    if start - end > 8.0 {
+                        values.push((end + start) / 2.0);
+                    }
+                }
+            }
+        }
     }
     values.sort_by(|a: &f64, b: &f64| {
         (*a - middle)
@@ -26,10 +59,15 @@ fn tracks(boxes: &[BoxNode], horizontal: bool, middle: f64) -> Vec<f64> {
     values
 }
 
-pub(super) fn corridors(a: &BoxNode, b: &BoxNode, boxes: &[BoxNode]) -> Vec<Vec<Point>> {
+pub(super) fn corridors(
+    a: &BoxNode,
+    b: &BoxNode,
+    boxes: &[BoxNode],
+    gap_midpoints: bool,
+) -> Vec<Vec<Point>> {
     let (ca, cb) = (center(a), center(b));
-    let xs = tracks(boxes, true, (ca.x + cb.x) / 2.0);
-    let ys = tracks(boxes, false, (ca.y + cb.y) / 2.0);
+    let xs = tracks(boxes, true, (ca.x + cb.x) / 2.0, gap_midpoints);
+    let ys = tracks(boxes, false, (ca.y + cb.y) / 2.0, gap_midpoints);
     let mut result = Vec::new();
     for &x in &xs {
         let (wa, wb) = (Point { x, y: ca.y }, Point { x, y: cb.y });
@@ -68,8 +106,12 @@ mod tests {
         .unwrap();
         let boxes =
             crate::geometry::place(&diagram, &crate::styles::StyleSheet::default()).unwrap();
-        assert!(corridors(&boxes[0], &boxes[2], &boxes).iter().any(|path| {
-            path.len() == 5 && super::super::geometry::route_is_clear(path, &boxes, &[])
-        }));
+        assert!(
+            corridors(&boxes[0], &boxes[2], &boxes, false)
+                .iter()
+                .any(|path| {
+                    path.len() == 5 && super::super::geometry::route_is_clear(path, &boxes, &[])
+                })
+        );
     }
 }

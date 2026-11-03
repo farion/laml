@@ -47,7 +47,11 @@ fn package_diagram_has_nested_groups_and_distinct_dependency_keywords() {
 }
 
 #[test]
-fn architecture_dependencies_are_short_and_clear_of_payments() {
+fn architecture_dependencies_route_without_changing_original_node_layout() {
+    assert!(
+        !ARCHITECTURE.contains("layout {"),
+        "the routing test must not prescribe geometry"
+    );
     for theme in ["modern", "modern-dark"] {
         let source =
             ARCHITECTURE.replace("type: package", &format!("type: package\ntheme: {theme}"));
@@ -65,29 +69,30 @@ fn architecture_dependencies_are_short_and_clear_of_payments() {
         let merge = &routes[3].points;
         assert_eq!(
             import.len(),
-            2,
-            "{theme}: import needs a straight rightward line"
+            4,
+            "{theme}: import should make only two bends"
         );
-        assert_eq!(
-            access.len(),
-            2,
-            "{theme}: access needs a straight rightward line"
+        assert!((import[0].x - api.x - api.width / 2.0).abs() < 1e-6);
+        assert!(
+            (import[0].y - api.y).abs() < 1e-6,
+            "{theme}: import must start on API"
         );
-        assert!((import[0].x - api.x - api.width).abs() < 1e-6);
-        assert!((import[1].x - payments.x).abs() < 1e-6);
-        assert!((import[0].y - import[1].y).abs() < 1e-6);
+        assert_eq!(access.len(), 2, "{theme}: access should go directly right");
         assert!((access[0].x - orders.x - orders.width).abs() < 1e-6);
         assert!((access[1].x - common.x).abs() < 1e-6);
         assert!((access[0].y - access[1].y).abs() < 1e-6);
-        assert!((api.y + api.height / 2.0 - payments.y - payments.height / 2.0).abs() < 1e-6);
-        assert_eq!(merge.len(), 3, "{theme}: merge needs one bend");
+        assert_eq!(merge.len(), 5, "{theme}: merge needs only a short corridor");
+        assert!(merge[2].y > payments.y + payments.height + 4.0);
+        assert!(merge[2].y < common.y - 4.0);
+        assert!((merge[4].y - common.y).abs() < 1e-6);
+        let label = routes[3].label.as_ref().unwrap();
         assert!(
-            merge[0].y > payments.y + payments.height + 4.0,
-            "{theme}: merge must run below Payments"
+            label.x + label.width + 4.0 < payments.x,
+            "{theme}: the rendered merge label pill must not touch Payments"
         );
         assert!(
             routes.iter().all(|route| route.bridges.is_empty()),
-            "{theme}: dependencies must avoid crossings"
+            "{theme}: dependencies must not cross"
         );
     }
 }

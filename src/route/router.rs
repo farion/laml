@@ -109,7 +109,7 @@ fn route_pass(
                         message,
                     }
                 })?;
-            candidates(diagram, index, from, to, boxes, &routed, offset)
+            candidates(diagram, index, from, to, boxes, &routed, offset, ranked)
         };
         if ranked && from != to {
             ranking::order(&mut options, &routed, boxes, from, to);
@@ -171,6 +171,8 @@ fn route_pass(
                 font_size,
                 width,
                 end_rules,
+                diagram.settings.diagram_type == crate::syntax::DiagramType::Package
+                    && sheet.theme.modern(),
             ) {
                 Ok(labels) => labels,
                 Err(message) => {

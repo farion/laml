@@ -29,14 +29,16 @@ pub(super) fn forced_port(node: &BoxNode, side: PortSide) -> Point {
     port(node, towards)
 }
 
-// Prefer a horizontal stroke when two generic node silhouettes overlap in Y.
+// Prefer a horizontal stroke when generic or package boxes overlap in Y.
 // A diagonal centre-to-centre line is not the only straight route between them.
 pub(super) fn horizontal_connection(a: &BoxNode, b: &BoxNode) -> Option<Vec<Point>> {
-    if a.kind != crate::syntax::NodeKind::Generic
-        || b.kind != crate::syntax::NodeKind::Generic
-        || a.shape == NodeShape::Note
-        || b.shape == NodeShape::Note
-    {
+    let horizontal_box = |node: &BoxNode| {
+        matches!(
+            node.kind,
+            crate::syntax::NodeKind::Generic | crate::syntax::NodeKind::Package
+        ) && node.shape != NodeShape::Note
+    };
+    if !horizontal_box(a) || !horizontal_box(b) {
         return None;
     }
     let (left, right, reverse) = if a.x + a.width < b.x {
@@ -169,7 +171,7 @@ mod candidate_tests {
             let source = format!("semantics {{\nA\nB\n}}\nlayout {{\n{rule}\n}}\n");
             let diagram = parse(&source).unwrap();
             let boxes = place(&diagram, &StyleSheet::default()).unwrap();
-            let options = candidates(&diagram, 0, 0, 1, &boxes, &[], 12.0);
+            let options = candidates(&diagram, 0, 0, 1, &boxes, &[], 12.0, false);
             let valid: Vec<_> = options
                 .iter()
                 .filter(|points| route_is_clear(points, &boxes, &[]))

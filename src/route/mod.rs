@@ -92,6 +92,7 @@ pub struct RouteError {
     pub message: String,
 }
 
+#[allow(clippy::too_many_arguments)] // Candidate geometry needs both endpoints and the current route plan.
 fn candidates(
     diagram: &Diagram,
     index: usize,
@@ -100,6 +101,7 @@ fn candidates(
     boxes: &[BoxNode],
     previous: &[Route],
     offset: f64,
+    ranked: bool,
 ) -> Vec<Vec<Point>> {
     let a = &boxes[from];
     let b = &boxes[to];
@@ -209,9 +211,18 @@ fn candidates(
         }
     }
     results.extend(
-        detours::corridors(a, b, boxes)
-            .into_iter()
-            .filter(|points| (source_side.is_none() && target_side.is_none()) || points.len() == 5),
+        detours::corridors(
+            a,
+            b,
+            boxes,
+            ranked
+                && matches!(
+                    diagram.settings.diagram_type,
+                    crate::syntax::DiagramType::Generic | crate::syntax::DiagramType::Package
+                ),
+        )
+        .into_iter()
+        .filter(|points| (source_side.is_none() && target_side.is_none()) || points.len() == 5),
     );
     results
         .into_iter()
