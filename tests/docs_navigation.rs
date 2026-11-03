@@ -48,8 +48,12 @@ fn heading_anchor(heading: &str) -> String {
 #[test]
 fn entry_points_link_to_all_diagram_guides() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let readme = fs::read_to_string(root.join("README.md")).unwrap();
-    let started = fs::read_to_string(root.join("docs/getting-started.md")).unwrap();
+    let readme = fs::read_to_string(root.join("README.md"))
+        .unwrap()
+        .replace("\r\n", "\n");
+    let started = fs::read_to_string(root.join("docs/getting-started.md"))
+        .unwrap()
+        .replace("\r\n", "\n");
     assert!(readme.contains("docs/getting-started.md"));
     let contents = readme
         .split_once("## Contents\n")
