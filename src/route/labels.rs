@@ -11,6 +11,7 @@ pub(super) fn near_options(
     own_markers: [f64; 2],
     boxes: &[BoxNode],
     previous: &[Route],
+    package_pill: bool,
 ) -> Result<Vec<Label>, String> {
     let width = measure(text, size)?;
     let height = size * 1.25;
@@ -21,7 +22,12 @@ pub(super) fn near_options(
         if dx.hypot(dy) < 1e-6 {
             continue;
         }
-        for progress in [0.5, 0.3, 0.7, 0.15, 0.85] {
+        let positions: &[f64] = if package_pill {
+            &[0.5, 0.45, 0.4, 0.3, 0.7, 0.15, 0.85]
+        } else {
+            &[0.5, 0.3, 0.7, 0.15, 0.85]
+        };
+        for &progress in positions {
             let mid = Point {
                 x: pair[0].x + dx * progress,
                 y: pair[0].y + dy * progress,

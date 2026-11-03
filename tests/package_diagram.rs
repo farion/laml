@@ -80,8 +80,13 @@ fn architecture_dependencies_route_without_changing_original_node_layout() {
         assert!((import[1].x - payments.x).abs() < 1e-6);
         assert!((import[0].y - import[1].y).abs() < 1e-6);
         assert!(
-            (api.y + api.height / 2.0 - payments.y - payments.height / 2.0).abs() < 1e-6,
-            "{theme}: automatic placement should lift Payments beside API"
+            api.y + api.height / 2.0 - payments.y - payments.height / 2.0 >= 10.0,
+            "{theme}: automatic placement should lift Payments clear of merge"
+        );
+        assert!(
+            import[1].y >= payments.y + 14.0 + 6.0
+                && import[1].y <= payments.y + payments.height - 6.0,
+            "{theme}: the straight import must still dock on Payments' visible body"
         );
         assert_eq!(access.len(), 2, "{theme}: access must be straight");
         assert!((access[0].x - orders.x - orders.width).abs() < 1e-6);
@@ -89,6 +94,12 @@ fn architecture_dependencies_route_without_changing_original_node_layout() {
         assert!((access[0].y - access[1].y).abs() < 1e-6);
         assert_eq!(merge.len(), 3, "{theme}: merge needs only one bend");
         assert!(merge[1].y > payments.y + payments.height + 4.0);
+        let distance_to_payments = merge[0].y - payments.y - payments.height;
+        let distance_to_common = common.y + 14.0 - merge[0].y;
+        assert!(
+            distance_to_payments > 1.7 * distance_to_common,
+            "{theme}: merge should visibly belong to Common, not Payments"
+        );
         assert!((merge[0].x - node("Shop.Pricing").x - node("Shop.Pricing").width).abs() < 1e-6);
         assert!((merge[2].x - common.x - common.width / 2.0).abs() < 1e-6);
         assert!(
@@ -118,6 +129,14 @@ fn architecture_dependencies_route_without_changing_original_node_layout() {
             );
         }
         let label = routes[3].label.as_ref().unwrap();
+        assert!(
+            label.y > merge[0].y,
+            "{theme}: merge label belongs below the route, near Common"
+        );
+        assert!(
+            label.y > payments.y + payments.height + 20.0,
+            "{theme}: merge label must clear the unrelated Payments box"
+        );
         assert!(
             label.x + label.width + 4.0 < payments.x,
             "{theme}: the rendered merge label pill must not touch Payments"

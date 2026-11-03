@@ -20,15 +20,21 @@ pub(super) fn select(
     package_pill: bool,
 ) -> Result<(Option<Label>, Vec<Label>, Option<Gap>), String> {
     let markers = side_rules::label_clearance(relation, width);
-    let options = match relation.display_label() {
+    let mut options = match relation.display_label() {
         None => vec![(None, None)],
         Some(text) => match placement {
-            LabelPlacement::Near => {
-                labels::near_options(points, &text, font_size, markers, boxes, previous)?
-                    .into_iter()
-                    .map(|label| (Some(label), None))
-                    .collect()
-            }
+            LabelPlacement::Near => labels::near_options(
+                points,
+                &text,
+                font_size,
+                markers,
+                boxes,
+                previous,
+                package_pill,
+            )?
+            .into_iter()
+            .map(|label| (Some(label), None))
+            .collect(),
             LabelPlacement::Along => {
                 labels::along_options(points, &text, font_size, markers, boxes, previous)?
                     .into_iter()
@@ -43,6 +49,20 @@ pub(super) fn select(
             }
         },
     };
+    // When a package relation turns down into its target, place its title on
+    // that side of the horizontal stroke before trying the unrelated upper row.
+    if package_pill && placement == LabelPlacement::Near && points.len() >= 3 {
+        let last = points[points.len() - 1];
+        let before = points[points.len() - 2];
+        if (last.x - before.x).abs() < 1e-6 && last.y > before.y + 1e-6 {
+            let horizontal_y = points[0].y;
+            options.sort_by_key(|(label, _)| {
+                label
+                    .as_ref()
+                    .is_none_or(|label| label.y + label.height / 2.0 < horizontal_y)
+            });
+        }
+    }
     let mut reason = None;
     for (label, gap) in options {
         // The modern package label's visible pill extends beyond its text box.

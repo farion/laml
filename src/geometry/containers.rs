@@ -142,6 +142,40 @@ fn relation_alignments(
             let owner_a = local.iter().find(|node| node.id == a)?;
             let owner_b = local.iter().find(|node| node.id == b)?;
             let center = |node: &BoxNode| node.y + node.height / 2.0;
+            // An upper external package should not crowd a separate relation
+            // from a lower sibling into another external package. A small
+            // upward preference leaves the incoming horizontal stroke intact.
+            let upper_clearance = if diagram.settings.diagram_type
+                == crate::syntax::DiagramType::Package
+                && parent.is_none()
+                && diagram.layout.is_empty()
+                && diagram
+                    .nodes
+                    .iter()
+                    .any(|node| node.id == to.id && node.parent.is_none())
+                && let Some(source_parent) = diagram
+                    .nodes
+                    .iter()
+                    .find(|node| node.id == from.id)
+                    .and_then(|node| node.parent.as_deref())
+                && diagram.relations.iter().any(|other| {
+                    other.from != relation.from
+                        && other.to != relation.to
+                        && diagram.nodes.iter().any(|node| {
+                            node.id == other.from && node.parent.as_deref() == Some(source_parent)
+                        })
+                        && diagram
+                            .nodes
+                            .iter()
+                            .any(|node| node.id == other.to && node.parent.is_none())
+                        && boxes
+                            .iter()
+                            .any(|node| node.id == other.from && center(node) > center(from) + 16.0)
+                }) {
+                12.0
+            } else {
+                0.0
+            };
             Some(ScopedAlignment {
                 first: a,
                 second: b,
@@ -150,7 +184,8 @@ fn relation_alignments(
                     - center(owner_a)
                     - owner_b.height / 2.0
                     - center(to)
-                    + center(owner_b),
+                    + center(owner_b)
+                    - upper_clearance,
                 line: 0,
             })
         })
@@ -159,7 +194,9 @@ fn relation_alignments(
 
 // In a package frame, a right-hand child need not sit directly in the row of
 // its incoming sibling when that blocks another sibling's outward relation.
-// Use the space between the two left-hand rows, never an authored position.
+// Favor the related lower row within that space, so its outgoing route stays
+// closer to its target than to unrelated nodes in the upper row. Never move
+// an authored position.
 fn open_package_lanes(diagram: &Diagram, local: &mut [BoxNode], parent: Option<&str>) {
     if diagram.settings.diagram_type != crate::syntax::DiagramType::Package
         || parent.is_none()
@@ -203,8 +240,8 @@ fn open_package_lanes(diagram: &Diagram, local: &mut [BoxNode], parent: Option<&
                 joined && outward
             });
         if let Some((upper, lower)) = candidate {
-            let proposed =
-                (center(&local[upper]) + center(&local[lower])) / 2.0 - local[right].height / 2.0;
+            let proposed = center(&local[upper]) * 0.4 + center(&local[lower]) * 0.6
+                - local[right].height / 2.0;
             let clear = local.iter().enumerate().all(|(i, node)| {
                 i == right
                     || node.x + node.width + 8.0 <= local[right].x
