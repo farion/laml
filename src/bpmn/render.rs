@@ -138,8 +138,15 @@ fn shape(svg: &mut String, n: &Node, b: BoxAt, icon: Option<&str>, caption_above
         Kind::Exclusive | Kind::Parallel | Kind::Inclusive | Kind::EventBased => {
             writeln!(svg,"<path class=\"bpmn-body\" d=\"M {x:.1} {:.1} L {:.1} {y:.1} L {x:.1} {:.1} L {:.1} {y:.1} Z\" fill=\"white\" stroke=\"#263548\" stroke-width=\"2\"/>",y-h/2.0,x+w/2.0,y+h/2.0,x-w/2.0).unwrap();
             match n.kind {
-                Kind::Exclusive => text(svg, x, y + 9.0, "X", 28.0),
-                Kind::Parallel => text(svg, x, y + 10.0, "+", 32.0),
+                Kind::Exclusive => {
+                    writeln!(svg, "<path class=\"bpmn-gateway-marker\" d=\"M {:.1} {:.1} L {:.1} {:.1} M {:.1} {:.1} L {:.1} {:.1}\" fill=\"none\" stroke=\"#182330\" stroke-width=\"4\" stroke-linecap=\"square\"/>",
+                        x - 12.0, y - 12.0, x + 12.0, y + 12.0,
+                        x + 12.0, y - 12.0, x - 12.0, y + 12.0).unwrap();
+                }
+                Kind::Parallel => {
+                    writeln!(svg, "<path class=\"bpmn-gateway-marker\" d=\"M {x:.1} {:.1} V {:.1} M {:.1} {y:.1} H {:.1}\" fill=\"none\" stroke=\"#182330\" stroke-width=\"4\" stroke-linecap=\"square\"/>",
+                        y - 15.0, y + 15.0, x - 15.0, x + 15.0).unwrap();
+                }
                 Kind::Inclusive => {
                     writeln!(svg,"<circle cx=\"{x:.1}\" cy=\"{y:.1}\" r=\"13\" fill=\"none\" stroke=\"#263548\" stroke-width=\"2.5\"/>").unwrap();
                 }
@@ -264,7 +271,8 @@ pub fn render_with_styles(
             if let Some(c) = text_color {
                 writeln!(
                     svg,
-                    "<style>[data-bpmn-id=\"{}\"] text {{fill:{c};}}</style>",
+                    "<style>[data-bpmn-id=\"{}\"] text {{fill:{c};}} [data-bpmn-id=\"{}\"] .bpmn-gateway-marker {{stroke:{c};}}</style>",
+                    escape(&n.id),
                     escape(&n.id)
                 )
                 .unwrap();

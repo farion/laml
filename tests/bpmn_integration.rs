@@ -46,6 +46,44 @@ fn all_bpmn_examples_export_to_every_format() {
 }
 
 #[test]
+fn gateway_crosses_are_geometry_not_font_glyphs() {
+    for (syntax, path_commands) in [("<X>", " L "), ("<+>", " V ")] {
+        let source = format!(
+            "settings {{\ntype: bpmn\n}}\nsemantics {{\nSource {syntax}@Split Left; Right\n}}"
+        );
+        let doc = bpmn::parse(&source).unwrap();
+        let svg = bpmn::render(&doc, TextMode::System).unwrap();
+        let gateway = svg
+            .split("<g data-bpmn-id=\"Split\">")
+            .nth(1)
+            .unwrap()
+            .split("</g>")
+            .next()
+            .unwrap();
+        let marker = gateway
+            .lines()
+            .find(|line| line.contains("class=\"bpmn-gateway-marker\""))
+            .unwrap();
+        assert!(marker.contains(path_commands), "{syntax}: {marker}");
+        assert!(marker.contains("fill=\"none\" stroke="));
+        assert!(!gateway.contains(">X</text>"));
+        assert!(!gateway.contains(">+</text>"));
+    }
+    let source = "settings {\ntype: bpmn\n}\nsemantics {\nSource <+>@Split Left; Right\n}\nstyling {\nnode[Split] {\ncolor: \"#aabbcc\"\n}\n}";
+    let doc = bpmn::parse(source).unwrap();
+    let sheet = styles::load(
+        &Diagram {
+            styling: doc.styling.clone(),
+            ..Default::default()
+        },
+        Path::new("examples/bpmn-basic.laml"),
+    )
+    .unwrap();
+    let svg = bpmn::render_with_styles(&doc, &sheet, TextMode::System).unwrap();
+    assert!(svg.contains(".bpmn-gateway-marker {stroke:#aabbcc;}"));
+}
+
+#[test]
 fn gateway_side_rules_parse_validate_and_reject_conflicts() {
     let source = include_str!("../examples/bpmn-basic.laml");
     let custom = format!(
