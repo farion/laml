@@ -23,7 +23,7 @@ styling {
   <img src="../images/gne-basic-modern.png" alt="Browser requests the API">
 </picture>
 
-[Complete source for this image](../../examples/gne-basic.laml). Build with `laml build examples/gne-basic.laml`. GNE is the default: no `type` setting is needed. The relation gives an automatic placement preference; the layout rule requires a minimum gap and aligned centers.
+[Complete source for this image](../../examples/gne-basic.laml). Build with `laml build examples/gne-basic.laml`. GNE is the default diagram type. The relation gives an automatic placement preference; the layout rule requires a minimum gap and aligned centers.
 
 ## Elements and relations
 
@@ -122,7 +122,7 @@ styling {
   <img src="../images/showcase-generic-modern.png" alt="Generic graph with package, ports and styled shapes">
 </picture>
 
-[Complete source for this image](../../examples/showcase-generic.laml). `node.class` selects a styling class; `node[ID]` selects one element. Generic shapes include `rectangle`, `ellipse`, `diamond` and `note`. In modern themes, a GNE note is a rounded card with a flush, full-height left accent, not a folded-paper icon; `plain` keeps the folded note. Modern arrowheads meet the visible edge of generic port dots instead of being covered by them. Packages group contained elements; members and ports can be addressed by relations.
+[Complete source for this image](../../examples/showcase-generic.laml). `node.class` selects a styling class; `node[ID]` selects one element. Generic shapes include `rectangle`, `ellipse`, `diamond` and `note`. In modern themes, a GNE note is a rounded card with a flush, full-height left accent; `plain` uses a folded note. Modern arrowheads meet the visible edge of generic port dots instead of being covered by them. Packages group contained elements; members and ports can be addressed by relations.
 
 | Selector or property | Use |
 |---|---|

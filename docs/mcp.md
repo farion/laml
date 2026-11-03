@@ -1,6 +1,6 @@
 # Local AI agent integration (MCP)
 
-LAML ships a local MCP server in the same binary as the CLI. It runs on stdio: the agent starts `laml mcp` as a child process; no listening port, account, or extra service is needed. Install a version of LAML that includes the `mcp` command first. An older installed `laml` binary will not acquire MCP support merely because you configure an agent.
+LAML ships a local MCP server in the CLI binary. The agent starts `laml mcp` over stdio and uses the same compiler as the command line.
 
 The server announces LAML's capabilities and exposes six tools:
 
@@ -8,10 +8,10 @@ The server announces LAML's capabilities and exposes six tools:
 - `laml_guide(topic)`: read the bundled guide for `gne`, any UML type, `bpmn`, or one of the four C4 types; `getting-started` covers shared syntax.
 - `laml_example(topic)`: get a complete, buildable `.laml` source for any diagram type.
 - `laml_relations(topic)`: read the relationship notation appropriate to that diagram type, including the distinction between semantic connections and placement rules.
-- `laml_check(file)`: quick source check; it does **not** check all measured geometry.
+- `laml_check(file)`: check source declarations and references.
 - `laml_build(file, output?)`: build SVG (default), PNG, or PDF and validate layout/routing; returns errors from the compiler on failure. An explicitly specified output file may be overwritten.
 
-The agent extracts **both elements and their relationships** from your architecture description, chooses a diagram type, consults its relationship notation, writes the `.laml` source in its project workspace using its normal file tools, then calls `laml_build`. If endpoints, directions or relationship meanings are missing from the description, it should not invent them silently. Relative paths resolve against the agent's project directory. The server does not generate source files on the agent's behalf, and it does not preview or inspect the generated image: use the agent's image-reading capability to review it. The server does not start LAML's optional background update check while compiling.
+The agent identifies **elements and relationships** in your architecture description, chooses a diagram type, consults its notation, writes the `.laml` source in its project workspace, and calls `laml_build`. Ask for clarification when endpoints, directions or relationship meanings are ambiguous. Relative paths resolve against the agent's project directory. Review the rendered image with the agent's image-reading capability.
 
 ## OpenCode
 
@@ -22,9 +22,9 @@ opencode mcp add laml -- laml mcp
 opencode mcp list
 ```
 
-This uses project-scoped configuration (run from a Git project so OpenCode can discover the project config). Use `--global` before `--` if you want the tool in every project. Alternatively configure a local server in `opencode.json` with `"mcp": {"laml": {"type": "local", "command": ["laml", "mcp"]}}`. OpenCode 2 uses `mcp.servers` instead of `mcp.laml`; follow the configuration format of the installed OpenCode version.
+Run the command in the project where OpenCode will create diagrams. Use `--global` before `--` to register it across projects.
 
-If `laml` is not in OpenCode's PATH, use an absolute path to the executable after `--`. Confirm that this binary supports `laml mcp` before registering it. From OpenCode, ask: “Use LAML to draw a C4 context diagram. Save the `.laml` source in this workspace and render an SVG.”
+Use an absolute executable path after `--` when appropriate. From OpenCode, ask: “Use LAML to draw a C4 context diagram. Save the `.laml` source in this workspace and render an SVG.”
 
 ## Claude Code
 
@@ -37,4 +37,4 @@ The default scope is local to the current project. Use `--scope project` if the 
 
 ## Design and trust boundary
 
-The compiler is the same CLI for agent and human. MCP only supplies discoverability and tool calls; a cloud model used by the agent may receive tool outputs or source contents even though the LAML process itself is local. The tools accept workspace-relative or absolute file paths with the same file access rights as the agent process. Only enable the MCP server for agents you trust with those rights. Compiler errors are reported as MCP tool errors; stdout of the MCP process is reserved for protocol messages.
+MCP exposes compiler tools to the agent. A cloud model used by the agent may receive source content or tool results. The MCP process has the file access rights of the agent process; configure it for projects whose files that agent may read and write. Compiler errors appear as MCP tool errors; stdout carries protocol messages.

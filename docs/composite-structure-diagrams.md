@@ -1,6 +1,6 @@
 # UML composite-structure diagrams
 
-Set `type: composite`. This **checked image subset** shows one structured classifier with its mandatory *internal structure* compartment. A `part` is owned by composition and receives a solid box; a noncomposite `role` has a dashed box. Both are typed by explicitly declared local classes. A port connector inside the owner is not an association between arbitrary instances and is not a dependency between class definitions. See the [buildable checkout example](../examples/composite-checkout.laml).
+Set `type: composite`. This draws a structured classifier with its *internal structure* compartment. A `part` is owned by composition and receives a solid box; a noncomposite `role` has a dashed box. Both are typed by explicitly declared local classes. A port connector inside the owner is not an association between arbitrary instances and is not a dependency between class definitions. See the [buildable checkout example](../examples/composite-checkout.laml).
 
 ```text
 settings {
@@ -39,4 +39,4 @@ layout {
 
 `==` is an **assembly connector** between ports on distinct sibling parts/roles, requiring matching interface names with opposite provided/required roles. `=>` is a **delegation connector** from an external port on the owner to a port on its own part/role, requiring matching interface and the same provided/required role. Both draw plain solid connector paths attached to visible port squares, with no arrowhead; the operator expresses source-level connector kind, *not* a dependency or direction of runtime messages. Generic `--`, dashed dependencies, unknown port contracts and end adornments fail. Boundary-side and separation rules are mandatory; unsafe routing and connector crossings through the *internal structure* label fail rather than changing UML meaning.
 
-The owner, parts, roles, connector paths and typed ports cannot be styled away. `check` validates identity, ownership and notation; `build` checks measured containment, label clearance and routed geometry, then produces SVG, PNG or vector PDF. Omitted from this first subset: property/connector-end multiplicities, type inheritance, untyped or complex multi-interface ports, untyped assembly connectors, n-ary connectors, association-typed connectors, collaboration uses and optional ball/socket connector glyphs. No parts or links are instantiated or executed. See the [UML 2.5.1 notation audit](uml-composite-structure-conformance.md).
+`check` validates identity, ownership and notation; `build` validates measured containment, label clearance and routed geometry, then produces SVG, PNG or vector PDF. See the [UML 2.5.1 notation audit](uml-composite-structure-conformance.md) for connector notation.

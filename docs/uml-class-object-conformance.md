@@ -1,27 +1,21 @@
-# UML 2.5.1 notation audit for LAML class and object diagrams
+# UML 2.5.1 class and object notation
 
-This is a notation audit of LAML's image-generation language, **not** a claim that LAML stores or validates a complete UML model. Clauses refer to the OMG Unified Modeling Language 2.5.1 specification. A diagram may use only the constructs listed as supported; notation needing a separate UML abstract-syntax model, language grammar, or safe geometry is rejected or omitted, not inferred.
+Reference: OMG UML 2.5.1 §§7.3.4, 9.2.4, 9.6.4, 9.8.4, 10.4.4 and 11.5.4. LAML draws these class and instance symbols with measured text and checked relationships:
 
-| UML clause | Notation / rule | LAML treatment and evidence | Limit |
-|---|---|---|---|
-| §7.3.4 | Formal template parameters in a small dashed rectangle over the template symbol | `class Repository<T>` uses a measured dashed corner box; `tests/class_object_v13.rs`, `tests/class_object_bindings.rs` | Local formal names with optional displayed `:Kind` and `=Default` are accepted; neither kind nor default is resolved against an external model. GNE retains its literal inline heading. |
-| §9.2.4 | Classifier name, keyword, compartments and suppression; abstract names italic or `{abstract}` | Headers, `«interface»`, `«enumeration»`, `«dataType»`, measured member rows and LSS compartment suppression; Inter Italic plus `{abstract}`; `tests/class_object_v13.rs`, `tests/class_object_compartments.rs`, `tests/class_object_italic.rs` | Receptions, internal structure and other optional compartments have no grammar. No hidden model is inferred when a compartment is suppressed. |
-| §9.6.4 | Operation text is name, parameters and optional return type, not a programming-language return type before the name | Simple shorthand is normalized to visible `name(parameter: Type): ReturnType`; complex forms rejected; `tests/class_object_members_audit.rs` | Direction, default, return multiplicity, property strings, operation templates and non-ASCII identifiers are not represented. |
-| §9.8.4 | Underlined instance headers, slots and links; link ends may carry names | `type: object` renders underlined instance/classifier text, literal `name = value` slots and end names; `tests/class_object_v13.rs`, `tests/class_object_members_audit.rs` | Link association/classifier ownership is not resolved from an external class model; object links reject multiplicities, qualifiers and other class-only markers. |
-| §9.9.4.8 | Generalization is acyclic | Transitive cycles, including reversed operators, fail; `tests/class_object_uml.rs` | No full classifier inheritance or substitutability model. |
-| §10.5.5.5 | Interface-owned features are public | Explicit private/protected/package visibility on interface members fails; `tests/class_object_members_audit.rs` | No separately loaded Interface model. |
-| §10.4.4 | Interface realization may use a labeled ball attached by a solid line to its provider | Relation-specific `interface-notation: lollipop`; one circle per provider, no visible unused interface box; `tests/class_object_lollipops.rs` | Requires an empty otherwise unused interface with no mandatory box layout, extra adornments or mixed box references. Compact socket notation and the inherited-interface caret have no grammar; a box-form dependency may still be drawn. |
-| §11.4.4 | Class compartments and visibility | Attribute/operation divider, visible member prefixes and static underlining, typed member selectors, explicit hiding; `tests/class_object_v13.rs`, `tests/class_object_compartments.rs` | Advanced class internal structures and receptions lack grammar. |
-| §11.5.4 | Binary association line, small aggregation/composition terminators, open navigability arrow, separately placed end names/multiplicities and n-ary diamond | Distinct operators, role/multiplicity side rules, checked n-ary arms and qualifier boxes; `tests/class_object_v13.rs`, `tests/class_object_qualifiers.rs`, `tests/class_object_junctions.rs` | End ownership dots, explicit non-navigability crosses, derived-association slash, ordered association-name triangle, property strings and aggregation end-tree merging lack grammar. No inference from absent navigability arrows or multiplicities. |
-| §11.5.4 | Association class attached by dashed line to binary path or n-ary diamond, same name | Checked dashed binary T-junction or n-ary diamond attachment, identity/name and uniqueness checks; `tests/class_object_junctions.rs` | Association class inheritance and generalization require a separate model. |
-| §11.5.4 | Qualifier rectangle lies between classifier and association path; every end may have one | Measured boxes at one or both ends, with unique qualifier attribute names and explicit collision checks; `tests/class_object_qualifiers.rs` | Qualifier-owned property semantics and selection-cardinality rules are not evaluated; unsafe placement fails. |
+| Drawing | Source or style |
+|---|---|
+| Classifier and typed member compartments | `class Kunde {` followed by `name: String` on the next line |
+| Interface, enumeration and data type | `interface API`, `enum Status`, `datatype Geld` |
+| Abstract classifier | `abstract class Dienst` |
+| Dashed template-parameter corner box | `class Repository<T>` |
+| Underlined object header and literal slots | `kunde1(of=Kunde) {` followed by `name = "Ada"` on the next line |
+| Binary association and end labels | `@orders Kunde "1" -- "0..*" Bestellung` |
+| Composition and aggregation | `A *-- B` / `A o-- B` |
+| Generalization and realization | `A --|> B` / `A ..|> B` |
+| Qualifier box | `qualifier(id:UUID)` on a class-association end |
+| N-ary association | `association Verordnet` with three or more arms |
+| Association class | `Facts .. relation[orders]` |
+| Compact interface realization | Named relation styled with `interface-notation: lollipop` |
+| Template binding | `StringRepository ..> Repository <<bind(T->String)>>` |
 
-## Diagram-level boundaries
-
-- Generic node-edge diagrams can mix freely typed shapes and rows. UML `type: class` rejects instance nodes and `type: object` rejects class nodes. This avoids asserting an unvalidated mixed model.
-- Relationship glyphs and styles are checked per specialized diagram. Named direct relation ends can mandate attachment sides; named ports have their own four-side constraints. A failed or unsupported combination is reported as an error rather than rendered as a different UML construct.
-- These checks validate local image notation, endpoint kinds and visible references. They do not establish UML abstract-syntax completeness, semantic type checking, inheritance computation, object execution or a conforming UML interchange format.
-
-## Release checks still required
-
-Run all-target local tests, examples and SVG/PNG/PDF output checks; verify platform CI and the export-license policy. The implementation checkpoint in [v1.3 status](v1.3-status.md) lists unresolved geometry, notation and release blockers. No release should be described as UML-conformant solely because its glyphs resemble UML.
+See the [class and object guide](class-object-diagrams.md), [class example](../examples/class-basic.laml) and [object example](../examples/object-basic.laml).

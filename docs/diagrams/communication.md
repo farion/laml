@@ -46,7 +46,7 @@ semantics {
   <img src="../images/communication-order-modern.png" alt="Three participants and nested message numbers">
 </picture>
 
-[Complete source](../../examples/communication-order.laml). Declare links before their messages. Message numbers are explicitly written, not inferred from the drawing.
+[Complete source](../../examples/communication-order.laml). Declare links before their messages. Write message numbers explicitly in the source.
 
 | Form | Use |
 |---|---|

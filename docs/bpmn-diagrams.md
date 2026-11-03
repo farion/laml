@@ -52,7 +52,7 @@ pool Shop("Shop") {
 Customer.Submit ~~> Shop.Received : order
 ```
 
-The snippet above is **an excerpt within `semantics { ... }`**, not a whole source file. `-->` draws a sequence flow within a participant; `~~>` draws a dashed message flow **between distinct pools**; `..>` draws a dotted association involving `data` or `store`, never a process step. Pools and lanes are semantic membership: `layout` cannot move an element into another participant or lane. If a flow references an element in another lane, define that element in its own lane first, then use its ID. A process without pools is also valid.
+The snippet above shows lines from a `semantics { ... }` section; follow its source link for the complete buildable diagram. `-->` draws a sequence flow within a participant; `~~>` draws a dashed message flow **between distinct pools**; `..>` draws a dotted association involving `data` or `store`, never a process step. Pools and lanes are semantic membership: `layout` cannot move an element into another participant or lane. If a flow references an element in another lane, define that element in its own lane first, then use its ID. A process without pools is also valid.
 
 ## Events, subprocesses and data
 
@@ -66,7 +66,7 @@ Review -(error@Failure:"Failed")-> HandleError
 Review -(message@Cancellation:"Cancel")-> Cancel
 ```
 
-`timer+` and `message+` denote noninterrupting boundary events with dashed rings. The string is diagram text, not an evaluated timer expression. `data Order("Order document")` and `store Archive("Archive")` are associated with tasks using `Order ..> Review` and `Review ..> Archive`. A BPMN text annotation uses `note Policy("Escalate after 2 days")` and an undirected dashed association `Policy .. Review`; it is neither a data association nor a process step.
+`timer+` and `message+` denote noninterrupting boundary events with dashed rings. The string appears as diagram text. `data Order("Order document")` and `store Archive("Archive")` are associated with tasks using `Order ..> Review` and `Review ..> Archive`. A BPMN text annotation uses `note Policy("Escalate after 2 days")` and an undirected dashed association `Policy .. Review`; it is neither a data association nor a process step.
 
 `+Check("Pack items")` draws a **collapsed** subprocess; `Check("Pack items") { ... }` draws its inner flow in a visibly **expanded** frame. These are alternative depictions, not two declarations of the same ID. Outer flows connect to the subprocess border, never directly to its inner nodes. See [`examples/bpmn-subprocess.laml`](../examples/bpmn-subprocess.laml):
 
@@ -93,7 +93,7 @@ layout {
 }
 ```
 
-Contradictory rules fail. Layout directions (`<`, `>`, `above`, `below`) describe actual image coordinates even when the automatic flow is top-to-bottom. A manual rule cannot change pool, lane or subprocess membership. This BPMN renderer supports relative ordering; numeric gap and alignment constraints are not yet supported for BPMN.
+Contradictory rules fail. Layout directions (`<`, `>`, `above`, `below`) describe actual image coordinates even when the automatic flow is top-to-bottom. A manual rule cannot change pool, lane or subprocess membership. BPMN layout rules specify relative ordering.
 
 By default, a gateway with up to four sequence flows assigns **a distinct cardinal docking point to each flow**. For the basic example, the split enters from the left and exits at the top (`ja`) and bottom (`nein`); the merge enters at the top and bottom and exits to the right. Automatic placement centers the straight-through path between the two branches; where unobstructed, each branch needs only one right-angle bend between its gateway and task. For cross-lane split/merge patterns, it may reorder unconstrained tasks within their own lane and assign join sides by that order to eliminate a crossing. Explicit layout and gateway docking rules take precedence. More than four flows are distributed at distinct points along the diamond's perimeter rather than sharing an anchor. Tasks, events, data objects, stores and notes also receive distinct attachments for their incident lines. The router considers distinct task/store attachment points as well as unobstructed orthogonal paths for each choice, including a lower-left task exit for data associations heading down and left. It tries sequence/message flows before supplementary connectors and compares alternative connector orders. Within those choices, it minimizes crossings first, then bend and length cost; it requires at least 20 pixels per bent segment (12 pixels at note/data brackets), avoids coincident segments, draws bridges at unavoidable crossings, and rejects drawings for which it cannot find a clear route rather than painting through a node. Annotation associations meet the visible bracket. All flow labels are placed after routing, close to their own line and clear of nodes, other lines, borders and other labels. Branch labels prefer the vicinity of their source gateway; ordinary flow labels favor the middle of their route instead of hugging either endpoint. A boundary-event caption such as `2 days` follows its outgoing flow and avoids the crowded side when another line runs beside it. Every pool has the same 30-pixel title header. Lane captions use a separate 30-pixel strip (30-pixel row in top-to-bottom diagrams). Bridges arc upward on horizontal lines and leftward on vertical lines, regardless of arrow direction. To override an individual gateway end, identify the flow by its endpoint IDs:
 
@@ -110,7 +110,7 @@ layout {
 
 LAML bundles the **complete 1,512-icon Phosphor regular catalogue**. Use `laml icons` for the list, `laml icons clock` to filter it, or see [`assets/phosphor/icons.txt`](../assets/phosphor/icons.txt). An icon on a task is illustrative; it never changes the task type. Task width reserves space for the label and the type/icon markers so they do not touch. The timer marker itself uses the bundled Phosphor `clock` SVG. SVG, PNG and PDF retain the existing hidden license metadata policy when icons are actually used.
 
-BPMN styling currently supports `fill`, `border-color`, `base-color`, `color`, `icon` and `icon-set: phosphor` with normal LSS selectors/imports. Other style properties are rejected rather than silently ignored. Example:
+BPMN styling supports `fill`, `border-color`, `base-color`, `color`, `icon` and `icon-set: phosphor` with normal LSS selectors and imports. Example:
 
 ```text
 styling {
@@ -122,6 +122,4 @@ styling {
 }
 ```
 
-## Coverage boundary
-
-The current BPMN drawing subset does not include BPMN XML interchange, choreography/conversation diagrams, simulation, complex gateways, transactions, compensation, event subprocesses, multi-instance task markers or every event subtype. It aims to cover common *drawn* processes and collaborations while rejecting unsupported constructs. Read that boundary before using the diagrams as evidence of BPMN conformance.
+The examples above show process and collaboration diagrams with pools, lanes, events, tasks, gateways, subprocesses and data elements. [The BPMN guide](diagrams/bpmn.md) starts with a complete buildable source.

@@ -1,6 +1,6 @@
 # UML deployment diagrams
 
-Set `type: deployment` in `settings`. LAML generates an image of a checked UML 2.5.1 deployment-notation subset, not a software installation or an executable UML model. These diagrams share GNE container placement, safe routing, scoped IDs, LSS styling and SVG/PNG/vector-PDF exports.
+Set `type: deployment` in `settings`. LAML draws UML 2.5.1 deployment notation with nodes, artifacts, communication paths and deployment and manifestation arrows. These diagrams share GNE container placement, safe routing, scoped IDs, LSS styling and SVG/PNG/vector-PDF exports.
 
 ## Infrastructure and contained artifacts
 
@@ -34,6 +34,6 @@ semantics {
 
 Fully qualified paths such as `Server.JVM.WorkerJar` address contained elements in layout and relations. `@id` remains diagram-wide, and the nearest container's local names take precedence otherwise. Explicit mandatory placement uses the same `layout` syntax as other graph diagrams. A fixed-size cube that cannot enclose its descendants fails rather than clipping them. See [the overview example](../examples/deployment-basic.laml).
 
-## Subset boundaries
+## Drawing checks
 
-These are **type-level images**: LAML does not instantiate a runtime cluster, distinguish node/artifact instances with an instance model, calculate configuration from a `DeploymentSpecification`, or infer artifact/component relationships from a file system. Communication paths in this subset have a plain association stroke with optional name/label but no checked association-end adornments. Artifact file names can be visible labels (`artifact App(label="app.jar")`); they are not read or resolved from disk. Extra stereotypes cannot replace or contradict the UML node, artifact, `«deploy»`, or `«manifest»` keywords. A node box uses a measured perspective glyph; LSS cannot swap it for an ellipse, diamond, or note shape. Unsupported notation and unsafe routing report errors. The [notation audit](uml-deployment-conformance.md) details the exact boundary against UML 2.5.1 §§19.2–19.4.
+Communication paths use a solid line with an optional name or label. Artifact file names can appear as visible labels (`artifact App(label="app.jar")`). Node boxes use measured perspective glyphs; the compiler checks containment, mandatory keywords and safe routing. The [notation audit](uml-deployment-conformance.md) maps the drawn relationships to UML 2.5.1 §§19.2–19.4.

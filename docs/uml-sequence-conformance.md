@@ -1,25 +1,19 @@
-# UML 2.5.1 sequence-notation audit (v1.2)
+# UML 2.5.1 sequence notation
 
-Normative source: [OMG UML 2.5.1 PDF](https://www.omg.org/spec/UML/2.5.1/PDF), clauses 8 and 17. “Supported” here means drawable notation and static checks, **not** an executable UML model. The outer `sd` interaction frame was expressly deferred beyond v1.2. Branch-dependent execution bars at an operand join deliberately fail, rather than receiving invented endpoints.
+Reference: OMG UML 2.5.1 clauses 8 and 17. LAML draws these sequence symbols with named, measured event positions:
 
-| Clause | Visible notation | LAML status / evidence | Remaining work |
-|---|---|---|---|
-| 17.2.4.1 | Outer `sd` frame, name, parameters, local attributes | Explicitly deferred | Do not present v1.2 as literal coverage of this shape. |
-| 17.2.4.3–4 | Occurrences; thin, overlapping and wide labeled executions; associated atomic Action symbol | `API+`/`API-`, local activation IDs and labels, `at[message.receive] : action="Read"` with link | Further collision-aware placement between unrelated boxes and labels. |
-| 17.2.4.5 | State invariant `{constraint}` or state symbol | `at[message.receive] : invariant="ready"` and `state="Ready"` | General positioning and optional note-associated display. |
-| 17.2.4.6 | Formal gate on interaction frame | Named `gate[id]` on `ref` frames | The deferred outer interaction frame cannot display its formal gate in v1.2. |
-| 17.3.4.1 | Lifeline head, selector, type, `self`, decomposition clause | `API(selector="u"; type="Service")`, `self`, and inline `decompose` head with `ref Name` | More exact compartment/head variants if needed. |
-| 17.4.4.1 | Sync, async call/signal, reply, creation, deletion, lost/found; direction and arrowhead | `->`, `<-`, `->>`, `<<-`, `<--`, `?`, `kind=create`, `arrow=filled`, `A -> B!`, `B! <- A`; labels are visible literal text | Collision-aware label placement; other explicit call-resolution cases. |
-| 17.4.4.2–3 | Destruction X; frame gate point | X and `gate[id]` rendered on the innermost enclosing `ref` or combined-fragment boundary; an outside-to-gate message and gate-to-inside message share one visible point | The deferred outer interaction frame has no gate in v1.2. |
-| 17.5.4 | General-ordering link | `order[request.receive,logged.send]` and named bar boundaries `execution(API,work).start`/`.finish`; contradictory endpoint cycles fail | Unnamed execution ends are not addressable; named execution boundaries also anchor time/duration observations and constraints. `ordering` LSS styles path and arrowhead. |
-| 17.6.4.2–3 | Operand guards, nested combined fragments, pentagon operator, dashed operand boundaries | `alt`, `par`, `opt`, `loop`, `critical`, `strict`, `seq`, `break`, `neg`, `assert` and other operator names; named frames and `frameId covers A,B` | General operator-specific trace semantics (not evaluated) and precise occurrence geometry; multi-operator pentagon shorthand is drawable. |
-| 17.6.4.4 | Consider/ignore curly message-name list, combinations | `ignore "m,s"`, `consider "m,s"`, `assert consider "m,s"` | Operator shorthands such as `assert strict consider` or `strict alt` are drawable; explicit nested blocks can express the same visible grouping. |
-| 17.6.4.5 | Continuation rounded symbol spanning lifelines | Named `continuation` in semantics, mandatory `spans` in layout | Additional placement and collision handling. |
-| 17.6.4.7–10 | Strict vertical order, loop bounds, parallel/coregion | Literal guards and numeric/symbolic loop bounds; `loop(0,0)` valid; endpoint-scoped coregions and mandatory `above : gap=...` | Cross-lifeline strict ordering verification and collision-aware placement of unrelated annotations. Mandatory coregion gaps now expand later rows and enclosing frames. |
-| 17.7.4.1 | Interaction use ref rectangle, name, arguments, return text, gates | `ref "Name(args): value"` literal label and `gate[id]`; named ref may use `covers` | No target is loaded or formal/actual gate model inferred. One-line refs share `fragment[ref]` styling; named gates have `gate[id]` styling. |
-| 17.7.4.2 | Part decomposition, inline sublifelines, strict, extra-global frames | Same-source `decompose API "Name" { ... }`, qualified child layout/notes/frames and spanning outer fragments | Exact cross-subdiagram temporal constraints. Root combined frames visibly cross inline decompositions; one-to-one operand trace correspondence is model semantics, not inferred from an image. |
-| 17.8.1 Tables 17.1–17.2 | Enumerated sequence nodes and paths | Most drawable primitives above exist; time/duration observation/constraint shapes are anchored by named message ends (Figure 17.5) | Finish diagram-level placement audit and inspect exports for collisions. |
+| Drawing | Source |
+|---|---|
+| Lifeline head, selector and type | `API(selector="u"; type="Service")` |
+| Execution bars | `API+`, `API-`, `work: API+ : "Validate"` |
+| Synchronous, asynchronous and reply arrows | `A -> B`, `A ->> B`, `A <-- B` |
+| Creation and destruction | `create(kind=create): A -> B+`, `A -> B!` |
+| Found and lost endpoints | `? -> API`, `API -> ?` |
+| Combined fragments and operands | `alt`, `par`, `opt`, `loop`, `break`, `strict`, `seq`, `critical`, `neg`, `assert`, `ignore`, `consider` |
+| Interaction-use frame and gates | `ref "Lookup" { ... }`, `gate[done]` |
+| State invariant and action | `at[request.receive] : invariant="ready"`, `action="Read"` |
+| Continuation and coregion | `continuation`, `coregion API { ... }` |
+| General ordering and time/duration annotations | `order[first.receive,second.send]`, `at[...]`, `between[...]` |
+| Inline part decomposition | `decompose API "Internals" { ... }` |
 
-## Coverage boundary and release validation
-
-This is a **drawable notation** audit, not a claim that LAML implements UML's interaction metamodel or interprets event traces. The table records bounded placement limits and the explicitly deferred outer `sd` frame; do not present these as supported shapes or model checks. A release requires unchanged graph behavior, Rust files of at most 500 lines, all-target tests, strict Clippy, SVG/PNG/vector-PDF example builds, and successful release jobs on every published platform. The local checks alone do not establish a published release.
+See the [sequence guide](sequence-diagrams.md) and [complete examples](../examples/sequence-basic.laml).

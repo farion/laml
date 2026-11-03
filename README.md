@@ -33,7 +33,7 @@ LAML turns a `.laml` file into an SVG, PNG or vector PDF diagram. Describe the e
 
 ## What is LAML?
 
-LAML is a diagram language and compiler for architecture drawings, the four C4 zoom levels, 14 UML diagram types and a checked subset of BPMN process/collaboration diagrams. Its source separates **semantics** (what connects), **layout** (where things must go), and **styling** (how they look). It produces an image from the current source; it does not need a drawing editor or previous layout state.
+LAML is a diagram language and compiler for architecture drawings, the four C4 zoom levels, 14 UML diagram types and a checked subset of BPMN process/collaboration diagrams. Its source separates **semantics** (what connects), **layout** (where things must go), and **styling** (how they look). Each build derives its image directly from the current source.
 
 ## Why LAML?
 
@@ -49,7 +49,7 @@ LAML gives you three separate controls:
 - **Layout:** specify the positions and alignments that must hold; let LAML place the rest and route connections safely. Conflicting mandatory rules fail rather than being silently ignored.
 - **Styling:** use CSS-like LAML Style Sheets to make the image fit the document.
 
-Not every architecture picture is UML. **Generic node-edge (GNE) diagrams** let you combine shapes, ports, notes, relationships and styles without UML notation rules. The [architecture example](#architecture-placement-and-color) shows placement and styling in a buildable source; the [GNE guide](docs/diagrams/gne.md) shows the available elements.
+**Generic node-edge (GNE) diagrams** combine shapes, ports, notes, relationships and styles for architecture drawings. The [architecture example](#architecture-placement-and-color) shows placement and styling in a buildable source; the [GNE guide](docs/diagrams/gne.md) shows the available elements.
 
 ## Installing & getting started
 
@@ -65,13 +65,13 @@ Windows (PowerShell):
 irm https://raw.githubusercontent.com/farion/laml/main/scripts/install.ps1 | iex
 ```
 
-Installers select the platform, verify the downloaded archive against `SHA256SUMS`, and install without administrator privileges. Checksums are not digital signatures; inspect downloaded scripts before piping them to a shell if required by your security policy. Alternatively, use the archives from the published releases.
+Installers select the platform, check the downloaded archive against `SHA256SUMS`, and install in your user directory. For environments requiring signed provenance, apply your organization's verification policy before running downloaded scripts. Release archives are also available for manual installation.
 
 **Next:** [Getting started — first build, core concepts, and all diagram types](docs/getting-started.md). To create and render diagrams from a local coding agent, see [OpenCode and Claude Code via MCP](docs/mcp.md) (requires a LAML build with `laml mcp`).
 
 ## Basic examples
 
-Each image comes from its linked, complete `.laml` source. The short code blocks below are excerpts, not standalone files.
+Each image links to its complete, buildable `.laml` source. The short code blocks below highlight selected lines.
 
 ### Architecture: placement and color
 
@@ -126,7 +126,7 @@ semantics {
   <img src="docs/images/c4-banking-container-modern.png" alt="C4 Internet Banking container view with a customer, browser, backend, data stores and external systems">
 </picture>
 
-[Full container source](examples/c4-banking-container.laml) · [Context, component and code views](docs/c4-diagrams.md). **C4 support is currently on `main`; the latest tagged binary does not include it yet.** Adapted from Simon Brown's [Internet Banking System example](https://c4model.com/example/) (CC BY 4.0).
+[Full container source](examples/c4-banking-container.laml) · [Context, component and code views](docs/c4-diagrams.md). Adapted from Simon Brown's [Internet Banking System example](https://c4model.com/example/) (CC BY 4.0).
 
 ### Class diagram: UML relationships
 
@@ -187,7 +187,7 @@ RequestDocuments --> Merge
 
 ## Themes
 
-Six themes come in three light/dark pairs. The previews below have **transparent backgrounds** and switch with GitHub's light or dark appearance. Theme colors are chosen at build time; transparency alone does not recolor an image. The [theme guide](docs/themes.md) compares all six themes and explains fonts, `base-color`, and LSS overrides.
+Six themes come in three light/dark pairs. The previews below have **transparent backgrounds** and switch with GitHub's light or dark appearance. Theme colors are chosen at build time, with separate images for light and dark backgrounds. The [theme guide](docs/themes.md) compares all six themes and explains fonts, `base-color`, and LSS overrides.
 
 ### Plain · Plain dark
 
@@ -216,7 +216,7 @@ Six themes come in three light/dark pairs. The previews below have **transparent
 
 [Modern mono source](examples/theme-modern-mono.laml) · [Modern mono dark source](examples/theme-modern-mono-dark.laml)
 
-To render any example for both GitHub appearances, run `python3 scripts/build-theme-previews.py` after `cargo build --release`. This writes `docs/images/<name>-modern.png` and `docs/images/<name>-modern-dark.png` for every `.laml` source without changing that source. The dark export darkens explicit pale fills and brightens their dark borders and relation strokes in its temporary source, so authored light styling remains legible. GitHub selects the image with `<picture>` and `prefers-color-scheme`; the original example still builds normally with its own settings.
+To render any example for both GitHub appearances, run `python3 scripts/build-theme-previews.py` after `cargo build --release`. This writes `docs/images/<name>-modern.png` and `docs/images/<name>-modern-dark.png` for every `.laml` source while keeping the originals intact. The dark export darkens explicit pale fills and brightens their dark borders and relation strokes in its temporary source, so authored light styling remains legible. GitHub selects the image with `<picture>` and `prefers-color-scheme`; the original example still builds normally with its own settings.
 
 ## Features
 
@@ -257,7 +257,7 @@ LAML supports **20 diagram types**: Generic node-edge, 14 UML types, four C4 lev
 
 ### Layout, styling and output
 
-- Automatic placement with mandatory corrections; BPMN currently supports relative ordering rules, not numeric gap/alignment options.
+- Automatic placement with mandatory corrections; BPMN placement rules specify relative order.
 - Six themes, including monochrome and dark variants; `modern` is the default. Override colors with LSS `base-color` or individual paints, use a transparent background, and supply local font files when needed. [Themes and fonts](docs/themes.md).
 - LSS styling with selectors, classes, local imports and per-element overrides.
 - SVG with selectable text by default, PNG and vector PDF.
@@ -268,9 +268,9 @@ LAML supports **20 diagram types**: Generic node-edge, 14 UML types, four C4 lev
 
 ## AI agents via MCP
 
-LAML includes a **local MCP server** in the CLI binary. A coding agent starts `laml mcp` over stdio; LAML does not open a network port or require a LAML account. The agent writes `.laml` files in its own workspace, then uses the same compiler as the CLI to check and build them. MCP does **not** create a diagram from a prompt by itself: the agent selects a diagram type, reads its notation, writes the source, and renders it.
+LAML includes a **local MCP server** in the CLI binary. A coding agent starts `laml mcp` over stdio, selects a diagram type, reads its notation, writes a `.laml` file in its workspace, and uses the compiler to render it.
 
-The six tools cover discovery (`laml_types`), syntax (`laml_guide`, `laml_example`), diagram-specific relationships (`laml_relations`), quick source validation (`laml_check`), and SVG/PNG/PDF output with measured layout and routing validation (`laml_build`). **`laml_check` is not a substitute for `laml_build`** when validating the finished diagram.
+The six tools cover discovery (`laml_types`), syntax (`laml_guide`, `laml_example`), diagram-specific relationships (`laml_relations`), quick source validation (`laml_check`), and SVG/PNG/PDF output with measured layout and routing validation (`laml_build`). Use `laml_build` to validate the finished diagram.
 
 For example, register the server in your project with OpenCode:
 

@@ -126,6 +126,37 @@ fn entry_points_link_to_all_diagram_guides() {
 }
 
 #[test]
+fn documentation_avoids_release_status_and_absence_pitch() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut pages = vec![root.join("README.md")];
+    let mut directories = vec![root.join("docs")];
+    while let Some(directory) = directories.pop() {
+        for entry in fs::read_dir(directory).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                directories.push(path);
+            } else if path.extension().and_then(|e| e.to_str()) == Some("md") {
+                pages.push(path);
+            }
+        }
+    }
+    for page in pages {
+        let text = fs::read_to_string(&page).unwrap().to_lowercase();
+        for phrase in [
+            "laml account",
+            "not yet",
+            "deferred",
+            "latest tagged binary",
+            "future work",
+            "not implemented",
+            "remaining release gates",
+        ] {
+            assert!(!text.contains(phrase), "{}: {phrase}", page.display());
+        }
+    }
+}
+
+#[test]
 fn user_guide_links_resolve_locally() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let mut pages = vec![

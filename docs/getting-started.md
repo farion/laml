@@ -14,7 +14,7 @@ Windows PowerShell:
 irm https://raw.githubusercontent.com/farion/laml/main/scripts/install.ps1 | iex
 ```
 
-The installer verifies the downloaded archive against `SHA256SUMS`; a checksum is not a digital signature. Review remote scripts before executing them if your environment requires it. On Windows, open a new terminal after installation. Verify the installation with `laml --version`; run `laml update` when you choose to install a newer release.
+The installer checks downloaded archives against `SHA256SUMS`. For environments requiring signed provenance, apply your organization's verification policy before executing downloaded scripts. On Windows, open a new terminal after installation. Verify the installation with `laml --version`; run `laml update` when you choose to install a newer release.
 
 ## First diagram
 
@@ -44,7 +44,7 @@ laml build first.laml first.png
 laml build first.laml first.pdf
 ```
 
-`check` validates source without producing an image; `build` also checks measured layout and routing. An omitted output filename writes SVG next to the source.
+`check` validates source; `build` also checks measured layout and routing and writes an image. An omitted output filename writes SVG next to the source.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="images/gne-basic-modern-dark.png">
@@ -62,11 +62,11 @@ This image was built from the [complete source](../examples/gne-basic.laml).
 | `layout` | Mandatory placement, alignment and diagram-specific geometry. |
 | `styling` | Colors, sizes and shape styling via LSS selectors; local `.lamlstyle` files can be imported. |
 
-The default theme is `modern`; put `theme: plain` in the `settings` section for a more restrained appearance. [Themes and fonts](themes.md) explains the six variants, custom font files, color overrides and transparent exports. Elements named in `semantics` can be addressed in `layout` or `styling`. A relationship describes a connection, not a mandatory position. See [GNE](diagrams/gne.md) for common placement, routing, labels and styling, and the [syntax reference](language-reference.md) for all accepted forms.
+The default theme is `modern`; put `theme: plain` in the `settings` section for a more restrained appearance. [Themes and fonts](themes.md) explains the six variants, custom font files, color overrides and transparent exports. Elements named in `semantics` can be addressed in `layout` or `styling`. Relationships describe connections; `layout` rules specify mandatory positions. See [GNE](diagrams/gne.md) for common placement, routing, labels and styling, and the [syntax reference](language-reference.md) for all accepted forms.
 
 ## Design principles
 
-**Describe first, constrain sparingly.** LAML arranges the unconstrained parts automatically. `A < B : align=center; gap=110` requires A left of B, vertical-center alignment and at least 110 units between their boxes. It is not a suggestion. Conflicting constraints cause an error rather than a silently different layout. Colors and typography live in `styling`, not in the relationship declaration.
+**Describe first, constrain sparingly.** LAML arranges the unconstrained parts automatically. `A < B : align=center; gap=110` requires A left of B, vertical-center alignment and at least 110 units between their boxes. Conflicting constraints produce an error. Colors and typography belong in `styling`.
 
 For the same simple connection, the three sources emphasize different things:
 
@@ -74,7 +74,7 @@ For the same simple connection, the three sources emphasize different things:
 |---|---|---|
 | `@startuml`<br>`rectangle Browser`<br>`rectangle API`<br>`Browser --> API : request`<br>`@enduml` | `flowchart LR`<br>`Browser -- request --> API` | `Browser -> API : request` in `semantics`<br>`Browser < API : gap=110` in `layout` |
 
-PlantUML also has direction controls; Mermaid supports flow directions, layout configuration and invisible links. The distinction is **not** that other tools cannot influence layout. LAML expresses the required box separation independently of the relationship: the rule is checked against measured geometry. [See the crossing and its complete source](diagrams/gne.md#placement-and-routing). Syntax references: [PlantUML](https://plantuml.com/deployment-diagram) · [Mermaid flowcharts](https://mermaid.js.org/syntax/flowchart.html).
+PlantUML also has direction controls; Mermaid supports flow directions, layout configuration and invisible links. LAML expresses the required box separation independently of the relationship: the rule is checked against measured geometry. [See the crossing and its complete source](diagrams/gne.md#placement-and-routing). Syntax references: [PlantUML](https://plantuml.com/deployment-diagram) · [Mermaid flowcharts](https://mermaid.js.org/syntax/flowchart.html).
 
 ## Diagram types
 

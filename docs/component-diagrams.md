@@ -1,6 +1,6 @@
 # Component diagrams
 
-Set `type: component` in `settings`. This produces an image of a documented UML notation subset, not a component metamodel or runtime wiring simulator. The notation follows OMG UML 2.5.1 §§11.2, 11.3 and 11.6. The source files in [`examples/`](../examples/) build as SVG, PNG and vector PDF.
+Set `type: component` in `settings`. This draws UML component notation with interfaces, ports and connectors. The notation follows OMG UML 2.5.1 §§11.2, 11.3 and 11.6. The source files in [`examples/`](../examples/) build as SVG, PNG and vector PDF.
 
 ## Overview and interface contracts
 
@@ -39,6 +39,6 @@ semantics {
 
 The defining components and the containing component are independent classifier declarations. Only the named parts inside `System` are its internal structure; a top-level dependency between `Client` and `Service` would **not** declare their assembly. Port connections can use the shared mandatory side and separation rules. A fixed-size component that cannot enclose its parts fails.
 
-## Notation limits
+## Connector checks
 
-Only simple one-interface ports and binary assembly/delegation connectors are validated. LAML does not infer port compatibility from operation signatures, implement complex ports with several interfaces, show n-ary channelled ball/socket assembly notation, or execute runtime requests. The assembly line attaches to port squares, not an optionally drawn ball-and-socket connector glyph. White-box `realizations`/`artifacts` compartments, and a general UML Component metamodel are outside this image subset. Unknown types, mismatched contracts, wrong ownership, mixed compact/box uses and unsupported relationship glyphs fail explicitly rather than being drawn as a different UML relationship.
+LAML validates one-interface ports and binary assembly/delegation connectors. Assembly lines attach to visible port squares. Unknown types, mismatched contracts and incorrect ownership produce source errors.

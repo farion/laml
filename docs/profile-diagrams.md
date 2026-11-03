@@ -1,6 +1,6 @@
 # UML profile diagrams
 
-Set `type: profile`. LAML draws a checked UML 2.5.1 **profile-definition image**, not an executable UML extension mechanism. A profile is a tabbed package with a visible `«profile»` keyword. Its directly contained stereotypes are classifiers labeled `«stereotype»`; external declared UML metaclasses appear as classifiers labeled `«metaclass»`. A plain package may show where the profile is applied.
+Set `type: profile` to draw a UML 2.5.1 profile-definition diagram. A profile is a tabbed package with a visible `«profile»` keyword. Its directly contained stereotypes are classifiers labeled `«stereotype»`; external declared UML metaclasses appear as classifiers labeled `«metaclass»`. A plain package may show where the profile is applied.
 
 ```text
 settings {
@@ -26,4 +26,4 @@ layout {
 
 The checked subset accepts one or more profiles, each with a directly owned leaf stereotype; each stereotype needs an explicit extension. Each metaclass is an external leaf from this known UML set: `Activity`, `Artifact`, `Association`, `Class`, `Classifier`, `Component`, `Dependency`, `Element`, `Interface`, `NamedElement`, `Operation`, `Package`, `Port`, `Property`, `State`, `UseCase`. Packages receiving a profile are external leaf packages. Profile/metaclass references and package/profile applications are optional, explicit relations. Duplicate or mismatched extensions, references or applications fail. Text keywords, outlines and relationships cannot be hidden with styles, and unsafe geometry fails.
 
-**Deferred:** required extensions and their `{required}` or multiplicity adornments; stereotype attributes, generalizations and icons; applied-stereotype tags and values on model elements; package/metamodel import; inherited metaclass references; profile application execution, strict metaclass filtering, constraints, stereotype property evaluation and model validation. These are rejected, not quietly drawn as equivalent notation. See the [notation audit](uml-profile-conformance.md).
+See the [notation audit](uml-profile-conformance.md) for the checked drawing rules.

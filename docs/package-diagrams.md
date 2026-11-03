@@ -1,6 +1,6 @@
 # UML package diagrams
 
-Set `type: package` for packages and checked package-to-package relationships. LAML produces an image, not a UML namespace resolver or package-merge engine. The complete [architecture example](../examples/package-architecture.laml) builds as SVG, PNG and vector PDF.
+Set `type: package` for packages and checked package-to-package relationships. LAML draws package boundaries, imports, access dependencies and merges. The complete [architecture example](../examples/package-architecture.laml) builds as SVG, PNG and vector PDF.
 
 ```text
 settings {
@@ -30,4 +30,4 @@ Every package relationship uses a **dashed directed open arrow**; the source and
 - `A ..> B <<access>>`: private package import, same direction but distinct keyword.
 - `A ..> B <<merge>>`: package merge, arrow from receiving **A** to merged **B**.
 
-Self-relationships and importing/accessing a package's own nested package are rejected; merge cycles also fail. Other stereotypes, class relationships, bare solid arrows and inappropriate endpoints are rejected. Source paths and displayed arrow labels are checked as notation, but imports do not make names available to the compiler and merges do not combine definitions. See the [notation audit](uml-package-conformance.md).
+Self-relationships, importing a package's own nested package and merge cycles produce source errors. Imports and merges draw the declared package relationships. See the [notation audit](uml-package-conformance.md).

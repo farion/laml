@@ -1,6 +1,6 @@
 # UML communication diagrams
 
-Set `type: communication`. LAML draws a **bounded communication interaction image**: named lifelines connected by explicit links, with directed numbered messages drawn beside those links. It does not execute messages or infer a time axis. This is a separate source form from `type: sequence`; messages are never silently converted from sequence-diagram events. The [order example](../examples/communication-order.laml) builds to SVG, PNG and vector PDF.
+Set `type: communication`. LAML draws a **bounded communication interaction image**: named lifelines connected by explicit links, with directed numbered messages drawn beside those links. It uses its own source form with explicitly numbered messages beside links. The [order example](../examples/communication-order.laml) builds to SVG, PNG and vector PDF.
 
 ```text
 settings {
@@ -24,8 +24,8 @@ layout {
 }
 ```
 
-`interaction: Name` names the enclosing `sd` frame. Each explicitly declared `object Instance(of=Type)` is an underlined, typed lifeline head. An unmarked `A -- B` is a **link**, not a message; only one link per unordered pair of lifelines is accepted. `message N Sender --> Receiver : name(arguments)` draws a small arrow near its label on that link; multiple messages may use the same link and may travel in opposite directions. The arrow in the `message` declaration specifies direction only—it does **not** infer whether a UML message is a synchronous call, asynchronous signal or reply. Do not use another arrow type as a stand-in.
+`interaction: Name` names the enclosing `sd` frame. Each explicitly declared `object Instance(of=Type)` is an underlined, typed lifeline head. An unmarked `A -- B` is a **link**, not a message; only one link per unordered pair of lifelines is accepted. `message N Sender --> Receiver : name(arguments)` draws a small arrow near its label on that link; multiple messages may use the same link and may travel in opposite directions. The arrow in the `message` declaration specifies the sender-to-receiver direction.
 
-The sequence expression `N` is explicit, unique and uses positive dot-separated integers. A nested `1.2` requires a `1` message in this source; the source order and spatial placement are **not** a hidden execution trace. Unnumbered, duplicate, malformed or unlinked messages fail. Labels must fit without covering lifelines, other links or message labels; add mandatory `layout` separation when necessary. Normal LSS node/link styling applies; links carrying messages cannot be hidden. `check` validates source and identity, while `build` also validates geometry and renders the image.
+The sequence expression `N` is explicit, unique and uses positive dot-separated integers. A nested `1.2` requires a `1` message in this source. Unnumbered, duplicate, malformed or unlinked messages fail. Labels must fit without covering lifelines, other links or message labels; add mandatory `layout` separation when necessary. Normal LSS node/link styling applies; links carrying messages cannot be hidden. `check` validates source and identity, while `build` also validates geometry and renders the image.
 
-This subset excludes concurrent named sequence terms (`1a`), recurrence (`*`), guards, self-messages, creation/destruction, found/lost messages, execution specifications, interaction uses and combined fragments. Those features cannot be approximated with ordinary graph arrows without risking false UML notation. See the [UML notation audit](uml-communication-conformance.md).
+See the [UML notation audit](uml-communication-conformance.md) for the checked link and message forms.
