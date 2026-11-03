@@ -84,6 +84,29 @@ fn gateway_crosses_are_geometry_not_font_glyphs() {
 }
 
 #[test]
+fn bpmn_text_is_readable_and_modern_flow_labels_have_backgrounds() {
+    for theme in ["modern", "modern-dark", "modern-mono", "plain"] {
+        let source = format!(
+            "settings {{\ntype: bpmn\ntheme: {theme}\n}}\nsemantics {{\nA --> B : next\n}}"
+        );
+        let doc = bpmn::parse(&source).unwrap();
+        let svg = bpmn::render(&doc, TextMode::System).unwrap();
+        assert!(svg.contains("font-size=\"16.0\" fill="), "{theme}");
+        assert!(svg.contains("font-size=\"14.0\" fill="), "{theme}");
+        assert_eq!(
+            svg.contains("data-edge-label-pill=\"true\""),
+            theme != "plain"
+        );
+        if theme != "plain" {
+            let pill = svg.find("data-edge-label-pill=\"true\"").unwrap();
+            let label = svg.find("class=\"bpmn-flow-label\"").unwrap();
+            assert!(pill < label, "paint the pill behind its label");
+            assert!(svg.contains("stroke-width=\"0.7\""), "{theme}");
+        }
+    }
+}
+
+#[test]
 fn gateway_side_rules_parse_validate_and_reject_conflicts() {
     let source = include_str!("../examples/bpmn-basic.laml");
     let custom = format!(

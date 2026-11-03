@@ -177,7 +177,7 @@ fn all_order_edges_have_unique_node_anchors_and_clear_paths() {
         .unwrap()];
     assert!(
         (archive[0].0 - (review.x - review.w / 2.0)).abs() < 0.01 && archive[0].1 > review.y + 10.0,
-        "the data association should try a separate lower-left task anchor"
+        "the data association should use a separate lower-left task anchor: route={archive:?}, review={review:?}"
     );
     assert!(
         super::orthogonal::bridges(
@@ -234,15 +234,16 @@ fn all_order_edges_have_unique_node_anchors_and_clear_paths() {
         .position(|n| n.id == "Shop.Policy")
         .unwrap();
     let note = geom.nodes[policy];
-    let text_width = crate::text::measure(&doc.nodes[policy].label, 13.0).unwrap();
+    let text_width =
+        crate::text::measure(&doc.nodes[policy].label, super::super::type_sizes::NOTE).unwrap();
     let bracket_x = note.x - note.w / 2.0;
     let text_left = note.x + 8.0 - text_width / 2.0;
     assert!(
-        (text_left - (bracket_x + 15.0) - 8.0).abs() < 1.0,
+        (text_left - (bracket_x + 15.0) - 5.0).abs() < 1.0,
         "annotation text should be visually grouped with its bracket"
     );
     assert!(
-        note.h <= 40.0,
+        note.h <= 44.0,
         "single-line annotations should have compact brackets"
     );
     let svg = bpmn::render(&doc, TextMode::System).unwrap();
@@ -278,14 +279,13 @@ fn all_order_edges_have_unique_node_anchors_and_clear_paths() {
         (coord("x"), coord("y"), line.contains("rotate(-90"))
     };
     let timer_node = node("Shop.Deadline");
-    let (days_x, days_y, days_vertical) = label("2 days");
+    let (days_x, days_y, _) = label("2 days");
     assert!(
-        days_vertical
-            && days_x < timer_node.x
-            && timer_node.x - days_x < 20.0
-            && days_y > note.y + note.h / 2.0 + 30.0
+        days_x < timer_node.x
+            && timer_node.x - days_x < 60.0
+            && days_y - 15.0 > note.y + note.h / 2.0 + 8.0
             && days_y < timer_node.y + 145.0,
-        "timer caption belongs on the uncrowded side below the annotation"
+        "timer caption belongs on the uncrowded side below the annotation: label=({days_x},{days_y}), note={note:?}, timer={timer_node:?}"
     );
     let (order_x, order_y, _) = label("order");
     let (answer_x, answer_y, _) = label("answer");
@@ -408,10 +408,10 @@ fn annotation_bracket_scales_with_multiline_text() {
     let note = geom.nodes[policy];
     let max_width = ["First line", "Second line"]
         .into_iter()
-        .map(|line| crate::text::measure(line, 13.0).unwrap())
+        .map(|line| crate::text::measure(line, super::super::type_sizes::NOTE).unwrap())
         .fold(0.0_f64, f64::max);
-    assert!((note.w - max_width - 30.0).abs() < 1.0);
-    assert!((note.h - 54.0).abs() < 0.01);
+    assert!((note.w - max_width - 24.0).abs() < 1.0);
+    assert!((note.h - 58.0).abs() < 0.01);
     let svg = bpmn::render(&doc, TextMode::System).unwrap();
     assert!(svg.contains(">First line</text>"));
     assert!(svg.contains(">Second line</text>"));

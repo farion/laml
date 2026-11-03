@@ -106,7 +106,7 @@ fn shape(svg: &mut String, n: &Node, b: BoxAt, icon: Option<&str>, caption_above
             } else {
                 y + 5.0
             };
-            text(svg, x, label_y, &n.label, 14.0);
+            text(svg, x, label_y, &n.label, super::type_sizes::TASK);
             if n.kind == Kind::Collapsed {
                 writeln!(svg,"<rect x=\"{:.1}\" y=\"{:.1}\" width=\"13\" height=\"13\" fill=\"white\" stroke=\"#263548\"/><path d=\"M {:.1} {:.1} v 9 m -4.5 -4.5 h 9\" stroke=\"#263548\"/>",x-6.5,y+h/2.0-15.0,x,y+h/2.0-13.0).unwrap();
             }
@@ -132,7 +132,7 @@ fn shape(svg: &mut String, n: &Node, b: BoxAt, icon: Option<&str>, caption_above
                 } else {
                     y + radius + 22.0
                 };
-                text(svg, x, caption_y, &n.label, 12.0);
+                text(svg, x, caption_y, &n.label, super::type_sizes::CAPTION);
             }
         }
         Kind::Exclusive | Kind::Parallel | Kind::Inclusive | Kind::EventBased => {
@@ -156,7 +156,13 @@ fn shape(svg: &mut String, n: &Node, b: BoxAt, icon: Option<&str>, caption_above
                 _ => {}
             }
             if !n.id.starts_with("gateway_") {
-                text(svg, x, y + h / 2.0 + 22.0, &n.label, 12.0);
+                text(
+                    svg,
+                    x,
+                    y + h / 2.0 + 22.0,
+                    &n.label,
+                    super::type_sizes::CAPTION,
+                );
             }
         }
         Kind::Annotation => {
@@ -165,18 +171,18 @@ fn shape(svg: &mut String, n: &Node, b: BoxAt, icon: Option<&str>, caption_above
             text(
                 svg,
                 x + 8.0,
-                y + 5.0 - (lines - 1) as f64 * 7.8,
+                y + 5.0 - (lines - 1) as f64 * 9.0,
                 &n.label,
-                13.0,
+                super::type_sizes::NOTE,
             );
         }
         Kind::Data => {
             writeln!(svg,"<path class=\"bpmn-body\" d=\"M {:.1} {:.1} h 49 l 13 13 v 60 h -62 Z M {:.1} {:.1} v 13 h 13\" fill=\"white\" stroke=\"#263548\" stroke-width=\"1.8\"/>",x-31.0,y-39.0,x+18.0,y-39.0).unwrap();
-            text(svg, x, y + 57.0, &n.label, 12.0);
+            text(svg, x, y + 57.0, &n.label, super::type_sizes::CAPTION);
         }
         Kind::Store => {
             writeln!(svg,"<path class=\"bpmn-body\" d=\"M {:.1} {:.1} v 63 a 31 8 0 0 0 62 0 v -63 M {:.1} {:.1} a 31 8 0 0 0 62 0 a 31 8 0 0 0 -62 0\" fill=\"white\" stroke=\"#263548\" stroke-width=\"1.8\"/>",x-31.0,y-31.0,x-31.0,y-31.0).unwrap();
-            text(svg, x, y + 57.0, &n.label, 12.0);
+            text(svg, x, y + 57.0, &n.label, super::type_sizes::CAPTION);
         }
     }
 }
@@ -318,10 +324,10 @@ pub fn render_with_styles(
                     band.y + band.h / 2.0,
                     p.y + 50.0,
                     &band.label,
-                    13.0,
+                    super::type_sizes::BAND,
                 );
             } else {
-                writeln!(svg,"<rect x=\"{:.1}\" y=\"{:.1}\" width=\"30\" height=\"{:.1}\" fill=\"#f8fbff\"/><path d=\"M {:.1} {:.1} V {:.1}\" stroke=\"#263548\" fill=\"none\"/><text x=\"{:.1}\" y=\"{:.1}\" transform=\"rotate(-90 {:.1} {:.1})\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"13\">{}</text>",p.x,band.y,span,p.x+30.0,band.y,band.y+span,p.x+15.0,band.y+band.h/2.0,p.x+15.0,band.y+band.h/2.0,escape(&band.label)).unwrap();
+                writeln!(svg,"<rect x=\"{:.1}\" y=\"{:.1}\" width=\"30\" height=\"{:.1}\" fill=\"#f8fbff\"/><path d=\"M {:.1} {:.1} V {:.1}\" stroke=\"#263548\" fill=\"none\"/><text x=\"{:.1}\" y=\"{:.1}\" transform=\"rotate(-90 {:.1} {:.1})\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"15\">{}</text>",p.x,band.y,span,p.x+30.0,band.y,band.y+span,p.x+15.0,band.y+band.h/2.0,p.x+15.0,band.y+band.h/2.0,escape(&band.label)).unwrap();
                 if band.y > p.y + 30.5 {
                     writeln!(
                         svg,
@@ -339,7 +345,7 @@ pub fn render_with_styles(
         writeln!(svg,"<rect x=\"{:.1}\" y=\"{:.1}\" width=\"{:.1}\" height=\"{:.1}\" fill=\"none\" stroke=\"#263548\" stroke-width=\"2\"/>",p.x,p.y,p.w,p.h).unwrap();
         writeln!(
             svg,
-            "<text x=\"{:.1}\" y=\"{:.1}\" font-family=\"Inter\" font-size=\"13\">{}</text>",
+            "<text x=\"{:.1}\" y=\"{:.1}\" font-family=\"Inter\" font-size=\"15\">{}</text>",
             p.x + 10.0,
             p.y + 20.0,
             escape(&p.label)

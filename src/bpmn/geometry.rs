@@ -50,11 +50,11 @@ fn size(doc: &Document, node: &Node) -> (f64, f64) {
             let lines: Vec<_> = node.label.split('\n').collect();
             let text_width = lines
                 .iter()
-                .map(|line| crate::text::measure(line, 13.0).unwrap_or(0.0))
+                .map(|line| crate::text::measure(line, super::type_sizes::NOTE).unwrap_or(0.0))
                 .fold(0.0_f64, f64::max);
             (
-                (text_width + 30.0).max(44.0),
-                (lines.len() as f64 * 16.0 + 22.0).max(38.0),
+                (text_width + 24.0).max(44.0),
+                (lines.len() as f64 * 18.0 + 22.0).max(40.0),
             )
         }
         Kind::Start | Kind::End | Kind::Intermediate | Kind::Boundary => (54.0, 54.0),

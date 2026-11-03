@@ -4,7 +4,8 @@
 use super::super::geometry::BoxAt;
 use super::orthogonal::{Point, Prior};
 use super::{Document, Geometry, escape};
-use crate::bpmn::{EdgeKind, Kind, LabelOrientation};
+use crate::bpmn::{EdgeKind, Kind, LabelOrientation, type_sizes};
+use crate::syntax::NodeKind;
 use std::fmt::Write;
 
 #[derive(Clone, Copy)]
@@ -149,7 +150,9 @@ fn choose(
     orientation: LabelOrientation,
     placed: &[BoxAt],
 ) -> Result<Label, String> {
-    let width = crate::text::measure(name, 12.0).unwrap_or(40.0).max(1.0);
+    let width = crate::text::measure(name, type_sizes::FLOW)
+        .unwrap_or(40.0)
+        .max(1.0);
     let points = &routes[index].points;
     let route_length: f64 = points
         .windows(2)
@@ -186,9 +189,9 @@ fn choose(
             // A vertical label reads along a vertical line. Horizontal text can
             // sit either above a horizontal run or beside a vertical one.
             let half = if horizontal || vertical {
-                width / 2.0 + 9.0
+                width / 2.0 + 6.0
             } else {
-                12.0
+                15.0
             };
             if length < 2.0 * half {
                 continue;
@@ -214,15 +217,15 @@ fn choose(
                 );
                 for sign in [-1.0, 1.0] {
                     let (x, y, box_at) = if vertical {
-                        let x = mid.0 + sign * 13.0;
+                        let x = mid.0 + sign * 18.0 + 5.0;
                         (
                             x,
                             mid.1,
                             BoxAt {
-                                x,
+                                x: x - 5.0,
                                 y: mid.1,
-                                w: 14.0,
-                                h: width + 6.0,
+                                w: 20.0,
+                                h: width + 10.0,
                             },
                         )
                     } else if horizontal {
@@ -238,20 +241,20 @@ fn choose(
                             BoxAt {
                                 x: mid.0,
                                 y: center_y,
-                                w: width + 6.0,
-                                h: 14.0,
+                                w: width + 10.0,
+                                h: 20.0,
                             },
                         )
                     } else {
                         let x = mid.0 + sign * (width / 2.0 + 10.0);
                         (
                             x,
-                            mid.1 + 4.0,
+                            mid.1 + 5.0,
                             BoxAt {
                                 x,
                                 y: mid.1,
-                                w: width + 6.0,
-                                h: 16.0,
+                                w: width + 10.0,
+                                h: 20.0,
                             },
                         )
                     };
@@ -287,7 +290,7 @@ fn choose(
                         } else {
                             0.0
                         }
-                        + if vertical { 12.0 } else { 0.0 }
+                        + if vertical { 80.0 } else { 0.0 }
                         + if !horizontal && !vertical { 5.0 } else { 0.0 };
                     let candidate = Label {
                         x,
@@ -358,7 +361,18 @@ pub(super) fn render(
         } else {
             String::new()
         };
-        writeln!(svg,"<text class=\"bpmn-flow-label\" x=\"{x:.1}\" y=\"{y:.1}\"{transform} text-anchor=\"middle\" font-family=\"Inter\" font-size=\"12\" fill=\"#182330\">{}</text>",escape(name)).unwrap();
+        if doc.theme.modern() {
+            let neutral = doc.theme.colors(doc.theme.default_base(NodeKind::Package));
+            let width = crate::text::measure(name, type_sizes::FLOW)? + 10.0;
+            writeln!(svg, "<rect data-edge-label-pill=\"true\" x=\"{:.1}\" y=\"{:.1}\" width=\"{width:.1}\" height=\"20\" rx=\"6\" fill=\"{}\" stroke=\"{}\" stroke-width=\"0.7\"{transform}/>",
+                x - width / 2.0, y - 15.0, neutral.fill, neutral.divider).unwrap();
+        }
+        let color = if doc.theme.modern() {
+            doc.theme.edge()
+        } else {
+            "#182330"
+        };
+        writeln!(svg,"<text class=\"bpmn-flow-label\" x=\"{x:.1}\" y=\"{y:.1}\"{transform} text-anchor=\"middle\" font-family=\"Inter\" font-size=\"{:.1}\" fill=\"{color}\">{}</text>",type_sizes::FLOW,escape(name)).unwrap();
         placed.push(candidate.box_at);
     }
     Ok(())

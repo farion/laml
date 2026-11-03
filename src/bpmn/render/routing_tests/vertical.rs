@@ -111,7 +111,9 @@ fn vertical_pool_lanes_fit_and_center_their_nodes() {
             !label.contains("rotate("),
             "the message label fits horizontally in the aisle"
         );
-        let half = crate::text::measure("order", 12.0).unwrap() / 2.0;
+        let half = crate::text::measure("order", super::super::super::type_sizes::FLOW).unwrap()
+            / 2.0
+            + 5.0;
         assert!(
             attr(label, "x") - half > customer.x + customer.w + 18.0
                 && attr(label, "x") + half < shop.x - 18.0,
