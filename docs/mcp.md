@@ -7,10 +7,11 @@ The server announces LAML's capabilities and exposes four tools:
 - `laml_types`: discover diagram types and the authoring workflow.
 - `laml_guide(topic)`: read the bundled guide for `gne`, any UML type, `bpmn`, or one of the four C4 types; `getting-started` covers shared syntax.
 - `laml_example(topic)`: get a complete, buildable `.laml` source for any diagram type.
+- `laml_relations(topic)`: read the relationship notation appropriate to that diagram type, including the distinction between semantic connections and placement rules.
 - `laml_check(file)`: quick source check; it does **not** check all measured geometry.
 - `laml_build(file, output?)`: build SVG (default), PNG, or PDF and validate layout/routing; returns errors from the compiler on failure. An explicitly specified output file may be overwritten.
 
-The agent writes the `.laml` source in its project workspace using its normal file tools, then calls `laml_build`. Relative paths resolve against the agent's project directory. The server does not generate source files on the agent's behalf, and it does not preview or inspect the generated image: use the agent's image-reading capability to review it. The server does not start LAML's optional background update check while compiling.
+The agent extracts **both elements and their relationships** from your architecture description, chooses a diagram type, consults its relationship notation, writes the `.laml` source in its project workspace using its normal file tools, then calls `laml_build`. If endpoints, directions or relationship meanings are missing from the description, it should not invent them silently. Relative paths resolve against the agent's project directory. The server does not generate source files on the agent's behalf, and it does not preview or inspect the generated image: use the agent's image-reading capability to review it. The server does not start LAML's optional background update check while compiling.
 
 ## OpenCode
 

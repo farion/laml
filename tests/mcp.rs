@@ -60,6 +60,7 @@ fn stdio_server_discovers_guides_builds_images_and_reports_errors() {
             "laml_check",
             "laml_example",
             "laml_guide",
+            "laml_relations",
             "laml_types"
         ]
     );
@@ -75,6 +76,20 @@ fn stdio_server_discovers_guides_builds_images_and_reports_errors() {
             .as_str()
             .unwrap()
             .contains("type: sequence")
+    );
+
+    let relations = request(
+        &mut stdin,
+        &mut stdout,
+        json!({"jsonrpc":"2.0","id":6,"method":"tools/call","params":{
+            "name":"laml_relations", "arguments":{"topic":"c4-context"}
+        }}),
+    );
+    assert!(
+        relations["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap()
+            .contains("Shop.Web -> Shop.API")
     );
 
     let dir = std::env::temp_dir().join(format!("laml-mcp-test-{}", std::process::id()));

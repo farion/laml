@@ -34,7 +34,7 @@ struct Build {
     output: Option<String>,
 }
 
-const TYPES: &str = "LAML compiles declarative .laml sources into SVG, PNG or vector PDF. Supported diagram types: gne (generic node-edge, the default), class, object, component, deployment, state, activity, usecase, package, sequence, communication, interaction-overview, timing, composite, profile, bpmn, c4-context, c4-container, c4-component, c4-code. Source sections separate settings, semantics, layout (hard constraints) and styling (LSS). Use laml_guide(topic) for syntax and laml_example(topic) for a complete, buildable source; write a .laml file in the workspace, then laml_build it. laml_check is a quick parse/style check; only laml_build checks all measured geometry and routing. Rendering can overwrite the selected output file.";
+const TYPES: &str = "LAML compiles declarative .laml sources into SVG, PNG or vector PDF. Supported diagram types: gne (generic node-edge, the default), class, object, component, deployment, state, activity, usecase, package, sequence, communication, interaction-overview, timing, composite, profile, bpmn, c4-context, c4-container, c4-component, c4-code. Source sections separate settings, semantics, layout (hard constraints) and styling (LSS). Use laml_guide(topic) for syntax, laml_relations(topic) for valid relationship notation, and laml_example(topic) for a complete, buildable source; write a .laml file in the workspace, then laml_build it. laml_check is a quick parse/style check; only laml_build checks all measured geometry and routing. Rendering can overwrite the selected output file.";
 
 fn example(topic: &str) -> Option<&'static str> {
     Some(match topic {
@@ -86,6 +86,100 @@ fn guide(topic: &str) -> Option<&'static str> {
         }
         _ => return None,
     })
+}
+
+fn relation_reference(topic: &str) -> Option<String> {
+    // Return the relevant bundled language-reference section, not generic operators
+    // that would misrepresent typed UML, C4, sequence or BPMN relationships.
+    let (text, heading, next) = match topic {
+        "gne" | "generic" => (
+            include_str!("../docs/language-reference.md"),
+            "## Semantics",
+            "## C4 diagrams",
+        ),
+        "class" | "object" | "c4-code" => (
+            include_str!("../docs/language-reference.md"),
+            "## Class and object diagrams",
+            "## Component diagrams",
+        ),
+        "c4-context" | "c4-container" | "c4-component" => (
+            include_str!("../docs/language-reference.md"),
+            "## C4 diagrams",
+            "## Class and object diagrams",
+        ),
+        "component" => (
+            include_str!("../docs/language-reference.md"),
+            "## Component diagrams",
+            "## Deployment diagrams",
+        ),
+        "deployment" => (
+            include_str!("../docs/language-reference.md"),
+            "## Deployment diagrams",
+            "## State diagrams",
+        ),
+        "state" => (
+            include_str!("../docs/language-reference.md"),
+            "## State diagrams",
+            "## Activity diagrams",
+        ),
+        "activity" => (
+            include_str!("../docs/language-reference.md"),
+            "## Activity diagrams",
+            "## Use-case diagrams",
+        ),
+        "usecase" | "use-case" => (
+            include_str!("../docs/language-reference.md"),
+            "## Use-case diagrams",
+            "## Package diagrams",
+        ),
+        "package" => (
+            include_str!("../docs/language-reference.md"),
+            "## Package diagrams",
+            "## Communication diagrams",
+        ),
+        "communication" => (
+            include_str!("../docs/language-reference.md"),
+            "## Communication diagrams",
+            "## Interaction-overview diagrams",
+        ),
+        "interaction-overview" => (
+            include_str!("../docs/language-reference.md"),
+            "## Interaction-overview diagrams",
+            "## Composite-structure diagrams",
+        ),
+        "composite" => (
+            include_str!("../docs/language-reference.md"),
+            "## Composite-structure diagrams",
+            "## Profile diagrams",
+        ),
+        "profile" => (
+            include_str!("../docs/language-reference.md"),
+            "## Profile diagrams",
+            "## Timing diagrams",
+        ),
+        "timing" => (
+            include_str!("../docs/language-reference.md"),
+            "## Timing diagrams",
+            "## Layout",
+        ),
+        "sequence" => (
+            include_str!("../docs/language-reference.md"),
+            "## Sequence diagrams",
+            "## Output and routing",
+        ),
+        "bpmn" => (
+            include_str!("../docs/bpmn-diagrams.md"),
+            "## First process",
+            "## Events, subprocesses and data",
+        ),
+        _ => return None,
+    };
+    let start = text.find(heading)?;
+    let end = text[start + heading.len()..].find(next)? + start + heading.len();
+    Some(format!(
+        "Relationships must use the operators and endpoint kinds of the chosen diagram type. Do not substitute a generic arrow for a typed relationship. Distinguish semantic relationships in semantics from mandatory placement in layout. Use laml_example for a complete file, laml_guide for details, and laml_build to validate the resulting image.\n\n{}",
+        text[start..end].trim()
+    ))
 }
 
 fn cli(args: &[&str]) -> CallToolResult {
@@ -155,6 +249,18 @@ impl LamlMcp {
     }
 
     #[tool(
+        description = "Read the relationship and connection notation for a specific LAML diagram type. Use before authoring edges: generic arrows are not valid substitutes for UML/BPMN/C4 relations."
+    )]
+    fn laml_relations(&self, Parameters(Topic { topic }): Parameters<Topic>) -> CallToolResult {
+        match relation_reference(&topic.to_ascii_lowercase()) {
+            Some(text) => CallToolResult::success(vec![ContentBlock::text(text)]),
+            None => CallToolResult::error(vec![ContentBlock::text(format!(
+                "Unknown diagram type: {topic}. Call laml_types for supported types."
+            ))]),
+        }
+    }
+
+    #[tool(
         description = "Quickly check an existing .laml file in the agent's workspace. This does NOT check all measured geometry; use laml_build for a complete validation and image."
     )]
     fn laml_check(&self, Parameters(Source { file }): Parameters<Source>) -> CallToolResult {
@@ -175,7 +281,7 @@ impl LamlMcp {
 #[tool_handler(
     name = "laml",
     version = "1.15.6",
-    instructions = "LAML is installed locally for architecture, C4, UML and BPMN diagrams. When asked for a diagram, discover the appropriate type with laml_types, read laml_guide for its real syntax and laml_example for complete buildable source, write a .laml file in the current project workspace, then call laml_build to render and fully validate it. The source file is the source of truth. Edit it and rebuild to fix diagnostic errors. If a preview is needed, open the resulting image using your host's file/image tools."
+    instructions = "LAML is installed locally for architecture, C4, UML and BPMN diagrams. When asked for a diagram, discover the appropriate type with laml_types, identify elements and the relationships between them, read laml_guide and laml_relations for the type-specific syntax and laml_example for complete buildable source, write a .laml file in the current project workspace, then call laml_build to render and fully validate it. The source file is the source of truth. Edit it and rebuild to fix diagnostic errors. If a preview is needed, open the resulting image using your host's file/image tools."
 )]
 impl ServerHandler for LamlMcp {}
 
@@ -224,6 +330,10 @@ mod tests {
         ] {
             assert!(guide(kind).is_some(), "missing guide for {kind}");
             assert!(example(kind).is_some(), "missing example for {kind}");
+            assert!(
+                relation_reference(kind).is_some(),
+                "missing relations for {kind}"
+            );
         }
     }
 }
