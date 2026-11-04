@@ -37,7 +37,7 @@ fn quickstart_draws_straight_association_from_proportional_actor_to_ellipse() {
     assert!(svg.contains(&format!(
         "M{x:.2},{:.2} V{:.2} M{:.2},{:.2} H{:.2} M{x:.2},{:.2} L{:.2},{:.2} M{x:.2},{:.2} L{:.2},{:.2}",
         actor.y + 29.0, actor.y + 60.0,
-        x - 26.0, actor.y + 34.0, x + 26.0,
+        x - 26.0, actor.y + 37.0, x + 26.0,
         actor.y + 60.0, x - 24.0, actor.y + 91.0,
         actor.y + 60.0, x + 24.0, actor.y + 91.0,
     )));
@@ -46,11 +46,10 @@ fn quickstart_draws_straight_association_from_proportional_actor_to_ellipse() {
     assert!((26.0 / leg_length - 2.0 / 3.0).abs() < 0.01);
     let opening = 2.0 * (24.0_f64 / 31.0).atan().to_degrees();
     assert!((opening - 75.0).abs() < 1.0);
-    // Neck: 5, abdomen: 26; the arms are ~2/3 up from the feet.
-    assert_eq!(34.0 - (15.0 + 14.0), 5.0);
-    assert_eq!(60.0 - 34.0, 26.0);
-    assert!(((91.0 - 34.0) / (91.0 - 1.0) - 2.0 / 3.0_f64).abs() < 0.04);
-    for (x, y) in [(14.0_f64, 1.0_f64), (26.0, 34.0), (24.0, 91.0)] {
+    // Neck: 8, abdomen: 23; the arms remain above the figure's middle.
+    assert_eq!(37.0 - (15.0 + 14.0), 8.0);
+    assert_eq!(60.0 - 37.0, 23.0);
+    for (x, y) in [(14.0_f64, 1.0_f64), (26.0, 37.0), (24.0, 91.0)] {
         assert!((x / 50.0).powi(2) + ((y - 47.5) / 50.0).powi(2) < 1.0);
     }
 }

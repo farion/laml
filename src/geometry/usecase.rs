@@ -5,9 +5,9 @@ use crate::syntax::{DiagramType, NodeDecl};
 
 // The silhouette is independent of caption width. Each arm is 26 long,
 // each leg ~39; the legs open to a 75-degree included angle.
-// Arms sit about two thirds of the way UP from the feet, just below the head.
+// Arms sit above the figure's middle, with a short neck below the head.
 pub(crate) const ARM_HALF: f64 = 26.0;
-pub(crate) const ARM_Y: f64 = 34.0;
+pub(crate) const ARM_Y: f64 = 37.0;
 pub(crate) const HIP_Y: f64 = 60.0;
 pub(crate) const FOOT_Y: f64 = 91.0;
 pub(crate) const FOOT_OFFSET: f64 = 24.0;
