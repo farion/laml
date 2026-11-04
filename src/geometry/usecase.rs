@@ -3,13 +3,14 @@ use super::{BoxNode, nodes};
 use crate::styles::{Element, StyleSheet};
 use crate::syntax::{DiagramType, NodeDecl};
 
-// Actor proportions are independent of the width of its caption. The arms are
-// 44 wide (22 per side), each leg is ~33 long and leans 15 degrees from vertical.
+// The silhouette is independent of caption width. The arms are 22 per side,
+// each leg is ~33 long, and the legs open to a 75-degree included angle.
+// Arms sit about two thirds of the way UP from the feet, just below the head.
 pub(crate) const ARM_HALF: f64 = 22.0;
-pub(crate) const ARM_Y: f64 = 64.0;
-pub(crate) const HIP_Y: f64 = 68.0;
-pub(crate) const FOOT_Y: f64 = 100.0;
-pub(crate) const FOOT_OFFSET: f64 = 8.5;
+pub(crate) const ARM_Y: f64 = 34.0;
+pub(crate) const HIP_Y: f64 = 65.0;
+pub(crate) const FOOT_Y: f64 = 91.0;
+pub(crate) const FOOT_OFFSET: f64 = 20.0;
 
 pub(super) fn actor(node: &NodeDecl, sheet: &StyleSheet) -> Result<BoxNode, String> {
     if sheet

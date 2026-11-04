@@ -22,7 +22,7 @@ fn quickstart_draws_straight_association_from_proportional_actor_to_ellipse() {
     );
     let start = routes[0].points[0];
     assert!((start.x - actor.x - actor.width / 2.0 - 22.0).abs() < 0.01);
-    assert!((start.y - actor.y - 64.0).abs() < 0.01);
+    assert!((start.y - actor.y - 34.0).abs() < 0.01);
     assert!((routes[0].points[1].y - start.y).abs() < 0.01);
     assert_eq!(system.radius, 8.0);
     let svg = render(&boxes, &routes).unwrap();
@@ -31,10 +31,23 @@ fn quickstart_draws_straight_association_from_proportional_actor_to_ellipse() {
         system.x, system.y, system.width, system.height
     )));
     assert!(svg.contains("r=\"11\""));
-    // Arms: 22 per side, legs: sqrt(32² + 8.5²) ≈ 33.1 each.
-    let leg_length = 32.0_f64.hypot(8.5);
+    let x = actor.x + actor.width / 2.0;
+    assert!(svg.contains(&format!(
+        "M{x:.2},{:.2} V{:.2} M{:.2},{:.2} H{:.2} M{x:.2},{:.2} L{:.2},{:.2} M{x:.2},{:.2} L{:.2},{:.2}",
+        actor.y + 26.0, actor.y + 65.0,
+        x - 22.0, actor.y + 34.0, x + 22.0,
+        actor.y + 65.0, x - 20.0, actor.y + 91.0,
+        actor.y + 65.0, x + 20.0, actor.y + 91.0,
+    )));
+    // Arms: 22 per side, legs: sqrt(26² + 20²) ≈ 32.8 each.
+    let leg_length = 26.0_f64.hypot(20.0);
     assert!((22.0 / leg_length - 2.0 / 3.0).abs() < 0.01);
-    assert!(((32.0_f64 / 8.5).atan().to_degrees() - 75.0).abs() < 1.0);
+    let opening = 2.0 * (20.0_f64 / 26.0).atan().to_degrees();
+    assert!((opening - 75.0).abs() < 1.0);
+    // Neck: 8, abdomen: 31; the arms are ~2/3 up from the feet.
+    assert_eq!(34.0 - (15.0 + 11.0), 8.0);
+    assert_eq!(65.0 - 34.0, 31.0);
+    assert!(((91.0 - 34.0) / (91.0 - 4.0) - 2.0 / 3.0_f64).abs() < 0.02);
 }
 
 fn source(body: &str) -> String {

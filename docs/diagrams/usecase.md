@@ -16,8 +16,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/usecase-quickstart-modern-dark.png?v=usecase-actor-20261104">
-  <img src="../images/usecase-quickstart-modern.png?v=usecase-actor-20261104" alt="Customer actor connected to a use case inside the Shop boundary">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/usecase-quickstart-modern-dark.png?v=usecase-actor-proportions-20261104">
+  <img src="../images/usecase-quickstart-modern.png?v=usecase-actor-proportions-20261104" alt="Customer actor connected to a use case inside the Shop boundary">
 </picture>
 
 [Complete source](../../examples/usecase-quickstart.laml). Declare use cases inside a `system` boundary; connect external actors with `--` and a qualified use-case ID.
@@ -39,8 +39,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/usecase-order-modern-dark.png?v=usecase-actor-20261104">
-  <img src="../images/usecase-order-modern.png?v=usecase-actor-20261104" alt="Included payment, optional discount and actor generalization">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/usecase-order-modern-dark.png?v=usecase-actor-proportions-20261104">
+  <img src="../images/usecase-order-modern.png?v=usecase-actor-proportions-20261104" alt="Included payment, optional discount and actor generalization">
 </picture>
 
 [Complete source](../../examples/usecase-order.laml).

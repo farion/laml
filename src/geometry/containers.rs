@@ -125,15 +125,23 @@ fn relation_alignments(
                 .find(|node| node.has_endpoint(&relation.from))?;
             let to = boxes.iter().find(|node| node.has_endpoint(&relation.to))?;
             // A named port or member has its own measured attachment position.
+            let actor_usecase = diagram.settings.diagram_type
+                == crate::syntax::DiagramType::UseCase
+                && parent.is_none()
+                && matches!(
+                    (from.kind, to.kind),
+                    (NodeKind::UseCaseActor, NodeKind::UseCase)
+                        | (NodeKind::UseCase, NodeKind::UseCaseActor)
+                );
             if relation.from != from.id
                 || relation.to != to.id
-                || !matches!(
-                    from.kind,
-                    NodeKind::Generic | NodeKind::Package | NodeKind::Object
-                )
+                || (!actor_usecase
+                    && (!matches!(
+                        from.kind,
+                        NodeKind::Generic | NodeKind::Package | NodeKind::Object
+                    ) || from.kind != to.kind))
                 || (from.kind == NodeKind::Package
                     && diagram.settings.diagram_type != crate::syntax::DiagramType::Package)
-                || from.kind != to.kind
                 || (parent.is_some() && from.kind == NodeKind::Package)
             {
                 return None;
@@ -164,6 +172,13 @@ fn relation_alignments(
             let owner_a = local.iter().find(|node| node.id == a)?;
             let owner_b = local.iter().find(|node| node.id == b)?;
             let center = |node: &BoxNode| node.y + node.height / 2.0;
+            let anchor = |node: &BoxNode| {
+                if actor_usecase && node.kind == NodeKind::UseCaseActor {
+                    node.y + super::usecase::ARM_Y
+                } else {
+                    center(node)
+                }
+            };
             // An upper external package should not crowd a separate relation
             // from a lower sibling into another external package. A small
             // upward preference leaves the incoming horizontal stroke intact.
@@ -223,10 +238,10 @@ fn relation_alignments(
                         - x_center(to)
                         + x_center(owner_b)
                 } else {
-                    owner_a.height / 2.0 + center(from)
+                    owner_a.height / 2.0 + anchor(from)
                         - center(owner_a)
                         - owner_b.height / 2.0
-                        - center(to)
+                        - anchor(to)
                         + center(owner_b)
                         - upper_clearance
                 },
