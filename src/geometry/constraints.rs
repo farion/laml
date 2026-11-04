@@ -1,16 +1,15 @@
+mod attachment_preference;
 use super::nodes::BoxNode;
 use crate::styles::{Element, StyleSheet, Value};
 use crate::syntax::{
     Alignment, Axis, Diagram, FlowDirection, NodeKind, Placement, ScopedAlignment,
 };
 use crate::text::measure;
-
 #[derive(Clone, Debug)]
 pub struct GeometryError {
     pub line: usize,
     pub message: String,
 }
-
 #[derive(Clone)]
 struct Equality {
     a: usize,
@@ -25,14 +24,12 @@ struct Minimum {
     distance: f64,
     line: usize,
 }
-
 fn err(line: usize, message: impl Into<String>) -> GeometryError {
     GeometryError {
         line,
         message: message.into(),
     }
 }
-
 fn solve_axis(
     count: usize,
     equal: &[Equality],
@@ -106,7 +103,6 @@ fn solve_axis(
     }
     Ok((0..count).map(|i| values[root[i]] + offset[i]).collect())
 }
-
 fn try_soft(
     count: usize,
     equal: &[Equality],
@@ -129,7 +125,7 @@ pub fn place(
     let n = boxes.len();
     // The preferred centre is independent of the measured size. Expansion
     // grows around that centre; later nodes are displaced only as needed.
-    let pref_x: Vec<f64> = boxes.iter().map(|b| 96.0 - b.width / 2.0).collect();
+    let mut pref_x: Vec<f64> = boxes.iter().map(|b| 96.0 - b.width / 2.0).collect();
     let pref_y: Vec<f64> = boxes.iter().map(|b| 96.0 - b.height / 2.0).collect();
     let mut eq_x = Vec::new();
     let mut eq_y = Vec::new();
@@ -322,6 +318,17 @@ pub fn place(
             if a == b {
                 continue;
             }
+            // A vertical authored separation takes precedence over the
+            // left-to-right preference of an undirected object link.
+            if boxes[a].kind == NodeKind::Object
+                && diagram.layout.iter().any(|rule| {
+                    matches!(rule.placement, Placement::Above | Placement::Below)
+                        && ((rule.first == boxes[a].id && rule.second == boxes[b].id)
+                            || (rule.first == boxes[b].id && rule.second == boxes[a].id))
+                })
+            {
+                continue;
+            }
             let (first, second) = (a.min(b), a.max(b));
             let horizontal = matches!(
                 diagram.settings.direction,
@@ -354,9 +361,16 @@ pub fn place(
             delta: rule.delta,
             line: 0,
         };
-        eq_y.push(candidate);
-        if solve_axis(n, &eq_y, &y, &pref_y).is_err() {
-            eq_y.pop();
+        if rule.axis == Axis::Vertical {
+            eq_y.push(candidate);
+            if solve_axis(n, &eq_y, &y, &pref_y).is_err() {
+                eq_y.pop();
+            }
+        } else {
+            eq_x.push(candidate);
+            if solve_axis(n, &eq_x, &x, &pref_x).is_err() {
+                eq_x.pop();
+            }
         }
     }
     // Compact interface symbols follow their provider's centre. Without this
@@ -428,6 +442,7 @@ pub fn place(
             eq_y.pop();
         }
     }
+    attachment_preference::prefer_x(diagram, boxes, &eq_x, &x, &mut pref_x)?;
     // Preserve earlier node positions where possible: move the later node's
     // alignment group to clear collisions. If Y is impossible, try X.
     for _ in 0..n.saturating_mul(n).saturating_mul(4).max(1) {

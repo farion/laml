@@ -35,7 +35,9 @@ pub(super) fn horizontal_connection(a: &BoxNode, b: &BoxNode) -> Option<Vec<Poin
     let horizontal_box = |node: &BoxNode| {
         matches!(
             node.kind,
-            crate::syntax::NodeKind::Generic | crate::syntax::NodeKind::Package
+            crate::syntax::NodeKind::Generic
+                | crate::syntax::NodeKind::Package
+                | crate::syntax::NodeKind::Object
         ) && node.shape != NodeShape::Note
     };
     if !horizontal_box(a) || !horizontal_box(b) {
