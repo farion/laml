@@ -204,15 +204,19 @@ fn parallel_activity_places_objects_in_lanes_without_diagonal_or_crossing_flows(
     }
     let (decision, reject) = (node("Valid"), node("Reject"));
     let invalid = &flow("Valid", "Reject").points;
-    assert_eq!(invalid.len(), 5);
+    assert_eq!(
+        invalid.len(),
+        3,
+        "top exit needs only one elbow before Reject"
+    );
     assert!((invalid[0].x - decision.x - decision.width / 2.0).abs() < 0.01);
     assert!(
         (invalid[0].y - decision.y).abs() < 0.01,
         "invalid exits at the diamond top"
     );
-    assert!((invalid[4].x - reject.x).abs() < 0.01);
+    assert!((invalid[2].x - reject.x).abs() < 0.01);
     assert!(
-        (invalid[4].y - reject.y - reject.height / 2.0).abs() < 0.01,
+        (invalid[2].y - reject.y - reject.height / 2.0).abs() < 0.01,
         "invalid enters the middle of Reject's left side"
     );
     assert!(

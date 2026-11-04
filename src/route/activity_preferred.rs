@@ -119,20 +119,15 @@ pub(super) fn activity_decision_above_action(a: &BoxNode, b: &BoxNode) -> Option
     }
     let start = forced_port(a, PortSide::Top);
     let end = forced_port(b, PortSide::Left);
-    let top = b.y - 12.0;
-    let approach_x = b.x - 28.0;
-    if top >= start.y - 8.0 || approach_x <= a.x + a.width + 12.0 {
+    if end.y >= start.y - 2.0 {
         return None;
     }
+    // Leave the diamond at its top and use the target's centre row directly.
+    // A raised detour would add two bends without clearing an obstacle.
     Some(vec![
         start,
-        Point { x: start.x, y: top },
         Point {
-            x: approach_x,
-            y: top,
-        },
-        Point {
-            x: approach_x,
+            x: start.x,
             y: end.y,
         },
         end,
