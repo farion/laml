@@ -10,7 +10,7 @@ pub fn route(
     boxes: &[BoxNode],
     sheet: &StyleSheet,
 ) -> Result<Vec<Route>, RouteError> {
-    let stable = route_pass(diagram, boxes, sheet, false)?;
+    let stable = route_pass(diagram, boxes, sheet, false);
     // UML-specialized relations can require notation-specific arms and docking;
     // preserve those checked candidates instead of optimizing them as generic lines.
     if !matches!(
@@ -24,8 +24,14 @@ pub fn route(
             )
         })
     }) {
-        return Ok(stable);
+        return stable;
     }
+    // A locally feasible early candidate can block a later relation. If the
+    // stable pass fails, retry from scratch with crossing-aware candidate order.
+    let stable = match stable {
+        Ok(routes) => routes,
+        Err(error) => return route_pass(diagram, boxes, sheet, true).or(Err(error)),
+    };
     if let Ok(ranked) = route_pass(diagram, boxes, sheet, true)
         && ranking::visibly_clear(&ranked, boxes)
         && diagram.relations.iter().enumerate().all(|(i, relation)| {
