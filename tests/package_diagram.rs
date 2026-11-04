@@ -62,6 +62,7 @@ fn architecture_dependencies_route_without_changing_original_node_layout() {
         let node = |id: &str| boxes.iter().find(|box_node| box_node.id == id).unwrap();
         let api = node("Shop.API");
         let orders = node("Shop.Orders");
+        let pricing = node("Shop.Pricing");
         let payments = node("Payments");
         let common = node("Common");
         assert!(
@@ -92,6 +93,10 @@ fn architecture_dependencies_route_without_changing_original_node_layout() {
         assert!((access[0].x - orders.x - orders.width).abs() < 1e-6);
         assert!((access[1].x - common.x).abs() < 1e-6);
         assert!((access[0].y - access[1].y).abs() < 1e-6);
+        assert!(
+            access[0].y - pricing.y - pricing.height >= 18.0,
+            "{theme}: access needs visible clearance below Pricing"
+        );
         assert_eq!(merge.len(), 3, "{theme}: merge needs only one bend");
         assert!(merge[1].y > payments.y + payments.height + 4.0);
         let distance_to_payments = merge[0].y - payments.y - payments.height;

@@ -446,7 +446,7 @@ pub fn place(
                 == crate::syntax::DiagramType::Package
                 && diagram.layout.is_empty()
             {
-                36.0
+                68.0
             } else {
                 24.0
             };

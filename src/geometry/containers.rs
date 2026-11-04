@@ -240,7 +240,7 @@ fn open_package_lanes(diagram: &Diagram, local: &mut [BoxNode], parent: Option<&
                 joined && outward
             });
         if let Some((upper, lower)) = candidate {
-            let proposed = center(&local[upper]) * 0.4 + center(&local[lower]) * 0.6
+            let proposed = center(&local[upper]) * 0.38 + center(&local[lower]) * 0.62
                 - local[right].height / 2.0;
             let clear = local.iter().enumerate().all(|(i, node)| {
                 i == right
