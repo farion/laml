@@ -111,6 +111,44 @@ fn actor_association_falls_back_to_a_single_diagonal_when_horizontal_is_impossib
 }
 
 #[test]
+fn order_actors_align_and_lateral_association_avoids_the_actor_head() {
+    let diagram = parse(ORDER).unwrap();
+    let sheet = load(&diagram, Path::new("examples/usecase-order.laml")).unwrap();
+    let boxes = place(&diagram, &sheet).unwrap();
+    let actor = boxes.iter().find(|n| n.id == "Customer").unwrap();
+    let returning = boxes.iter().find(|n| n.id == "ReturningCustomer").unwrap();
+    let shop = boxes.iter().find(|n| n.id == "Shop").unwrap();
+    let order = boxes.iter().find(|n| n.id == "Shop.Order").unwrap();
+    assert!(
+        (actor.y - returning.y).abs() < 0.01,
+        "align the figures, not their captions"
+    );
+    let routes = route(&diagram, &boxes, &sheet).unwrap();
+    let generalization = &routes[diagram
+        .relations
+        .iter()
+        .position(|r| r.from == "ReturningCustomer")
+        .unwrap()];
+    assert_eq!(generalization.points.len(), 2);
+    assert!((generalization.points[0].y - generalization.points[1].y).abs() < 0.01);
+    let association = &routes[diagram
+        .relations
+        .iter()
+        .position(|r| r.from == "Customer")
+        .unwrap()];
+    assert_eq!(association.points.len(), 5);
+    let p = &association.points;
+    assert!((p[0].y - actor.y - 47.5).abs() < 0.01);
+    assert!((p[0].y - p[1].y).abs() < 0.01);
+    assert!(
+        p[1].x < shop.x - 8.0,
+        "the first elbow must clear the subject frame"
+    );
+    assert!(p[2].y > order.y + order.height + 8.0);
+    assert!((p[4].y - order.y - order.height).abs() < 0.01);
+}
+
+#[test]
 fn usecase_subject_corner_radius_follows_theme_and_can_be_overridden() {
     let diagram = parse(QUICKSTART).unwrap();
     let mut sheet = load(&diagram, Path::new("examples/usecase-quickstart.laml")).unwrap();

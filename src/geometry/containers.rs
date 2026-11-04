@@ -125,17 +125,21 @@ fn relation_alignments(
                 .find(|node| node.has_endpoint(&relation.from))?;
             let to = boxes.iter().find(|node| node.has_endpoint(&relation.to))?;
             // A named port or member has its own measured attachment position.
-            let actor_usecase = diagram.settings.diagram_type
+            let usecase_actors = diagram.settings.diagram_type
                 == crate::syntax::DiagramType::UseCase
-                && parent.is_none()
+                && parent.is_none();
+            let actor_usecase = usecase_actors
                 && matches!(
                     (from.kind, to.kind),
                     (NodeKind::UseCaseActor, NodeKind::UseCase)
                         | (NodeKind::UseCase, NodeKind::UseCaseActor)
                 );
+            let actor_generalization = usecase_actors
+                && from.kind == NodeKind::UseCaseActor
+                && to.kind == NodeKind::UseCaseActor;
             if relation.from != from.id
                 || relation.to != to.id
-                || (!actor_usecase
+                || (!(actor_usecase || actor_generalization)
                     && (!matches!(
                         from.kind,
                         NodeKind::Generic | NodeKind::Package | NodeKind::Object
@@ -173,7 +177,7 @@ fn relation_alignments(
             let owner_b = local.iter().find(|node| node.id == b)?;
             let center = |node: &BoxNode| node.y + node.height / 2.0;
             let anchor = |node: &BoxNode| {
-                if actor_usecase && node.kind == NodeKind::UseCaseActor {
+                if (actor_usecase || actor_generalization) && node.kind == NodeKind::UseCaseActor {
                     node.y + super::usecase::FIGURE_CENTER_Y
                 } else {
                     center(node)

@@ -129,8 +129,8 @@ pub(super) fn horizontal_connection(a: &BoxNode, b: &BoxNode) -> Option<Vec<Poin
     })
 }
 
-// The actor's hand is not its box center. Aim the use-case ellipse at that
-// actual hand, so a fallback is still one straight segment, not a stub.
+// A fallback straight connection uses the figure's invisible contour and the
+// use-case ellipse. The actor caption and its visible arms are not ports.
 pub(super) fn actor_usecase_straight(a: &BoxNode, b: &BoxNode) -> Option<Vec<Point>> {
     let (actor, usecase, reverse) = match (a.kind, b.kind) {
         (crate::syntax::NodeKind::UseCaseActor, crate::syntax::NodeKind::UseCase) => (a, b, false),
@@ -144,6 +144,101 @@ pub(super) fn actor_usecase_straight(a: &BoxNode, b: &BoxNode) -> Option<Vec<Poi
     } else {
         points
     })
+}
+
+// For a mostly lateral actor/use-case relation obstructed by another use case,
+// leave the figure from its side before routing around that obstacle. The
+// generic exterior candidates might otherwise pick the actor's head first.
+pub(super) fn actor_side_detours(a: &BoxNode, b: &BoxNode, boxes: &[BoxNode]) -> Vec<Vec<Point>> {
+    let (actor, usecase, actor_at_start) = match (a.kind, b.kind) {
+        (crate::syntax::NodeKind::UseCaseActor, crate::syntax::NodeKind::UseCase) => (a, b, true),
+        (crate::syntax::NodeKind::UseCase, crate::syntax::NodeKind::UseCaseActor) => (b, a, false),
+        _ => return Vec::new(),
+    };
+    let (ac, uc) = (center(actor), center(usecase));
+    if (uc.x - ac.x).abs() < (uc.y - ac.y).abs() {
+        return Vec::new(); // A genuinely vertical connection may use the head.
+    }
+    let rightward = uc.x > ac.x;
+    let mut options: Vec<_> = super::detours::corridors(a, b, boxes, false)
+        .into_iter()
+        .filter(|points| {
+            if points.len() < 4 {
+                return false;
+            }
+            let (at, next) = if actor_at_start {
+                (points[0], points[1])
+            } else {
+                (*points.last().unwrap(), points[points.len() - 2])
+            };
+            (at.y - ac.y).abs() < 1e-6
+                && (next.y - at.y).abs() < 1e-6
+                && if rightward {
+                    next.x > at.x
+                } else {
+                    next.x < at.x
+                }
+        })
+        .collect();
+    // Below the use-case row is preferable here: it keeps the title area and
+    // the actor's head clear. Route feasibility still decides the outcome.
+    let bottom = usecase.y + usecase.height;
+    options.sort_by(|a, b| {
+        let score = |points: &Vec<Point>| {
+            let below = points.iter().any(|p| p.y > bottom + 8.0);
+            let length: f64 = points
+                .windows(2)
+                .map(|w| (w[1].x - w[0].x).hypot(w[1].y - w[0].y))
+                .sum();
+            (!below, length)
+        };
+        let (a_below, a_length) = score(a);
+        let (b_below, b_length) = score(b);
+        a_below.cmp(&b_below).then(a_length.total_cmp(&b_length))
+    });
+    // Prefer an elbow outside the subject frame, then a crossing with room
+    // below the use-case row. Generic obstacle tracks can hug its left edge.
+    if let Some(frame) = boxes.iter().find(|node| {
+        node.kind == crate::syntax::NodeKind::UseCaseSystem
+            && usecase.x >= node.x
+            && usecase.x + usecase.width <= node.x + node.width
+    }) {
+        let y = bottom + 14.0;
+        let side = forced_port(
+            actor,
+            if rightward {
+                PortSide::Right
+            } else {
+                PortSide::Left
+            },
+        );
+        let x = if rightward {
+            (side.x + 24.0).min(frame.x - 12.0)
+        } else {
+            (side.x - 24.0).max(frame.x + frame.width + 12.0)
+        };
+        if y < frame.y + frame.height - 14.0 && (x - side.x) * (uc.x - ac.x) > 0.0 {
+            let bottom_port = port(
+                usecase,
+                Point {
+                    x: uc.x,
+                    y: y + 100.0,
+                },
+            );
+            let mut path = vec![
+                side,
+                Point { x, y: side.y },
+                Point { x, y },
+                Point { x: uc.x, y },
+                bottom_port,
+            ];
+            if !actor_at_start {
+                path.reverse();
+            }
+            options.insert(0, path);
+        }
+    }
+    options
 }
 
 pub(super) fn named_port_candidates(

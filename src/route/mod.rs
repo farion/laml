@@ -24,8 +24,8 @@ mod self_loops;
 mod side_rules;
 use geometry::{center, member_port, port};
 use preferred::{
-    actor_usecase_straight, forced_port, horizontal_connection, named_port_candidates,
-    normal_at_port,
+    actor_side_detours, actor_usecase_straight, forced_port, horizontal_connection,
+    named_port_candidates, normal_at_port,
 };
 pub use qualifiers::QualifierBox;
 pub use router::route;
@@ -162,6 +162,7 @@ fn candidates(
         && let Some(points) = actor_usecase_straight(a, b)
     {
         results.push(points);
+        results.extend(actor_side_detours(a, b, boxes));
     }
     if diagram.settings.diagram_type == crate::syntax::DiagramType::Class
         && source_side.is_none()
