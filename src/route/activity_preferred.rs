@@ -108,6 +108,37 @@ pub(super) fn activity_decision_to_action(a: &BoxNode, b: &BoxNode) -> Option<Ve
     Some(vec![forced_port(a, PortSide::Right), Point { x: b.x, y }])
 }
 
+pub(super) fn activity_decision_above_action(a: &BoxNode, b: &BoxNode) -> Option<Vec<Point>> {
+    use crate::syntax::NodeKind;
+    if a.kind != NodeKind::ActivityDecision
+        || b.kind != NodeKind::ActivityAction
+        || a.x + a.width >= b.x
+        || center(b).y >= center(a).y - 2.0
+    {
+        return None;
+    }
+    let start = forced_port(a, PortSide::Top);
+    let end = forced_port(b, PortSide::Left);
+    let top = b.y - 12.0;
+    let approach_x = b.x - 28.0;
+    if top >= start.y - 8.0 || approach_x <= a.x + a.width + 12.0 {
+        return None;
+    }
+    Some(vec![
+        start,
+        Point { x: start.x, y: top },
+        Point {
+            x: approach_x,
+            y: top,
+        },
+        Point {
+            x: approach_x,
+            y: end.y,
+        },
+        end,
+    ])
+}
+
 pub(super) fn activity_decision_to_fork(a: &BoxNode, b: &BoxNode) -> Option<Vec<Point>> {
     use crate::syntax::NodeKind;
     if a.kind != NodeKind::ActivityDecision
@@ -117,13 +148,7 @@ pub(super) fn activity_decision_to_fork(a: &BoxNode, b: &BoxNode) -> Option<Vec<
     {
         return None;
     }
-    // Leave the lower-right slope: the exact bottom vertex may sit within the
-    // incoming control arrowhead's reserved footprint.
-    let c = center(a);
-    let start = Point {
-        x: c.x + 5.0,
-        y: c.y + 7.0,
-    };
+    let start = forced_port(a, PortSide::Bottom);
     let end = forced_port(b, PortSide::Left);
     Some(vec![
         start,

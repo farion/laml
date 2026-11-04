@@ -377,62 +377,50 @@ pub(super) fn route_is_clear(points: &[Point], boxes: &[BoxNode], previous: &[Ro
             return false;
         }
         for route in previous {
-            let markers = [
-                (route.points[0], route.appearance.start),
-                (*route.points.last().unwrap(), route.appearance.end),
-            ];
-            if markers.iter().any(|(point, symbol)| {
-                *symbol != crate::syntax::EndSymbol::None && {
-                    let radius = marker_radius(*symbol, route.width);
+            if super::marker_clearance::hits_segment(pair[0], pair[1], route, boxes, true)
+                || super::marker_clearance::hits_segment(pair[0], pair[1], route, boxes, false)
+                || route.qualifiers.iter().any(|qualifier| {
                     segment_hits_rect(
                         pair[0],
                         pair[1],
-                        point.x - radius,
-                        point.y - radius,
-                        2.0 * radius,
-                        2.0 * radius,
-                    )
-                }
-            }) || route.qualifiers.iter().any(|qualifier| {
-                segment_hits_rect(
-                    pair[0],
-                    pair[1],
-                    qualifier.x,
-                    qualifier.y,
-                    qualifier.width,
-                    qualifier.height,
-                )
-            }) || route.bridges.iter().any(|bridge| {
-                let segment = &route.points[bridge.segment..=bridge.segment + 1];
-                let length = (segment[1].x - segment[0].x).hypot(segment[1].y - segment[0].y);
-                let t = bridge.distance / length;
-                let center = Point {
-                    x: segment[0].x + t * (segment[1].x - segment[0].x),
-                    y: segment[0].y + t * (segment[1].y - segment[0].y),
-                };
-                let reach = bridge.radius + bridge.height + route.width;
-                segment_hits_rect(
-                    pair[0],
-                    pair[1],
-                    center.x - reach,
-                    center.y - reach,
-                    2.0 * reach,
-                    2.0 * reach,
-                )
-            }) || route
-                .label
-                .iter()
-                .chain(route.end_labels.iter())
-                .any(|label| {
-                    segment_hits_rect(
-                        pair[0],
-                        pair[1],
-                        label.x,
-                        label.y,
-                        label.width,
-                        label.height,
+                        qualifier.x,
+                        qualifier.y,
+                        qualifier.width,
+                        qualifier.height,
                     )
                 })
+                || route.bridges.iter().any(|bridge| {
+                    let segment = &route.points[bridge.segment..=bridge.segment + 1];
+                    let length = (segment[1].x - segment[0].x).hypot(segment[1].y - segment[0].y);
+                    let t = bridge.distance / length;
+                    let center = Point {
+                        x: segment[0].x + t * (segment[1].x - segment[0].x),
+                        y: segment[0].y + t * (segment[1].y - segment[0].y),
+                    };
+                    let reach = bridge.radius + bridge.height + route.width;
+                    segment_hits_rect(
+                        pair[0],
+                        pair[1],
+                        center.x - reach,
+                        center.y - reach,
+                        2.0 * reach,
+                        2.0 * reach,
+                    )
+                })
+                || route
+                    .label
+                    .iter()
+                    .chain(route.end_labels.iter())
+                    .any(|label| {
+                        segment_hits_rect(
+                            pair[0],
+                            pair[1],
+                            label.x,
+                            label.y,
+                            label.width,
+                            label.height,
+                        )
+                    })
             {
                 return false;
             }

@@ -13,6 +13,7 @@ mod end_labels;
 mod geometry;
 mod junction_arms;
 mod labels;
+mod marker_clearance;
 mod outline_clearance;
 mod package_outline;
 mod parallel;
@@ -24,9 +25,9 @@ mod router;
 mod self_loops;
 mod side_rules;
 use activity_preferred::{
-    activity_action_to_join, activity_control_entry, activity_decision_to_action,
-    activity_decision_to_fork, activity_fork_to_action, activity_join_to_action,
-    activity_object_to_input, activity_output_to_object,
+    activity_action_to_join, activity_control_entry, activity_decision_above_action,
+    activity_decision_to_action, activity_decision_to_fork, activity_fork_to_action,
+    activity_join_to_action, activity_object_to_input, activity_output_to_object,
 };
 use geometry::{center, member_port, port};
 use preferred::{
@@ -177,6 +178,9 @@ fn candidates(
                 results.insert(0, points);
             }
             if let Some(points) = activity_decision_to_action(a, b) {
+                results.insert(0, points);
+            }
+            if let Some(points) = activity_decision_above_action(a, b) {
                 results.insert(0, points);
             }
             if let Some(points) = activity_control_entry(a, b) {

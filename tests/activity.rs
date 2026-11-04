@@ -180,7 +180,6 @@ fn parallel_activity_places_objects_in_lanes_without_diagonal_or_crossing_flows(
         ("Parallel", "Authorize"),
         ("Together", "Dispatch"),
         ("Inspect", "Valid"),
-        ("Valid", "Reject"),
     ] {
         let points = &flow(from, to).points;
         assert_eq!(points.len(), 2, "{from} -> {to} must be direct");
@@ -203,6 +202,30 @@ fn parallel_activity_places_objects_in_lanes_without_diagonal_or_crossing_flows(
             "{from} -> {to} must be orthogonal"
         );
     }
+    let (decision, reject) = (node("Valid"), node("Reject"));
+    let invalid = &flow("Valid", "Reject").points;
+    assert_eq!(invalid.len(), 5);
+    assert!((invalid[0].x - decision.x - decision.width / 2.0).abs() < 0.01);
+    assert!(
+        (invalid[0].y - decision.y).abs() < 0.01,
+        "invalid exits at the diamond top"
+    );
+    assert!((invalid[4].x - reject.x).abs() < 0.01);
+    assert!(
+        (invalid[4].y - reject.y - reject.height / 2.0).abs() < 0.01,
+        "invalid enters the middle of Reject's left side"
+    );
+    assert!(
+        invalid
+            .windows(2)
+            .all(|w| (w[0].x - w[1].x).abs() < 0.01 || (w[0].y - w[1].y).abs() < 0.01)
+    );
+    let else_path = &flow("Valid", "Parallel").points;
+    assert!(
+        (else_path[0].x - decision.x - decision.width / 2.0).abs() < 0.01,
+        "else starts at the diamond's bottom centre"
+    );
+    assert!((else_path[0].y - decision.y - decision.height).abs() < 0.01);
     assert!(
         routes.iter().all(|r| r.bridges.is_empty()),
         "these parallel lanes need no crossings"
