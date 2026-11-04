@@ -77,6 +77,34 @@ fn plain_arrows_end_at_square_border_in_light_and_dark() {
 }
 
 #[test]
+fn plain_dark_ports_use_dark_fill_without_overriding_explicit_paint() {
+    let source = include_str!("../examples/theme-plain-dark.laml");
+    let (svg, boxes, _) = image(source);
+    let port = &boxes
+        .iter()
+        .find(|node| !node.ports.is_empty())
+        .unwrap()
+        .ports[0];
+    assert_eq!(port.fill, "#181f2a");
+    assert_eq!(port.border_color, "#9eafc3");
+    assert!(svg.contains("data-port-id=\"input\""));
+    assert!(svg.contains("fill=\"#181f2a\" stroke=\"#9eafc3\""));
+
+    let styled = source.replace(
+        "layout {",
+        "styling {\nport[input] {\nfill: \"#123456\"\nborder-color: \"#abcdef\"\n}\n}\nlayout {",
+    );
+    let (_, boxes, _) = image(&styled);
+    let port = &boxes
+        .iter()
+        .find(|node| !node.ports.is_empty())
+        .unwrap()
+        .ports[0];
+    assert_eq!(port.fill, "#123456");
+    assert_eq!(port.border_color, "#abcdef");
+}
+
+#[test]
 fn modern_generic_note_is_rounded_without_fold_and_has_flush_full_height_accent() {
     let source = "semantics {\nnote Memo {\nImportant\n}\n}\n";
     let (svg, boxes, _) = image(source);

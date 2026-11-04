@@ -13,6 +13,7 @@ mod compact;
 mod component_container;
 mod composite;
 mod deployment;
+mod edge_labels;
 mod escape;
 mod interaction_use;
 mod markers;
@@ -182,27 +183,7 @@ fn render_svg(
                     if i==last { &end_marker } else { "" }).unwrap();
             }
         }
-        for label in route.label.iter().chain(route.end_labels.iter()) {
-            let cx = label.x + label.width / 2.0;
-            let cy = label.y + label.height / 2.0;
-            let rotation = if label.angle.abs() > 1e-9 {
-                format!(" transform=\"rotate({:.2} {cx:.2} {cy:.2})\"", label.angle)
-            } else {
-                String::new()
-            };
-            if theme.modern() {
-                let neutral = theme.colors(theme.default_base(NodeKind::Package));
-                let pill = if label.angle.abs() > 1e-9 {
-                    rotation.as_str()
-                } else {
-                    ""
-                };
-                writeln!(svg, "<rect data-edge-label-pill=\"true\" x=\"{:.2}\" y=\"{:.2}\" width=\"{:.2}\" height=\"{:.2}\" rx=\"6\" fill=\"{}\"{pill}/>",
-                    label.x-4.0,label.y-2.0,label.width+8.0,label.height+4.0,neutral.fill).unwrap();
-            }
-            writeln!(svg,"<text x=\"{cx:.2}\" y=\"{:.2}\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\"{}>{}</text>",
-                cy+route.font_size*1.25*0.28,route.font_size,route.color,rotation,escape(&label.text)).unwrap();
-        }
+        edge_labels::draw(&mut svg, route, theme)?;
     }
     for (index, node) in boxes
         .iter()

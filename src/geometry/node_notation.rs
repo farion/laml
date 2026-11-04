@@ -153,13 +153,27 @@ pub(super) fn port_paint(
             sheet,
             element,
             "fill",
-            paint.map_or("#eff4fa", |p| p.fill.as_str()),
+            paint.map_or(
+                if sheet.theme.dark() {
+                    "#181f2a"
+                } else {
+                    "#eff4fa"
+                },
+                |p| p.fill.as_str(),
+            ),
         ),
         border: color(
             sheet,
             element,
             "border-color",
-            paint.map_or("#395373", |p| p.border.as_str()),
+            paint.map_or(
+                if sheet.theme.dark() {
+                    "#9eafc3"
+                } else {
+                    "#395373"
+                },
+                |p| p.border.as_str(),
+            ),
         ),
         explicit_fill: sheet.get(element, "fill").is_some(),
     }

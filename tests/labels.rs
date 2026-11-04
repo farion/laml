@@ -2,8 +2,9 @@ use laml::geometry::place;
 use laml::parser::parse;
 use laml::route::route;
 use laml::styles::StyleSheet;
-use laml::svg::render;
+use laml::svg::{TextMode, render, render_with_theme};
 use laml::syntax::LabelPlacement;
+use laml::theme::Theme;
 
 #[test]
 fn global_inline_and_named_along_override_render_distinctly() {
@@ -28,6 +29,41 @@ fn global_inline_and_named_along_override_render_distinctly() {
     assert!(svg.contains("rotate("));
     assert!(svg.contains(">Batch</text>"));
     assert!(svg.contains(">Stream</text>"));
+}
+
+#[test]
+fn modern_along_pill_wraps_text_not_rotated_collision_envelope() {
+    let diagram = parse(include_str!("../examples/label-modes.laml")).unwrap();
+    let sheet = StyleSheet::default();
+    let boxes = place(&diagram, &sheet).unwrap();
+    let routes = route(&diagram, &boxes, &sheet).unwrap();
+    let along = routes
+        .iter()
+        .find(|route| {
+            route
+                .label
+                .as_ref()
+                .is_some_and(|label| label.angle.abs() > 1e-9)
+        })
+        .unwrap();
+    let label = along.label.as_ref().unwrap();
+    let text_width = laml::text::measure(&label.text, along.font_size).unwrap();
+    let line_height = along.font_size * 1.25;
+    let cx = label.x + label.width / 2.0;
+    let cy = label.y + label.height / 2.0;
+    let expected = format!(
+        "<rect data-edge-label-pill=\"true\" x=\"{:.2}\" y=\"{:.2}\" width=\"{:.2}\" height=\"{:.2}\"",
+        cx - text_width / 2.0 - 4.0,
+        cy - line_height / 2.0 - 2.0,
+        text_width + 8.0,
+        line_height + 4.0
+    );
+    for theme in [Theme::Modern, Theme::ModernDark] {
+        let svg = render_with_theme(&boxes, &routes, TextMode::Embedded, theme).unwrap();
+        let pill = svg.lines().find(|line| line.contains(&expected)).unwrap();
+        assert!(pill.contains("transform=\"rotate("), "{pill}");
+        assert!(svg.contains(&format!(">{}</text>", label.text)));
+    }
 }
 
 #[test]
