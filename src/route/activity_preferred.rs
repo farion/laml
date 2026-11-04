@@ -81,6 +81,33 @@ pub(super) fn activity_output_to_object(
     ])
 }
 
+pub(super) fn activity_decision_to_action(a: &BoxNode, b: &BoxNode) -> Option<Vec<Point>> {
+    use crate::syntax::NodeKind;
+    if a.kind != NodeKind::ActivityDecision
+        || b.kind != NodeKind::ActivityAction
+        || a.x + a.width >= b.x
+    {
+        return None;
+    }
+    let y = center(a).y;
+    let radius = b.radius.min(b.width / 2.0).min(b.height / 2.0);
+    if y < b.y + 2.0 || y > b.y + b.height - 2.0 {
+        return None;
+    }
+    // A rounded action corner can be just inside its rectangular bounds.
+    // Dock on the left only when its visible outline is within one pixel.
+    let corner_offset = if y < b.y + radius {
+        b.y + radius - y
+    } else {
+        (y - (b.y + b.height - radius)).max(0.0)
+    };
+    let inset = radius - (radius * radius - corner_offset * corner_offset).sqrt();
+    if inset > 1.0 {
+        return None;
+    }
+    Some(vec![forced_port(a, PortSide::Right), Point { x: b.x, y }])
+}
+
 pub(super) fn activity_decision_to_fork(a: &BoxNode, b: &BoxNode) -> Option<Vec<Point>> {
     use crate::syntax::NodeKind;
     if a.kind != NodeKind::ActivityDecision

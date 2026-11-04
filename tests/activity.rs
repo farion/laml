@@ -176,6 +176,7 @@ fn parallel_activity_places_objects_in_lanes_without_diagonal_or_crossing_flows(
         ("Parallel", "Reserve"),
         ("Together", "Dispatch"),
         ("Inspect", "Valid"),
+        ("Valid", "Reject"),
     ] {
         let points = &flow(from, to).points;
         assert_eq!(points.len(), 2, "{from} -> {to} must be direct");
