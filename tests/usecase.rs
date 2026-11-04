@@ -21,7 +21,7 @@ fn quickstart_draws_straight_association_from_proportional_actor_to_ellipse() {
         "simple associations must be straight"
     );
     let start = routes[0].points[0];
-    assert!((start.x - actor.x - actor.width / 2.0 - 22.0).abs() < 0.01);
+    assert!((start.x - actor.x - actor.width / 2.0 - 26.0).abs() < 0.01);
     assert!((start.y - actor.y - 34.0).abs() < 0.01);
     assert!((routes[0].points[1].y - start.y).abs() < 0.01);
     assert_eq!(system.radius, 8.0);
@@ -34,19 +34,19 @@ fn quickstart_draws_straight_association_from_proportional_actor_to_ellipse() {
     let x = actor.x + actor.width / 2.0;
     assert!(svg.contains(&format!(
         "M{x:.2},{:.2} V{:.2} M{:.2},{:.2} H{:.2} M{x:.2},{:.2} L{:.2},{:.2} M{x:.2},{:.2} L{:.2},{:.2}",
-        actor.y + 26.0, actor.y + 65.0,
-        x - 22.0, actor.y + 34.0, x + 22.0,
-        actor.y + 65.0, x - 20.0, actor.y + 91.0,
-        actor.y + 65.0, x + 20.0, actor.y + 91.0,
+        actor.y + 26.0, actor.y + 60.0,
+        x - 26.0, actor.y + 34.0, x + 26.0,
+        actor.y + 60.0, x - 24.0, actor.y + 91.0,
+        actor.y + 60.0, x + 24.0, actor.y + 91.0,
     )));
-    // Arms: 22 per side, legs: sqrt(26² + 20²) ≈ 32.8 each.
-    let leg_length = 26.0_f64.hypot(20.0);
-    assert!((22.0 / leg_length - 2.0 / 3.0).abs() < 0.01);
-    let opening = 2.0 * (20.0_f64 / 26.0).atan().to_degrees();
+    // Arms: 26 per side, legs: sqrt(31² + 24²) ≈ 39.2 each.
+    let leg_length = 31.0_f64.hypot(24.0);
+    assert!((26.0 / leg_length - 2.0 / 3.0).abs() < 0.01);
+    let opening = 2.0 * (24.0_f64 / 31.0).atan().to_degrees();
     assert!((opening - 75.0).abs() < 1.0);
-    // Neck: 8, abdomen: 31; the arms are ~2/3 up from the feet.
+    // Neck: 8, abdomen: 26; the arms are ~2/3 up from the feet.
     assert_eq!(34.0 - (15.0 + 11.0), 8.0);
-    assert_eq!(65.0 - 34.0, 31.0);
+    assert_eq!(60.0 - 34.0, 26.0);
     assert!(((91.0 - 34.0) / (91.0 - 4.0) - 2.0 / 3.0_f64).abs() < 0.02);
 }
 
