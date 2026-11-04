@@ -5,12 +5,20 @@ use super::{
 };
 use crate::{geometry::BoxNode, styles::StyleSheet, syntax::Diagram};
 
+fn furthest_failure(stable: RouteError, alternative: RouteError) -> RouteError {
+    if alternative.line > stable.line {
+        alternative
+    } else {
+        stable
+    }
+}
+
 pub fn route(
     diagram: &Diagram,
     boxes: &[BoxNode],
     sheet: &StyleSheet,
 ) -> Result<Vec<Route>, RouteError> {
-    let stable = route_pass(diagram, boxes, sheet, false);
+    let stable = route_pass(diagram, boxes, sheet, None);
     // UML-specialized relations can require notation-specific arms and docking;
     // preserve those checked candidates instead of optimizing them as generic lines.
     if !matches!(
@@ -30,9 +38,29 @@ pub fn route(
     // stable pass fails, retry from scratch with crossing-aware candidate order.
     let stable = match stable {
         Ok(routes) => routes,
-        Err(error) => return route_pass(diagram, boxes, sheet, true).or(Err(error)),
+        Err(error) => {
+            let mut failure = error;
+            if let Ok(routes) = route_pass(diagram, boxes, sheet, Some(usize::MAX))
+                && ranking::visibly_clear(&routes, boxes)
+            {
+                return Ok(routes);
+            }
+            let first_blocked = diagram
+                .relations
+                .iter()
+                .position(|relation| relation.line == failure.line)
+                .unwrap_or(0);
+            for cutoff in first_blocked..diagram.relations.len().min(first_blocked + 12) {
+                match route_pass(diagram, boxes, sheet, Some(cutoff)) {
+                    Ok(routes) if ranking::visibly_clear(&routes, boxes) => return Ok(routes),
+                    Ok(_) => {}
+                    Err(alternative) => failure = furthest_failure(failure, alternative),
+                }
+            }
+            return Err(failure);
+        }
     };
-    if let Ok(ranked) = route_pass(diagram, boxes, sheet, true)
+    if let Ok(ranked) = route_pass(diagram, boxes, sheet, Some(usize::MAX))
         && ranking::visibly_clear(&ranked, boxes)
         && diagram.relations.iter().enumerate().all(|(i, relation)| {
             relation.from != relation.to || ranked[i].points == stable[i].points
@@ -52,13 +80,14 @@ fn route_pass(
     diagram: &Diagram,
     boxes: &[BoxNode],
     sheet: &StyleSheet,
-    ranked: bool,
+    ranked_until: Option<usize>,
 ) -> Result<Vec<Route>, RouteError> {
     let visible = crate::geometry::visible_diagram(diagram, sheet)
         .map_err(|(line, message)| RouteError { line, message })?;
     let diagram = &visible;
     let mut routed = Vec::new();
     for (index, relation) in diagram.relations.iter().enumerate() {
+        let ranked = ranked_until.is_some_and(|cutoff| index <= cutoff);
         let owner = |id: &str| {
             boxes
                 .iter()
@@ -290,12 +319,24 @@ mod tests {
     use crate::{geometry::place, parser::parse};
 
     #[test]
+    fn later_failure_is_not_hidden_by_an_earlier_failed_pass() {
+        let failure = |line, message: &str| RouteError {
+            line,
+            message: message.into(),
+        };
+        let reported = furthest_failure(failure(4, "early"), failure(9, "later"));
+        assert_eq!((reported.line, reported.message.as_str()), (9, "later"));
+        let reported = furthest_failure(failure(9, "later"), failure(4, "early"));
+        assert_eq!((reported.line, reported.message.as_str()), (9, "later"));
+    }
+
+    #[test]
     fn picks_shorter_clear_corridor_over_first_external_detour() {
         let source = "semantics {\nA\nB\nC\nA -> C\n}\nlayout {\nA < B : align=center; gap=90\nB < C : align=center; gap=90\n}\n";
         let diagram = parse(source).unwrap();
         let sheet = StyleSheet::default();
         let boxes = place(&diagram, &sheet).unwrap();
-        let stable = route_pass(&diagram, &boxes, &sheet, false).unwrap();
+        let stable = route_pass(&diagram, &boxes, &sheet, None).unwrap();
         let chosen = route(&diagram, &boxes, &sheet).unwrap();
         assert!(
             ranking::better_than(&chosen, &stable),
