@@ -44,5 +44,10 @@ semantics {
     control Dispatch --> Done
 }
 layout {
-    relation[approved] : label=along
+    relation[approved] : label=near
+}
+styling {
+    node[Parallel] {
+        length: 170
+    }
 }

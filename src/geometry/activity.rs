@@ -10,7 +10,7 @@ pub(super) fn size_nodes(diagram: &Diagram, boxes: &mut [BoxNode]) {
         return;
     }
     for node in boxes {
-        if node.kind == NodeKind::ActivityJoin {
+        if node.kind == NodeKind::ActivityJoin && node.fixed_height.is_none() {
             let arms = diagram
                 .relations
                 .iter()

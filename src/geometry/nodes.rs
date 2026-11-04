@@ -108,6 +108,9 @@ pub fn measure_node(
         id: &node.id,
         classes: &node.classes,
     };
+    if styles.get(&element, "length").is_some() {
+        return Err("length is only valid for activity fork/join bars".into());
+    }
     let shape = match styles.get(&element, "shape").map(|d| &d.value) {
         Some(Value::Keyword(value)) => match value.as_str() {
             "rectangle" => NodeShape::Rectangle,

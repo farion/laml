@@ -240,7 +240,7 @@ fn validate_value(property: &Property, path: &Path) -> Result<Value, StyleError>
             }
             Ok(Value::Color(parsed))
         }
-        "padding" | "min-width" | "min-height" | "width" | "height" | "font-size"
+        "padding" | "min-width" | "min-height" | "width" | "height" | "length" | "font-size"
         | "border-width" | "corner-radius" => {
             let number = value
                 .parse::<f64>()

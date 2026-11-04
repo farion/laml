@@ -142,6 +142,9 @@ fn parallel_activity_places_objects_in_lanes_without_diagonal_or_crossing_flows(
         (reservation.x + reservation.width / 2.0 - approval.x - approval.width / 2.0).abs() < 0.01
     );
     assert!(reserve.y < authorize.y);
+    let fork = node("Parallel");
+    assert_eq!(fork.width, 12.0);
+    assert_eq!(fork.height, 170.0);
     assert!(reservation.x + reservation.width + 32.0 < join.x);
     assert!(join.x + join.width < dispatch.x);
     let pin_y =
@@ -174,6 +177,7 @@ fn parallel_activity_places_objects_in_lanes_without_diagonal_or_crossing_flows(
         ("Authorize::approval", "Approval"),
         ("Approval", "Dispatch::approval"),
         ("Parallel", "Reserve"),
+        ("Parallel", "Authorize"),
         ("Together", "Dispatch"),
         ("Inspect", "Valid"),
         ("Valid", "Reject"),
@@ -187,7 +191,6 @@ fn parallel_activity_places_objects_in_lanes_without_diagonal_or_crossing_flows(
     }
     for (from, to) in [
         ("Valid", "Parallel"),
-        ("Parallel", "Authorize"),
         ("Reserve", "Together"),
         ("Authorize", "Together"),
     ] {
@@ -208,7 +211,10 @@ fn parallel_activity_places_objects_in_lanes_without_diagonal_or_crossing_flows(
 
 #[test]
 fn authored_multi_input_action_height_is_not_overridden_by_auto_layout() {
-    let source = format!("{ORDER}\nstyling {{\nnode[Dispatch] {{\nheight: 100\n}}\n}}");
+    let source = ORDER.replace(
+        "styling {",
+        "styling {\n    node[Dispatch] {\n        height: 100\n    }",
+    );
     let diagram = parse(&source).unwrap();
     let sheet = load(&diagram, Path::new("examples/activity-order.laml")).unwrap();
     let boxes = place(&diagram, &sheet).unwrap();
@@ -254,6 +260,57 @@ fn simple_activity_renders_and_exports() {
     assert!(svg.contains("rx=\"14.00\""));
     assert!(export::png(&svg).is_ok());
     assert!(export::pdf(&svg).is_ok());
+}
+
+#[test]
+fn authored_bar_length_follows_flow_orientation_and_preserves_join_size() {
+    for (direction, expected_fork, expected_join) in [
+        ("", (12.0, 170.0), (12.0, 110.0)),
+        ("direction: top-to-bottom", (170.0, 12.0), (110.0, 12.0)),
+    ] {
+        let text = ORDER.replacen("type: activity", &format!("type: activity\n{direction}"), 1)
+            .replace("node[Parallel] {\n        length: 170\n    }", "node[Parallel] {\n        length: 170\n    }\n    node[Together] {\n        length: 110\n    }");
+        let diagram = parse(&text).unwrap();
+        let sheet = load(&diagram, Path::new("examples/activity-order.laml")).unwrap();
+        let boxes = place(&diagram, &sheet).unwrap();
+        let fork = boxes.iter().find(|n| n.id == "Parallel").unwrap();
+        let join = boxes.iter().find(|n| n.id == "Together").unwrap();
+        assert_eq!((fork.width, fork.height), expected_fork);
+        assert_eq!((join.width, join.height), expected_join);
+    }
+}
+
+#[test]
+fn bar_length_does_not_resize_other_uml_control_symbols() {
+    let too_short = ORDER.replace("length: 170", "length: 12");
+    let diagram = parse(&too_short).unwrap();
+    let sheet = load(&diagram, Path::new("examples/activity-order.laml")).unwrap();
+    assert!(
+        place(&diagram, &sheet)
+            .unwrap_err()
+            .message
+            .contains("at least 24")
+    );
+
+    let invalid = ORDER.replace("node[Parallel]", "node[Valid]");
+    let diagram = parse(&invalid).unwrap();
+    let sheet = load(&diagram, Path::new("examples/activity-order.laml")).unwrap();
+    assert!(
+        place(&diagram, &sheet)
+            .unwrap_err()
+            .message
+            .contains("only valid for activity fork/join")
+    );
+
+    let invalid = ORDER.replace("node[Parallel]", "node[Reserve]");
+    let diagram = parse(&invalid).unwrap();
+    let sheet = load(&diagram, Path::new("examples/activity-order.laml")).unwrap();
+    assert!(
+        place(&diagram, &sheet)
+            .unwrap_err()
+            .message
+            .contains("only valid for activity fork/join")
+    );
 }
 
 #[test]

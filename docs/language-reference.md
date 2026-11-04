@@ -89,7 +89,7 @@ Set `type: state` for a checked behavior state-machine image. `state Ready` is a
 
 ## Activity diagrams
 
-Set `type: activity`. Declare `action`, `objectNode`, `initial`, `activityFinal`, `flowFinal`, `decision`, `merge`, `fork` and `join` explicitly. An action body can declare `input Name` and `output Name` pins; object flows address them as `Action::Name`. Use `control A --> B` for control flow and `object A::out --> B::in` for object flow. Decision exits require `[guard]` labels. The [activity guide](activity-diagrams.md) and [UML notation audit](uml-activity-conformance.md) document the checked topology and unsupported notation.
+Set `type: activity`. Declare `action`, `objectNode`, `initial`, `activityFinal`, `flowFinal`, `decision`, `merge`, `fork` and `join` explicitly. An action body can declare `input Name` and `output Name` pins; object flows address them as `Action::Name`. Use `control A --> B` for control flow and `object A::out --> B::in` for object flow. Decision exits require `[guard]` labels. In `styling`, `node[BarId] { length: 170 }` sets the long-axis length of a `fork` or `join` (minimum 24); its thickness remains fixed. The [activity guide](activity-diagrams.md) and [UML notation audit](uml-activity-conformance.md) document the checked topology and unsupported notation.
 
 ## Use-case diagrams
 

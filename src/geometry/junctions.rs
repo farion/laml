@@ -23,6 +23,17 @@ pub(super) fn measure(
     {
         return Err("initial or fork/join control node must remain visibly filled".into());
     }
+    let activity_bar = matches!(node.kind, NodeKind::ActivityFork | NodeKind::ActivityJoin);
+    let authored_length = sheet.get(&element, "length").and_then(|d| match d.value {
+        Value::Number(value) => Some(value),
+        _ => None,
+    });
+    if authored_length.is_some() && !activity_bar {
+        return Err("length is only valid for activity fork/join bars".into());
+    }
+    if authored_length.is_some_and(|length| length < 24.0) {
+        return Err("activity fork/join length must be at least 24".into());
+    }
     if [
         "shape",
         "width",
@@ -112,11 +123,12 @@ pub(super) fn measure(
             direction,
             FlowDirection::LeftToRight | FlowDirection::RightToLeft
         );
+    let bar_length = authored_length.unwrap_or(72.0);
     let base = match node.kind {
         NodeKind::Lollipop | NodeKind::Socket => 20.0,
         NodeKind::StateInitial | NodeKind::ActivityInitial => 18.0,
         NodeKind::ActivityFork | NodeKind::ActivityJoin if vertical_bar => 12.0,
-        NodeKind::ActivityFork | NodeKind::ActivityJoin => 72.0,
+        NodeKind::ActivityFork | NodeKind::ActivityJoin => bar_length,
         _ => 24.0,
     };
     let width = if label.is_empty() {
@@ -125,7 +137,7 @@ pub(super) fn measure(
         base + 12.0 + text_width(&label, 14.0)?
     };
     let height = if matches!(node.kind, NodeKind::ActivityFork | NodeKind::ActivityJoin) {
-        if vertical_bar { 72.0 } else { 12.0 }
+        if vertical_bar { bar_length } else { 12.0 }
     } else if label.is_empty() {
         base
     } else {
@@ -168,8 +180,8 @@ pub(super) fn measure(
         y: 0.0,
         width,
         height,
-        fixed_width: None,
-        fixed_height: None,
+        fixed_width: (!vertical_bar).then_some(authored_length).flatten(),
+        fixed_height: vertical_bar.then_some(authored_length).flatten(),
         font_size: 14.0,
         padding: 0.0,
         fill: if matches!(

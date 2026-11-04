@@ -18,4 +18,16 @@ Use `control A --> B` for a control flow, or `object A::output --> Result` / `ob
 
 For a left-to-right control chain, automatic placement prefers a direct entry from the initial node on the action's left and a direct exit on its right. When an action has a named input pin, the incoming control arrow uses the clear upper part of the left edge. A single object node feeding that pin prefers a row below the action; its object flow approaches the input square separately. For a left-to-right parallel two-branch activity with two object inputs, automatic placement can align each object with its output pin and matching input pin. It sizes the join bar for its incoming controls and expands the receiving action to leave a separate central control lane. Explicit action heights are preserved. Authored layout remains mandatory and takes precedence over these preferences.
 
+To extend a fork or join bar, set its **long-axis length** in LSS. In a left-to-right activity the bar grows vertically; in a top-to-bottom activity it grows horizontally. Its thickness stays at the UML notation's 12 px:
+
+```laml
+styling {
+    node[Parallel] {
+        length: 170
+    }
+}
+```
+
+Bars start at 72 px; left-to-right multi-input joins can be sized automatically. An explicit `length` (at least 24 px) overrides that automatic sizing. The compiler preserves the specified length, while the router can attach separate outgoing control flows horizontally to the longer bar. `width` and `height` remain unavailable on these control symbols; use `length` instead. See the [order example](../examples/activity-order.laml).
+
 `laml build` validates the drawn control and object flows, their endpoints and their routed geometry.
