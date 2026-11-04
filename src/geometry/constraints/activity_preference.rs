@@ -333,6 +333,75 @@ pub(super) fn apply(
     }
 }
 
+// Give a decision's upper branch a visible vertical departure before the
+// control flow turns toward an action. Move its entire existing alignment
+// group, so preceding nodes keep their authored/soft axial relationships.
+pub(super) fn separate_short_decision_stem(
+    diagram: &Diagram,
+    boxes: &[BoxNode],
+    eq_y: &[Equality],
+    y: &[Minimum],
+    positions: &[f64],
+    preferred: &mut [f64],
+) -> bool {
+    if diagram.settings.diagram_type != DiagramType::Activity
+        || diagram.settings.direction != FlowDirection::LeftToRight
+    {
+        return false;
+    }
+    let owner = |id: &str| boxes.iter().position(|node| node.has_endpoint(id)).unwrap();
+    for relation in &diagram.relations {
+        if relation.activity_flow != Some(ActivityFlow::Control) {
+            continue;
+        }
+        let (decision, target) = (owner(&relation.from), owner(&relation.to));
+        if boxes[decision].kind != NodeKind::ActivityDecision
+            || boxes[target].kind != NodeKind::ActivityAction
+        {
+            continue;
+        }
+        let target_center = positions[target] + boxes[target].height / 2.0;
+        let decision_center = positions[decision] + boxes[decision].height / 2.0;
+        if target_center >= decision_center - 2.0 {
+            continue; // Not an upper branch.
+        }
+        let stem = positions[decision] - target_center;
+        let minimum = boxes[decision].height;
+        if stem >= minimum - 0.01 {
+            continue;
+        }
+        let mut connected = vec![false; boxes.len()];
+        connected[decision] = true;
+        loop {
+            let mut changed = false;
+            for equality in eq_y {
+                if connected[equality.a] && !connected[equality.b] {
+                    connected[equality.b] = true;
+                    changed = true;
+                }
+                if connected[equality.b] && !connected[equality.a] {
+                    connected[equality.a] = true;
+                    changed = true;
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
+        let anchor = connected.iter().position(|member| *member).unwrap();
+        let saved = preferred[anchor];
+        preferred[anchor] += minimum - stem;
+        if solve_axis(boxes.len(), eq_y, y, preferred).is_ok_and(|new_positions| {
+            new_positions[decision] - new_positions[target] - boxes[target].height / 2.0
+                >= minimum - 0.01
+        }) {
+            return true;
+        }
+        preferred[anchor] = saved; // Mandatory constraints leave no room to separate.
+    }
+    false
+}
+
 // Collision resolution can separate branch actions after their initial
 // positions were chosen. Recenter the free join on those final branch lanes.
 pub(super) fn recenter_joins(

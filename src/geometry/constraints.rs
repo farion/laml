@@ -425,6 +425,16 @@ pub fn place(
             if activity_preference::recenter_joins(diagram, boxes, &ys, &mut pref_y) {
                 continue;
             }
+            if activity_preference::separate_short_decision_stem(
+                diagram,
+                boxes,
+                &eq_y,
+                &y,
+                &ys,
+                &mut pref_y,
+            ) {
+                continue;
+            }
             for (i, node) in boxes.iter_mut().enumerate() {
                 node.x = xs[i];
                 node.y = ys[i];

@@ -214,6 +214,10 @@ fn parallel_activity_places_objects_in_lanes_without_diagonal_or_crossing_flows(
         (invalid[0].y - decision.y).abs() < 0.01,
         "invalid exits at the diamond top"
     );
+    assert!(
+        invalid[0].y - invalid[1].y >= decision.height - 0.01,
+        "auto-layout must move the decision's upstream chain to leave a gateway-high first segment"
+    );
     assert!((invalid[2].x - reject.x).abs() < 0.01);
     assert!(
         (invalid[2].y - reject.y - reject.height / 2.0).abs() < 0.01,
