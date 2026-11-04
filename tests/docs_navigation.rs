@@ -252,12 +252,13 @@ fn every_diagram_guide_starts_with_code_image_and_complete_source() {
                 .expect("missing dark image");
             assert_eq!(dark, light.replace("-modern.png", "-modern-dark.png"));
             for path in [light, dark] {
+                let file = path.split('?').next().unwrap();
                 assert!(
-                    root.join("docs/diagrams").join(path).is_file(),
+                    root.join("docs/diagrams").join(file).is_file(),
                     "{name}: missing {path}"
                 );
             }
-            let filename = Path::new(light)
+            let filename = Path::new(light.split('?').next().unwrap())
                 .file_stem()
                 .unwrap()
                 .to_str()

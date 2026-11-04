@@ -72,14 +72,32 @@ fn options_one(
                 x: pair[0].x + ux * distance,
                 y: pair[0].y + uy * distance,
             };
+            // The relation moves under the width of a horizontal label (or
+            // the height of a vertical one). Leave room for that slope, not
+            // just for a horizontal/vertical six-pixel gap.
+            let clearance = if horizontal {
+                6.0 + width / 2.0 * (uy / ux).abs()
+            } else {
+                6.0 + height / 2.0 * (ux / uy).abs()
+            };
             let (x, y) = if horizontal {
                 (
                     mid.x - width / 2.0,
-                    mid.y + if side < 0.0 { -height - 6.0 } else { 6.0 },
+                    mid.y
+                        + if side < 0.0 {
+                            -height - clearance
+                        } else {
+                            clearance
+                        },
                 )
             } else {
                 (
-                    mid.x + if side < 0.0 { -width - 6.0 } else { 6.0 },
+                    mid.x
+                        + if side < 0.0 {
+                            -width - clearance
+                        } else {
+                            clearance
+                        },
                     mid.y - height / 2.0,
                 )
             };

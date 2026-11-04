@@ -28,7 +28,9 @@ fn object_showcase_uses_straight_free_lanes_without_crossing_the_visitor_link() 
     let attachment = routes.last().unwrap();
     assert!(attachment.points.iter().all(|p| p.x > vertical[0].x));
     let first = link("cart", "itemA");
-    assert!(first.windows(2).all(|pair| {
-        (pair[0].x - pair[1].x).abs() < 1e-6 || (pair[0].y - pair[1].y).abs() < 1e-6
-    }));
+    assert_eq!(
+        first.len(),
+        2,
+        "firstItem must be a single straight segment: {first:?}"
+    );
 }

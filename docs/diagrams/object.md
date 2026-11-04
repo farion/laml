@@ -50,8 +50,8 @@ styling {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/showcase-object-modern-dark.png">
-  <img src="../images/showcase-object-modern.png" alt="Styled object diagram with instances and attached note">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/showcase-object-modern-dark.png?v=20261104-2">
+  <img src="../images/showcase-object-modern.png?v=20261104-2" alt="Styled object diagram with instances and attached note">
 </picture>
 
 [Complete source](../../examples/showcase-object.laml). Use named links to target individual styling or attach a note; scope styling with `node[ID]` and `relation[ID]`. Unlike class associations, object links do not carry multiplicities. For common placement and styling, see [GNE](gne.md); for instance forms, see the [language reference](../language-reference.md#class-and-object-diagrams).
