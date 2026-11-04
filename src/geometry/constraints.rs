@@ -1,10 +1,13 @@
+mod activity_preference;
 mod attachment_preference;
+mod soft;
 use super::nodes::BoxNode;
 use crate::styles::{Element, StyleSheet, Value};
 use crate::syntax::{
     Alignment, Axis, Diagram, FlowDirection, NodeKind, Placement, ScopedAlignment,
 };
 use crate::text::measure;
+use soft::try_soft;
 #[derive(Clone, Debug)]
 pub struct GeometryError {
     pub line: usize,
@@ -103,19 +106,6 @@ fn solve_axis(
     }
     Ok((0..count).map(|i| values[root[i]] + offset[i]).collect())
 }
-fn try_soft(
-    count: usize,
-    equal: &[Equality],
-    bounds: &mut Vec<Minimum>,
-    candidate: Minimum,
-    preferred: &[f64],
-) {
-    bounds.push(candidate);
-    if solve_axis(count, equal, bounds, preferred).is_err() {
-        bounds.pop();
-    }
-}
-
 pub fn place(
     diagram: &Diagram,
     boxes: &mut [BoxNode],
@@ -268,6 +258,9 @@ pub fn place(
             let relation = &diagram.relations[index];
             let a = owner(&relation.from);
             let b = owner(&relation.to);
+            if activity_preference::prefers_below(diagram, boxes, relation, a, b) {
+                continue;
+            }
             let distance = if matches!(
                 diagram.settings.direction,
                 FlowDirection::LeftToRight | FlowDirection::RightToLeft
@@ -373,6 +366,9 @@ pub fn place(
             }
         }
     }
+    activity_preference::apply(
+        diagram, boxes, &mut eq_x, &mut eq_y, &x, &mut y, &pref_x, &pref_y,
+    );
     // Compact interface symbols follow their provider's centre. Without this
     // soft equality, separating two symbols moves the symbol alone and tilts
     // its realization even though the provider has room to move with it.

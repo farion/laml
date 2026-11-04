@@ -24,8 +24,8 @@ mod self_loops;
 mod side_rules;
 use geometry::{center, member_port, port};
 use preferred::{
-    actor_side_detours, actor_usecase_straight, forced_port, horizontal_connection,
-    named_port_candidates, normal_at_port,
+    activity_control_entry, activity_object_to_input, actor_side_detours, actor_usecase_straight,
+    forced_port, horizontal_connection, named_port_candidates, normal_at_port,
 };
 pub use qualifiers::QualifierBox;
 pub use router::route;
@@ -155,6 +155,23 @@ fn candidates(
             .into_iter()
             .collect()
     };
+    if diagram.settings.diagram_type == crate::syntax::DiagramType::Activity
+        && source_side.is_none()
+        && target_side.is_none()
+    {
+        let relation = &diagram.relations[index];
+        if relation.activity_flow == Some(crate::syntax::ActivityFlow::Control)
+            && let Some(points) = activity_control_entry(a, b)
+        {
+            results.insert(0, points);
+        }
+        if relation.activity_flow == Some(crate::syntax::ActivityFlow::Object)
+            && let Some(member) = target_member
+            && let Some(points) = activity_object_to_input(a, b, member)
+        {
+            results.insert(0, points);
+        }
+    }
     if source_side.is_none()
         && target_side.is_none()
         && source_member.is_none()

@@ -4,6 +4,47 @@ use laml::{export, geometry::place, route::route, styles::load, svg::render};
 use std::path::Path;
 
 const ORDER: &str = include_str!("../examples/activity-order.laml");
+const BASIC: &str = include_str!("../examples/activity-basic.laml");
+
+#[test]
+fn basic_activity_places_control_spine_and_input_object_on_separate_rows() {
+    let diagram = parse(BASIC).unwrap();
+    let sheet = load(&diagram, Path::new("examples/activity-basic.laml")).unwrap();
+    let boxes = place(&diagram, &sheet).unwrap();
+    let get = |id| boxes.iter().find(|node| node.id == id).unwrap();
+    let (start, request, review, done) = (get("Start"), get("Request"), get("Review"), get("Done"));
+    assert!(start.x + start.width < review.x);
+    assert!(review.x + review.width < done.x);
+    assert!((request.x + request.width / 2.0 - review.x - review.width / 2.0).abs() < 0.01);
+    assert!(request.y >= review.y + review.height + 20.0);
+    let routes = route(&diagram, &boxes, &sheet).unwrap();
+    let get_route = |from: &str, to: &str| {
+        &routes[diagram
+            .relations
+            .iter()
+            .position(|r| r.from == from && r.to == to)
+            .unwrap()]
+    };
+    let enter = get_route("Start", "Review");
+    let leave = get_route("Review", "Done");
+    assert_eq!(
+        enter.points.len(),
+        2,
+        "initial control should enter directly from the left"
+    );
+    assert_eq!(
+        leave.points.len(),
+        2,
+        "final control should leave directly to the right"
+    );
+    assert!((enter.points[0].y - enter.points[1].y).abs() < 0.01);
+    assert!((enter.points[1].x - review.x).abs() < 0.01);
+    assert!((leave.points[0].y - leave.points[1].y).abs() < 0.01);
+    let object = get_route("Request", "Review::request");
+    assert_eq!(object.points.len(), 4);
+    assert!(object.points[1].x < review.x - 12.0);
+    assert!((object.points[2].y - object.points[3].y).abs() < 0.01);
+}
 
 fn source(body: &str) -> String {
     format!("settings {{\ntype: activity\n}}\nsemantics {{\n{body}\n}}\n")

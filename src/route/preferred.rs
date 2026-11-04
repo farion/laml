@@ -241,6 +241,52 @@ pub(super) fn actor_side_detours(a: &BoxNode, b: &BoxNode, boxes: &[BoxNode]) ->
     options
 }
 
+pub(super) fn activity_control_entry(a: &BoxNode, b: &BoxNode) -> Option<Vec<Point>> {
+    use crate::syntax::{ActivityPinDirection, NodeKind};
+    if a.kind != NodeKind::ActivityInitial
+        || b.kind != NodeKind::ActivityAction
+        || !b
+            .ports
+            .iter()
+            .any(|p| p.activity_pin == Some(ActivityPinDirection::Input))
+        || a.x + a.width >= b.x
+    {
+        return None;
+    }
+    let y = b.y + b.radius + 2.0;
+    let start = forced_port(a, PortSide::Right);
+    ((start.y - y).abs() < 1e-4).then_some(vec![start, Point { x: b.x, y }])
+}
+
+pub(super) fn activity_object_to_input(
+    a: &BoxNode,
+    b: &BoxNode,
+    member: &str,
+) -> Option<Vec<Point>> {
+    use crate::syntax::{ActivityPinDirection, NodeKind};
+    if a.kind != NodeKind::ActivityObject
+        || b.kind != NodeKind::ActivityAction
+        || a.y < b.y + b.height + 8.0
+    {
+        return None;
+    }
+    let pin = b
+        .ports
+        .iter()
+        .find(|p| p.id == member && p.activity_pin == Some(ActivityPinDirection::Input))?;
+    let start = Point {
+        x: a.x,
+        y: a.y + a.height / 2.0,
+    };
+    let x = a.x.min(b.x) - 24.0;
+    Some(vec![
+        start,
+        Point { x, y: start.y },
+        Point { x, y: pin.y },
+        Point { x: pin.x, y: pin.y },
+    ])
+}
+
 pub(super) fn named_port_candidates(
     a: &BoxNode,
     b: &BoxNode,
