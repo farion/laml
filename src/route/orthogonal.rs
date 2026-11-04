@@ -1,5 +1,5 @@
 //! Axis-aligned connector candidates. Feasibility and label checks remain in the router.
-use super::{Point, preferred::forced_port};
+use super::{Point, Route, preferred::forced_port};
 use crate::geometry::{BoxNode, NodeShape};
 use crate::syntax::PortSide;
 
@@ -85,6 +85,7 @@ pub(super) fn candidates(
     target_member: Option<&str>,
     source_side: Option<PortSide>,
     target_side: Option<PortSide>,
+    previous: &[Route],
 ) -> Vec<Vec<Point>> {
     let mut result = Vec::new();
     let ca = super::geometry::center(a);
@@ -109,6 +110,18 @@ pub(super) fn candidates(
     };
     let from = endpoints(a, source_member, source_side, source_primary);
     let to = endpoints(b, target_member, target_side, target_primary);
+    let outer_x = previous
+        .iter()
+        .flat_map(|route| route.points.iter().map(|p| p.x))
+        .fold((f64::INFINITY, f64::NEG_INFINITY), |(lo, hi), x| {
+            (lo.min(x), hi.max(x))
+        });
+    let outer_y = previous
+        .iter()
+        .flat_map(|route| route.points.iter().map(|p| p.y))
+        .fold((f64::INFINITY, f64::NEG_INFINITY), |(lo, hi), y| {
+            (lo.min(y), hi.max(y))
+        });
     for start in from {
         for &end in &to {
             if (start.x - end.x).abs() < 0.01 || (start.y - end.y).abs() < 0.01 {
@@ -157,6 +170,33 @@ pub(super) fn candidates(
                 },
                 end,
             ]);
+            // A route that shares a source with an earlier connection may need
+            // to pass outside that connection before returning to its target.
+            // The node-only tracks cannot clear a long existing route.
+            if outer_x.0.is_finite() {
+                for track in [outer_x.0 - 64.0, outer_x.1 + 64.0] {
+                    result.push(vec![
+                        start,
+                        Point {
+                            x: track,
+                            y: start.y,
+                        },
+                        Point { x: track, y: end.y },
+                        end,
+                    ]);
+                }
+                for track in [outer_y.0 - 64.0, outer_y.1 + 64.0] {
+                    result.push(vec![
+                        start,
+                        Point {
+                            x: start.x,
+                            y: track,
+                        },
+                        Point { x: end.x, y: track },
+                        end,
+                    ]);
+                }
+            }
             for node in [a, b] {
                 for track in [node.x - 24.0, node.x + node.width + 24.0] {
                     result.push(vec![
@@ -190,4 +230,31 @@ pub(super) fn axis_aligned(points: &[Point]) -> bool {
     points
         .windows(2)
         .all(|p| (p[0].x - p[1].x).abs() < 1e-4 || (p[0].y - p[1].y).abs() < 1e-4)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{geometry::place, parser::parse, styles::StyleSheet};
+
+    #[test]
+    fn offers_a_corridor_beyond_an_existing_long_route() {
+        let diagram = parse(
+            "semantics {\nA\nB\nC\nA -> B\n}\nlayout {\nA < B : align=center; gap=180\nB above C : gap=80\n}\n",
+        )
+        .unwrap();
+        let sheet = StyleSheet::default();
+        let boxes = place(&diagram, &sheet).unwrap();
+        let previous = super::super::route(&diagram, &boxes, &sheet).unwrap();
+        let outer_x = previous[0]
+            .points
+            .iter()
+            .map(|point| point.x)
+            .fold(f64::NEG_INFINITY, f64::max)
+            + 64.0;
+        let options = candidates(&boxes[0], &boxes[2], None, None, None, None, &previous);
+        assert!(options.iter().any(|path| {
+            axis_aligned(path) && path.iter().any(|point| (point.x - outer_x).abs() < 1e-6)
+        }));
+    }
 }

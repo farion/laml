@@ -107,6 +107,19 @@ pub(super) fn visibly_clear(routes: &[Route], boxes: &[BoxNode]) -> bool {
         .all(|route| border_hugs(&route.points, boxes, route.from, route.to) == 0)
 }
 
+/// A successful stable route can already pass close to an unrelated outline.
+/// Optimizing another connection need not discard it, but must not add hugs.
+pub(super) fn no_worse_clearance(
+    candidate: &[Route],
+    baseline: &[Route],
+    boxes: &[BoxNode],
+) -> bool {
+    candidate.iter().zip(baseline).all(|(new, old)| {
+        border_hugs(&new.points, boxes, new.from, new.to)
+            <= border_hugs(&old.points, boxes, old.from, old.to)
+    })
+}
+
 pub(super) fn order(
     options: &mut [Vec<Point>],
     routed: &[Route],

@@ -60,8 +60,10 @@ pub fn route(
             return Err(failure);
         }
     };
-    if let Ok(ranked) = route_pass(diagram, boxes, sheet, Some(usize::MAX))
-        && ranking::visibly_clear(&ranked, boxes)
+    let fully_ranked = route_pass(diagram, boxes, sheet, Some(usize::MAX));
+    let fully_ranked_failed = fully_ranked.is_err();
+    if let Ok(ranked) = fully_ranked
+        && ranking::no_worse_clearance(&ranked, &stable, boxes)
         && diagram.relations.iter().enumerate().all(|(i, relation)| {
             relation.from != relation.to || ranked[i].points == stable[i].points
         })
@@ -72,6 +74,25 @@ pub fn route(
         })
     {
         return Ok(ranked);
+    }
+    // Ranking every edge can make a later edge impossible even though ranking
+    // only the first few edges improves a needlessly long stable route.
+    if fully_ranked_failed {
+        for cutoff in 0..diagram.relations.len().min(3) {
+            if let Ok(candidate) = route_pass(diagram, boxes, sheet, Some(cutoff))
+                && ranking::no_worse_clearance(&candidate, &stable, boxes)
+                && diagram.relations.iter().enumerate().all(|(i, relation)| {
+                    relation.from != relation.to || candidate[i].points == stable[i].points
+                })
+                && (if diagram.settings.allow_diagonal {
+                    ranking::better_than(&candidate, &stable)
+                } else {
+                    ranking::better_than_orthogonal(&candidate, &stable)
+                })
+            {
+                return Ok(candidate);
+            }
+        }
     }
     Ok(stable)
 }

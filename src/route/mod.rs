@@ -280,6 +280,7 @@ fn candidates(
             target_member,
             source_side,
             target_side,
+            previous,
         ));
     }
     results.extend(
