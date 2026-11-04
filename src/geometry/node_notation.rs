@@ -248,7 +248,6 @@ pub(super) fn corner_radius(
                     | NodeKind::ActivityObject
                     | NodeKind::UseCase
                     | NodeKind::UseCaseActor
-                    | NodeKind::UseCaseSystem
                     | NodeKind::DeploymentNode
                     | NodeKind::Device
                     | NodeKind::ExecutionEnvironment
@@ -269,11 +268,7 @@ pub(super) fn corner_radius(
     if kind == NodeKind::ActivityObject && radius != 0.0 {
         return Err("UML object node must remain rectangular".into());
     }
-    if matches!(
-        kind,
-        NodeKind::UseCase | NodeKind::UseCaseActor | NodeKind::UseCaseSystem
-    ) && radius != 0.0
-    {
+    if matches!(kind, NodeKind::UseCase | NodeKind::UseCaseActor) && radius != 0.0 {
         return Err("UML use-case notation does not allow a custom corner radius".into());
     }
     Ok(radius)

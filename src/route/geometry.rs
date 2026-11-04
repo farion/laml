@@ -70,12 +70,13 @@ pub(super) fn port(node: &BoxNode, towards: Point) -> Point {
     let c = center(node);
     if node.kind == crate::syntax::NodeKind::UseCaseActor {
         return Point {
-            x: if towards.x >= c.x {
-                node.x + node.width
-            } else {
-                node.x
-            },
-            y: node.y + 47.0,
+            x: c.x
+                + if towards.x >= c.x {
+                    crate::geometry::usecase::ARM_HALF
+                } else {
+                    -crate::geometry::usecase::ARM_HALF
+                },
+            y: node.y + crate::geometry::usecase::ARM_Y,
         };
     }
     let dx = towards.x - c.x;
@@ -105,6 +106,22 @@ pub(super) fn port(node: &BoxNode, towards: Point) -> Point {
     }
 }
 pub(super) fn intersection(a: Point, b: Point, node: &BoxNode) -> bool {
+    if node.kind == crate::syntax::NodeKind::UseCaseActor {
+        let x = node.x + node.width / 2.0;
+        let arm = crate::geometry::usecase::ARM_HALF;
+        let feet = crate::geometry::usecase::FOOT_Y;
+        // The caption can be wider than the figure. Its empty side margins must
+        // not force a line starting at a visible hand to bend around a box.
+        return segment_hits_rect(a, b, x - arm, node.y + 4.0, arm * 2.0, feet - 3.0)
+            || segment_hits_rect(
+                a,
+                b,
+                node.x,
+                node.y + feet + 7.0,
+                node.width,
+                (node.height - feet - 7.0).max(0.0),
+            );
+    }
     if node.kind == crate::syntax::NodeKind::Package && !node.c4_boundary {
         return super::package_outline::intersects(a, b, node);
     }

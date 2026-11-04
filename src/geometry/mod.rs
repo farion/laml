@@ -13,7 +13,7 @@ mod nodes;
 pub(crate) mod package_outline;
 mod port_contours;
 mod ports;
-mod usecase;
+pub(crate) mod usecase;
 mod visibility;
 
 pub use constraints::GeometryError;

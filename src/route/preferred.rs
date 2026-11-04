@@ -29,7 +29,7 @@ pub(super) fn forced_port(node: &BoxNode, side: PortSide) -> Point {
     port(node, towards)
 }
 
-// Prefer a horizontal stroke when generic or package boxes overlap in Y.
+// Prefer a horizontal stroke when compatible visible contours overlap in Y.
 // A diagonal centre-to-centre line is not the only straight route between them.
 pub(super) fn horizontal_connection(a: &BoxNode, b: &BoxNode) -> Option<Vec<Point>> {
     let horizontal_box = |node: &BoxNode| {
@@ -40,7 +40,17 @@ pub(super) fn horizontal_connection(a: &BoxNode, b: &BoxNode) -> Option<Vec<Poin
                 | crate::syntax::NodeKind::Object
         ) && node.shape != NodeShape::Note
     };
-    if !horizontal_box(a) || !horizontal_box(b) {
+    let actor_usecase = matches!(
+        (a.kind, b.kind),
+        (
+            crate::syntax::NodeKind::UseCaseActor,
+            crate::syntax::NodeKind::UseCase
+        ) | (
+            crate::syntax::NodeKind::UseCase,
+            crate::syntax::NodeKind::UseCaseActor
+        )
+    );
+    if !actor_usecase && (!horizontal_box(a) || !horizontal_box(b)) {
         return None;
     }
     let (left, right, reverse) = if a.x + a.width < b.x {
@@ -59,14 +69,45 @@ pub(super) fn horizontal_connection(a: &BoxNode, b: &BoxNode) -> Option<Vec<Poin
             node.y + 4.0
         }
     };
-    let top = solid_top(left).max(solid_top(right));
-    let bottom = (left.y + left.height - 4.0).min(right.y + right.height - 4.0);
-    if top > bottom {
+    let (top, bottom, y) = if actor_usecase {
+        let actor = if left.kind == crate::syntax::NodeKind::UseCaseActor {
+            left
+        } else {
+            right
+        };
+        let usecase = if left.kind == crate::syntax::NodeKind::UseCase {
+            left
+        } else {
+            right
+        };
+        let y = actor.y + crate::geometry::usecase::ARM_Y;
+        (usecase.y + 4.0, usecase.y + usecase.height - 4.0, y)
+    } else {
+        let top = solid_top(left).max(solid_top(right));
+        let bottom = (left.y + left.height - 4.0).min(right.y + right.height - 4.0);
+        (top, bottom, center(left).y)
+    };
+    if y < top || y > bottom {
         return None;
     }
-    let y = center(left).y.clamp(top, bottom);
+    let y = if actor_usecase {
+        y
+    } else {
+        y.clamp(top, bottom)
+    };
     let contour = |node: &BoxNode, right_side: bool| {
         let center = center(node);
+        if node.kind == crate::syntax::NodeKind::UseCaseActor {
+            return Point {
+                x: center.x
+                    + if right_side {
+                        crate::geometry::usecase::ARM_HALF
+                    } else {
+                        -crate::geometry::usecase::ARM_HALF
+                    },
+                y,
+            };
+        }
         let ry = node.height / 2.0;
         let ratio = ((y - center.y) / ry).abs();
         let width = match node.shape {
@@ -81,6 +122,23 @@ pub(super) fn horizontal_connection(a: &BoxNode, b: &BoxNode) -> Option<Vec<Poin
         }
     };
     let points = vec![contour(left, true), contour(right, false)];
+    Some(if reverse {
+        points.into_iter().rev().collect()
+    } else {
+        points
+    })
+}
+
+// The actor's hand is not its box center. Aim the use-case ellipse at that
+// actual hand, so a fallback is still one straight segment, not a stub.
+pub(super) fn actor_usecase_straight(a: &BoxNode, b: &BoxNode) -> Option<Vec<Point>> {
+    let (actor, usecase, reverse) = match (a.kind, b.kind) {
+        (crate::syntax::NodeKind::UseCaseActor, crate::syntax::NodeKind::UseCase) => (a, b, false),
+        (crate::syntax::NodeKind::UseCase, crate::syntax::NodeKind::UseCaseActor) => (b, a, true),
+        _ => return None,
+    };
+    let hand = port(actor, center(usecase));
+    let points = vec![hand, port(usecase, hand)];
     Some(if reverse {
         points.into_iter().rev().collect()
     } else {

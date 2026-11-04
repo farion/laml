@@ -23,7 +23,10 @@ mod router;
 mod self_loops;
 mod side_rules;
 use geometry::{center, member_port, port};
-use preferred::{forced_port, horizontal_connection, named_port_candidates, normal_at_port};
+use preferred::{
+    actor_usecase_straight, forced_port, horizontal_connection, named_port_candidates,
+    normal_at_port,
+};
 pub use qualifiers::QualifierBox;
 pub use router::route;
 
@@ -152,6 +155,14 @@ fn candidates(
             .into_iter()
             .collect()
     };
+    if source_side.is_none()
+        && target_side.is_none()
+        && source_member.is_none()
+        && target_member.is_none()
+        && let Some(points) = actor_usecase_straight(a, b)
+    {
+        results.push(points);
+    }
     if diagram.settings.diagram_type == crate::syntax::DiagramType::Class
         && source_side.is_none()
         && target_side.is_none()
