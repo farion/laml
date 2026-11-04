@@ -20,7 +20,12 @@ fn compact_radius(node: &BoxNode) -> Option<f64> {
 pub(super) fn center(node: &BoxNode) -> Point {
     Point {
         x: node.x + compact_radius(node).unwrap_or(node.width / 2.0),
-        y: node.y + node.height / 2.0,
+        y: node.y
+            + if node.kind == crate::syntax::NodeKind::UseCaseActor {
+                crate::geometry::usecase::FIGURE_CENTER_Y
+            } else {
+                node.height / 2.0
+            },
     }
 }
 pub(super) fn member_port(node: &BoxNode, member: &str, towards: Point) -> Option<Point> {
@@ -68,25 +73,22 @@ pub(super) fn port(node: &BoxNode, towards: Point) -> Point {
         return hit;
     }
     let c = center(node);
-    if node.kind == crate::syntax::NodeKind::UseCaseActor {
-        return Point {
-            x: c.x
-                + if towards.x >= c.x {
-                    crate::geometry::usecase::ARM_HALF
-                } else {
-                    -crate::geometry::usecase::ARM_HALF
-                },
-            y: node.y + crate::geometry::usecase::ARM_Y,
-        };
-    }
     let dx = towards.x - c.x;
     let dy = towards.y - c.y;
-    let (rx, ry) = if let Some(radius) = compact_radius(node) {
+    let (rx, ry) = if node.kind == crate::syntax::NodeKind::UseCaseActor {
+        (
+            crate::geometry::usecase::DOCK_RX,
+            crate::geometry::usecase::DOCK_RY,
+        )
+    } else if let Some(radius) = compact_radius(node) {
         (radius, radius)
     } else {
         ((node.width / 2.0).max(1e-9), (node.height / 2.0).max(1e-9))
     };
     let scale = match node.shape {
+        _ if node.kind == crate::syntax::NodeKind::UseCaseActor => {
+            ((dx / rx).powi(2) + (dy / ry).powi(2)).sqrt()
+        }
         NodeShape::Rectangle | NodeShape::Note => (dx.abs() / rx).max(dy.abs() / ry),
         NodeShape::Ellipse => ((dx / rx).powi(2) + (dy / ry).powi(2)).sqrt(),
         NodeShape::Diamond => dx.abs() / rx + dy.abs() / ry,
@@ -105,22 +107,37 @@ pub(super) fn port(node: &BoxNode, towards: Point) -> Point {
         y: c.y + dy * t,
     }
 }
+fn ellipse_intersection(a: Point, b: Point, c: Point, rx: f64, ry: f64) -> bool {
+    let (ax, ay) = ((a.x - c.x) / rx, (a.y - c.y) / ry);
+    let (dx, dy) = ((b.x - a.x) / rx, (b.y - a.y) / ry);
+    let denominator = dx * dx + dy * dy;
+    let t = if denominator < 1e-12 {
+        0.0
+    } else {
+        (-(ax * dx + ay * dy) / denominator).clamp(0.0, 1.0)
+    };
+    (ax + t * dx).powi(2) + (ay + t * dy).powi(2) < 1.0 - 1e-5
+}
+
 pub(super) fn intersection(a: Point, b: Point, node: &BoxNode) -> bool {
     if node.kind == crate::syntax::NodeKind::UseCaseActor {
-        let x = node.x + node.width / 2.0;
-        let arm = crate::geometry::usecase::ARM_HALF;
         let feet = crate::geometry::usecase::FOOT_Y;
-        // The caption can be wider than the figure. Its empty side margins must
-        // not force a line starting at a visible hand to bend around a box.
-        return segment_hits_rect(a, b, x - arm, node.y + 4.0, arm * 2.0, feet - 3.0)
-            || segment_hits_rect(
-                a,
-                b,
-                node.x,
-                node.y + feet + 7.0,
-                node.width,
-                (node.height - feet - 7.0).max(0.0),
-            );
+        // Both docking and collision use the same invisible ellipse; the
+        // caption remains a separate obstacle below the figure.
+        return ellipse_intersection(
+            a,
+            b,
+            center(node),
+            crate::geometry::usecase::DOCK_RX,
+            crate::geometry::usecase::DOCK_RY,
+        ) || segment_hits_rect(
+            a,
+            b,
+            node.x,
+            node.y + feet + 7.0,
+            node.width,
+            (node.height - feet - 7.0).max(0.0),
+        );
     }
     if node.kind == crate::syntax::NodeKind::Package && !node.c4_boundary {
         return super::package_outline::intersects(a, b, node);
@@ -145,15 +162,7 @@ pub(super) fn intersection(a: Point, b: Point, node: &BoxNode) -> bool {
             {
                 return true;
             }
-            let (ax, ay) = ((a.x - c.x) / rx, (a.y - c.y) / ry);
-            let (dx, dy) = ((b.x - a.x) / rx, (b.y - a.y) / ry);
-            let denominator = dx * dx + dy * dy;
-            let t = if denominator < 1e-12 {
-                0.0
-            } else {
-                (-(ax * dx + ay * dy) / denominator).clamp(0.0, 1.0)
-            };
-            return (ax + t * dx).powi(2) + (ay + t * dy).powi(2) < 1.0 - 1e-5;
+            return ellipse_intersection(a, b, c, rx, ry);
         }
         NodeShape::Diamond => {
             if compact_radius(node).is_some()

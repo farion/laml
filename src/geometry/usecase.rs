@@ -11,6 +11,10 @@ pub(crate) const ARM_Y: f64 = 34.0;
 pub(crate) const HIP_Y: f64 = 60.0;
 pub(crate) const FOOT_Y: f64 = 91.0;
 pub(crate) const FOOT_OFFSET: f64 = 24.0;
+// Invisible docking contour around the figure, not around its caption.
+pub(crate) const FIGURE_CENTER_Y: f64 = 47.5;
+pub(crate) const DOCK_RX: f64 = 50.0;
+pub(crate) const DOCK_RY: f64 = 50.0;
 
 pub(super) fn actor(node: &NodeDecl, sheet: &StyleSheet) -> Result<BoxNode, String> {
     if sheet
@@ -26,6 +30,9 @@ pub(super) fn actor(node: &NodeDecl, sheet: &StyleSheet) -> Result<BoxNode, Stri
         return Err("actor stick figure has no fillable box".into());
     }
     let mut shape = nodes::measure_node(node, sheet, DiagramType::UseCase, &[])?;
+    if shape.width < DOCK_RX * 2.0 {
+        return Err("actor width cannot fit the figure's connection contour".into());
+    }
     if shape.border_color == "none" || shape.border_width == 0.0 {
         return Err("actor stick figure requires a visible outline".into());
     }

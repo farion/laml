@@ -21,8 +21,10 @@ fn quickstart_draws_straight_association_from_proportional_actor_to_ellipse() {
         "simple associations must be straight"
     );
     let start = routes[0].points[0];
-    assert!((start.x - actor.x - actor.width / 2.0 - 26.0).abs() < 0.01);
-    assert!((start.y - actor.y - 34.0).abs() < 0.01);
+    assert!((start.x - actor.x - actor.width / 2.0 - 50.0).abs() < 0.01);
+    assert!((start.y - actor.y - 47.5).abs() < 0.01);
+    assert!(start.x > actor.x + actor.width / 2.0 + 26.0);
+    // The route starts at the invisible contour, not at the actor's arm.
     assert!((routes[0].points[1].y - start.y).abs() < 0.01);
     assert_eq!(system.radius, 8.0);
     let svg = render(&boxes, &routes).unwrap();
@@ -48,6 +50,9 @@ fn quickstart_draws_straight_association_from_proportional_actor_to_ellipse() {
     assert_eq!(34.0 - (15.0 + 11.0), 8.0);
     assert_eq!(60.0 - 34.0, 26.0);
     assert!(((91.0 - 34.0) / (91.0 - 4.0) - 2.0 / 3.0_f64).abs() < 0.02);
+    for (x, y) in [(11.0_f64, 4.0_f64), (26.0, 34.0), (24.0, 91.0)] {
+        assert!((x / 50.0).powi(2) + ((y - 47.5) / 50.0).powi(2) < 1.0);
+    }
 }
 
 fn source(body: &str) -> String {

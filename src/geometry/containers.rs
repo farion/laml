@@ -174,7 +174,7 @@ fn relation_alignments(
             let center = |node: &BoxNode| node.y + node.height / 2.0;
             let anchor = |node: &BoxNode| {
                 if actor_usecase && node.kind == NodeKind::UseCaseActor {
-                    node.y + super::usecase::ARM_Y
+                    node.y + super::usecase::FIGURE_CENTER_Y
                 } else {
                     center(node)
                 }

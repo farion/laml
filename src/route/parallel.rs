@@ -58,7 +58,7 @@ pub(super) fn offset(
     Ok((rank as f64 - (siblings.len() - 1) as f64 / 2.0) * step)
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Face {
     Left,
     Right,
@@ -67,6 +67,21 @@ enum Face {
 }
 
 fn face(node: &BoxNode, point: Point) -> Option<Face> {
+    if node.kind == crate::syntax::NodeKind::UseCaseActor {
+        let c = super::center(node);
+        let rx = crate::geometry::usecase::DOCK_RX;
+        let ry = crate::geometry::usecase::DOCK_RY;
+        let on_contour = ((point.x - c.x) / rx).powi(2) + ((point.y - c.y) / ry).powi(2);
+        return if (on_contour - 1.0).abs() < 1e-5 {
+            Some(if point.x < c.x {
+                Face::Left
+            } else {
+                Face::Right
+            })
+        } else {
+            None
+        };
+    }
     if (point.x - node.x).abs() < 1e-5 {
         Some(Face::Left)
     } else if (point.x - node.x - node.width).abs() < 1e-5 {
@@ -138,6 +153,21 @@ pub(super) fn shift_port(node: &BoxNode, point: Point, offset: f64) -> Option<Po
     if offset.abs() < 1e-9 {
         return Some(point);
     }
+    if node.kind == crate::syntax::NodeKind::UseCaseActor {
+        let c = super::center(node);
+        let ry = crate::geometry::usecase::DOCK_RY;
+        let y = point.y + offset;
+        if (y - c.y).abs() >= ry - 6.0 {
+            return None;
+        }
+        return Some(Point {
+            x: c.x
+                + (point.x - c.x).signum()
+                    * crate::geometry::usecase::DOCK_RX
+                    * (1.0 - ((y - c.y) / ry).powi(2)).sqrt(),
+            y,
+        });
+    }
     let vertical_side =
         (point.x - node.x).abs() < 1e-5 || (point.x - (node.x + node.width)).abs() < 1e-5;
     if vertical_side {
@@ -165,6 +195,26 @@ mod tests {
     use super::*;
     use crate::geometry::place;
     use crate::parser::parse;
+    #[test]
+    fn parallel_actor_anchors_remain_on_the_invisible_ellipse() {
+        let diagram = parse(include_str!("../../examples/usecase-quickstart.laml")).unwrap();
+        let boxes = place(&diagram, &StyleSheet::default()).unwrap();
+        let actor = boxes.iter().find(|node| node.id == "Customer").unwrap();
+        let c = super::center(actor);
+        let point = super::port(
+            actor,
+            Point {
+                x: c.x + 500.0,
+                y: c.y,
+            },
+        );
+        assert_eq!(face(actor, point), Some(Face::Right));
+        let shifted = shift_port(actor, point, 12.0).unwrap();
+        assert_eq!(face(actor, shifted), Some(Face::Right));
+        assert!(shifted.x < point.x);
+        assert!((shifted.y - point.y - 12.0).abs() < 1e-6);
+    }
+
     #[test]
     fn two_parallel_relations_get_different_source_order_lanes() {
         let diagram = parse("semantics {\nA\nB\nA -> B\nB -> A\n}\n").unwrap();

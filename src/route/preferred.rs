@@ -80,7 +80,7 @@ pub(super) fn horizontal_connection(a: &BoxNode, b: &BoxNode) -> Option<Vec<Poin
         } else {
             right
         };
-        let y = actor.y + crate::geometry::usecase::ARM_Y;
+        let y = actor.y + crate::geometry::usecase::FIGURE_CENTER_Y;
         (usecase.y + 4.0, usecase.y + usecase.height - 4.0, y)
     } else {
         let top = solid_top(left).max(solid_top(right));
@@ -101,9 +101,9 @@ pub(super) fn horizontal_connection(a: &BoxNode, b: &BoxNode) -> Option<Vec<Poin
             return Point {
                 x: center.x
                     + if right_side {
-                        crate::geometry::usecase::ARM_HALF
+                        crate::geometry::usecase::DOCK_RX
                     } else {
-                        -crate::geometry::usecase::ARM_HALF
+                        -crate::geometry::usecase::DOCK_RX
                     },
                 y,
             };
