@@ -39,8 +39,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/usecase-order-modern-dark.png">
-  <img src="../images/usecase-order-modern.png" alt="Included payment, optional discount and actor generalization">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/usecase-order-modern-dark.png?v=ea7813c">
+  <img src="../images/usecase-order-modern.png?v=ea7813c" alt="Included payment, optional discount and actor generalization">
 </picture>
 
 [Complete source](../../examples/usecase-order.laml).

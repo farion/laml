@@ -39,8 +39,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/profile-audit-modern-dark.png">
-  <img src="../images/profile-audit-modern.png" alt="Profile, metaclass reference and application to a package">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/profile-audit-modern-dark.png?v=ea7813c">
+  <img src="../images/profile-audit-modern.png?v=ea7813c" alt="Profile, metaclass reference and application to a package">
 </picture>
 
 [Complete source](../../examples/profile-audit.laml).

@@ -135,8 +135,8 @@ class StringRepository
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/class-binding-modern-dark.png">
-  <img src="../images/class-binding-modern.png" alt="Template binding">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/class-binding-modern-dark.png?v=ea7813c">
+  <img src="../images/class-binding-modern.png?v=ea7813c" alt="Template binding">
 </picture>
 
 [Complete binding source](../../examples/class-binding.laml). A named `association` can join three classifiers:
@@ -150,8 +150,8 @@ Medikament -- Verordnet
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/class-nary-modern-dark.png">
-  <img src="../images/class-nary-modern.png" alt="Three-arm association">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/class-nary-modern-dark.png?v=ea7813c">
+  <img src="../images/class-nary-modern.png?v=ea7813c" alt="Three-arm association">
 </picture>
 
 [Complete association source](../../examples/class-nary.laml). An unpositioned n-ary diamond aligns with the middle participant; its arms prefer horizontal and vertical runs over diagonals. Explicit layout rules still take precedence.

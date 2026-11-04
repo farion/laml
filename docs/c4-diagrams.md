@@ -9,18 +9,18 @@ These four buildable examples demonstrate the C4 visual vocabulary: named scope 
 [Context source](../examples/c4-banking-context.laml) · [Container source](../examples/c4-banking-container.laml) · [Component source](../examples/c4-banking-component.laml) · [Code source](../examples/c4-banking-code.laml)
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/c4-banking-context-modern-dark.png">
-  <img src="images/c4-banking-context-modern.png" alt="C4 banking context with customer, online banking, core banking and email provider">
+  <source media="(prefers-color-scheme: dark)" srcset="images/c4-banking-context-modern-dark.png?v=ea7813c">
+  <img src="images/c4-banking-context-modern.png?v=ea7813c" alt="C4 banking context with customer, online banking, core banking and email provider">
 </picture>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/c4-banking-container-modern-dark.png">
-  <img src="images/c4-banking-container-modern.png" alt="C4 banking container diagram showing a person, browser UI, backend, data stores and two external systems">
+  <source media="(prefers-color-scheme: dark)" srcset="images/c4-banking-container-modern-dark.png?v=ea7813c">
+  <img src="images/c4-banking-container-modern.png?v=ea7813c" alt="C4 banking container diagram showing a person, browser UI, backend, data stores and two external systems">
 </picture>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/c4-banking-component-modern-dark.png">
-  <img src="images/c4-banking-component-modern.png" alt="C4 banking component diagram showing backend APIs, components and connected systems">
+  <source media="(prefers-color-scheme: dark)" srcset="images/c4-banking-component-modern-dark.png?v=ea7813c">
+  <img src="images/c4-banking-component-modern.png?v=ea7813c" alt="C4 banking component diagram showing backend APIs, components and connected systems">
 </picture>
 
 <picture>
@@ -61,22 +61,22 @@ The scoped software system is a box; people and directly connected external syst
 
 ## Container
 
-[Complete source](../examples/c4-container.laml) · [Rendered image](images/c4-container-modern.png)
+[Complete source](../examples/c4-container.laml) · [Rendered image](images/c4-container-modern.png?v=ea7813c)
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/c4-container-modern-dark.png">
-  <img src="images/c4-container-modern.png" alt="C4 container view with a web app, API and database">
+  <source media="(prefers-color-scheme: dark)" srcset="images/c4-container-modern-dark.png?v=ea7813c">
+  <img src="images/c4-container-modern.png?v=ea7813c" alt="C4 container view with a web app, API and database">
 </picture>
 
 `scope: Shop` identifies the single `system Shop(...) { ... }` boundary. The block contains `container` declarations, each with a required `technology` and `description`. People and external systems remain outside it. Relations can use qualified endpoints such as `Shop.Web` and `Shop.API`. The named edge `@submit(technology="HTTPS") Shop.Web -> Shop.API : Sends order` shows the protocol visibly as `Sends order (HTTPS)`.
 
 ## Component
 
-[Complete source](../examples/c4-component.laml) · [Rendered image](images/c4-component-modern.png)
+[Complete source](../examples/c4-component.laml) · [Rendered image](images/c4-component-modern.png?v=ea7813c)
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/c4-component-modern-dark.png">
-  <img src="images/c4-component-modern.png" alt="C4 component view of the order API">
+  <source media="(prefers-color-scheme: dark)" srcset="images/c4-component-modern-dark.png?v=ea7813c">
+  <img src="images/c4-component-modern.png?v=ea7813c" alt="C4 component view of the order API">
 </picture>
 
 `scope: API` selects one `container API(...) { ... }` boundary containing `component` declarations. You may optionally enclose it and its peer containers in one `system Name { ... }` boundary, as in the banking example; the scope remains the container ID, and references use the full path (`Banking.Backend.SignIn`). Each component has a description and technology. Peer containers, people and external systems may be shown as supporting elements. C4 components carry their description and technology in this view.

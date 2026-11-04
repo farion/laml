@@ -184,7 +184,10 @@ fn user_guide_links_resolve_locally() {
                 continue;
             }
             let (target, anchor) = link.split_once('#').unwrap_or((link, ""));
-            let target = page.parent().unwrap().join(target);
+            let target = page
+                .parent()
+                .unwrap()
+                .join(target.split('?').next().unwrap());
             assert!(
                 target.is_file(),
                 "{}: missing target {link}",
@@ -224,7 +227,7 @@ fn every_diagram_guide_starts_with_code_image_and_complete_source() {
             .split_once("<img src=\"")
             .and_then(|(_, tail)| tail.split('"').next())
             .unwrap();
-        let filename = Path::new(first_image)
+        let filename = Path::new(first_image.split('?').next().unwrap())
             .file_stem()
             .unwrap()
             .to_str()

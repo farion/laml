@@ -30,8 +30,8 @@ These six diagrams share the same semantics and layout and use theme-default col
 | Style | Light | Dark |
 |---|---|---|
 | Plain | ![Plain](images/theme-plain.png) | ![Plain dark](images/theme-plain-dark.png) |
-| Modern | ![Modern](images/theme-modern.png) | ![Modern dark](images/theme-modern-dark.png) |
-| Modern mono | ![Modern mono](images/theme-modern-mono.png) | ![Modern mono dark](images/theme-modern-mono-dark.png) |
+| Modern | ![Modern](images/theme-modern.png?v=ea7813c) | ![Modern dark](images/theme-modern-dark.png?v=ea7813c) |
+| Modern mono | ![Modern mono](images/theme-modern-mono.png?v=ea7813c) | ![Modern mono dark](images/theme-modern-mono-dark.png?v=ea7813c) |
 
 `plain` uses restrained styling and bundled Inter typography. Modern notes in GNE, class/object and sequence diagrams are rounded cards without a folded corner; their accent spans the full left edge. `plain` notes keep the folded shape. Modern classifier boxes, sequence participant heads, activation bars and combined-fragment frames also gain measured corner radii without changing their notation or layout. Modern open arrowheads are slightly larger. Arrows entering a named port meet its visible rim: round for modern generic ports, square for plain and UML ports. `modern` uses bundled Geist Sans, pale tinted nodes and a quieter edge palette. `modern-mono` uses grayscale theme defaults and bundled Geist Sans. Any explicit LSS color remains in force, even in a mono theme. The dark variants use a black (`#000000`) canvas and inverted light/dark paints; `plain` variants use bundled Inter. Modern variants use Geist Sans. Fonts are measured before layout, so changing a theme or font can move text and change node dimensions.
 

@@ -51,8 +51,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/parallel-loops-modern-dark.png">
-  <img src="../images/parallel-loops-modern.png" alt="Parallel relations and an exterior self-loop">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/parallel-loops-modern-dark.png?v=ea7813c">
+  <img src="../images/parallel-loops-modern.png?v=ea7813c" alt="Parallel relations and an exterior self-loop">
 </picture>
 
 [Complete source](../../examples/parallel-loops.laml). Named relations can be styled individually; multiple connections use separate routes.
@@ -118,8 +118,8 @@ styling {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/showcase-generic-modern-dark.png">
-  <img src="../images/showcase-generic-modern.png" alt="Generic graph with package, ports and styled shapes">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/showcase-generic-modern-dark.png?v=ea7813c">
+  <img src="../images/showcase-generic-modern.png?v=ea7813c" alt="Generic graph with package, ports and styled shapes">
 </picture>
 
 [Complete source for this image](../../examples/showcase-generic.laml). `node.class` selects a styling class; `node[ID]` selects one element. Generic shapes include `rectangle`, `ellipse`, `diamond` and `note`. In modern themes, a GNE note is a rounded card with a flush, full-height left accent; `plain` uses a folded note. Arrowheads meet the visible edge of named ports—round in modern themes and square in plain themes. Packages group contained elements; members and ports can be addressed by relations.
