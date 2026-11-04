@@ -13,14 +13,16 @@ pub(super) fn background(svg: &mut String, boxes: &[BoxNode]) {
 }
 
 pub(super) fn actor(svg: &mut String, node: &BoxNode) {
-    use crate::geometry::usecase::{ARM_HALF, ARM_Y, FOOT_OFFSET, FOOT_Y, HIP_Y};
+    use crate::geometry::usecase::{
+        ARM_HALF, ARM_Y, FOOT_OFFSET, FOOT_Y, HEAD_CENTER_Y, HEAD_RADIUS, HIP_Y,
+    };
     let x = node.x + node.width / 2.0;
     let y = node.y;
     let stroke = node.border_width.max(1.8);
-    writeln!(svg,"<circle cx=\"{x:.2}\" cy=\"{:.2}\" r=\"11\" fill=\"none\" stroke=\"{}\" stroke-width=\"{stroke:.2}\" />",
-        y+15.0,node.border_color).unwrap();
+    writeln!(svg,"<circle cx=\"{x:.2}\" cy=\"{:.2}\" r=\"{HEAD_RADIUS:.2}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{stroke:.2}\" />",
+        y+HEAD_CENTER_Y,node.border_color).unwrap();
     writeln!(svg,"<path d=\"M{x:.2},{:.2} V{:.2} M{:.2},{:.2} H{:.2} M{x:.2},{:.2} L{:.2},{:.2} M{x:.2},{:.2} L{:.2},{:.2}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{stroke:.2}\" stroke-linecap=\"round\" stroke-linejoin=\"round\" />",
-        y+26.0,y+HIP_Y,x-ARM_HALF,y+ARM_Y,x+ARM_HALF,
+        y+HEAD_CENTER_Y+HEAD_RADIUS,y+HIP_Y,x-ARM_HALF,y+ARM_Y,x+ARM_HALF,
         y+HIP_Y,x-FOOT_OFFSET,y+FOOT_Y,
         y+HIP_Y,x+FOOT_OFFSET,y+FOOT_Y,node.border_color).unwrap();
 }
