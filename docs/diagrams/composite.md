@@ -49,8 +49,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/composite-checkout-modern-dark.png">
-  <img src="../images/composite-checkout-modern.png" alt="Checkout structure with a reference role and delegated port">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/composite-checkout-modern-dark.png?v=orthogonal-default-20261104">
+  <img src="../images/composite-checkout-modern.png?v=orthogonal-default-20261104" alt="Checkout structure with a reference role and delegated port">
 </picture>
 
 [Complete source](../../examples/composite-checkout.laml). A `role` is shown with a dashed outline; `=>` connects a boundary port to a matching same-role internal port.

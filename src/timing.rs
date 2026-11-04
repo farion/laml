@@ -36,6 +36,7 @@ pub struct Tick {
 #[derive(Clone, Debug)]
 pub struct Document {
     pub theme: crate::theme::Theme,
+    pub allow_diagonal: bool,
     pub interaction: String,
     pub unit: Option<String>,
     pub lifelines: Vec<Lifeline>,
@@ -147,6 +148,7 @@ pub fn parse(source: &str) -> Result<Document, ParseError> {
     let mut section = "";
     let mut seen = [false; 3];
     let mut ty = false;
+    let mut allow_diagonal = None;
     let mut interaction = None;
     let mut unit = None;
     let mut scale = None;
@@ -192,6 +194,13 @@ pub fn parse(source: &str) -> Result<Document, ParseError> {
                 let (name, value) = split_colon(text, line)?;
                 match name {
                     "type" if value == "timing" && !ty => ty = true,
+                    "allow-diagonal" if allow_diagonal.is_none() => {
+                        allow_diagonal = Some(match value {
+                            "true" => true,
+                            "false" => false,
+                            _ => return Err(error(line, "allow-diagonal must be true or false")),
+                        });
+                    }
                     "interaction"
                         if valid_identifier(value)
                             && value.len() <= 80
@@ -382,6 +391,7 @@ pub fn parse(source: &str) -> Result<Document, ParseError> {
     ticks.sort_by(|a, b| a.time.total_cmp(&b.time));
     Ok(Document {
         theme,
+        allow_diagonal: allow_diagonal.unwrap_or(false),
         interaction,
         unit,
         lifelines,

@@ -36,6 +36,7 @@ Unqualified identifiers match `[A-Za-z_][A-Za-z0-9_]*`; nested package paths use
 | `direction` | `left-to-right`, `right-to-left`, `top-to-bottom`, `bottom-to-top` | `left-to-right` |
 | `naming-convention` | `uppercase-nodes-lowercase-relations` | Off |
 | `relation-label` | `near`, `along`, `inline` | `near` |
+| `allow-diagonal` | `false`, `true` | `false` |
 | `theme` | `plain`, `modern`, `modern-mono`, `plain-dark`, `modern-dark`, `modern-mono-dark` | `modern` |
 | `background` | `opaque`, `transparent` | `opaque` (white for light, black for dark) |
 | `font-file` | Quoted path to a local OpenType/TrueType font | Bundled Geist for modern, Inter for plain |
@@ -46,10 +47,11 @@ settings {
     direction: left-to-right
     naming-convention: uppercase-nodes-lowercase-relations
     relation-label: near
+    allow-diagonal: false
 }
 ```
 
-The optional naming convention requires node IDs to start with an uppercase ASCII letter and *named* relation IDs with a lowercase ASCII letter. Without it, either case is accepted. Unknown or repeated settings are errors. `direction` affects automatic placement, not mandatory layout.
+The optional naming convention requires node IDs to start with an uppercase ASCII letter and *named* relation IDs with a lowercase ASCII letter. Without it, either case is accepted. Unknown or repeated settings are errors. `direction` affects automatic placement, not mandatory layout. `allow-diagonal: false` requires axis-aligned straight connector segments across diagram types; modern themes can still round their bends. It does not change the outlines of symbols, arrowheads or icons. With `true`, the free-routing behaviour remains available. A graph whose mandatory sides, obstacles or labels leave no safe orthogonal path fails on `build` rather than drawing a diagonal. BPMN and timing already use axis-aligned strokes. Sequence messages with different send/receive times preserve both event positions and use an orthogonal bend.
 
 ## Semantics
 
@@ -184,7 +186,7 @@ An imported `.lamlstyle` file contains one `styling { ... }` section. Imports co
 
 ## Sequence diagrams
 
-Select the separate sequence grammar with `settings { type: sequence }` (one entry per line). Files without `type: sequence` retain the graph grammar above. In sequence sources, `direction`, `relation-label`, and graph routing settings do not apply. `semantic-check: off` disables only the numeric `min <= max` loop-bound check; it never relaxes reference or mandatory layout checks.
+Select the separate sequence grammar with `settings { type: sequence }` (one entry per line). Files without `type: sequence` retain the graph grammar above. In sequence sources, `direction`, `relation-label`, and graph-specific endpoint rules do not apply; `allow-diagonal` does. `semantic-check: off` disables only the numeric `min <= max` loop-bound check; it never relaxes reference or mandatory layout checks.
 
 ```text
 settings {

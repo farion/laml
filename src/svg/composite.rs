@@ -1,7 +1,6 @@
 //! The mandatory structured-classifier internal-structure compartment and dashed role box.
 use crate::geometry::{BoxNode, composite::header_height};
 use crate::route::{Point, Route};
-use crate::text::measure;
 use std::fmt::Write;
 
 pub(super) fn background(svg: &mut String, node: &BoxNode) {
@@ -45,13 +44,7 @@ pub(super) fn validate(boxes: &[BoxNode], routes: &[Route]) -> Result<(), String
     for node in boxes.iter().filter(|node| {
         node.kind == crate::syntax::NodeKind::CompositeStructure && node.is_container
     }) {
-        let width = measure("internal structure", 12.0)?;
-        let x = node.x + node.padding + 24.0;
-        let y = node.y + header_height(node) + 7.0;
-        if x + width + node.padding > node.x + node.width {
-            return Err("internal structure label does not fit its classifier frame".into());
-        }
-        let rect = (x - 3.0, y + 2.0, x + width + 3.0, y + 21.0);
+        let rect = crate::geometry::composite::internal_label_rect(node)?;
         if routes.iter().any(|r| {
             r.points
                 .windows(2)

@@ -147,6 +147,8 @@ pub struct Settings {
     pub direction: FlowDirection,
     pub strict_case: bool,
     pub relation_label: LabelPlacement,
+    /// False requires orthogonal connector centre-lines; true retains free routing.
+    pub allow_diagonal: bool,
     pub diagram_type: DiagramType,
     pub theme: crate::theme::Theme,
     pub transparent: bool,

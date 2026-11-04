@@ -43,8 +43,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/state-basic-modern-dark.png?v=ea7813c">
-  <img src="../images/state-basic-modern.png?v=ea7813c" alt="Guarded choice and state entry/do/exit behavior">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/state-basic-modern-dark.png?v=orthogonal-default-20261104">
+  <img src="../images/state-basic-modern.png?v=orthogonal-default-20261104" alt="Guarded choice and state entry/do/exit behavior">
 </picture>
 
 [Complete source](../../examples/state-basic.laml). Guards label choice exits; `entry`, `do`, and `exit` appear inside a state.

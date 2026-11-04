@@ -173,8 +173,8 @@ second.receive above first.receive
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/sequence-coregion-modern-dark.png">
-  <img src="../images/sequence-coregion-modern.png" alt="Coregion on API with mandatory occurrence order">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/sequence-coregion-modern-dark.png?v=orthogonal-default-20261104">
+  <img src="../images/sequence-coregion-modern.png?v=orthogonal-default-20261104" alt="Coregion on API with mandatory occurrence order">
 </picture>
 
 [Complete coregion source](../../examples/sequence-coregion.laml). A coregion groups occurrences on one lifeline; `above` fixes their displayed order.

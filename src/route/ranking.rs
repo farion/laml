@@ -1,4 +1,5 @@
-//! Rank bounded routing candidates by turns, visible crossings, then path length.
+//! Rank feasible candidates by visible clearance, attachment face and short
+//! legs, then turns, crossings and path length in orthogonal mode.
 //! Feasibility (obstacles, labels, mandatory sides and bridges) remains checked
 //! by the normal router before accepting the first candidate in this order.
 use super::{Point, Route, geometry, outline_clearance};
@@ -39,6 +40,16 @@ fn crossings(points: &[Point], routed: &[Route], from: usize, to: usize) -> usiz
         })
         .sum()
 }
+fn short_segments(points: &[Point]) -> usize {
+    points
+        .windows(2)
+        .filter(|pair| {
+            let distance = (pair[1].x - pair[0].x).hypot(pair[1].y - pair[0].y);
+            distance > 0.01 && distance < 24.0 - 1e-6
+        })
+        .count()
+}
+
 fn length(points: &[Point]) -> f64 {
     points
         .windows(2)
@@ -51,6 +62,20 @@ pub(super) fn total(routes: &[Route]) -> (usize, usize, f64) {
         routes.iter().map(|route| bends(&route.points)).sum(),
         routes.iter().map(|route| length(&route.points)).sum(),
     )
+}
+
+pub(super) fn better_than_orthogonal(ranked: &[Route], stable: &[Route]) -> bool {
+    let quality = |routes: &[Route]| {
+        let short = routes
+            .iter()
+            .map(|r| short_segments(&r.points))
+            .sum::<usize>();
+        let (bridges, bends, length) = total(routes);
+        (short, bridges, bends, length)
+    };
+    let (as_, ab, at, al) = quality(ranked);
+    let (bs, bb, bt, bl) = quality(stable);
+    (ab, as_, at) < (bb, bs, bt) || (ab, as_, at) == (bb, bs, bt) && al < bl - 1e-6
 }
 
 pub(super) fn better_than(ranked: &[Route], stable: &[Route]) -> bool {
@@ -88,12 +113,51 @@ pub(super) fn order(
     boxes: &[BoxNode],
     from: usize,
     to: usize,
+    orthogonal_packages: bool,
+    strict: bool,
 ) {
+    let lateral = orthogonal_packages
+        && matches!(boxes.get(from).zip(boxes.get(to)), Some((a,b)) if (a.x+a.width < b.x || b.x+b.width < a.x));
+    let side_penalty = |points: &[Point]| -> usize {
+        if !lateral {
+            return 0;
+        }
+        let (first, last) = (points[0], *points.last().unwrap());
+        let (a, b) = (&boxes[from], &boxes[to]);
+        if a.x < b.x {
+            usize::from((first.x - a.x - a.width).abs() > 0.01)
+                + usize::from((last.x - b.x).abs() > 0.01)
+        } else {
+            usize::from((first.x - a.x).abs() > 0.01)
+                + usize::from((last.x - b.x - b.width).abs() > 0.01)
+        }
+    };
     options.sort_by(|a, b| {
         border_hugs(a, boxes, from, to)
             .cmp(&border_hugs(b, boxes, from, to))
+            .then_with(|| side_penalty(a).cmp(&side_penalty(b)))
+            .then_with(|| {
+                if strict {
+                    crossings(a, routed, from, to).cmp(&crossings(b, routed, from, to))
+                } else {
+                    std::cmp::Ordering::Equal
+                }
+            })
+            .then_with(|| {
+                if strict {
+                    short_segments(a).cmp(&short_segments(b))
+                } else {
+                    std::cmp::Ordering::Equal
+                }
+            })
             .then_with(|| bends(a).cmp(&bends(b)))
-            .then_with(|| crossings(a, routed, from, to).cmp(&crossings(b, routed, from, to)))
+            .then_with(|| {
+                if strict {
+                    std::cmp::Ordering::Equal
+                } else {
+                    crossings(a, routed, from, to).cmp(&crossings(b, routed, from, to))
+                }
+            })
             .then_with(|| length(a).total_cmp(&length(b)))
     });
 }
@@ -111,7 +175,7 @@ mod tests {
             vec![p(0.0, 0.0), p(120.0, 0.0)],
             vec![p(0.0, 0.0), p(0.0, 10.0), p(120.0, 10.0), p(120.0, 0.0)],
         ];
-        order(&mut options, &[], &[], 0, 1);
+        order(&mut options, &[], &[], 0, 1, false, false);
         assert_eq!(options[0].len(), 2);
         assert_eq!(options[1][1].y, 10.0);
     }

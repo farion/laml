@@ -99,7 +99,7 @@ pub(crate) fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, 
     let mut diagram = Diagram::default();
     let mut section = Section::Top;
     let mut seen = [false; 4];
-    let mut seen_settings = [false; 8];
+    let mut seen_settings = [false; 9];
     diagram.settings.diagram_type = prescan_type(source);
     for (index, original) in source.lines().enumerate() {
         let line = index + 1;

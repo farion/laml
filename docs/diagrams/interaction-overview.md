@@ -47,8 +47,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/interaction-overview-purchase-modern-dark.png">
-  <img src="../images/interaction-overview-purchase-modern.png" alt="Purchase with decision, guarded paths and merge">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/interaction-overview-purchase-modern-dark.png?v=orthogonal-default-20261104">
+  <img src="../images/interaction-overview-purchase-modern.png?v=orthogonal-default-20261104" alt="Purchase with decision, guarded paths and merge">
 </picture>
 
 [Complete source](../../examples/interaction-overview-purchase.laml). `decision` branches on guards; `merge` reunites the paths.
@@ -64,8 +64,8 @@ Charge --> Complete
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/interaction-overview-parallel-modern-dark.png?v=ea7813c">
-  <img src="../images/interaction-overview-parallel-modern.png?v=ea7813c" alt="Parallel interaction uses with fork and join">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/interaction-overview-parallel-modern-dark.png?v=orthogonal-default-20261104">
+  <img src="../images/interaction-overview-parallel-modern.png?v=orthogonal-default-20261104" alt="Parallel interaction uses with fork and join">
 </picture>
 
 [Complete source](../../examples/interaction-overview-parallel.laml). `fork` and `join` delimit parallel paths. Common placement: [GNE](gne.md). [Full syntax](../language-reference.md#interaction-overview-diagrams).

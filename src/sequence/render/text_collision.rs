@@ -238,6 +238,7 @@ pub(super) fn time_label(
     floor: f64,
     ceiling: f64,
     preferred_offset: f64,
+    allow_diagonal: bool,
 ) -> Result<(f64, f64), String> {
     let width = label_width_at(label, font)?;
     for at_y in [
@@ -254,11 +255,16 @@ pub(super) fn time_label(
             let at_x = if left { x - width - 22.0 } else { x + 22.0 };
             let region = text(at_x, at_y, label, font)?;
             let tip_x = if left { x - 18.0 } else { x + 18.0 };
+            let path = if allow_diagonal {
+                vec![(x, y), (tip_x, at_y + 1.0)]
+            } else {
+                vec![(x, y), (x, at_y + 1.0), (tip_x, at_y + 1.0)]
+            };
             if region.x >= 8.0
                 && region.y >= floor
                 && region.y + region.height < ceiling - 8.0
                 && region_clear(region, occupied, connectors)
-                && path_clear(occupied, &[(x, y), (tip_x, at_y + 1.0)])
+                && path_clear(occupied, &path)
             {
                 return Ok((at_x, at_y));
             }
@@ -280,8 +286,19 @@ mod tests {
             width: 50.0,
             height: 25.0,
         };
-        let (x, y) =
-            time_label(&[blocking], &[], 40.0, 100.0, "t0", 14.0, 20.0, 300.0, 0.0).unwrap();
+        let (x, y) = time_label(
+            &[blocking],
+            &[],
+            40.0,
+            100.0,
+            "t0",
+            14.0,
+            20.0,
+            300.0,
+            0.0,
+            false,
+        )
+        .unwrap();
         assert!(x < 40.0 || y < 82.0);
         assert!(!text(x, y, "t0", 14.0).unwrap().overlaps(blocking));
     }
@@ -312,8 +329,19 @@ mod tests {
             width: 10.0,
             height: 13.0,
         };
-        let (x, _) =
-            time_label(&[blocker], &[], 100.0, 150.0, "t", 14.0, 84.0, 300.0, 0.0).unwrap();
+        let (x, _) = time_label(
+            &[blocker],
+            &[],
+            100.0,
+            150.0,
+            "t",
+            14.0,
+            84.0,
+            300.0,
+            0.0,
+            false,
+        )
+        .unwrap();
         assert!(x < 100.0);
     }
 
@@ -331,6 +359,7 @@ mod tests {
                 84.0,
                 400.0,
                 index as f64 * 30.0,
+                false,
             )
             .unwrap();
             let next = text(x, y, "t", 14.0).unwrap();

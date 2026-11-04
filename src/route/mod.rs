@@ -14,6 +14,7 @@ mod geometry;
 mod junction_arms;
 mod labels;
 mod marker_clearance;
+mod orthogonal;
 mod outline_clearance;
 mod package_outline;
 mod parallel;
@@ -271,6 +272,16 @@ fn candidates(
             }
         }
     }
+    if !diagram.settings.allow_diagonal {
+        results.extend(orthogonal::candidates(
+            a,
+            b,
+            source_member,
+            target_member,
+            source_side,
+            target_side,
+        ));
+    }
     results.extend(
         detours::corridors(
             a,
@@ -374,6 +385,9 @@ fn candidates(
                     }
                     _ => {}
                 }
+            }
+            if !diagram.settings.allow_diagonal && !orthogonal::axis_aligned(&points) {
+                return None;
             }
             if source_port.is_some_and(|(_, side)| !normal_at_port(&points, side, true))
                 || target_port.is_some_and(|(_, side)| !normal_at_port(&points, side, false))

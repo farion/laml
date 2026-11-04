@@ -226,15 +226,21 @@ pub(super) fn draw(
                         let tip_x = midpoint + 16.0 * side;
                         let region =
                             text_collision::text(label_x, baseline, &annotation.text, font)?;
+                        let leader = if diagram.allow_diagonal {
+                            vec![(midpoint, y), (tip_x, baseline + 1.0)]
+                        } else {
+                            vec![
+                                (midpoint, y),
+                                (midpoint, baseline + 1.0),
+                                (tip_x, baseline + 1.0),
+                            ]
+                        };
                         if region.x >= 8.0
                             && region.x + region.width < canvas_width - 8.0
                             && region.y >= header_bottom + 4.0
                             && region.y + region.height < canvas_bottom - 8.0
                             && text_collision::region_clear(region, &occupied, &connectors)
-                            && text_collision::path_clear(
-                                &occupied,
-                                &[(midpoint, y), (tip_x, baseline + 1.0)],
-                            )
+                            && text_collision::path_clear(&occupied, &leader)
                         {
                             chosen = Some((label_x, baseline, tip_x, region));
                             break;
@@ -252,8 +258,17 @@ pub(super) fn draw(
                 })?;
                 occupied.push(region);
                 annotation_regions.push(region);
-                connectors.push(vec![(midpoint, y), (tip_x, baseline + 1.0)]);
-                writeln!(svg, "<path d=\"M{midpoint:.2},{y:.2} L{tip_x:.2},{:.2}\" fill=\"none\" stroke=\"{color}\" stroke-width=\"{stroke:.2}\" data-annotation=\"duration-observation\" />", baseline + 1.0).unwrap();
+                if diagram.allow_diagonal {
+                    connectors.push(vec![(midpoint, y), (tip_x, baseline + 1.0)]);
+                    writeln!(svg, "<path d=\"M{midpoint:.2},{y:.2} L{tip_x:.2},{:.2}\" fill=\"none\" stroke=\"{color}\" stroke-width=\"{stroke:.2}\" data-annotation=\"duration-observation\" />", baseline + 1.0).unwrap();
+                } else {
+                    connectors.push(vec![
+                        (midpoint, y),
+                        (midpoint, baseline + 1.0),
+                        (tip_x, baseline + 1.0),
+                    ]);
+                    writeln!(svg, "<path d=\"M{midpoint:.2},{y:.2} V{:.2} H{tip_x:.2}\" fill=\"none\" stroke=\"{color}\" stroke-width=\"{stroke:.2}\" data-annotation=\"duration-observation\" />", baseline + 1.0).unwrap();
+                }
                 writeln!(svg, "<text x=\"{label_x:.2}\" y=\"{baseline:.2}\" font-family=\"Inter\" font-size=\"{font:.2}\" fill=\"{color}\">{}</text>", escape(&annotation.text)).unwrap();
                 continue;
             }
@@ -403,11 +418,17 @@ pub(super) fn draw(
                         header_bottom + 4.0,
                         canvas_bottom,
                         offset,
+                        diagram.allow_diagonal,
                     )
                     .map_err(|reason| format!("annotation at '{anchor_name}': {reason}"))?;
                     let dx = if at_x < x { -18.0 } else { 18.0 };
-                    connectors.push(vec![(x, y), (x + dx, at_y + 1.0)]);
-                    writeln!(svg, "<path d=\"M{x:.2},{y:.2} l{dx:.2},{:.2}\" fill=\"none\" stroke=\"{color}\" stroke-width=\"{stroke:.2}\" data-annotation=\"time-observation\" />", at_y - y + 1.0).unwrap();
+                    if diagram.allow_diagonal {
+                        connectors.push(vec![(x, y), (x + dx, at_y + 1.0)]);
+                        writeln!(svg, "<path d=\"M{x:.2},{y:.2} l{dx:.2},{:.2}\" fill=\"none\" stroke=\"{color}\" stroke-width=\"{stroke:.2}\" data-annotation=\"time-observation\" />", at_y - y + 1.0).unwrap();
+                    } else {
+                        connectors.push(vec![(x, y), (x, at_y + 1.0), (x + dx, at_y + 1.0)]);
+                        writeln!(svg, "<path d=\"M{x:.2},{y:.2} V{:.2} h{dx:.2}\" fill=\"none\" stroke=\"{color}\" stroke-width=\"{stroke:.2}\" data-annotation=\"time-observation\" />", at_y + 1.0).unwrap();
+                    }
                     ("time-observation", annotation.text.clone(), at_x, at_y)
                 };
                 if annotation.kind == AnnotationKind::TimeObservation {

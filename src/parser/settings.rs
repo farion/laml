@@ -7,7 +7,7 @@ pub(super) fn parse_setting(
     text: &str,
     line: usize,
     diagram: &mut Diagram,
-    seen: &mut [bool; 8],
+    seen: &mut [bool; 9],
 ) -> Result<(), ParseError> {
     let (key, value) =
         split_once_top_level(text, ':').ok_or_else(|| error(line, "expected setting: value"))?;
@@ -21,6 +21,7 @@ pub(super) fn parse_setting(
         "background" => 5,
         "font-file" => 6,
         "font-italic-file" => 7,
+        "allow-diagonal" => 8,
         _ => return Err(error(line, format!("unknown setting '{}'", key.trim()))),
     };
     if seen[slot] {
@@ -42,6 +43,13 @@ pub(super) fn parse_setting(
                 return Err(error(line, "invalid naming convention"));
             }
             diagram.settings.strict_case = true;
+        }
+        "allow-diagonal" => {
+            diagram.settings.allow_diagonal = match value {
+                "true" => true,
+                "false" => false,
+                _ => return Err(error(line, "allow-diagonal must be true or false")),
+            };
         }
         "relation-label" => {
             diagram.settings.relation_label = match value {

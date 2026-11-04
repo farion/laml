@@ -109,6 +109,7 @@ pub fn parse(source: &str) -> Result<Document, String> {
     let mut stylesheet = String::new();
     let mut style_depth = 0usize;
     let mut seen_sections = std::collections::HashSet::new();
+    let mut seen_diagonal_setting = false;
     for (offset, raw) in source.lines().enumerate() {
         let line = offset + 1;
         let text = without_comment(raw).trim();
@@ -225,6 +226,17 @@ pub fn parse(source: &str) -> Result<Document, String> {
             };
             match section.as_str() {
                 "settings" if text == "type: bpmn" => {}
+                "settings" if text.starts_with("allow-diagonal:") => {
+                    if seen_diagonal_setting {
+                        return Err(error(line, "duplicate allow-diagonal setting"));
+                    }
+                    doc.allow_diagonal = match text.trim_start_matches("allow-diagonal:").trim() {
+                        "true" => true,
+                        "false" => false,
+                        _ => return Err(error(line, "allow-diagonal must be true or false")),
+                    };
+                    seen_diagonal_setting = true;
+                }
                 "settings" if text == "direction: left-to-right" => {
                     doc.direction = crate::syntax::FlowDirection::LeftToRight;
                 }

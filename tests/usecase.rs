@@ -92,8 +92,9 @@ fn usecase_system_has_scoped_ellipses_and_external_actors() {
 }
 
 #[test]
-fn actor_association_falls_back_to_a_single_diagonal_when_horizontal_is_impossible() {
-    let diagram = parse(QUICKSTART).unwrap();
+fn actor_association_falls_back_to_a_single_diagonal_when_enabled() {
+    let diagram =
+        parse(&QUICKSTART.replace("type: usecase", "type: usecase\nallow-diagonal: true")).unwrap();
     let sheet = load(&diagram, Path::new("examples/usecase-quickstart.laml")).unwrap();
     let mut boxes = place(&diagram, &sheet).unwrap();
     let actor_y = boxes.iter().find(|node| node.id == "Customer").unwrap().y;

@@ -1,6 +1,5 @@
 //! First sequence renderer: lifelines, messages, self-calls and executions.
 //! This does not claim complete UML 2.5.1 coverage.
-
 mod anchors;
 mod annotations;
 mod arrows;
@@ -52,12 +51,7 @@ struct DrawnFrame {
     messages: Vec<usize>,
 }
 
-fn styled_text(svg: &mut String, x: f64, y: f64, value: &str, size: f64, color: &str) {
-    for (index, line) in value.split('\n').enumerate() {
-        writeln!(svg, "<text x=\"{x:.2}\" y=\"{:.2}\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"{size:.2}\" fill=\"{}\">{}</text>",
-            y + index as f64 * size * 1.25, escape(color), escape(line)).unwrap();
-    }
-}
+use styles::styled_text;
 /// Render only the currently parsed subset. Other syntax must fail at parse time.
 pub fn render(diagram: &SequenceDiagram, mode: TextMode) -> Result<String, String> {
     render_with_styles(diagram, &StyleSheet::default(), mode)
@@ -427,7 +421,14 @@ pub fn render_with_styles(
     executions::draw(&mut svg, diagram, sheet, &centers, &bars)?;
     let mut drawn_gates = Vec::new();
     for ((m, _), anchor) in positioned.iter().zip(&message_anchors) {
-        messages::draw(&mut svg, sheet, m, anchor, &mut drawn_gates)?;
+        messages::draw(
+            &mut svg,
+            sheet,
+            m,
+            anchor,
+            &mut drawn_gates,
+            diagram.allow_diagonal,
+        )?;
     }
     coregions::draw(&mut svg, diagram, &centers, &message_anchors, sheet)?;
     let annotation_regions = annotations::draw(

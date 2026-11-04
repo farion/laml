@@ -132,6 +132,7 @@ pub struct SequenceDiagram {
     pub continuation_layout: Vec<ContinuationPlacement>,
     pub frame_layout: Vec<FrameCoverage>,
     pub semantic_check_off: bool,
+    pub allow_diagonal: bool,
     pub decompositions: Vec<Decomposition>,
     pub coregions: Vec<Coregion>,
     pub vertical_layout: Vec<VerticalRule>,

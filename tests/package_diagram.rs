@@ -106,7 +106,10 @@ fn architecture_dependencies_route_without_changing_original_node_layout() {
             "{theme}: merge should visibly belong to Common, not Payments"
         );
         assert!((merge[0].x - node("Shop.Pricing").x - node("Shop.Pricing").width).abs() < 1e-6);
-        assert!((merge[2].x - common.x - common.width / 2.0).abs() < 1e-6);
+        assert!(
+            merge[2].x >= common.x + 32.0 && merge[2].x <= common.x + common.width - 6.0,
+            "{theme}: merge docks on Common's visible top edge"
+        );
         assert!(
             (merge[2].y - common.y - 14.0).abs() < 1e-6,
             "{theme}: merge should meet Common's visible body, not the tab's bounding box"

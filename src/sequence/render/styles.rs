@@ -2,6 +2,7 @@
 
 use crate::sequence::AnnotationKind;
 use crate::styles::{Element, StyleSheet, Value};
+use std::fmt::Write;
 
 pub(super) fn escape(text: &str) -> String {
     let mut output = String::new();
@@ -244,5 +245,12 @@ pub(super) fn message(styles: &StyleSheet, name: Option<&str>, classes: &[String
         color: color(styles, &element, "color", "#20252b"),
         width: size(styles, &element, "width", 1.6),
         font_size: size(styles, &element, "font-size", 14.0),
+    }
+}
+
+pub(super) fn styled_text(svg: &mut String, x: f64, y: f64, value: &str, size: f64, color: &str) {
+    for (index, line) in value.split('\n').enumerate() {
+        writeln!(svg, "<text x=\"{x:.2}\" y=\"{:.2}\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"{size:.2}\" fill=\"{}\">{}</text>",
+            y + index as f64 * size * 1.25, escape(color), escape(line)).unwrap();
     }
 }

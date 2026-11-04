@@ -46,8 +46,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/class-basic-modern-dark.png">
-  <img src="../images/class-basic-modern.png" alt="Class compartments, end roles and a note on the association">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/class-basic-modern-dark.png?v=orthogonal-default-20261104">
+  <img src="../images/class-basic-modern.png?v=orthogonal-default-20261104" alt="Class compartments, end roles and a note on the association">
 </picture>
 
 [Complete source](../../examples/class-basic.laml). `--` separates attributes and operations; `Regel .. relation[orders]` attaches a note to the named association.
@@ -121,8 +121,8 @@ package Vertrieb {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/class-packages-modern-dark.png">
-  <img src="../images/class-packages-modern.png" alt="Nested packages with scoped classes">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/class-packages-modern-dark.png?v=orthogonal-default-20261104">
+  <img src="../images/class-packages-modern.png?v=orthogonal-default-20261104" alt="Nested packages with scoped classes">
 </picture>
 
 [Complete package source](../../examples/class-packages.laml). Without an explicit placement rule, a nested package linked from a sibling may stack below it so the child connection is vertical. Use `Vertrieb.Kunde` to refer to a class from outside the package.
@@ -180,8 +180,8 @@ Auftrag .. relation[orders]
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/class-association-class-modern-dark.png">
-  <img src="../images/class-association-class-modern.png" alt="Association class attached to a named association">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/class-association-class-modern-dark.png?v=orthogonal-default-20261104">
+  <img src="../images/class-association-class-modern.png?v=orthogonal-default-20261104" alt="Association class attached to a named association">
 </picture>
 
 [Complete association-class source](../../examples/class-association-class.laml). Give the binary association an ID so its association class can attach to it. Shared placement and styling: [GNE](gne.md). More syntax: [language reference](../language-reference.md#class-and-object-diagrams).

@@ -1,4 +1,7 @@
-// Four nodes force two diagonal relations to cross.
+// Opt in to free routing to showcase a bridged diagonal crossing.
+settings {
+    allow-diagonal: true
+}
 semantics {
     A
     B

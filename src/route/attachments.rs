@@ -12,17 +12,26 @@ fn near_event(route: &Route, segment: usize, distance: f64) -> bool {
     })
 }
 
-fn only_target_touch(start: Point, anchor: Point, target: &Route) -> bool {
-    let hits: Vec<_> = target
-        .points
+fn only_target_touch(points: &[Point], target: &Route) -> bool {
+    let hits: Vec<_> = points
         .windows(2)
-        .filter(|pair| geometry::crosses(start, anchor, pair[0], pair[1]))
+        .enumerate()
+        .flat_map(|(i, chord)| {
+            target
+                .points
+                .windows(2)
+                .filter(move |pair| geometry::crosses(chord[0], chord[1], pair[0], pair[1]))
+                .map(move |pair| (i, chord, pair))
+        })
         .collect();
     if hits.len() != 1 {
         return false;
     }
-    let segment = hits[0];
-    let (dx, dy) = (anchor.x - start.x, anchor.y - start.y);
+    let (i, chord, segment) = hits[0];
+    if i + 2 != points.len() {
+        return false;
+    }
+    let (dx, dy) = (chord[1].x - chord[0].x, chord[1].y - chord[0].y);
     let (ex, ey) = (segment[1].x - segment[0].x, segment[1].y - segment[0].y);
     (dx * ey - dy * ex).abs() > 1e-5 * dx.hypot(dy) * ex.hypot(ey)
 }
@@ -78,9 +87,52 @@ pub(super) fn route_attachments(
                     x: a.x + (b.x - a.x) * fraction,
                     y: a.y + (b.y - a.y) * fraction,
                 };
-                let start = geometry::port(&boxes[from], anchor);
-                let points = vec![start, anchor];
-                if !only_target_touch(start, anchor, target)
+                let points = if diagram.settings.allow_diagonal {
+                    vec![geometry::port(&boxes[from], anchor), anchor]
+                } else {
+                    let source = &boxes[from];
+                    let center = geometry::center(source);
+                    if (b.y - a.y).abs() < 1e-5 {
+                        let toward = Point {
+                            x: center.x,
+                            y: if anchor.y < center.y {
+                                center.y - 1000.0
+                            } else {
+                                center.y + 1000.0
+                            },
+                        };
+                        let start = geometry::port(source, toward);
+                        vec![
+                            start,
+                            Point {
+                                x: anchor.x,
+                                y: start.y,
+                            },
+                            anchor,
+                        ]
+                    } else {
+                        let toward = Point {
+                            x: if anchor.x < center.x {
+                                center.x - 1000.0
+                            } else {
+                                center.x + 1000.0
+                            },
+                            y: center.y,
+                        };
+                        let start = geometry::port(source, toward);
+                        vec![
+                            start,
+                            Point {
+                                x: start.x,
+                                y: anchor.y,
+                            },
+                            anchor,
+                        ]
+                    }
+                };
+                if !only_target_touch(&points, target)
+                    || (!diagram.settings.allow_diagonal
+                        && !super::orthogonal::axis_aligned(&points))
                     || !geometry::route_is_clear(&points, boxes, routed)
                 {
                     continue;

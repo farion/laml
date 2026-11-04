@@ -37,8 +37,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/component-basic-modern-dark.png?v=ea7813c">
-  <img src="../images/component-basic-modern.png?v=ea7813c" alt="Required and provided component interfaces">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/component-basic-modern-dark.png?v=orthogonal-default-20261104">
+  <img src="../images/component-basic-modern.png?v=orthogonal-default-20261104" alt="Required and provided component interfaces">
 </picture>
 
 [Complete source](../../examples/component-basic.laml). `..>` points to a required interface box; `..|>` is a provided realization. The source chooses `interface-notation: lollipop` for the provided interface.
@@ -60,8 +60,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/component-internal-modern-dark.png">
-  <img src="../images/component-internal-modern.png" alt="Component with typed ports and internal connectors">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/component-internal-modern-dark.png?v=orthogonal-default-20261104">
+  <img src="../images/component-internal-modern.png?v=orthogonal-default-20261104" alt="Component with typed ports and internal connectors">
 </picture>
 
 [Complete source](../../examples/component-internal.laml).
@@ -88,8 +88,8 @@ styling {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/component-interfaces-modern-dark.png?v=ea7813c">
-  <img src="../images/component-interfaces-modern.png?v=ea7813c" alt="Component with a lollipop and socket">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/component-interfaces-modern-dark.png?v=orthogonal-default-20261104">
+  <img src="../images/component-interfaces-modern.png?v=orthogonal-default-20261104" alt="Component with a lollipop and socket">
 </picture>
 
 [Complete source](../../examples/component-interfaces.laml). The compact forms are selected on named interface relations; typed ports remain independently addressable.

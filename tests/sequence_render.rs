@@ -156,17 +156,21 @@ fn coregion_marks_only_the_named_lifeline() {
             .lines()
             .find(|line| line.contains(&format!("data-message=\"{id}\"")))
             .unwrap();
-        line.split(" L")
-            .nth(1)
-            .unwrap()
-            .split(',')
-            .nth(1)
-            .unwrap()
-            .split('"')
-            .next()
-            .unwrap()
-            .parse()
-            .unwrap()
+        if let Some(vertical) = line.split(" V").nth(1) {
+            vertical.split_whitespace().next().unwrap().parse().unwrap()
+        } else {
+            line.split(" L")
+                .nth(1)
+                .unwrap()
+                .split(',')
+                .nth(1)
+                .unwrap()
+                .split('"')
+                .next()
+                .unwrap()
+                .parse()
+                .unwrap()
+        }
     };
     assert!(end_y("second") < end_y("first"));
     for name in ["first", "second"] {

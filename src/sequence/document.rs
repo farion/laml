@@ -24,6 +24,7 @@ fn parse_inner(source: &str, complete: bool) -> Result<SequenceDiagram, ParseErr
     let mut section = "";
     let mut seen_type = false;
     let mut seen_semantic_setting = false;
+    let mut seen_diagonal_setting = false;
     let mut seen_semantics = false;
     let mut seen_layout = false;
     let mut calls: Vec<(String, String)> = Vec::new();
@@ -74,6 +75,16 @@ fn parse_inner(source: &str, complete: bool) -> Result<SequenceDiagram, ParseErr
             {
                 seen_semantic_setting = true;
                 diagram.semantic_check_off = text.ends_with("off");
+            } else if let Some(value) = text.strip_prefix("allow-diagonal:") {
+                if seen_diagonal_setting {
+                    return Err(error(line, "duplicate allow-diagonal setting"));
+                }
+                diagram.allow_diagonal = match value.trim() {
+                    "true" => true,
+                    "false" => false,
+                    _ => return Err(error(line, "allow-diagonal must be true or false")),
+                };
+                seen_diagonal_setting = true;
             } else {
                 return Err(error(line, "unknown or duplicate sequence setting"));
             }

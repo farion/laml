@@ -26,8 +26,8 @@ Layout and Markup Language
 LAML turns a `.laml` file into an SVG, PNG or vector PDF diagram. Describe the elements, add only the placement rules that matter, and style the result independently.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/showcase-generic-modern-dark.png?v=ea7813c">
-  <img src="docs/images/showcase-generic-modern.png?v=ea7813c" alt="Architecture diagram with a vertically arranged decision flow">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/showcase-generic-modern-dark.png?v=orthogonal-default-20261104">
+  <img src="docs/images/showcase-generic-modern.png?v=orthogonal-default-20261104" alt="Architecture diagram with a vertically arranged decision flow">
 </picture>
 
 [Source for this image](examples/showcase-generic.laml) · [Getting started](docs/getting-started.md)
@@ -47,7 +47,7 @@ Text-to-diagram tools make it easy to describe connections, but often leave the 
 LAML gives you three separate controls:
 
 - **Semantics:** declare the elements and relationships that give the diagram its meaning.
-- **Layout:** specify the positions and alignments that must hold; let LAML place the rest and route connections safely. Conflicting mandatory rules fail rather than being silently ignored.
+- **Layout:** specify the positions and alignments that must hold; let LAML place the rest and route connections safely. Connectors are orthogonal by default; `allow-diagonal: true` in `settings` opts into free routing. Conflicting mandatory rules fail rather than being silently ignored.
 - **Styling:** use CSS-like LAML Style Sheets to make the image fit the document.
 
 **Generic node-edge (GNE) diagrams** combine shapes, ports, notes, relationships and styles for architecture drawings. The [architecture example](#architecture-placement-and-color) shows placement and styling in a buildable source; the [GNE guide](docs/diagrams/gne.md) shows the available elements.
@@ -123,8 +123,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/c4-banking-container-modern-dark.png?v=ea7813c">
-  <img src="docs/images/c4-banking-container-modern.png?v=ea7813c" alt="C4 Internet Banking container view with a customer, browser, backend, data stores and external systems">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/c4-banking-container-modern-dark.png?v=orthogonal-default-20261104">
+  <img src="docs/images/c4-banking-container-modern.png?v=orthogonal-default-20261104" alt="C4 Internet Banking container view with a customer, browser, backend, data stores and external systems">
 </picture>
 
 [Full container source](examples/c4-banking-container.laml) · [Context, component and code views](docs/c4-diagrams.md). Adapted from Simon Brown's [Internet Banking System example](https://c4model.com/example/) (CC BY 4.0).
@@ -193,8 +193,8 @@ Six themes come in three light/dark pairs. The previews below have **transparent
 ### Plain · Plain dark
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/theme-plain-dark.png">
-  <img src="docs/images/theme-plain.png" alt="Plain theme example: connected service, archive and client">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/theme-plain-dark.png?v=orthogonal-default-20261104">
+  <img src="docs/images/theme-plain.png?v=orthogonal-default-20261104" alt="Plain theme example: connected service, archive and client">
 </picture>
 
 [Plain source](examples/theme-plain.laml) · [Plain dark source](examples/theme-plain-dark.laml)
@@ -202,8 +202,8 @@ Six themes come in three light/dark pairs. The previews below have **transparent
 ### Modern · Modern dark
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/theme-modern-dark.png?v=ea7813c">
-  <img src="docs/images/theme-modern.png?v=ea7813c" alt="Modern theme example: connected service, archive and client">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/theme-modern-dark.png?v=orthogonal-default-20261104">
+  <img src="docs/images/theme-modern.png?v=orthogonal-default-20261104" alt="Modern theme example: connected service, archive and client">
 </picture>
 
 [Modern source](examples/theme-modern.laml) · [Modern dark source](examples/theme-modern-dark.laml)
@@ -211,8 +211,8 @@ Six themes come in three light/dark pairs. The previews below have **transparent
 ### Modern mono · Modern mono dark
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/theme-modern-mono-dark.png?v=ea7813c">
-  <img src="docs/images/theme-modern-mono.png?v=ea7813c" alt="Modern monochrome theme example: connected service, archive and client">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/theme-modern-mono-dark.png?v=orthogonal-default-20261104">
+  <img src="docs/images/theme-modern-mono.png?v=orthogonal-default-20261104" alt="Modern monochrome theme example: connected service, archive and client">
 </picture>
 
 [Modern mono source](examples/theme-modern-mono.laml) · [Modern mono dark source](examples/theme-modern-mono-dark.laml)

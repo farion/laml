@@ -12,12 +12,27 @@ fn coordinate(svg: &str, name: &str, endpoint: &str) -> f64 {
         .split('"')
         .next()
         .unwrap();
-    let pair = if endpoint == "send" {
-        path.split(' ').next().unwrap().trim_start_matches('M')
-    } else {
-        path.split('L').nth(1).unwrap()
-    };
-    pair.split(',').nth(1).unwrap().parse().unwrap()
+    let mut y: f64 = path
+        .split_whitespace()
+        .next()
+        .unwrap()
+        .trim_start_matches('M')
+        .split(',')
+        .nth(1)
+        .unwrap()
+        .parse()
+        .unwrap();
+    if endpoint == "receive" {
+        for segment in path.split_whitespace().skip(1) {
+            if let Some(value) = segment.strip_prefix('V') {
+                y = value.parse().unwrap();
+            }
+            if let Some(value) = segment.strip_prefix('L') {
+                y = value.split(',').nth(1).unwrap().parse().unwrap();
+            }
+        }
+    }
+    y
 }
 
 #[test]

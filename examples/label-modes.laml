@@ -1,6 +1,7 @@
 // Global inline text; the named diagonal relation uses along-path text.
 settings {
     relation-label: inline
+    allow-diagonal: true
 }
 semantics {
     A(label="Source")

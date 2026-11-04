@@ -31,7 +31,11 @@ pub fn route(
         && diagram.relations.iter().enumerate().all(|(i, relation)| {
             relation.from != relation.to || ranked[i].points == stable[i].points
         })
-        && ranking::better_than(&ranked, &stable)
+        && (if diagram.settings.allow_diagonal {
+            ranking::better_than(&ranked, &stable)
+        } else {
+            ranking::better_than_orthogonal(&ranked, &stable)
+        })
     {
         return Ok(ranked);
     }
@@ -112,7 +116,16 @@ fn route_pass(
             candidates(diagram, index, from, to, boxes, &routed, offset, ranked)
         };
         if ranked && from != to {
-            ranking::order(&mut options, &routed, boxes, from, to);
+            ranking::order(
+                &mut options,
+                &routed,
+                boxes,
+                from,
+                to,
+                !diagram.settings.allow_diagonal
+                    && diagram.settings.diagram_type == crate::syntax::DiagramType::Package,
+                !diagram.settings.allow_diagonal,
+            );
         }
         let label_rule = diagram
             .relation_layout
@@ -147,6 +160,36 @@ fn route_pass(
                     continue;
                 }
             };
+            if !diagram.settings.allow_diagonal && !super::orthogonal::axis_aligned(&points) {
+                continue;
+            }
+            if !diagram.settings.allow_diagonal
+                && diagram.settings.diagram_type == crate::syntax::DiagramType::Composite
+                && boxes
+                    .iter()
+                    .filter(|node| {
+                        node.kind == crate::syntax::NodeKind::CompositeStructure
+                            && node.is_container
+                    })
+                    .any(|node| {
+                        crate::geometry::composite::internal_label_rect(node).is_ok_and(
+                            |(left, top, right, bottom)| {
+                                points.windows(2).any(|p| {
+                                    super::labels::segment_hits_rect(
+                                        p[0],
+                                        p[1],
+                                        left,
+                                        top,
+                                        right - left,
+                                        bottom - top,
+                                    )
+                                })
+                            },
+                        )
+                    })
+            {
+                continue;
+            }
             if !route_is_clear(&points, boxes, &routed) {
                 continue;
             }
@@ -187,7 +230,11 @@ fn route_pass(
             choice.ok_or_else(|| {
                 let label_failed = label_error.is_some();
                 let reason = label_error.unwrap_or_else(|| {
-                    "no safe path around nodes, other connections, and crossings".into()
+                    if diagram.settings.allow_diagonal {
+                        "no safe path around nodes, other connections, and crossings"
+                    } else {
+                        "no safe orthogonal path around nodes, other connections, and crossings"
+                    }.into()
                 });
                 let identity = relation.name.as_deref().unwrap_or("unnamed");
                 let advice = if let Some(name) = relation.name.as_deref() {

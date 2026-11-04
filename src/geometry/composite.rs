@@ -2,6 +2,16 @@
 use super::BoxNode;
 use crate::syntax::PortSide;
 
+pub(crate) fn internal_label_rect(node: &BoxNode) -> Result<(f64, f64, f64, f64), String> {
+    let width = crate::text::measure("internal structure", 12.0)?;
+    let x = node.x + node.padding + 24.0;
+    let y = node.y + header_height(node) + 7.0;
+    if x + width + node.padding > node.x + node.width {
+        return Err("internal structure label does not fit its classifier frame".into());
+    }
+    Ok((x - 3.0, y + 2.0, x + width + 3.0, y + 21.0))
+}
+
 pub(crate) fn header_height(node: &BoxNode) -> f64 {
     let side_ports = node
         .ports

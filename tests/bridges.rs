@@ -37,7 +37,7 @@ fn later_relation_gets_a_bridge_and_earlier_gets_a_small_gap() {
 }
 
 #[test]
-fn crossing_showcase_bridge_rises_above_its_chord() {
+fn crossing_showcase_bridge_stays_on_the_upper_or_left_side() {
     for source in [
         include_str!("../examples/crossing.laml").to_string(),
         include_str!("../examples/crossing.laml").replace("second: B -> C", "second: C -> B"),
@@ -47,8 +47,9 @@ fn crossing_showcase_bridge_rises_above_its_chord() {
         let bridge = &bridged.bridges[0];
         let pair = &bridged.points[bridge.segment..=bridge.segment + 1];
         let length = (pair[1].x - pair[0].x).hypot(pair[1].y - pair[0].y);
+        let center_x = pair[0].x + (pair[1].x - pair[0].x) * bridge.distance / length;
         let center_y = pair[0].y + (pair[1].y - pair[0].y) * bridge.distance / length;
-        let control_y: f64 = svg
+        let coords: Vec<f64> = svg
             .split(" Q")
             .nth(1)
             .unwrap()
@@ -56,14 +57,13 @@ fn crossing_showcase_bridge_rises_above_its_chord() {
             .next()
             .unwrap()
             .split(',')
-            .nth(1)
-            .unwrap()
-            .parse()
-            .unwrap();
-        assert!(
-            control_y < center_y - 2.0,
-            "bridge must arch upward regardless of arrow direction"
-        );
+            .map(|s| s.parse().unwrap())
+            .collect();
+        if (pair[0].y - pair[1].y).abs() < 1e-6 {
+            assert!(coords[1] < center_y - 2.0, "horizontal bridge arches up");
+        } else {
+            assert!(coords[0] < center_x - 2.0, "vertical bridge arches left");
+        }
     }
 }
 #[test]

@@ -14,6 +14,7 @@ pub(super) fn draw(
     m: &Message,
     anchor: &MessageAnchor,
     drawn_gates: &mut Vec<(String, f64, f64)>,
+    allow_diagonal: bool,
 ) -> Result<(), String> {
     let (start, y) = anchor.send;
     let (end, receive_y) = anchor.receive;
@@ -42,12 +43,27 @@ pub(super) fn draw(
             );
         }
     } else {
-        writeln!(svg, "<path d=\"M{start:.2},{y:.2} L{end:.2},{receive_y:.2}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\"{dash} data-message=\"{name}\" />", paint.color, paint.width).unwrap();
+        let (path, tip_direction) = if allow_diagonal || (receive_y - y).abs() < 0.01 {
+            (
+                format!("M{start:.2},{y:.2} L{end:.2},{receive_y:.2}"),
+                (end - start, receive_y - y),
+            )
+        } else {
+            // Put the time-carrying leg beside the sender. A leg beside the
+            // receiver can cross another message that arrives earlier there.
+            let approach = 24.0_f64.min((end - start).abs() / 2.0);
+            let elbow = start + (end - start).signum() * approach;
+            (
+                format!("M{start:.2},{y:.2} H{elbow:.2} V{receive_y:.2} H{end:.2}"),
+                (end - elbow, 0.0),
+            )
+        };
+        writeln!(svg, "<path d=\"{path}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\"{dash} data-message=\"{name}\" />", paint.color, paint.width).unwrap();
         if m.to != "?" && m.kind != MessageKind::Delete {
             arrows::draw(
                 svg,
                 (end, receive_y),
-                (end - start, receive_y - y),
+                tip_direction,
                 m.kind == MessageKind::Sync || m.filled_reply,
                 &paint.color,
                 sheet.theme.modern(),
@@ -77,13 +93,22 @@ pub(super) fn draw(
         }
     }
     if let Some(label) = &m.label {
+        let bent_message = !allow_diagonal && m.from != m.to && (receive_y - y).abs() >= 0.01;
         let x = if m.from == m.to {
             start + 44.0 + label_width_at(label, paint.font_size)? / 2.0 + 8.0
+        } else if bent_message {
+            let width = label_width_at(label, paint.font_size)?;
+            start + (end - start).signum() * (width / 2.0 + 20.0).min((end - start).abs() / 2.0)
         } else {
             (start + end) / 2.0
         };
         let lines = label.split('\n').count();
-        let baseline = (y + receive_y) / 2.0 - 9.0 - paint.font_size * 1.25 * (lines - 1) as f64;
+        let baseline_y = if bent_message {
+            y
+        } else {
+            (y + receive_y) / 2.0
+        };
+        let baseline = baseline_y - 9.0 - paint.font_size * 1.25 * (lines - 1) as f64;
         if sheet.theme.modern() {
             let width = label_width_at(label, paint.font_size)? + 10.0;
             let height = paint.font_size * 1.25 * (lines - 1) as f64 + paint.font_size * 1.2 + 4.0;

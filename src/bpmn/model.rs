@@ -64,6 +64,7 @@ pub struct Pool {
 pub struct Document {
     pub theme: crate::theme::Theme,
     pub direction: crate::syntax::FlowDirection,
+    pub allow_diagonal: bool,
     pub nodes: Vec<Node>,
     pub edges: Vec<Edge>,
     pub pools: Vec<Pool>,

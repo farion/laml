@@ -27,9 +27,12 @@ pub(super) fn hits_segment(
     let endpoint = if at_start { route.from } else { route.to };
     // Retain conservative clearance for other notations and endpoints.
     if symbol != EndSymbol::Arrow
-        || boxes
-            .get(endpoint)
-            .is_none_or(|node| node.kind != NodeKind::ActivityDecision)
+        || boxes.get(endpoint).is_none_or(|node| {
+            !matches!(
+                node.kind,
+                NodeKind::ActivityDecision | NodeKind::ActivityMerge | NodeKind::StateChoice
+            )
+        })
     {
         let radius = marker_radius(symbol, route.width);
         return segment_hits_rect(

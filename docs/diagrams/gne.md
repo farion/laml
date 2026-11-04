@@ -62,7 +62,10 @@ semantics {
 Placement rules constrain **boxes**, not the ends of arrows. Relations guide automatic placement, but do not override mandatory rules.
 
 ```laml
-// Excerpt from examples/crossing.laml (layout)
+// Excerpts from examples/crossing.laml
+settings {
+    allow-diagonal: true
+}
 layout {
     A < B : align=top; gap=120
     C < D : align=top; gap=120
@@ -72,8 +75,8 @@ layout {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/crossing-modern-dark.png">
-  <img src="../images/crossing-modern.png" alt="Crossing with a bridge">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/crossing-modern-dark.png?v=orthogonal-default-20261104">
+  <img src="../images/crossing-modern.png?v=orthogonal-default-20261104" alt="Crossing with a bridge">
 </picture>
 
 [Complete source for this image](../../examples/crossing.laml).
@@ -85,7 +88,7 @@ layout {
 | `gap=120` | Minimum empty space between boxes. |
 | `align=center`, `align=top` or `align=left` | Align on the perpendicular axis; left/right placement accepts `top`, `center`, `bottom`; above/below accepts `left`, `center`, `right`. |
 
-Parallel relations get separate routes; supported crossings draw a bridge, as above. The bridge arches upward on predominantly horizontal relations (including the diagonal shown), or leftward on predominantly vertical ones, regardless of arrow direction. Impossible placement or unsafe routing fails during `build`.
+Parallel relations get separate routes; supported crossings draw a bridge, as above. The crossing example opts into diagonal connectors; other diagrams default to orthogonal segments. The bridge arches upward on predominantly horizontal relations or leftward on predominantly vertical ones, regardless of arrow direction. Impossible placement or unsafe routing fails during `build`.
 
 ## Shapes, containers and styling
 
@@ -118,8 +121,8 @@ styling {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/showcase-generic-modern-dark.png?v=ea7813c">
-  <img src="../images/showcase-generic-modern.png?v=ea7813c" alt="Generic graph with package, ports and styled shapes">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/showcase-generic-modern-dark.png?v=orthogonal-default-20261104">
+  <img src="../images/showcase-generic-modern.png?v=orthogonal-default-20261104" alt="Generic graph with package, ports and styled shapes">
 </picture>
 
 [Complete source for this image](../../examples/showcase-generic.laml). `node.class` selects a styling class; `node[ID]` selects one element. Generic shapes include `rectangle`, `ellipse`, `diamond` and `note`. In modern themes, a GNE note is a rounded card with a flush, full-height left accent; `plain` uses a folded note. Arrowheads meet the visible edge of named ports—round in modern themes and square in plain themes. Packages group contained elements; members and ports can be addressed by relations.
