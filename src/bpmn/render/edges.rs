@@ -79,7 +79,11 @@ fn gateway_route(
 fn path_with_bridges(
     points: &[super::orthogonal::Point],
     bridges: &[(usize, super::orthogonal::Point)],
+    radius: f64,
 ) -> (String, Vec<String>) {
+    let corners: Vec<_> = (1..points.len().saturating_sub(1))
+        .map(|i| rounded_corner(points, bridges, i, radius))
+        .collect();
     let mut d = format!("M {:.1} {:.1}", points[0].0, points[0].1);
     let mut masks = Vec::new();
     for (segment, leg) in points.windows(2).enumerate() {
@@ -119,9 +123,55 @@ fn path_with_bridges(
             )
             .unwrap();
         }
-        write!(d, " L {:.1} {:.1}", b.0, b.1).unwrap();
+        if let Some((before, after)) = corners.get(segment).copied().flatten() {
+            write!(
+                d,
+                " L {:.1} {:.1} Q {:.1} {:.1} {:.1} {:.1}",
+                before.0, before.1, b.0, b.1, after.0, after.1
+            )
+            .unwrap();
+        } else {
+            write!(d, " L {:.1} {:.1}", b.0, b.1).unwrap();
+        }
     }
     (d, masks)
+}
+fn rounded_corner(
+    points: &[super::orthogonal::Point],
+    bridges: &[(usize, super::orthogonal::Point)],
+    index: usize,
+    radius: f64,
+) -> Option<(super::orthogonal::Point, super::orthogonal::Point)> {
+    if radius <= 0.0 {
+        return None;
+    }
+    let (a, b, c) = (points[index - 1], points[index], points[index + 1]);
+    let (dx, dy) = (b.0 - a.0, b.1 - a.1);
+    let (ex, ey) = (c.0 - b.0, c.1 - b.1);
+    let before = dx.hypot(dy);
+    let after = ex.hypot(ey);
+    if before < 1e-6 || after < 1e-6 || (dx * ey - dy * ex).abs() < 1e-5 * before * after {
+        return None;
+    }
+    let last_bridge = bridges
+        .iter()
+        .filter(|(i, _)| *i == index - 1)
+        .map(|(_, p)| (p.0 - a.0).hypot(p.1 - a.1) + 6.0)
+        .fold(0.0_f64, f64::max);
+    let first_bridge = bridges
+        .iter()
+        .filter(|(i, _)| *i == index)
+        .map(|(_, p)| (p.0 - b.0).hypot(p.1 - b.1) - 6.0)
+        .fold(after, f64::min);
+    let r = radius
+        .min(before / 2.0)
+        .min(after / 2.0)
+        .min(before - last_bridge)
+        .min(first_bridge);
+    (r >= 1.0).then_some((
+        (b.0 - dx / before * r, b.1 - dy / before * r),
+        (b.0 + ex / after * r, b.1 + ey / after * r),
+    ))
 }
 pub(super) fn edge(
     svg: &mut String,
@@ -183,7 +233,11 @@ pub(super) fn edge(
         })
     })?;
     let bridges = super::orthogonal::bridges(&plan.points, previous);
-    let (path, masks) = path_with_bridges(&plan.points, &bridges);
+    let (path, masks) = path_with_bridges(
+        &plan.points,
+        &bridges,
+        if doc.theme.modern() { 9.0 } else { 0.0 },
+    );
     for mask in masks {
         writeln!(
             svg,
@@ -228,17 +282,29 @@ pub(super) fn edge(
 mod tests {
     use super::path_with_bridges;
     #[test]
+    fn modern_route_rounds_the_bend_but_plain_keeps_it_sharp() {
+        let points = [(0.0, 0.0), (60.0, 0.0), (60.0, 80.0)];
+        assert_eq!(
+            path_with_bridges(&points, &[], 9.0).0,
+            "M 0.0 0.0 L 51.0 0.0 Q 60.0 0.0 60.0 9.0 L 60.0 80.0"
+        );
+        assert_eq!(
+            path_with_bridges(&points, &[], 0.0).0,
+            "M 0.0 0.0 L 60.0 0.0 L 60.0 80.0"
+        );
+    }
+    #[test]
     fn bridges_arc_up_or_left_regardless_of_flow_direction() {
         for points in [[(0.0, 50.0), (100.0, 50.0)], [(100.0, 50.0), (0.0, 50.0)]] {
             assert!(
-                path_with_bridges(&points, &[(0, (50.0, 50.0))])
+                path_with_bridges(&points, &[(0, (50.0, 50.0))], 0.0)
                     .0
                     .contains("Q 50.0 35.0")
             );
         }
         for points in [[(50.0, 0.0), (50.0, 100.0)], [(50.0, 100.0), (50.0, 0.0)]] {
             assert!(
-                path_with_bridges(&points, &[(0, (50.0, 50.0))])
+                path_with_bridges(&points, &[(0, (50.0, 50.0))], 0.0)
                     .0
                     .contains("Q 35.0 50.0")
             );

@@ -255,7 +255,8 @@ fn all_order_edges_have_unique_node_anchors_and_clear_paths() {
         note.y + note.h / 2.0 - 6.0
     )));
     assert!(
-        !svg.contains(" Q "),
+        !svg.lines()
+            .any(|line| line.contains(" Q ") && line.contains("stroke-width=\"6\"/>")),
         "the order example should route without bridge crossings"
     );
     let label = |name: &str| {

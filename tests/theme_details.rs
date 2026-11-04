@@ -77,6 +77,25 @@ fn plain_arrows_end_at_square_border_in_light_and_dark() {
 }
 
 #[test]
+fn modern_routes_round_elbows_while_plain_routes_keep_sharp_corners() {
+    let (modern, _, _) = image(include_str!("../examples/theme-modern-dark.laml"));
+    let (plain, _, _) = image(include_str!("../examples/theme-plain-dark.laml"));
+    let curved = |svg: &str| {
+        svg.lines().any(|line| {
+            line.starts_with("<path d=")
+                && line.contains("stroke-linejoin=\"round\"")
+                && line.contains(" Q")
+        })
+    };
+    assert!(curved(&modern), "modern must draw a visibly rounded route");
+    assert!(
+        !curved(&plain),
+        "plain must keep the original angular route"
+    );
+    assert!(plain.lines().any(|line| line.starts_with("<polyline ")));
+}
+
+#[test]
 fn plain_dark_ports_use_dark_fill_without_overriding_explicit_paint() {
     let source = include_str!("../examples/theme-plain-dark.laml");
     let (svg, boxes, _) = image(source);

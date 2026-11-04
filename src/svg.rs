@@ -150,7 +150,10 @@ fn render_svg(
         } else {
             ""
         };
-        if route.bridges.is_empty() && route.gaps.is_empty() {
+        if route.bridges.is_empty()
+            && route.gaps.is_empty()
+            && (!theme.modern() || !crate::svg_paths::has_rounded_corner(route, 9.0))
+        {
             let last = route.points.len().saturating_sub(1);
             let points: Vec<String> = route
                 .points
@@ -170,11 +173,12 @@ fn render_svg(
             writeln!(svg,"<polyline points=\"{}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"{dash}{end_marker}{start_marker} />",
                 points.join(" "), route.color, route.width).unwrap();
         } else {
-            let fragments = if visual_start.is_none() && visual_end.is_none() {
-                crate::svg_paths::fragments(route)?
-            } else {
-                crate::svg_paths::fragments_with_ends(route, visual_start, visual_end)?
-            };
+            let fragments = crate::svg_paths::fragments_with_ends_rounded(
+                route,
+                visual_start,
+                visual_end,
+                if theme.modern() { 9.0 } else { 0.0 },
+            )?;
             let last = fragments.len() - 1;
             for (i, path) in fragments.iter().enumerate() {
                 writeln!(svg,"<path d=\"{}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"{dash}{}{} />",

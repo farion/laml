@@ -123,7 +123,10 @@ fn parallel_routes_render_as_distinct_paths() {
     let svg = fs::read_to_string(&destination).unwrap();
     let lines: Vec<&str> = svg
         .lines()
-        .filter(|line| line.starts_with("<polyline"))
+        .filter(|line| {
+            (line.starts_with("<polyline") || line.starts_with("<path d="))
+                && line.contains("stroke-linejoin=\"round\"")
+        })
         .collect();
     assert_eq!(lines.len(), 2);
     assert_ne!(lines[0], lines[1]);
