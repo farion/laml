@@ -12,7 +12,7 @@ pub(crate) const HIP_Y: f64 = 60.0;
 pub(crate) const FOOT_Y: f64 = 91.0;
 pub(crate) const FOOT_OFFSET: f64 = 24.0;
 pub(crate) const HEAD_CENTER_Y: f64 = 15.0;
-pub(crate) const HEAD_RADIUS: f64 = 12.5;
+pub(crate) const HEAD_RADIUS: f64 = 14.0;
 // Invisible docking contour around the figure, not around its caption.
 pub(crate) const FIGURE_CENTER_Y: f64 = 47.5;
 pub(crate) const DOCK_RX: f64 = 50.0;
