@@ -387,7 +387,12 @@ fn candidates(
                     _ => {}
                 }
             }
-            if !diagram.settings.allow_diagonal && !orthogonal::axis_aligned(&points) {
+            if diagram.settings.allow_diagonal {
+                if !orthogonal::non_tangent_ends(&points, a, b) {
+                    return None;
+                }
+            } else if !orthogonal::axis_aligned(&points) || !orthogonal::normal_ends(&points, a, b)
+            {
                 return None;
             }
             if source_port.is_some_and(|(_, side)| !normal_at_port(&points, side, true))

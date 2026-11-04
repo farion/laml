@@ -226,6 +226,62 @@ pub(super) fn candidates(
     result
 }
 
+// For box-like nodes, both terminal strokes must be normal to a visible
+// side; following an edge into an arrowhead is never a valid connector.
+fn valid_departure(node: &BoxNode, port: Point, outside: Point, allow_slant: bool) -> bool {
+    if node.shape != NodeShape::Rectangle
+        || !matches!(
+            node.kind,
+            crate::syntax::NodeKind::Generic
+                | crate::syntax::NodeKind::Package
+                | crate::syntax::NodeKind::Class
+                | crate::syntax::NodeKind::Object
+                | crate::syntax::NodeKind::UseCaseSystem
+        )
+    {
+        return true;
+    }
+    let (dx, dy) = (outside.x - port.x, outside.y - port.y);
+    let epsilon = 0.01;
+    let normal = |axial: f64, lateral: f64| {
+        if allow_slant {
+            let distance = axial.hypot(lateral);
+            distance >= 20.0 - epsilon && axial >= distance * 0.25
+        } else {
+            axial >= 20.0 - epsilon && lateral.abs() < epsilon
+        }
+    };
+    let visible_top = if node.kind == crate::syntax::NodeKind::Package && !node.c4_boundary {
+        crate::geometry::package_outline::tab(node).ok()
+    } else {
+        None
+    };
+    let left = (port.x - node.x).abs() < epsilon && normal(-dx, dy);
+    let right = (port.x - node.x - node.width).abs() < epsilon
+        && visible_top.is_none_or(|(_, tab_height)| port.y >= node.y + tab_height - epsilon)
+        && normal(dx, dy);
+    let bottom = (port.y - node.y - node.height).abs() < epsilon && normal(dy, dx);
+    let top = visible_top.map_or((port.y - node.y).abs() < epsilon, |(tab_w, tab_h)| {
+        ((port.y - node.y).abs() < epsilon && port.x <= node.x + tab_w + epsilon)
+            || ((port.y - node.y - tab_h).abs() < epsilon && port.x >= node.x + tab_w - epsilon)
+    }) && normal(-dy, dx);
+    left || right || top || bottom
+}
+
+pub(super) fn normal_ends(points: &[Point], a: &BoxNode, b: &BoxNode) -> bool {
+    if points.len() < 2 {
+        return false;
+    }
+    valid_departure(a, points[0], points[1], false)
+        && valid_departure(b, *points.last().unwrap(), points[points.len() - 2], false)
+}
+
+pub(super) fn non_tangent_ends(points: &[Point], a: &BoxNode, b: &BoxNode) -> bool {
+    points.len() >= 2
+        && valid_departure(a, points[0], points[1], true)
+        && valid_departure(b, *points.last().unwrap(), points[points.len() - 2], true)
+}
+
 pub(super) fn axis_aligned(points: &[Point]) -> bool {
     points
         .windows(2)
@@ -236,6 +292,69 @@ pub(super) fn axis_aligned(points: &[Point]) -> bool {
 mod tests {
     use super::*;
     use crate::{geometry::place, parser::parse, styles::StyleSheet};
+
+    #[test]
+    fn rectangular_connectors_require_normal_departure_and_arrival() {
+        let diagram =
+            parse("semantics {\nA\nB\nA -> B\n}\nlayout {\nA < B : align=center; gap=100\n}\n")
+                .unwrap();
+        let boxes = place(&diagram, &StyleSheet::default()).unwrap();
+        let (a, b) = (&boxes[0], &boxes[1]);
+        let y = a.y + a.height / 2.0;
+        let start = Point {
+            x: a.x + a.width,
+            y,
+        };
+        let end = Point { x: b.x, y };
+        let valid = [
+            start,
+            Point {
+                x: start.x + 20.0,
+                y,
+            },
+            Point { x: end.x - 20.0, y },
+            end,
+        ];
+        assert!(normal_ends(&valid, a, b));
+        let tangent = [
+            start,
+            Point {
+                x: start.x,
+                y: y + 30.0,
+            },
+            end,
+        ];
+        assert!(!normal_ends(&tangent, a, b));
+        assert!(!non_tangent_ends(&tangent, a, b));
+        let diagonal = [
+            start,
+            Point {
+                x: start.x + 28.0,
+                y: y + 15.0,
+            },
+            end,
+        ];
+        assert!(non_tangent_ends(&diagonal, a, b));
+        let short = [
+            start,
+            Point {
+                x: start.x + 19.0,
+                y,
+            },
+            end,
+        ];
+        assert!(!normal_ends(&short, a, b));
+        let tangent_arrival = [
+            start,
+            Point {
+                x: end.x,
+                y: y + 30.0,
+            },
+            end,
+        ];
+        assert!(!normal_ends(&tangent_arrival, a, b));
+        assert!(!non_tangent_ends(&tangent_arrival, a, b));
+    }
 
     #[test]
     fn offers_a_corridor_beyond_an_existing_long_route() {

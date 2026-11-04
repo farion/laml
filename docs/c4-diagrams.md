@@ -14,8 +14,8 @@ These four buildable examples demonstrate the C4 visual vocabulary: named scope 
 </picture>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/c4-banking-container-modern-dark.png?v=orthogonal-default-20261104">
-  <img src="images/c4-banking-container-modern.png?v=orthogonal-default-20261104" alt="C4 banking container diagram showing a person, browser UI, backend, data stores and two external systems">
+  <source media="(prefers-color-scheme: dark)" srcset="images/c4-banking-container-modern-dark.png?v=normal-docking-20261104">
+  <img src="images/c4-banking-container-modern.png?v=normal-docking-20261104" alt="C4 banking container diagram showing a person, browser UI, backend, data stores and two external systems">
 </picture>
 
 <picture>

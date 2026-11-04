@@ -26,8 +26,8 @@ Layout and Markup Language
 LAML turns a `.laml` file into an SVG, PNG or vector PDF diagram. Describe the elements, add only the placement rules that matter, and style the result independently.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/showcase-generic-modern-dark.png?v=orthogonal-default-20261104">
-  <img src="docs/images/showcase-generic-modern.png?v=orthogonal-default-20261104" alt="Architecture diagram with a vertically arranged decision flow">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/showcase-generic-modern-dark.png?v=normal-docking-20261104">
+  <img src="docs/images/showcase-generic-modern.png?v=normal-docking-20261104" alt="Architecture diagram with a vertically arranged decision flow">
 </picture>
 
 [Source for this image](examples/showcase-generic.laml) · [Getting started](docs/getting-started.md)
@@ -123,8 +123,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/c4-banking-container-modern-dark.png?v=orthogonal-default-20261104">
-  <img src="docs/images/c4-banking-container-modern.png?v=orthogonal-default-20261104" alt="C4 Internet Banking container view with a customer, browser, backend, data stores and external systems">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/c4-banking-container-modern-dark.png?v=normal-docking-20261104">
+  <img src="docs/images/c4-banking-container-modern.png?v=normal-docking-20261104" alt="C4 Internet Banking container view with a customer, browser, backend, data stores and external systems">
 </picture>
 
 [Full container source](examples/c4-banking-container.laml) · [Context, component and code views](docs/c4-diagrams.md). Adapted from Simon Brown's [Internet Banking System example](https://c4model.com/example/) (CC BY 4.0).
