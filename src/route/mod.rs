@@ -4,6 +4,7 @@
 use crate::geometry::BoxNode;
 use crate::syntax::{Diagram, EndPosition, PortSide};
 
+mod activity_preferred;
 mod attachments;
 mod bridges;
 mod detours;
@@ -22,10 +23,15 @@ mod route_labels;
 mod router;
 mod self_loops;
 mod side_rules;
+use activity_preferred::{
+    activity_action_to_join, activity_control_entry, activity_decision_to_fork,
+    activity_fork_to_action, activity_join_to_action, activity_object_to_input,
+    activity_output_to_object,
+};
 use geometry::{center, member_port, port};
 use preferred::{
-    activity_control_entry, activity_object_to_input, actor_side_detours, actor_usecase_straight,
-    forced_port, horizontal_connection, named_port_candidates, normal_at_port,
+    actor_side_detours, actor_usecase_straight, forced_port, horizontal_connection,
+    named_port_candidates, normal_at_port,
 };
 pub use qualifiers::QualifierBox;
 pub use router::route;
@@ -160,16 +166,34 @@ fn candidates(
         && target_side.is_none()
     {
         let relation = &diagram.relations[index];
-        if relation.activity_flow == Some(crate::syntax::ActivityFlow::Control)
-            && let Some(points) = activity_control_entry(a, b)
-        {
-            results.insert(0, points);
+        if relation.activity_flow == Some(crate::syntax::ActivityFlow::Control) {
+            if let Some(points) = activity_fork_to_action(a, b) {
+                results.insert(0, points);
+            }
+            if let Some(points) = activity_action_to_join(a, b) {
+                results.insert(0, points);
+            }
+            if let Some(points) = activity_decision_to_fork(a, b) {
+                results.insert(0, points);
+            }
+            if let Some(points) = activity_control_entry(a, b) {
+                results.insert(0, points);
+            }
+            if let Some(points) = activity_join_to_action(a, b) {
+                results.insert(0, points);
+            }
         }
-        if relation.activity_flow == Some(crate::syntax::ActivityFlow::Object)
-            && let Some(member) = target_member
-            && let Some(points) = activity_object_to_input(a, b, member)
-        {
-            results.insert(0, points);
+        if relation.activity_flow == Some(crate::syntax::ActivityFlow::Object) {
+            if let Some(member) = target_member
+                && let Some(points) = activity_object_to_input(a, b, member)
+            {
+                results.insert(0, points);
+            }
+            if let Some(member) = source_member
+                && let Some(points) = activity_output_to_object(a, b, member)
+            {
+                results.insert(0, points);
+            }
         }
     }
     if source_side.is_none()

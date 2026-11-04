@@ -125,6 +125,99 @@ fn order_example_renders_distinct_pins_and_control_symbols_in_all_formats() {
 }
 
 #[test]
+fn parallel_activity_places_objects_in_lanes_without_diagonal_or_crossing_flows() {
+    let diagram = parse(ORDER).unwrap();
+    let sheet = load(&diagram, Path::new("examples/activity-order.laml")).unwrap();
+    let boxes = place(&diagram, &sheet).unwrap();
+    let node = |id| boxes.iter().find(|n| n.id == id).unwrap();
+    let (reserve, authorize, reservation, approval, join, dispatch) = (
+        node("Reserve"),
+        node("Authorize"),
+        node("Reservation"),
+        node("Approval"),
+        node("Together"),
+        node("Dispatch"),
+    );
+    assert!(
+        (reservation.x + reservation.width / 2.0 - approval.x - approval.width / 2.0).abs() < 0.01
+    );
+    assert!(reserve.y < authorize.y);
+    assert!(reservation.x + reservation.width + 32.0 < join.x);
+    assert!(join.x + join.width < dispatch.x);
+    let pin_y =
+        |n: &laml::geometry::BoxNode, name: &str| n.ports.iter().find(|p| p.id == name).unwrap().y;
+    assert!(
+        (reservation.y + reservation.height / 2.0 - pin_y(reserve, "Reserve::reservation")).abs()
+            < 0.01
+    );
+    assert!(
+        (approval.y + approval.height / 2.0 - pin_y(authorize, "Authorize::approval")).abs() < 0.01
+    );
+    assert!(
+        (pin_y(dispatch, "Dispatch::reservation") - reservation.y - reservation.height / 2.0).abs()
+            < 0.01
+    );
+    assert!(
+        (pin_y(dispatch, "Dispatch::approval") - approval.y - approval.height / 2.0).abs() < 0.01
+    );
+    let routes = route(&diagram, &boxes, &sheet).unwrap();
+    let flow = |from: &str, to: &str| {
+        &routes[diagram
+            .relations
+            .iter()
+            .position(|r| r.from == from && r.to == to)
+            .unwrap()]
+    };
+    for (from, to) in [
+        ("Reserve::reservation", "Reservation"),
+        ("Reservation", "Dispatch::reservation"),
+        ("Authorize::approval", "Approval"),
+        ("Approval", "Dispatch::approval"),
+        ("Parallel", "Reserve"),
+        ("Together", "Dispatch"),
+        ("Inspect", "Valid"),
+    ] {
+        let points = &flow(from, to).points;
+        assert_eq!(points.len(), 2, "{from} -> {to} must be direct");
+        assert!(
+            (points[0].y - points[1].y).abs() < 0.01,
+            "{from} -> {to} must be horizontal"
+        );
+    }
+    for (from, to) in [
+        ("Valid", "Parallel"),
+        ("Parallel", "Authorize"),
+        ("Reserve", "Together"),
+        ("Authorize", "Together"),
+    ] {
+        let points = &flow(from, to).points;
+        assert!(points.len() >= 3, "{from} -> {to}");
+        assert!(
+            points
+                .windows(2)
+                .all(|w| (w[0].x - w[1].x).abs() < 0.01 || (w[0].y - w[1].y).abs() < 0.01),
+            "{from} -> {to} must be orthogonal"
+        );
+    }
+    assert!(
+        routes.iter().all(|r| r.bridges.is_empty()),
+        "these parallel lanes need no crossings"
+    );
+}
+
+#[test]
+fn authored_multi_input_action_height_is_not_overridden_by_auto_layout() {
+    let source = format!("{ORDER}\nstyling {{\nnode[Dispatch] {{\nheight: 100\n}}\n}}");
+    let diagram = parse(&source).unwrap();
+    let sheet = load(&diagram, Path::new("examples/activity-order.laml")).unwrap();
+    let boxes = place(&diagram, &sheet).unwrap();
+    assert_eq!(
+        boxes.iter().find(|n| n.id == "Dispatch").unwrap().height,
+        100.0
+    );
+}
+
+#[test]
 fn merge_and_direct_pin_to_pin_flow_have_explicit_roles() {
     let merge = source(
         "initial Start\ndecision Branch\naction First\naction Second\nmerge Combine\nactivityFinal Done\ncontrol Start --> Branch\ncontrol Branch --> First : [ok]\ncontrol Branch --> Second : [else]\ncontrol First --> Combine\ncontrol Second --> Combine\ncontrol Combine --> Done",
@@ -176,6 +269,9 @@ fn fork_and_join_bars_are_perpendicular_to_the_diagram_flow() {
             .filter(|node| matches!(node.kind, NodeKind::ActivityFork | NodeKind::ActivityJoin))
         {
             assert_eq!(node.height > node.width, vertical, "{}", node.id);
+            if !vertical {
+                assert_eq!(node.height, 12.0, "horizontal UML bars stay thin");
+            }
         }
     }
 }

@@ -365,7 +365,7 @@ fn scope(
         .cloned()
         .collect();
     let preferred = relation_alignments(diagram, boxes, &local, parent);
-    constraints::place(&graph, &mut local, styles, &preferred)?;
+    constraints::place(&graph, &mut local, styles, &preferred, diagram)?;
     package_lanes::open_package_lanes(diagram, &mut local, parent);
     if local.is_empty() {
         return Ok(());

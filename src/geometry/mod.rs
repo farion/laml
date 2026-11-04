@@ -1,6 +1,7 @@
 //! First geometry stage: measure rectangular nodes and satisfy hard rules.
 //! Collision resolution is bounded. Complex routes may still fail explicitly.
 
+pub(crate) mod activity;
 mod c4_frame;
 pub(crate) mod composite;
 mod constraints;
@@ -84,6 +85,9 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
             })
         })
         .collect::<Result<_, _>>()?;
+    if diagram.settings.diagram_type == crate::syntax::DiagramType::Activity {
+        activity::size_nodes(diagram, &mut boxes);
+    }
     for (source, drawn) in diagram.nodes.iter().zip(&boxes) {
         if source.classes.iter().any(|class| {
             matches!(

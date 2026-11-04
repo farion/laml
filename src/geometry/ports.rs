@@ -74,6 +74,13 @@ pub(super) fn position(diagram: &Diagram, boxes: &mut [BoxNode]) {
                     })
             })
             .collect();
+        let all_activity_inputs = current.kind == crate::syntax::NodeKind::ActivityAction
+            && current.ports.len() >= 2
+            && current
+                .ports
+                .iter()
+                .all(|p| p.activity_pin == Some(crate::syntax::ActivityPinDirection::Input));
+        let input_count = current.ports.len();
         for (number, port) in current.ports.iter_mut().enumerate() {
             port.side = sides[number];
             let (x, y) = match port.side {
@@ -82,6 +89,12 @@ pub(super) fn position(diagram: &Diagram, boxes: &mut [BoxNode]) {
                         .iter()
                         .filter(|side| matches!(side, PortSide::Left | PortSide::Right))
                         .count();
+                    let first = current.port_start + current.font_size * 1.25 / 2.0;
+                    let expanded_inputs = all_activity_inputs
+                        && current.height
+                            >= 2.0 * first
+                                + super::activity::PARALLEL_LANE_GAP * (input_count - 1) as f64
+                                - 1e-6;
                     (
                         if port.side == PortSide::Left {
                             current.x
@@ -89,8 +102,11 @@ pub(super) fn position(diagram: &Diagram, boxes: &mut [BoxNode]) {
                             current.x + current.width
                         },
                         current.y
-                            + current.port_start
-                            + current.font_size * 1.25 * (row as f64 + 0.5),
+                            + if expanded_inputs {
+                                first + row as f64 * super::activity::PARALLEL_LANE_GAP
+                            } else {
+                                current.port_start + current.font_size * 1.25 * (row as f64 + 0.5)
+                            },
                     )
                 }
                 PortSide::Top | PortSide::Bottom => {

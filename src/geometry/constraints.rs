@@ -1,6 +1,7 @@
 mod activity_preference;
 mod attachment_preference;
 mod soft;
+mod solver;
 use super::nodes::BoxNode;
 use crate::styles::{Element, StyleSheet, Value};
 use crate::syntax::{
@@ -8,6 +9,7 @@ use crate::syntax::{
 };
 use crate::text::measure;
 use soft::try_soft;
+use solver::solve_axis;
 #[derive(Clone, Debug)]
 pub struct GeometryError {
     pub line: usize,
@@ -33,90 +35,18 @@ fn err(line: usize, message: impl Into<String>) -> GeometryError {
         message: message.into(),
     }
 }
-fn solve_axis(
-    count: usize,
-    equal: &[Equality],
-    minimum: &[Minimum],
-    preferred: &[f64],
-) -> Result<Vec<f64>, GeometryError> {
-    let mut adjacency = vec![Vec::<(usize, f64, usize)>::new(); count];
-    for eq in equal {
-        adjacency[eq.a].push((eq.b, eq.delta, eq.line));
-        adjacency[eq.b].push((eq.a, -eq.delta, eq.line));
-    }
-    let mut root = vec![usize::MAX; count];
-    let mut offset = vec![0.0; count];
-    let mut groups = 0;
-    for start in 0..count {
-        if root[start] != usize::MAX {
-            continue;
-        }
-        root[start] = groups;
-        let mut stack = vec![start];
-        while let Some(a) = stack.pop() {
-            for &(b, delta, line) in &adjacency[a] {
-                let proposed = offset[a] + delta;
-                if root[b] == usize::MAX {
-                    root[b] = groups;
-                    offset[b] = proposed;
-                    stack.push(b);
-                } else if (offset[b] - proposed).abs() > 1e-6 {
-                    return Err(err(line, "incompatible mandatory alignments"));
-                }
-            }
-        }
-        groups += 1;
-    }
-    let mut values = vec![0.0_f64; groups];
-    let mut initialized = vec![false; groups];
-    for i in 0..count {
-        if !initialized[root[i]] {
-            values[root[i]] = preferred[i] - offset[i];
-            initialized[root[i]] = true;
-        }
-    }
-    for iteration in 0..groups {
-        let mut changed = false;
-        for bound in minimum {
-            let needed = bound.distance + offset[bound.a] - offset[bound.b];
-            if root[bound.a] == root[bound.b] {
-                if needed > 1e-6 {
-                    return Err(err(
-                        bound.line,
-                        "mandatory alignment conflicts with separation",
-                    ));
-                }
-                continue;
-            }
-            let candidate = values[root[bound.a]] + needed;
-            if candidate > values[root[bound.b]] + 1e-6 {
-                values[root[bound.b]] = candidate;
-                changed = true;
-                if iteration + 1 == groups {
-                    return Err(err(
-                        bound.line,
-                        "impossible cycle of mandatory placement rules",
-                    ));
-                }
-            }
-        }
-        if !changed {
-            break;
-        }
-    }
-    Ok((0..count).map(|i| values[root[i]] + offset[i]).collect())
-}
 pub fn place(
     diagram: &Diagram,
     boxes: &mut [BoxNode],
     styles: &StyleSheet,
     soft_alignments: &[ScopedAlignment],
+    original: &Diagram,
 ) -> Result<(), GeometryError> {
     let n = boxes.len();
     // The preferred centre is independent of the measured size. Expansion
     // grows around that centre; later nodes are displaced only as needed.
     let mut pref_x: Vec<f64> = boxes.iter().map(|b| 96.0 - b.width / 2.0).collect();
-    let pref_y: Vec<f64> = boxes.iter().map(|b| 96.0 - b.height / 2.0).collect();
+    let mut pref_y: Vec<f64> = boxes.iter().map(|b| 96.0 - b.height / 2.0).collect();
     let mut eq_x = Vec::new();
     let mut eq_y = Vec::new();
     let mut x = Vec::new();
@@ -367,7 +297,15 @@ pub fn place(
         }
     }
     activity_preference::apply(
-        diagram, boxes, &mut eq_x, &mut eq_y, &x, &mut y, &pref_x, &pref_y,
+        diagram,
+        original,
+        boxes,
+        &mut eq_x,
+        &mut eq_y,
+        &mut x,
+        &mut y,
+        &pref_x,
+        &mut pref_y,
     );
     // Compact interface symbols follow their provider's centre. Without this
     // soft equality, separating two symbols moves the symbol alone and tilts
@@ -484,6 +422,9 @@ pub fn place(
                 }
             }
         } else {
+            if activity_preference::recenter_joins(diagram, boxes, &ys, &mut pref_y) {
+                continue;
+            }
             for (i, node) in boxes.iter_mut().enumerate() {
                 node.x = xs[i];
                 node.y = ys[i];
