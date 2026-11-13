@@ -18,8 +18,8 @@ layout {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/sequence-quickstart-modern-dark.png">
-  <img src="../images/sequence-quickstart-modern.png" alt="Client calls the API and receives a reply">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/sequence-quickstart-modern-dark.png?v=1fdd512a1c">
+  <img src="../images/sequence-quickstart-modern.png?v=1fdd512a1c" alt="Client calls the API and receives a reply">
 </picture>
 
 [Complete source](../../examples/sequence-quickstart.laml). `+` opens an execution; `<--` replies to the last unambiguous open call. The participant declarations draw heads and lifelines.
@@ -36,8 +36,8 @@ API -> API : retry
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/sequence-basic-modern-dark.png">
-  <img src="../images/sequence-basic-modern.png" alt="Asynchronous message, interaction use and self-message">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/sequence-basic-modern-dark.png?v=41865e08f9">
+  <img src="../images/sequence-basic-modern.png?v=41865e08f9" alt="Asynchronous message, interaction use and self-message">
 </picture>
 
 [Complete source](../../examples/sequence-basic.laml). `->>` is asynchronous; `ref` draws a named interaction-use frame, and `API -> API` is a self-message.
@@ -59,8 +59,8 @@ else "cart expired" {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/showcase-sequence-modern-dark.png">
-  <img src="../images/showcase-sequence-modern.png" alt="Sequence with branches, notes and annotations">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/showcase-sequence-modern-dark.png?v=cd4545bc70">
+  <img src="../images/showcase-sequence-modern.png?v=cd4545bc70" alt="Sequence with branches, notes and annotations">
 </picture>
 
 [Complete source for this image](../../examples/showcase-sequence.laml). Name a message to attach an annotation to its `.send` or `.receive` end; use `alt`/`else` for alternatives and `loop` for repetition. The [interaction-use example](../../examples/sequence-basic.laml) shows `ref`.
@@ -89,8 +89,8 @@ else "construct" {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/sequence-alternative-births-modern-dark.png">
-  <img src="../images/sequence-alternative-births-modern.png" alt="Separate lifeline segments in two alternatives">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/sequence-alternative-births-modern-dark.png?v=56d44525ab">
+  <img src="../images/sequence-alternative-births-modern.png?v=56d44525ab" alt="Separate lifeline segments in two alternatives">
 </picture>
 
 [Complete source](../../examples/sequence-alternative-births.laml). `kind=create` chooses the creation arrow; `!` ends a lifeline with an X.
@@ -112,8 +112,8 @@ layout {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/showcase-sequence-modern-dark.png">
-  <img src="../images/showcase-sequence-modern.png" alt="Note beside the API and an invariant beside its activation">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/showcase-sequence-modern-dark.png?v=cd4545bc70">
+  <img src="../images/showcase-sequence-modern.png?v=cd4545bc70" alt="Note beside the API and an invariant beside its activation">
 </picture>
 
 [Complete source](../../examples/showcase-sequence.laml). With the default `modern` theme, participant heads, activations and fragment frames have softened corners; message labels use subtle pills, and notes use the same full-height accent card as generic diagrams. `plain` retains the previous outlines. Name a note in `semantics` and place it in `layout`; `right of` places it beside a participant without a connector. For time and duration annotations, see the [annotation example](../../examples/sequence-annotations.laml).
@@ -136,8 +136,8 @@ ref "Process order" {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/sequence-gates-modern-dark.png">
-  <img src="../images/sequence-gates-modern.png" alt="Named gates on an interaction-use boundary">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/sequence-gates-modern-dark.png?v=41cddd330a">
+  <img src="../images/sequence-gates-modern.png?v=41cddd330a" alt="Named gates on an interaction-use boundary">
 </picture>
 
 [Complete gate source](../../examples/sequence-gates.laml). A named gate attaches a message to the `ref` boundary.
@@ -154,8 +154,8 @@ order[request.receive,logged.send]
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/sequence-order-modern-dark.png">
-  <img src="../images/sequence-order-modern.png" alt="General ordering between events in parallel operands">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/sequence-order-modern-dark.png?v=bc97aabd22">
+  <img src="../images/sequence-order-modern.png?v=bc97aabd22" alt="General ordering between events in parallel operands">
 </picture>
 
 [Complete ordering source](../../examples/sequence-order.laml). `order[...]` draws an explicit general-ordering link between named occurrences.
@@ -173,8 +173,8 @@ second.receive above first.receive
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/sequence-coregion-modern-dark.png?v=orthogonal-default-20261104">
-  <img src="../images/sequence-coregion-modern.png?v=orthogonal-default-20261104" alt="Coregion on API with mandatory occurrence order">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/sequence-coregion-modern-dark.png?v=3faca4913d">
+  <img src="../images/sequence-coregion-modern.png?v=3faca4913d" alt="Coregion on API with mandatory occurrence order">
 </picture>
 
 [Complete coregion source](../../examples/sequence-coregion.laml). A coregion groups occurrences on one lifeline; `above` fixes their displayed order.
@@ -187,8 +187,8 @@ condition spans Client,API : gap=16
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/sequence-continuation-modern-dark.png">
-  <img src="../images/sequence-continuation-modern.png" alt="Continuation spanning two lifelines">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/sequence-continuation-modern-dark.png?v=11d9961c7f">
+  <img src="../images/sequence-continuation-modern.png?v=11d9961c7f" alt="Continuation spanning two lifelines">
 </picture>
 
 [Complete continuation source](../../examples/sequence-continuation.laml). Define the continuation in `semantics`; position it with `spans` in `layout`.
@@ -206,8 +206,8 @@ API.Cache < API.DB : gap=36
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/sequence-decomposition-modern-dark.png">
-  <img src="../images/sequence-decomposition-modern.png" alt="Inline decomposition of Gateway into Cache and DB">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/sequence-decomposition-modern-dark.png?v=a3dc3051f6">
+  <img src="../images/sequence-decomposition-modern.png?v=a3dc3051f6" alt="Inline decomposition of Gateway into Cache and DB">
 </picture>
 
 [Complete decomposition source](../../examples/sequence-decomposition.laml). Root layout addresses child lifelines through qualified IDs. For additional operator and styling options, see the [syntax reference](../language-reference.md#sequence-diagrams). Sequence styling can target `lifeline`, `activation`, `fragment`, `note`, `annotation` and `continuation`, alongside `node` and `relation`. [Shared source sections and styling](gne.md).

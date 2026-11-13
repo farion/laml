@@ -14,6 +14,7 @@ mod end_labels;
 mod fanout;
 mod geometry;
 mod junction_arms;
+mod label_ownership;
 mod labels;
 mod marker_clearance;
 mod obstacles;

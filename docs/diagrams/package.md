@@ -19,8 +19,8 @@ layout {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/package-quickstart-modern-dark.png">
-  <img src="../images/package-quickstart-modern.png" alt="Nested Shop package with a dependency on Payments">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/package-quickstart-modern-dark.png?v=e448664618">
+  <img src="../images/package-quickstart-modern.png?v=e448664618" alt="Nested Shop package with a dependency on Payments">
 </picture>
 
 [Complete source](../../examples/package-quickstart.laml). Braces enclose a package; `Shop.Orders` addresses its nested package. `..>` is a dependency. The placement rule aligns the two package centers so the dependency runs horizontally.
@@ -38,8 +38,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/package-architecture-modern-dark.png?v=7625cd209f">
-  <img src="../images/package-architecture-modern.png?v=f6101a924c" alt="Nested packages with import, access and merge">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/package-architecture-modern-dark.png?v=6a9fa62258">
+  <img src="../images/package-architecture-modern.png?v=6a9fa62258" alt="Nested packages with import, access and merge">
 </picture>
 
 [Complete source](../../examples/package-architecture.laml).

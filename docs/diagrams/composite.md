@@ -26,8 +26,8 @@ layout {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/composite-basic-modern-dark.png">
-  <img src="../images/composite-basic-modern.png" alt="Two typed parts and an assembly connector">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/composite-basic-modern-dark.png?v=f24044ed5d">
+  <img src="../images/composite-basic-modern.png?v=f24044ed5d" alt="Two typed parts and an assembly connector">
 </picture>
 
 [Complete source for this image](../../examples/composite-basic.laml). `part` creates an owned internal instance of a declared class. `==` joins compatible required and provided ports. The structure contains a visible internal-structure compartment.
@@ -49,8 +49,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/composite-checkout-modern-dark.png?v=orthogonal-default-20261104">
-  <img src="../images/composite-checkout-modern.png?v=orthogonal-default-20261104" alt="Checkout structure with a reference role and delegated port">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/composite-checkout-modern-dark.png?v=4cd567062d">
+  <img src="../images/composite-checkout-modern.png?v=4cd567062d" alt="Checkout structure with a reference role and delegated port">
 </picture>
 
 [Complete source](../../examples/composite-checkout.laml). A `role` is shown with a dashed outline; `=>` connects a boundary port to a matching same-role internal port.

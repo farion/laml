@@ -107,7 +107,11 @@ mod tests {
                         .iter()
                         .position(|r| r.name.as_deref() == Some(name))
                         .unwrap();
-                    assert_eq!(routes[i].points.len(), 2, "{name} should route directly");
+                    assert!(
+                        routes[i].points.len() <= 4,
+                        "{name} may need a local offset for an unambiguous label, not an exterior loop"
+                    );
+                    assert!(routes[i].label.is_some());
                 }
             }
         }

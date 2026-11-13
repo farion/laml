@@ -32,8 +32,8 @@ layout {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/timing-basic-modern-dark.png">
-  <img src="../images/timing-basic-modern.png" alt="Client and server timelines on one millisecond ruler">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/timing-basic-modern-dark.png?v=4624d7d4e3">
+  <img src="../images/timing-basic-modern.png?v=4624d7d4e3" alt="Client and server timelines on one millisecond ruler">
 </picture>
 
 [Complete source for this image](../../examples/timing-basic.laml). A lifeline starts in its declared state; `state ... at` changes it at a numeric time, and `event ... at` adds visible text. Both lifelines share one ruler.
@@ -60,8 +60,8 @@ layout {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/timing-access-modern-dark.png">
-  <img src="../images/timing-access-modern.png" alt="Two access lifelines with state changes and events">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/timing-access-modern-dark.png?v=5a34ac42f3">
+  <img src="../images/timing-access-modern.png?v=5a34ac42f3" alt="Two access lifelines with state changes and events">
 </picture>
 
 [Complete source](../../examples/timing-access.laml).

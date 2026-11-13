@@ -26,8 +26,8 @@ Layout and Markup Language
 LAML turns a `.laml` file into an SVG, PNG or vector PDF diagram. Describe the elements, add only the placement rules that matter, and style the result independently.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/showcase-generic-modern-dark.png?v=ea7a7ff5b3">
-  <img src="docs/images/showcase-generic-modern.png?v=09dbc5f68a" alt="Architecture diagram with a vertically arranged decision flow">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/showcase-generic-modern-dark.png?v=33e1e4bd55">
+  <img src="docs/images/showcase-generic-modern.png?v=33e1e4bd55" alt="Architecture diagram with a vertically arranged decision flow">
 </picture>
 
 [Source for this image](examples/showcase-generic.laml) · [Getting started](docs/getting-started.md)
@@ -100,8 +100,8 @@ styling {
 [Open the complete source](examples/architecture.laml) to build the image.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/architecture-modern-dark.png">
-  <img src="docs/images/architecture-modern.png" alt="Four-layer architecture diagram">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/architecture-modern-dark.png?v=8feb1eeb12">
+  <img src="docs/images/architecture-modern.png?v=8feb1eeb12" alt="Four-layer architecture diagram">
 </picture>
 
 ### C4: a system boundary, containers and technologies
@@ -123,8 +123,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/c4-banking-container-modern-dark.png?v=normal-docking-20261104">
-  <img src="docs/images/c4-banking-container-modern.png?v=normal-docking-20261104" alt="C4 Internet Banking container view with a customer, browser, backend, data stores and external systems">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/c4-banking-container-modern-dark.png?v=c7c4d4d9f9">
+  <img src="docs/images/c4-banking-container-modern.png?v=c7c4d4d9f9" alt="C4 Internet Banking container view with a customer, browser, backend, data stores and external systems">
 </picture>
 
 [Full container source](examples/c4-banking-container.laml) · [Context, component and code views](docs/c4-diagrams.md). Adapted from Simon Brown's [Internet Banking System example](https://c4model.com/example/) (CC BY 4.0).
@@ -142,8 +142,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/showcase-class-modern-dark.png">
-  <img src="docs/images/showcase-class-modern.png" alt="Compact class diagram with Customer, Order, Line and Pricing">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/showcase-class-modern-dark.png?v=78fc8e804b">
+  <img src="docs/images/showcase-class-modern.png?v=78fc8e804b" alt="Compact class diagram with Customer, Order, Line and Pricing">
 </picture>
 
 [Full class source](examples/showcase-class.laml) · [Class guide](docs/diagrams/class.md)
@@ -163,8 +163,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/showcase-sequence-modern-dark.png">
-  <img src="docs/images/showcase-sequence-modern.png" alt="Compact sequence diagram with activation bars, fragments, a note and destruction crosses">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/showcase-sequence-modern-dark.png?v=cd4545bc70">
+  <img src="docs/images/showcase-sequence-modern.png?v=cd4545bc70" alt="Compact sequence diagram with activation bars, fragments, a note and destruction crosses">
 </picture>
 
 [Full showcase source](examples/showcase-sequence.laml) · [Sequence guide](docs/diagrams/sequence.md).
@@ -180,8 +180,8 @@ RequestDocuments --> Merge
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/bpmn-basic-modern-dark.png?v=ea7813c">
-  <img src="docs/images/bpmn-basic-modern.png?v=ea7813c" alt="BPMN process with an exclusive decision">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/bpmn-basic-modern-dark.png?v=b5dd65013f">
+  <img src="docs/images/bpmn-basic-modern.png?v=b5dd65013f" alt="BPMN process with an exclusive decision">
 </picture>
 
 [Complete BPMN source](examples/bpmn-basic.laml) · [BPMN guide and coverage limits](docs/bpmn-diagrams.md).
@@ -193,8 +193,8 @@ Six themes come in three light/dark pairs. The previews below have **transparent
 ### Plain · Plain dark
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/theme-plain-dark.png?v=40d1be0b38">
-  <img src="docs/images/theme-plain.png?v=77e3234871" alt="Plain theme example: connected service, archive and client">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/theme-plain-dark.png?v=771b0f22d9">
+  <img src="docs/images/theme-plain.png?v=771b0f22d9" alt="Plain theme example: connected service, archive and client">
 </picture>
 
 [Plain source](examples/theme-plain.laml) · [Plain dark source](examples/theme-plain-dark.laml)
@@ -202,8 +202,8 @@ Six themes come in three light/dark pairs. The previews below have **transparent
 ### Modern · Modern dark
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/theme-modern-dark.png?v=0c6041c955">
-  <img src="docs/images/theme-modern.png?v=014f3ef515" alt="Modern theme example: connected service, archive and client">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/theme-modern-dark.png?v=683fbd0e1f">
+  <img src="docs/images/theme-modern.png?v=683fbd0e1f" alt="Modern theme example: connected service, archive and client">
 </picture>
 
 [Modern source](examples/theme-modern.laml) · [Modern dark source](examples/theme-modern-dark.laml)
@@ -211,8 +211,8 @@ Six themes come in three light/dark pairs. The previews below have **transparent
 ### Modern mono · Modern mono dark
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/theme-modern-mono-dark.png?v=1c8c321215">
-  <img src="docs/images/theme-modern-mono.png?v=e98ce47465" alt="Modern monochrome theme example: connected service, archive and client">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/theme-modern-mono-dark.png?v=84d8bae3ff">
+  <img src="docs/images/theme-modern-mono.png?v=84d8bae3ff" alt="Modern monochrome theme example: connected service, archive and client">
 </picture>
 
 [Modern mono source](examples/theme-modern-mono.laml) · [Modern mono dark source](examples/theme-modern-mono-dark.laml)

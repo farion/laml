@@ -407,6 +407,15 @@ pub(super) fn route_is_clear(points: &[Point], boxes: &[BoxNode], previous: &[Ro
                         2.0 * reach,
                     )
                 })
+                || route.label.as_ref().is_some_and(|label| {
+                    super::label_ownership::steals(
+                        label,
+                        &route.points,
+                        pair[0],
+                        pair[1],
+                        route.width,
+                    )
+                })
                 || route
                     .label
                     .iter()

@@ -9,30 +9,30 @@ These four buildable examples demonstrate the C4 visual vocabulary: named scope 
 [Context source](../examples/c4-banking-context.laml) · [Container source](../examples/c4-banking-container.laml) · [Component source](../examples/c4-banking-component.laml) · [Code source](../examples/c4-banking-code.laml)
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/c4-banking-context-modern-dark.png?v=0c608b6e38">
-  <img src="images/c4-banking-context-modern.png?v=86be72af7d" alt="C4 banking context with customer, online banking, core banking and email provider">
+  <source media="(prefers-color-scheme: dark)" srcset="images/c4-banking-context-modern-dark.png?v=c34c3835c6">
+  <img src="images/c4-banking-context-modern.png?v=c34c3835c6" alt="C4 banking context with customer, online banking, core banking and email provider">
 </picture>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/c4-banking-container-modern-dark.png?v=normal-docking-20261104">
-  <img src="images/c4-banking-container-modern.png?v=normal-docking-20261104" alt="C4 banking container diagram showing a person, browser UI, backend, data stores and two external systems">
+  <source media="(prefers-color-scheme: dark)" srcset="images/c4-banking-container-modern-dark.png?v=c7c4d4d9f9">
+  <img src="images/c4-banking-container-modern.png?v=c7c4d4d9f9" alt="C4 banking container diagram showing a person, browser UI, backend, data stores and two external systems">
 </picture>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/c4-banking-component-modern-dark.png?v=e9708ea12f">
-  <img src="images/c4-banking-component-modern.png?v=464aed7d80" alt="C4 banking component diagram showing backend APIs, components and connected systems">
+  <source media="(prefers-color-scheme: dark)" srcset="images/c4-banking-component-modern-dark.png?v=cef43b043b">
+  <img src="images/c4-banking-component-modern.png?v=cef43b043b" alt="C4 banking component diagram showing backend APIs, components and connected systems">
 </picture>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/c4-banking-code-modern-dark.png">
-  <img src="images/c4-banking-code-modern.png" alt="C4 code diagram of the core banking adapter">
+  <source media="(prefers-color-scheme: dark)" srcset="images/c4-banking-code-modern-dark.png?v=75d31f5226">
+  <img src="images/c4-banking-code-modern.png?v=75d31f5226" alt="C4 code diagram of the core banking adapter">
 </picture>
 
 The context, container and component views adapt Simon Brown's [Internet Banking System C4 example](https://c4model.com/example/) under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Descriptions and layout are LAML adaptations. The component view shows both the scoped Backend and its enclosing Internet Banking System; its component inventory is curated for this example. The code view illustrates the next zoom level with a separate LAML example.
 
 ## System context
 
-[Complete source](../examples/c4-context.laml) · [Rendered image](images/c4-context-modern.png)
+[Complete source](../examples/c4-context.laml) · [Rendered image](images/c4-context-modern.png?v=f3d9d696b8)
 
 ```laml
 settings {
@@ -53,41 +53,41 @@ layout {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/c4-context-modern-dark.png">
-  <img src="images/c4-context-modern.png" alt="C4 context for an online shop">
+  <source media="(prefers-color-scheme: dark)" srcset="images/c4-context-modern-dark.png?v=f3d9d696b8">
+  <img src="images/c4-context-modern.png?v=f3d9d696b8" alt="C4 context for an online shop">
 </picture>
 
 The scoped software system is a box; people and directly connected external systems are supporting elements. Technology details appear at the container level.
 
 ## Container
 
-[Complete source](../examples/c4-container.laml) · [Rendered image](images/c4-container-modern.png?v=5d229274e3)
+[Complete source](../examples/c4-container.laml) · [Rendered image](images/c4-container-modern.png?v=c0ceca3b58)
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/c4-container-modern-dark.png?v=a7187b59ee">
-  <img src="images/c4-container-modern.png?v=5d229274e3" alt="C4 container view with a web app, API and database">
+  <source media="(prefers-color-scheme: dark)" srcset="images/c4-container-modern-dark.png?v=c0ceca3b58">
+  <img src="images/c4-container-modern.png?v=c0ceca3b58" alt="C4 container view with a web app, API and database">
 </picture>
 
 `scope: Shop` identifies the single `system Shop(...) { ... }` boundary. The block contains `container` declarations, each with a required `technology` and `description`. People and external systems remain outside it. Relations can use qualified endpoints such as `Shop.Web` and `Shop.API`. The named edge `@submit(technology="HTTPS") Shop.Web -> Shop.API : Sends order` shows the protocol visibly as `Sends order (HTTPS)`.
 
 ## Component
 
-[Complete source](../examples/c4-component.laml) · [Rendered image](images/c4-component-modern.png?v=57905463e2)
+[Complete source](../examples/c4-component.laml) · [Rendered image](images/c4-component-modern.png?v=2769016f1f)
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/c4-component-modern-dark.png?v=d620bb287d">
-  <img src="images/c4-component-modern.png?v=57905463e2" alt="C4 component view of the order API">
+  <source media="(prefers-color-scheme: dark)" srcset="images/c4-component-modern-dark.png?v=2769016f1f">
+  <img src="images/c4-component-modern.png?v=2769016f1f" alt="C4 component view of the order API">
 </picture>
 
 `scope: API` selects one `container API(...) { ... }` boundary containing `component` declarations. You may optionally enclose it and its peer containers in one `system Name { ... }` boundary, as in the banking example; the scope remains the container ID, and references use the full path (`Banking.Backend.SignIn`). Each component has a description and technology. Peer containers, people and external systems may be shown as supporting elements. C4 components carry their description and technology in this view.
 
 ## Code
 
-[Complete source](../examples/c4-code.laml) · [Rendered image](images/c4-code-modern.png)
+[Complete source](../examples/c4-code.laml) · [Rendered image](images/c4-code-modern.png?v=dd40bc27e7)
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/c4-code-modern-dark.png">
-  <img src="images/c4-code-modern.png" alt="C4 code view of the order service">
+  <source media="(prefers-color-scheme: dark)" srcset="images/c4-code-modern-dark.png?v=dd40bc27e7">
+  <img src="images/c4-code-modern.png?v=dd40bc27e7" alt="C4 code view of the order service">
 </picture>
 
 `scope: Orders` selects a `component Orders(...) { ... }` boundary. Inside it, `class`, `interface`, `enum` and `datatype` declarations use the existing UML class notation, including members and class relationships. The code view is authored as a separate diagram using the class notation.

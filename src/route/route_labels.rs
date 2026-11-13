@@ -63,8 +63,18 @@ pub(super) fn select(
             });
         }
     }
+    let ownership = super::label_ownership::Objects::new(boxes);
     let mut reason = None;
     for (label, gap) in options {
+        if label
+            .as_ref()
+            .is_some_and(|text| !ownership.clear(text, points, previous))
+        {
+            reason = Some(
+                "relation label is closer to another object than to its own connection".into(),
+            );
+            continue;
+        }
         // The modern package label's visible pill extends beyond its text box.
         // Reject a placement that would paint over another package outline.
         if package_pill

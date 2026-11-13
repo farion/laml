@@ -49,8 +49,8 @@ laml build first.laml first.pdf
 `check` validates source; `build` also checks measured layout and routing and writes an image. An omitted output filename writes SVG next to the source.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/gne-basic-modern-dark.png">
-  <img src="images/gne-basic-modern.png" alt="Browser sends a request to the API">
+  <source media="(prefers-color-scheme: dark)" srcset="images/gne-basic-modern-dark.png?v=311c8ea67f">
+  <img src="images/gne-basic-modern.png?v=311c8ea67f" alt="Browser sends a request to the API">
 </picture>
 
 This image was built from the [complete source](../examples/gne-basic.laml).

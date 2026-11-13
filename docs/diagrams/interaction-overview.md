@@ -21,8 +21,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/interaction-overview-basic-modern-dark.png">
-  <img src="../images/interaction-overview-basic-modern.png" alt="Two interaction uses in a Checkout frame">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/interaction-overview-basic-modern-dark.png?v=a52ab37694">
+  <img src="../images/interaction-overview-basic-modern.png?v=a52ab37694" alt="Two interaction uses in a Checkout frame">
 </picture>
 
 [Complete source for this image](../../examples/interaction-overview-basic.laml). Each `interaction-use` is a `ref` frame; directed control flows connect the frames between initial and final vertices.
@@ -47,8 +47,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/interaction-overview-purchase-modern-dark.png?v=orthogonal-default-20261104">
-  <img src="../images/interaction-overview-purchase-modern.png?v=orthogonal-default-20261104" alt="Purchase with decision, guarded paths and merge">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/interaction-overview-purchase-modern-dark.png?v=731e610a28">
+  <img src="../images/interaction-overview-purchase-modern.png?v=731e610a28" alt="Purchase with decision, guarded paths and merge">
 </picture>
 
 [Complete source](../../examples/interaction-overview-purchase.laml). `decision` branches on guards; `merge` reunites the paths.
@@ -64,8 +64,8 @@ Charge --> Complete
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/interaction-overview-parallel-modern-dark.png?v=orthogonal-default-20261104">
-  <img src="../images/interaction-overview-parallel-modern.png?v=orthogonal-default-20261104" alt="Parallel interaction uses with fork and join">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/interaction-overview-parallel-modern-dark.png?v=9a1cc8b566">
+  <img src="../images/interaction-overview-parallel-modern.png?v=9a1cc8b566" alt="Parallel interaction uses with fork and join">
 </picture>
 
 [Complete source](../../examples/interaction-overview-parallel.laml). `fork` and `join` delimit parallel paths. Common placement: [GNE](gne.md). [Full syntax](../language-reference.md#interaction-overview-diagrams).

@@ -19,8 +19,8 @@ layout {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/deployment-quickstart-modern-dark.png">
-  <img src="../images/deployment-quickstart-modern.png" alt="Two devices, a contained artifact and a communication path">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/deployment-quickstart-modern-dark.png?v=c65dd417e0">
+  <img src="../images/deployment-quickstart-modern.png?v=c65dd417e0" alt="Two devices, a contained artifact and a communication path">
 </picture>
 
 [Complete source](../../examples/deployment-quickstart.laml). The artifact is drawn inside its device; `--` connects devices with a communication path.
@@ -42,8 +42,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/deployment-basic-modern-dark.png?v=ea7813c">
-  <img src="../images/deployment-basic-modern.png?v=ea7813c" alt="Deployment and manifestation beside contained runtime">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/deployment-basic-modern-dark.png?v=6d0d6dc186">
+  <img src="../images/deployment-basic-modern.png?v=6d0d6dc186" alt="Deployment and manifestation beside contained runtime">
 </picture>
 
 [Complete source](../../examples/deployment-basic.laml). `<<deploy>>` points to a deployment target; `<<manifest>>` points to the component realized by an artifact.
@@ -66,8 +66,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/deployment-topology-modern-dark.png?v=ec855e62a7">
-  <img src="../images/deployment-topology-modern.png?v=420ec2960e" alt="Nested deployment topology">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/deployment-topology-modern-dark.png?v=0b84b7fcb0">
+  <img src="../images/deployment-topology-modern.png?v=0b84b7fcb0" alt="Nested deployment topology">
 </picture>
 
 [Complete source](../../examples/deployment-topology.laml).
@@ -84,8 +84,8 @@ executionEnvironment JVM
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/deployment-manifest-modern-dark.png?v=09275e3ec7">
-  <img src="../images/deployment-manifest-modern.png?v=f3c9b8eaef" alt="Artifact manifested from a component and deployed on a JVM">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/deployment-manifest-modern-dark.png?v=09d4622cd6">
+  <img src="../images/deployment-manifest-modern.png?v=09d4622cd6" alt="Artifact manifested from a component and deployed on a JVM">
 </picture>
 
 [Complete source](../../examples/deployment-manifest.laml). Manifestation points to a component; deployment points to a node or execution environment. Use [GNE](gne.md) for shared placement and styling. [Full deployment syntax](../language-reference.md#deployment-diagrams).

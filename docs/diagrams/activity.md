@@ -21,8 +21,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/activity-basic-modern-dark.png?v=activity-control-spine-20261104">
-  <img src="../images/activity-basic-modern.png?v=activity-control-spine-20261104" alt="Request enters an action pin alongside the control flow">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/activity-basic-modern-dark.png?v=1bebbb4b67">
+  <img src="../images/activity-basic-modern.png?v=1bebbb4b67" alt="Request enters an action pin alongside the control flow">
 </picture>
 
 [Complete source for this image](../../examples/activity-basic.laml). `object` carries a request to the action's named input pin; `control` connects the start, action and activity final. The default layout keeps the control flow left-to-right and places a lone input object beneath its action.
@@ -49,8 +49,8 @@ styling {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/activity-order-modern-dark.png?v=15512e4918">
-  <img src="../images/activity-order-modern.png?v=fb14eb8893" alt="Order activity with guarded decision and extended fork/join">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/activity-order-modern-dark.png?v=2e2fc0938f">
+  <img src="../images/activity-order-modern.png?v=2e2fc0938f" alt="Order activity with guarded decision and extended fork/join">
 </picture>
 
 [Complete source](../../examples/activity-order.laml). A `decision` uses guarded outgoing paths; `fork` and `join` split and rejoin parallel paths. `length` extends the fork along its long axis so both outgoing arrows can run horizontally. `flowFinal` ends one path, `activityFinal` ends the activity.
@@ -66,8 +66,8 @@ object Approval --> Dispatch::approval
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/activity-order-modern-dark.png?v=15512e4918">
-  <img src="../images/activity-order-modern.png?v=fb14eb8893" alt="Named action pins and object nodes in the order activity">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/activity-order-modern-dark.png?v=2e2fc0938f">
+  <img src="../images/activity-order-modern.png?v=2e2fc0938f" alt="Named action pins and object nodes in the order activity">
 </picture>
 
 [Complete source](../../examples/activity-order.laml). `Action::pin` addresses an input or output pin. See [GNE](gne.md) for common placement/styling and the [syntax reference](../language-reference.md#activity-diagrams) for vertex and flow forms.

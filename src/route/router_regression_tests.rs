@@ -51,6 +51,12 @@ fn nested_fanout_uses_local_corridors_without_crossings_or_left_loops() {
             super::super::obstacles::Obstacles::new(&b, r.from, r.to).clear(&r.points, &others),
             "joint clearance must survive restoring semantic order"
         );
+        if let Some(label) = &r.label {
+            assert!(
+                super::super::label_ownership::clear(label, &r.points, &b, &others),
+                "label ownership must also survive restoring semantic order"
+            );
+        }
     }
     let telemetry = &routes[2];
     assert!(
@@ -108,7 +114,7 @@ fn unrelated_objects_need_clearance_not_just_an_unintersected_interior() {
 }
 
 #[test]
-fn a_short_labeled_top_arrival_does_not_need_a_hairpin() {
+fn crowded_short_arrival_must_give_its_label_an_unambiguous_owner() {
     let d=parse("semantics {\nA\nNeighbor\nStore\npackage Network {\nInner\n}\nA -> Store : Read objects\n}\n").unwrap();
     let s = StyleSheet::default();
     let mut b = place(&d, &s).unwrap();
@@ -118,9 +124,12 @@ fn a_short_labeled_top_arrival_does_not_need_a_hairpin() {
     set_box(&mut b, "Network", 200., 84., 400., 300.);
     set_box(&mut b, "Network.Inner", 250., 200., 100., 60.);
     let r = route(&d, &b, &s).unwrap();
-    assert_eq!(r[0].points.len(), 3, "{:?}", r[0].points);
     assert_eq!(r[0].points.last().unwrap().y, 84.0, "arrive from above");
-    assert!(r[0].label.is_some());
+    let label = r[0].label.as_ref().unwrap();
+    assert!(
+        super::super::label_ownership::clear(label, &r[0].points, &b, &[]),
+        "a short L is not acceptable when its label looks like the neighbor's caption"
+    );
 }
 
 #[test]

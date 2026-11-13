@@ -21,8 +21,8 @@ layout {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/object-basic-modern-dark.png">
-  <img src="../images/object-basic-modern.png" alt="Two typed objects with slots and a link">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/object-basic-modern-dark.png?v=5056ccbf61">
+  <img src="../images/object-basic-modern.png?v=5056ccbf61" alt="Two typed objects with slots and a link">
 </picture>
 
 [Complete source for this image](../../examples/object-basic.laml). An object has an underlined instance header; slots display values. Links can show end names.
@@ -50,8 +50,8 @@ styling {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/showcase-object-modern-dark.png?v=orthogonal-default-20261104">
-  <img src="../images/showcase-object-modern.png?v=orthogonal-default-20261104" alt="Styled object diagram with instances and attached note">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/showcase-object-modern-dark.png?v=8c169ddf7c">
+  <img src="../images/showcase-object-modern.png?v=8c169ddf7c" alt="Styled object diagram with instances and attached note">
 </picture>
 
 [Complete source](../../examples/showcase-object.laml). Use named links to target individual styling or attach a note; scope styling with `node[ID]` and `relation[ID]`. Unlike class associations, object links do not carry multiplicities. For common placement and styling, see [GNE](gne.md); for instance forms, see the [language reference](../language-reference.md#class-and-object-diagrams).

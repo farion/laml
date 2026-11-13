@@ -20,8 +20,8 @@ layout {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/communication-quickstart-modern-dark.png">
-  <img src="../images/communication-quickstart-modern.png" alt="Two participants exchanging numbered messages on one link">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/communication-quickstart-modern-dark.png?v=0cef798283">
+  <img src="../images/communication-quickstart-modern.png?v=0cef798283" alt="Two participants exchanging numbered messages on one link">
 </picture>
 
 [Complete source](../../examples/communication-quickstart.laml). Declare a link with `--`; numbered messages can travel in either direction on it. `interaction` names the enclosing frame.
@@ -42,8 +42,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/communication-order-modern-dark.png">
-  <img src="../images/communication-order-modern.png" alt="Three participants and nested message numbers">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/communication-order-modern-dark.png?v=2b7ff79260">
+  <img src="../images/communication-order-modern.png?v=2b7ff79260" alt="Three participants and nested message numbers">
 </picture>
 
 [Complete source](../../examples/communication-order.laml). Declare links before their messages. Write message numbers explicitly in the source.

@@ -21,8 +21,8 @@ layout {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/class-quickstart-modern-dark.png">
-  <img src="../images/class-quickstart-modern.png" alt="Customer and Order with an association">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/class-quickstart-modern-dark.png?v=45b6d9141a">
+  <img src="../images/class-quickstart-modern.png?v=45b6d9141a" alt="Customer and Order with an association">
 </picture>
 
 [Complete source for this image](../../examples/class-quickstart.laml). `"1"` and `"0..*"` label the association ends; `layout` fixes the boxes' minimum separation.
@@ -46,8 +46,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/class-basic-modern-dark.png?v=orthogonal-default-20261104">
-  <img src="../images/class-basic-modern.png?v=orthogonal-default-20261104" alt="Class compartments, end roles and a note on the association">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/class-basic-modern-dark.png?v=8064f72849">
+  <img src="../images/class-basic-modern.png?v=8064f72849" alt="Class compartments, end roles and a note on the association">
 </picture>
 
 [Complete source](../../examples/class-basic.laml). `--` separates attributes and operations; `Regel .. relation[orders]` attaches a note to the named association.
@@ -73,8 +73,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/showcase-class-modern-dark.png">
-  <img src="../images/showcase-class-modern.png" alt="Classes, packages, templates and relationships">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/showcase-class-modern-dark.png?v=78fc8e804b">
+  <img src="../images/showcase-class-modern.png?v=78fc8e804b" alt="Classes, packages, templates and relationships">
 </picture>
 
 [Complete source](../../examples/showcase-class.laml). The excerpt illustrates notation; the complete source supplies declarations and layout.
@@ -101,8 +101,8 @@ styling {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/class-lollipops-modern-dark.png">
-  <img src="../images/class-lollipops-modern.png" alt="Compact interface notation">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/class-lollipops-modern-dark.png?v=b01948198d">
+  <img src="../images/class-lollipops-modern.png?v=b01948198d" alt="Compact interface notation">
 </picture>
 
 [Complete source](../../examples/class-lollipops.laml). Each compact interface symbol stays level with its provider, so its connector is horizontal.
@@ -121,8 +121,8 @@ package Vertrieb {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/class-packages-modern-dark.png?v=orthogonal-default-20261104">
-  <img src="../images/class-packages-modern.png?v=orthogonal-default-20261104" alt="Nested packages with scoped classes">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/class-packages-modern-dark.png?v=6b85841683">
+  <img src="../images/class-packages-modern.png?v=6b85841683" alt="Nested packages with scoped classes">
 </picture>
 
 [Complete package source](../../examples/class-packages.laml). Without an explicit placement rule, a nested package linked from a sibling may stack below it so the child connection is vertical. Use `Vertrieb.Kunde` to refer to a class from outside the package.
@@ -135,8 +135,8 @@ class StringRepository
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/class-binding-modern-dark.png?v=35bd58116c">
-  <img src="../images/class-binding-modern.png?v=5365841b21" alt="Template binding">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/class-binding-modern-dark.png?v=eeb99b3ee1">
+  <img src="../images/class-binding-modern.png?v=eeb99b3ee1" alt="Template binding">
 </picture>
 
 [Complete binding source](../../examples/class-binding.laml). A named `association` can join three classifiers:
@@ -150,8 +150,8 @@ Medikament -- Verordnet
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/class-nary-modern-dark.png?v=ea7813c">
-  <img src="../images/class-nary-modern.png?v=ea7813c" alt="Three-arm association">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/class-nary-modern-dark.png?v=2daaa565a2">
+  <img src="../images/class-nary-modern.png?v=2daaa565a2" alt="Three-arm association">
 </picture>
 
 [Complete association source](../../examples/class-nary.laml). An unpositioned n-ary diamond aligns with the middle participant; its arms prefer horizontal and vertical runs over diagonals. Explicit layout rules still take precedence.
@@ -164,8 +164,8 @@ Medikament -- Verordnet
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/class-qualifiers-modern-dark.png">
-  <img src="../images/class-qualifiers-modern.png" alt="Qualifier boxes on both association ends">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/class-qualifiers-modern-dark.png?v=246f928b4d">
+  <img src="../images/class-qualifiers-modern.png?v=246f928b4d" alt="Qualifier boxes on both association ends">
 </picture>
 
 [Complete qualifier source](../../examples/class-qualifiers.laml). `qualifier(...)` attaches named, typed attributes to the adjacent association end.
@@ -180,8 +180,8 @@ Auftrag .. relation[orders]
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/class-association-class-modern-dark.png?v=orthogonal-default-20261104">
-  <img src="../images/class-association-class-modern.png?v=orthogonal-default-20261104" alt="Association class attached to a named association">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/class-association-class-modern-dark.png?v=e06c34effa">
+  <img src="../images/class-association-class-modern.png?v=e06c34effa" alt="Association class attached to a named association">
 </picture>
 
 [Complete association-class source](../../examples/class-association-class.laml). Give the binary association an ID so its association class can attach to it. Shared placement and styling: [GNE](gne.md). More syntax: [language reference](../language-reference.md#class-and-object-diagrams).

@@ -35,6 +35,12 @@ pub fn route(
             )
         })
     }) {
+        if stable.is_err()
+            && !diagram.settings.allow_diagonal
+            && diagram.settings.diagram_type == crate::syntax::DiagramType::Generic
+        {
+            return super::optimize::route(diagram, boxes, sheet, stable);
+        }
         return stable;
     }
     if !diagram.settings.allow_diagonal {

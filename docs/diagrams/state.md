@@ -18,8 +18,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/state-quickstart-modern-dark.png">
-  <img src="../images/state-quickstart-modern.png" alt="Initial state, two states and a final state">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/state-quickstart-modern-dark.png?v=6eb554441e">
+  <img src="../images/state-quickstart-modern.png?v=6eb554441e" alt="Initial state, two states and a final state">
 </picture>
 
 [Complete source](../../examples/state-quickstart.laml). `-->` draws a transition; the text after `:` appears beside it.
@@ -43,8 +43,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/state-basic-modern-dark.png?v=40a20fef5a">
-  <img src="../images/state-basic-modern.png?v=907bbd843f" alt="Guarded choice and state entry/do/exit behavior">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/state-basic-modern-dark.png?v=442b245253">
+  <img src="../images/state-basic-modern.png?v=442b245253" alt="Guarded choice and state entry/do/exit behavior">
 </picture>
 
 [Complete source](../../examples/state-basic.laml). Guards label choice exits; `entry`, `do`, and `exit` appear inside a state.
@@ -65,8 +65,8 @@ state Processing {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/state-composite-modern-dark.png">
-  <img src="../images/state-composite-modern.png" alt="State containing a nested region">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/state-composite-modern-dark.png?v=9525f0e201">
+  <img src="../images/state-composite-modern.png?v=9525f0e201" alt="State containing a nested region">
 </picture>
 
 [Composite source](../../examples/state-composite.laml). A state may contain one visible nested region.
@@ -77,8 +77,8 @@ state Processing {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/state-loop-modern-dark.png?v=9768150810">
-  <img src="../images/state-loop-modern.png?v=f179732e87" alt="State self-loop routed outside Open">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/state-loop-modern-dark.png?v=fe3fb8fca0">
+  <img src="../images/state-loop-modern.png?v=fe3fb8fca0" alt="State self-loop routed outside Open">
 </picture>
 
 [Complete self-loop source](../../examples/state-loop.laml). A self-transition uses `A --> A` and routes outside the state.
