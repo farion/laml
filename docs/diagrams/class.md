@@ -135,8 +135,8 @@ class StringRepository
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/class-binding-modern-dark.png?v=ea7813c">
-  <img src="../images/class-binding-modern.png?v=ea7813c" alt="Template binding">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/class-binding-modern-dark.png?v=35bd58116c">
+  <img src="../images/class-binding-modern.png?v=5365841b21" alt="Template binding">
 </picture>
 
 [Complete binding source](../../examples/class-binding.laml). A named `association` can join three classifiers:

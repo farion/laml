@@ -37,8 +37,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/component-basic-modern-dark.png?v=orthogonal-default-20261104">
-  <img src="../images/component-basic-modern.png?v=orthogonal-default-20261104" alt="Required and provided component interfaces">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/component-basic-modern-dark.png?v=fdc409e2c9">
+  <img src="../images/component-basic-modern.png?v=e24d0e8a7d" alt="Required and provided component interfaces">
 </picture>
 
 [Complete source](../../examples/component-basic.laml). `..>` points to a required interface box; `..|>` is a provided realization. The source chooses `interface-notation: lollipop` for the provided interface.

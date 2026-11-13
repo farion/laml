@@ -66,8 +66,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/deployment-topology-modern-dark.png?v=ea7813c">
-  <img src="../images/deployment-topology-modern.png?v=ea7813c" alt="Nested deployment topology">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/deployment-topology-modern-dark.png?v=ec855e62a7">
+  <img src="../images/deployment-topology-modern.png?v=420ec2960e" alt="Nested deployment topology">
 </picture>
 
 [Complete source](../../examples/deployment-topology.laml).
@@ -84,8 +84,8 @@ executionEnvironment JVM
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/deployment-manifest-modern-dark.png?v=ea7813c">
-  <img src="../images/deployment-manifest-modern.png?v=ea7813c" alt="Artifact manifested from a component and deployed on a JVM">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/deployment-manifest-modern-dark.png?v=09275e3ec7">
+  <img src="../images/deployment-manifest-modern.png?v=f3c9b8eaef" alt="Artifact manifested from a component and deployed on a JVM">
 </picture>
 
 [Complete source](../../examples/deployment-manifest.laml). Manifestation points to a component; deployment points to a node or execution environment. Use [GNE](gne.md) for shared placement and styling. [Full deployment syntax](../language-reference.md#deployment-diagrams).

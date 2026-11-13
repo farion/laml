@@ -8,6 +8,8 @@ fn endpoints(
     member: Option<&str>,
     side: Option<PortSide>,
     primary: PortSide,
+    explore: bool,
+    other: Point,
 ) -> Vec<Point> {
     if let Some(name) = member
         && let Some(named) = node.ports.iter().find(|p| p.id == name)
@@ -29,12 +31,53 @@ fn endpoints(
         .flat_map(|s| {
             let centered = forced_port(node, s);
             let mut ports = vec![centered];
-            if s == primary
+            if explore && node.shape == NodeShape::Rectangle {
+                if node.kind == crate::syntax::NodeKind::Package
+                    && !node.c4_boundary
+                    && let Ok((w, h)) = crate::geometry::package_outline::tab(node)
+                    && s == PortSide::Top
+                    && w >= 24.0
+                    && node.width - w >= 24.0
+                {
+                    for x in [
+                        node.x + w / 2.0,
+                        other.x.clamp(node.x + 12.0, node.x + w - 12.0),
+                    ] {
+                        ports.push(Point { x, y: node.y });
+                    }
+                    ports.push(Point {
+                        x: other.x.clamp(node.x + w + 12.0, node.x + node.width - 12.0),
+                        y: node.y + h,
+                    });
+                } else if node.kind != crate::syntax::NodeKind::Package {
+                    let projected = match s {
+                        PortSide::Top | PortSide::Bottom if node.width >= 24.0 => Some(Point {
+                            x: other.x.clamp(node.x + 12.0, node.x + node.width - 12.0),
+                            y: centered.y,
+                        }),
+                        PortSide::Left | PortSide::Right if node.height >= 24.0 => Some(Point {
+                            x: centered.x,
+                            y: other.y.clamp(node.y + 12.0, node.y + node.height - 12.0),
+                        }),
+                        _ => None,
+                    };
+                    ports.extend(projected);
+                }
+            }
+            if (s == primary || explore)
                 && node.shape == NodeShape::Rectangle
                 && node.width >= 36.0
                 && node.height >= 36.0
             {
-                for shift in [-12.0, 12.0] {
+                let mut shifts = vec![-12.0, 12.0];
+                if explore {
+                    let half = match s {
+                        PortSide::Left | PortSide::Right => node.height / 2.0,
+                        PortSide::Top | PortSide::Bottom => node.width / 2.0,
+                    };
+                    shifts.extend([12.0 - half, half - 12.0]);
+                }
+                for shift in shifts {
                     let p = match s {
                         PortSide::Right | PortSide::Left => Point {
                             x: centered.x,
@@ -78,6 +121,7 @@ fn endpoints(
         .collect()
 }
 
+#[allow(clippy::too_many_arguments)] // Both endpoints, mandatory sides and current obstacles define candidates.
 pub(super) fn candidates(
     a: &BoxNode,
     b: &BoxNode,
@@ -86,6 +130,7 @@ pub(super) fn candidates(
     source_side: Option<PortSide>,
     target_side: Option<PortSide>,
     previous: &[Route],
+    obstacles: Option<&[BoxNode]>,
 ) -> Vec<Vec<Point>> {
     let mut result = Vec::new();
     let ca = super::geometry::center(a);
@@ -108,8 +153,28 @@ pub(super) fn candidates(
         PortSide::Top => PortSide::Bottom,
         PortSide::Bottom => PortSide::Top,
     };
-    let from = endpoints(a, source_member, source_side, source_primary);
-    let to = endpoints(b, target_member, target_side, target_primary);
+    let from = endpoints(
+        a,
+        source_member,
+        source_side,
+        source_primary,
+        obstacles.is_some(),
+        cb,
+    );
+    let to = endpoints(
+        b,
+        target_member,
+        target_side,
+        target_primary,
+        obstacles.is_some(),
+        ca,
+    );
+    let tracks = obstacles.map(|boxes| {
+        (
+            super::detours::tracks(boxes, true, (ca.x + cb.x) / 2.0, true),
+            super::detours::tracks(boxes, false, (ca.y + cb.y) / 2.0, true),
+        )
+    });
     let outer_x = previous
         .iter()
         .flat_map(|route| route.points.iter().map(|p| p.x))
@@ -122,6 +187,7 @@ pub(super) fn candidates(
         .fold((f64::INFINITY, f64::NEG_INFINITY), |(lo, hi), y| {
             (lo.min(y), hi.max(y))
         });
+    let contours = Contours::new(a, b);
     for start in from {
         for &end in &to {
             if (start.x - end.x).abs() < 0.01 || (start.y - end.y).abs() < 0.01 {
@@ -197,6 +263,64 @@ pub(super) fn candidates(
                     ]);
                 }
             }
+            if let Some((xs, ys)) = &tracks {
+                // Mixed faces need a local corridor too: an L path alone can be
+                // blocked even though a short right-to-top path exists nearby.
+                let horizontal_start =
+                    (start.x - a.x).abs() < 0.01 || (start.x - a.x - a.width).abs() < 0.01;
+                let horizontal_end =
+                    (end.x - b.x).abs() < 0.01 || (end.x - b.x - b.width).abs() < 0.01;
+                if horizontal_start != horizontal_end {
+                    for &x in xs {
+                        for &y in ys {
+                            let path = if horizontal_start {
+                                vec![
+                                    start,
+                                    Point { x, y: start.y },
+                                    Point { x, y },
+                                    Point { x: end.x, y },
+                                    end,
+                                ]
+                            } else {
+                                vec![
+                                    start,
+                                    Point { x: start.x, y },
+                                    Point { x, y },
+                                    Point { x, y: end.y },
+                                    end,
+                                ]
+                            };
+                            if contours.normal(&path, false) {
+                                result.push(path);
+                            }
+                        }
+                    }
+                } else {
+                    for &track in if horizontal_start { xs } else { ys } {
+                        result.push(if horizontal_start {
+                            vec![
+                                start,
+                                Point {
+                                    x: track,
+                                    y: start.y,
+                                },
+                                Point { x: track, y: end.y },
+                                end,
+                            ]
+                        } else {
+                            vec![
+                                start,
+                                Point {
+                                    x: start.x,
+                                    y: track,
+                                },
+                                Point { x: end.x, y: track },
+                                end,
+                            ]
+                        });
+                    }
+                }
+            }
             for node in [a, b] {
                 for track in [node.x - 24.0, node.x + node.width + 24.0] {
                     result.push(vec![
@@ -228,7 +352,13 @@ pub(super) fn candidates(
 
 // For box-like nodes, both terminal strokes must be normal to a visible
 // side; following an edge into an arrowhead is never a valid connector.
-fn valid_departure(node: &BoxNode, port: Point, outside: Point, allow_slant: bool) -> bool {
+fn valid_departure(
+    node: &BoxNode,
+    port: Point,
+    outside: Point,
+    allow_slant: bool,
+    visible_top: Option<(f64, f64)>,
+) -> bool {
     if node.shape != NodeShape::Rectangle
         || !matches!(
             node.kind,
@@ -251,11 +381,6 @@ fn valid_departure(node: &BoxNode, port: Point, outside: Point, allow_slant: boo
             axial >= 20.0 - epsilon && lateral.abs() < epsilon
         }
     };
-    let visible_top = if node.kind == crate::syntax::NodeKind::Package && !node.c4_boundary {
-        crate::geometry::package_outline::tab(node).ok()
-    } else {
-        None
-    };
     let left = (port.x - node.x).abs() < epsilon && normal(-dx, dy);
     let right = (port.x - node.x - node.width).abs() < epsilon
         && visible_top.is_none_or(|(_, tab_height)| port.y >= node.y + tab_height - epsilon)
@@ -268,18 +393,41 @@ fn valid_departure(node: &BoxNode, port: Point, outside: Point, allow_slant: boo
     left || right || top || bottom
 }
 
-pub(super) fn normal_ends(points: &[Point], a: &BoxNode, b: &BoxNode) -> bool {
-    if points.len() < 2 {
-        return false;
-    }
-    valid_departure(a, points[0], points[1], false)
-        && valid_departure(b, *points.last().unwrap(), points[points.len() - 2], false)
+pub(super) struct Contours<'a> {
+    a: &'a BoxNode,
+    b: &'a BoxNode,
+    tabs: [Option<(f64, f64)>; 2],
 }
-
+impl<'a> Contours<'a> {
+    pub(super) fn new(a: &'a BoxNode, b: &'a BoxNode) -> Self {
+        let tabs = [a, b].map(|n| {
+            if n.kind == crate::syntax::NodeKind::Package && !n.c4_boundary {
+                crate::geometry::package_outline::tab(n).ok()
+            } else {
+                None
+            }
+        });
+        Self { a, b, tabs }
+    }
+    pub(super) fn normal(&self, points: &[Point], slant: bool) -> bool {
+        points.len() >= 2
+            && valid_departure(self.a, points[0], points[1], slant, self.tabs[0])
+            && valid_departure(
+                self.b,
+                *points.last().unwrap(),
+                points[points.len() - 2],
+                slant,
+                self.tabs[1],
+            )
+    }
+}
+#[cfg(test)]
+pub(super) fn normal_ends(points: &[Point], a: &BoxNode, b: &BoxNode) -> bool {
+    Contours::new(a, b).normal(points, false)
+}
+#[cfg(test)]
 pub(super) fn non_tangent_ends(points: &[Point], a: &BoxNode, b: &BoxNode) -> bool {
-    points.len() >= 2
-        && valid_departure(a, points[0], points[1], true)
-        && valid_departure(b, *points.last().unwrap(), points[points.len() - 2], true)
+    Contours::new(a, b).normal(points, true)
 }
 
 pub(super) fn axis_aligned(points: &[Point]) -> bool {
@@ -289,91 +437,5 @@ pub(super) fn axis_aligned(points: &[Point]) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{geometry::place, parser::parse, styles::StyleSheet};
-
-    #[test]
-    fn rectangular_connectors_require_normal_departure_and_arrival() {
-        let diagram =
-            parse("semantics {\nA\nB\nA -> B\n}\nlayout {\nA < B : align=center; gap=100\n}\n")
-                .unwrap();
-        let boxes = place(&diagram, &StyleSheet::default()).unwrap();
-        let (a, b) = (&boxes[0], &boxes[1]);
-        let y = a.y + a.height / 2.0;
-        let start = Point {
-            x: a.x + a.width,
-            y,
-        };
-        let end = Point { x: b.x, y };
-        let valid = [
-            start,
-            Point {
-                x: start.x + 20.0,
-                y,
-            },
-            Point { x: end.x - 20.0, y },
-            end,
-        ];
-        assert!(normal_ends(&valid, a, b));
-        let tangent = [
-            start,
-            Point {
-                x: start.x,
-                y: y + 30.0,
-            },
-            end,
-        ];
-        assert!(!normal_ends(&tangent, a, b));
-        assert!(!non_tangent_ends(&tangent, a, b));
-        let diagonal = [
-            start,
-            Point {
-                x: start.x + 28.0,
-                y: y + 15.0,
-            },
-            end,
-        ];
-        assert!(non_tangent_ends(&diagonal, a, b));
-        let short = [
-            start,
-            Point {
-                x: start.x + 19.0,
-                y,
-            },
-            end,
-        ];
-        assert!(!normal_ends(&short, a, b));
-        let tangent_arrival = [
-            start,
-            Point {
-                x: end.x,
-                y: y + 30.0,
-            },
-            end,
-        ];
-        assert!(!normal_ends(&tangent_arrival, a, b));
-        assert!(!non_tangent_ends(&tangent_arrival, a, b));
-    }
-
-    #[test]
-    fn offers_a_corridor_beyond_an_existing_long_route() {
-        let diagram = parse(
-            "semantics {\nA\nB\nC\nA -> B\n}\nlayout {\nA < B : align=center; gap=180\nB above C : gap=80\n}\n",
-        )
-        .unwrap();
-        let sheet = StyleSheet::default();
-        let boxes = place(&diagram, &sheet).unwrap();
-        let previous = super::super::route(&diagram, &boxes, &sheet).unwrap();
-        let outer_x = previous[0]
-            .points
-            .iter()
-            .map(|point| point.x)
-            .fold(f64::NEG_INFINITY, f64::max)
-            + 64.0;
-        let options = candidates(&boxes[0], &boxes[2], None, None, None, None, &previous);
-        assert!(options.iter().any(|path| {
-            axis_aligned(path) && path.iter().any(|point| (point.x - outer_x).abs() < 1e-6)
-        }));
-    }
-}
+#[path = "orthogonal_tests.rs"]
+mod tests;

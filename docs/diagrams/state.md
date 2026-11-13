@@ -43,8 +43,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/state-basic-modern-dark.png?v=orthogonal-default-20261104">
-  <img src="../images/state-basic-modern.png?v=orthogonal-default-20261104" alt="Guarded choice and state entry/do/exit behavior">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/state-basic-modern-dark.png?v=40a20fef5a">
+  <img src="../images/state-basic-modern.png?v=907bbd843f" alt="Guarded choice and state entry/do/exit behavior">
 </picture>
 
 [Complete source](../../examples/state-basic.laml). Guards label choice exits; `entry`, `do`, and `exit` appear inside a state.
@@ -77,8 +77,8 @@ state Processing {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/state-loop-modern-dark.png?v=ea7813c">
-  <img src="../images/state-loop-modern.png?v=ea7813c" alt="State self-loop routed outside Open">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/state-loop-modern-dark.png?v=9768150810">
+  <img src="../images/state-loop-modern.png?v=f179732e87" alt="State self-loop routed outside Open">
 </picture>
 
 [Complete self-loop source](../../examples/state-loop.laml). A self-transition uses `A --> A` and routes outside the state.

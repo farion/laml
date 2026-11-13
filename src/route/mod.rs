@@ -7,13 +7,17 @@ use crate::syntax::{Diagram, EndPosition, PortSide};
 mod activity_preferred;
 mod attachments;
 mod bridges;
+mod clearance;
 mod detours;
 mod edge_style;
 mod end_labels;
+mod fanout;
 mod geometry;
 mod junction_arms;
 mod labels;
 mod marker_clearance;
+mod obstacles;
+mod optimize;
 mod orthogonal;
 mod outline_clearance;
 mod package_outline;
@@ -23,6 +27,7 @@ mod qualifiers;
 mod ranking;
 mod route_labels;
 mod router;
+mod routing_order;
 mod self_loops;
 mod side_rules;
 use activity_preferred::{
@@ -272,6 +277,7 @@ fn candidates(
             }
         }
     }
+    let orthogonal_start = results.len();
     if !diagram.settings.allow_diagonal {
         results.extend(orthogonal::candidates(
             a,
@@ -281,8 +287,10 @@ fn candidates(
             source_side,
             target_side,
             previous,
+            ranked.then_some(boxes),
         ));
     }
+    let orthogonal_end = results.len();
     results.extend(
         detours::corridors(
             a,
@@ -297,27 +305,32 @@ fn candidates(
         .into_iter()
         .filter(|points| (source_side.is_none() && target_side.is_none()) || points.len() == 5),
     );
+    let contours = orthogonal::Contours::new(a, b);
     results
         .into_iter()
         .enumerate()
         .filter_map(|(option, mut points)| {
             let last = points.len() - 1;
-            if let Some(side) = source_side {
-                points[0] = forced_port(a, side);
-            }
-            if let Some(side) = target_side {
-                points[last] = forced_port(b, side);
+            if !(orthogonal_start..orthogonal_end).contains(&option) {
+                if let Some(side) = source_side {
+                    points[0] = forced_port(a, side);
+                }
+                if let Some(side) = target_side {
+                    points[last] = forced_port(b, side);
+                }
             }
             let first_horizontal = (points[0].y - points[1].y).abs() < 1e-6;
             let last_horizontal = (points[last - 1].y - points[last].y).abs() < 1e-6;
-            let start_offset = if source_member.is_none()
+            let start_offset = if offset.abs() > 1e-9
+                && source_member.is_none()
                 && parallel::has_competing_port(diagram, index, boxes, from, points[0], previous)
             {
                 offset
             } else {
                 0.0
             };
-            let end_offset = if target_member.is_none()
+            let end_offset = if offset.abs() > 1e-9
+                && target_member.is_none()
                 && parallel::has_competing_port(diagram, index, boxes, to, points[last], previous)
             {
                 offset
@@ -367,7 +380,9 @@ fn candidates(
                         points[2].x = end.x;
                     }
                     5 => {
-                        if matches!(source_side, Some(PortSide::Top | PortSide::Bottom)) {
+                        if matches!(source_side, Some(PortSide::Top | PortSide::Bottom))
+                            || source_side.is_none() && !first_horizontal
+                        {
                             points[1] = Point {
                                 x: start.x,
                                 y: points[2].y,
@@ -375,7 +390,9 @@ fn candidates(
                         } else {
                             points[1].y = start.y;
                         }
-                        if matches!(target_side, Some(PortSide::Left | PortSide::Right)) {
+                        if matches!(target_side, Some(PortSide::Left | PortSide::Right))
+                            || target_side.is_none() && last_horizontal
+                        {
                             points[3] = Point {
                                 x: points[2].x,
                                 y: end.y,
@@ -388,11 +405,10 @@ fn candidates(
                 }
             }
             if diagram.settings.allow_diagonal {
-                if !orthogonal::non_tangent_ends(&points, a, b) {
+                if !contours.normal(&points, true) {
                     return None;
                 }
-            } else if !orthogonal::axis_aligned(&points) || !orthogonal::normal_ends(&points, a, b)
-            {
+            } else if !orthogonal::axis_aligned(&points) || !contours.normal(&points, false) {
                 return None;
             }
             if source_port.is_some_and(|(_, side)| !normal_at_port(&points, side, true))

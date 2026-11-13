@@ -5,7 +5,12 @@ use super::{
 };
 use crate::geometry::BoxNode;
 
-fn tracks(boxes: &[BoxNode], horizontal: bool, middle: f64, gap_midpoints: bool) -> Vec<f64> {
+pub(super) fn tracks(
+    boxes: &[BoxNode],
+    horizontal: bool,
+    middle: f64,
+    gap_midpoints: bool,
+) -> Vec<f64> {
     let mut values = Vec::new();
     for node in boxes {
         let (low, high) = if horizontal {
@@ -14,7 +19,12 @@ fn tracks(boxes: &[BoxNode], horizontal: bool, middle: f64, gap_midpoints: bool)
             (node.y, node.y + node.height)
         };
         values.extend([low - 24.0, high + 24.0]);
+        if gap_midpoints {
+            let gap = super::clearance::GAP + 2.0;
+            values.extend([low - gap, high + gap]);
+        }
     }
+    let edge_count = values.len();
     // A route can pass between two disjoint boxes even if another box,
     // elsewhere on the diagram, overlaps their gap on this axis. Keep the
     // midpoint as a candidate and let the full obstacle check decide.
@@ -48,6 +58,13 @@ fn tracks(boxes: &[BoxNode], horizontal: bool, middle: f64, gap_midpoints: bool)
             }
         }
     }
+    // Pairwise gap midpoints must not crowd out the actual obstacle-edge
+    // tracks near an endpoint (especially in deeply nested containers).
+    let mut midpoints = values.split_off(edge_count);
+    midpoints.sort_by(|a, b| (*a - middle).abs().total_cmp(&(*b - middle).abs()));
+    midpoints.dedup_by(|a, b| (*a - *b).abs() < 1.0);
+    midpoints.truncate(8);
+    values.extend(midpoints);
     values.sort_by(|a: &f64, b: &f64| {
         (*a - middle)
             .abs()
@@ -55,7 +72,7 @@ fn tracks(boxes: &[BoxNode], horizontal: bool, middle: f64, gap_midpoints: bool)
             .then(a.total_cmp(b))
     });
     values.dedup_by(|a, b| (*a - *b).abs() < 1.0);
-    values.truncate(12);
+    values.truncate(64);
     values
 }
 

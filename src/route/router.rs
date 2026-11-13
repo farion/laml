@@ -18,6 +18,9 @@ pub fn route(
     boxes: &[BoxNode],
     sheet: &StyleSheet,
 ) -> Result<Vec<Route>, RouteError> {
+    let visible = crate::geometry::visible_diagram(diagram, sheet)
+        .map_err(|(line, message)| RouteError { line, message })?;
+    let diagram = &visible;
     let stable = route_pass(diagram, boxes, sheet, None);
     // UML-specialized relations can require notation-specific arms and docking;
     // preserve those checked candidates instead of optimizing them as generic lines.
@@ -33,6 +36,9 @@ pub fn route(
         })
     }) {
         return stable;
+    }
+    if !diagram.settings.allow_diagonal {
+        return super::optimize::route(diagram, boxes, sheet, stable);
     }
     // A locally feasible early candidate can block a later relation. If the
     // stable pass fails, retry from scratch with crossing-aware candidate order.
@@ -103,11 +109,26 @@ fn route_pass(
     sheet: &StyleSheet,
     ranked_until: Option<usize>,
 ) -> Result<Vec<Route>, RouteError> {
-    let visible = crate::geometry::visible_diagram(diagram, sheet)
-        .map_err(|(line, message)| RouteError { line, message })?;
-    let diagram = &visible;
+    route_in_order(
+        diagram,
+        boxes,
+        sheet,
+        ranked_until,
+        &(0..diagram.relations.len()).collect::<Vec<_>>(),
+    )
+}
+
+pub(super) fn route_in_order(
+    diagram: &Diagram,
+    boxes: &[BoxNode],
+    sheet: &StyleSheet,
+    ranked_until: Option<usize>,
+    order: &[usize],
+) -> Result<Vec<Route>, RouteError> {
+    // The public entry point resolves visibility and notation exactly once.
     let mut routed = Vec::new();
-    for (index, relation) in diagram.relations.iter().enumerate() {
+    for &index in order {
+        let relation = &diagram.relations[index];
         let ranked = ranked_until.is_some_and(|cutoff| index <= cutoff);
         let owner = |id: &str| {
             boxes
@@ -171,7 +192,20 @@ fn route_pass(
                 })?;
             candidates(diagram, index, from, to, boxes, &routed, offset, ranked)
         };
+        let obstacles = (!diagram.settings.allow_diagonal
+            && matches!(
+                diagram.settings.diagram_type,
+                crate::syntax::DiagramType::Generic | crate::syntax::DiagramType::Package
+            )
+            && !diagram
+                .nodes
+                .iter()
+                .any(|n| n.classes.iter().any(|c| c.starts_with("c4"))))
+        .then(|| super::obstacles::Obstacles::new(boxes, from, to));
         if ranked && from != to {
+            if let Some(check) = &obstacles {
+                options.retain(|points| check.clear(points, &routed));
+            }
             ranking::order(
                 &mut options,
                 &routed,
@@ -181,6 +215,9 @@ fn route_pass(
                 !diagram.settings.allow_diagonal
                     && diagram.settings.diagram_type == crate::syntax::DiagramType::Package,
                 !diagram.settings.allow_diagonal,
+                obstacles
+                    .as_ref()
+                    .and_then(|_| super::fanout::preferred(diagram, index, boxes, from)),
             );
         }
         let label_rule = diagram
@@ -246,7 +283,10 @@ fn route_pass(
             {
                 continue;
             }
-            if !route_is_clear(&points, boxes, &routed) {
+            if !obstacles.as_ref().map_or_else(
+                || route_is_clear(&points, boxes, &routed),
+                |check| check.clear(&points, &routed),
+            ) {
                 continue;
             }
             let Some(plan) = bridges::plan(&points, boxes, &routed, from, to, width) else {
@@ -330,9 +370,18 @@ fn route_pass(
             appearance: relation.appearance,
         });
     }
+    // Bridge/gap plans are already attached to their routes; restore source
+    // order before rendering or resolving relation attachments.
+    let mut indexed: Vec<_> = order.iter().copied().zip(routed).collect();
+    indexed.sort_by_key(|(index, _)| *index);
+    let mut routed: Vec<_> = indexed.into_iter().map(|(_, route)| route).collect();
     attachments::route_attachments(diagram, boxes, sheet, &mut routed)?;
     Ok(routed)
 }
+
+#[cfg(test)]
+#[path = "router_regression_tests.rs"]
+mod regression_tests;
 
 #[cfg(test)]
 mod tests {
@@ -360,7 +409,7 @@ mod tests {
         let stable = route_pass(&diagram, &boxes, &sheet, None).unwrap();
         let chosen = route(&diagram, &boxes, &sheet).unwrap();
         assert!(
-            ranking::better_than(&chosen, &stable),
+            ranking::better_than_orthogonal(&chosen, &stable),
             "bounded auto-routing should shorten a safe detour"
         );
         assert!(ranking::visibly_clear(&chosen, &boxes));

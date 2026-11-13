@@ -16,7 +16,16 @@ pub(super) fn near_options(
     let width = measure(text, size)?;
     let height = size * 1.25;
     let mut options = Vec::new();
-    for pair in points.windows(2) {
+    let mut segments: Vec<_> = points.windows(2).collect();
+    if !package_pill {
+        // Keep labels away from short departure stubs; those are shared
+        // fan-out corridors, not useful space for an annotation.
+        segments.sort_by(|a, b| {
+            let length = |p: &&[Point]| (p[1].x - p[0].x).hypot(p[1].y - p[0].y);
+            length(b).total_cmp(&length(a))
+        });
+    }
+    for pair in segments {
         let dx = pair[1].x - pair[0].x;
         let dy = pair[1].y - pair[0].y;
         if dx.hypot(dy) < 1e-6 {
@@ -25,22 +34,22 @@ pub(super) fn near_options(
         let positions: &[f64] = if package_pill {
             &[0.5, 0.45, 0.4, 0.3, 0.7, 0.15, 0.85]
         } else {
-            &[0.5, 0.3, 0.7, 0.15, 0.85]
+            &[0.5, 0.3, 0.7, 0.15, 0.85, 0.25, 0.75]
         };
         for &progress in positions {
             let mid = Point {
                 x: pair[0].x + dx * progress,
                 y: pair[0].y + dy * progress,
             };
-            for side in [-1.0, 1.0] {
+            for (side, gap) in [(-1.0, 8.0), (1.0, 8.0), (-1.0, 16.0), (1.0, 16.0)] {
                 let (x, y) = if dx.abs() >= dy.abs() {
                     (
                         mid.x - width / 2.0,
-                        mid.y + side * (height / 2.0 + 8.0) - height / 2.0,
+                        mid.y + side * (height / 2.0 + gap) - height / 2.0,
                     )
                 } else {
                     (
-                        mid.x + side * (width / 2.0 + 8.0) - width / 2.0,
+                        mid.x + side * (width / 2.0 + gap) - width / 2.0,
                         mid.y - height / 2.0,
                     )
                 };

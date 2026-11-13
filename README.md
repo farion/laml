@@ -26,8 +26,8 @@ Layout and Markup Language
 LAML turns a `.laml` file into an SVG, PNG or vector PDF diagram. Describe the elements, add only the placement rules that matter, and style the result independently.
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/showcase-generic-modern-dark.png?v=normal-docking-20261104">
-  <img src="docs/images/showcase-generic-modern.png?v=normal-docking-20261104" alt="Architecture diagram with a vertically arranged decision flow">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/showcase-generic-modern-dark.png?v=ea7a7ff5b3">
+  <img src="docs/images/showcase-generic-modern.png?v=09dbc5f68a" alt="Architecture diagram with a vertically arranged decision flow">
 </picture>
 
 [Source for this image](examples/showcase-generic.laml) · [Getting started](docs/getting-started.md)
@@ -193,8 +193,8 @@ Six themes come in three light/dark pairs. The previews below have **transparent
 ### Plain · Plain dark
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/theme-plain-dark.png?v=orthogonal-default-20261104">
-  <img src="docs/images/theme-plain.png?v=orthogonal-default-20261104" alt="Plain theme example: connected service, archive and client">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/theme-plain-dark.png?v=40d1be0b38">
+  <img src="docs/images/theme-plain.png?v=77e3234871" alt="Plain theme example: connected service, archive and client">
 </picture>
 
 [Plain source](examples/theme-plain.laml) · [Plain dark source](examples/theme-plain-dark.laml)
@@ -202,8 +202,8 @@ Six themes come in three light/dark pairs. The previews below have **transparent
 ### Modern · Modern dark
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/theme-modern-dark.png?v=orthogonal-default-20261104">
-  <img src="docs/images/theme-modern.png?v=orthogonal-default-20261104" alt="Modern theme example: connected service, archive and client">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/theme-modern-dark.png?v=0c6041c955">
+  <img src="docs/images/theme-modern.png?v=014f3ef515" alt="Modern theme example: connected service, archive and client">
 </picture>
 
 [Modern source](examples/theme-modern.laml) · [Modern dark source](examples/theme-modern-dark.laml)
@@ -211,8 +211,8 @@ Six themes come in three light/dark pairs. The previews below have **transparent
 ### Modern mono · Modern mono dark
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/theme-modern-mono-dark.png?v=orthogonal-default-20261104">
-  <img src="docs/images/theme-modern-mono.png?v=orthogonal-default-20261104" alt="Modern monochrome theme example: connected service, archive and client">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/theme-modern-mono-dark.png?v=1c8c321215">
+  <img src="docs/images/theme-modern-mono.png?v=e98ce47465" alt="Modern monochrome theme example: connected service, archive and client">
 </picture>
 
 [Modern mono source](examples/theme-modern-mono.laml) · [Modern mono dark source](examples/theme-modern-mono-dark.laml)

@@ -38,8 +38,8 @@ semantics {
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/package-architecture-modern-dark.png?v=normal-docking-20261104">
-  <img src="../images/package-architecture-modern.png?v=normal-docking-20261104" alt="Nested packages with import, access and merge">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/package-architecture-modern-dark.png?v=7625cd209f">
+  <img src="../images/package-architecture-modern.png?v=f6101a924c" alt="Nested packages with import, access and merge">
 </picture>
 
 [Complete source](../../examples/package-architecture.laml).

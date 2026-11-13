@@ -75,6 +75,20 @@ pub(super) fn better_than_orthogonal(ranked: &[Route], stable: &[Route]) -> bool
     };
     let (as_, ab, at, al) = quality(ranked);
     let (bs, bb, bt, bl) = quality(stable);
+    ab < bb || ab == bb && (al < bl - 1e-6 || (al - bl).abs() <= 1e-6 && (as_, at) < (bs, bt))
+}
+
+pub(super) fn better_than_packages(ranked: &[Route], stable: &[Route]) -> bool {
+    let quality = |routes: &[Route]| {
+        let (bridges, bends, length) = total(routes);
+        let short = routes
+            .iter()
+            .map(|r| short_segments(&r.points))
+            .sum::<usize>();
+        (bridges, short, bends, length)
+    };
+    let (ab, as_, at, al) = quality(ranked);
+    let (bb, bs, bt, bl) = quality(stable);
     (ab, as_, at) < (bb, bs, bt) || (ab, as_, at) == (bb, bs, bt) && al < bl - 1e-6
 }
 
@@ -120,6 +134,7 @@ pub(super) fn no_worse_clearance(
     })
 }
 
+#[allow(clippy::too_many_arguments)] // Rank against the same endpoints, route plan and notation constraints.
 pub(super) fn order(
     options: &mut [Vec<Point>],
     routed: &[Route],
@@ -128,6 +143,7 @@ pub(super) fn order(
     to: usize,
     orthogonal_packages: bool,
     strict: bool,
+    source_slot: Option<Point>,
 ) {
     let lateral = orthogonal_packages
         && matches!(boxes.get(from).zip(boxes.get(to)), Some((a,b)) if (a.x+a.width < b.x || b.x+b.width < a.x));
@@ -145,6 +161,35 @@ pub(super) fn order(
                 + usize::from((last.x - b.x - b.width).abs() > 0.01)
         }
     };
+    if strict && orthogonal_packages {
+        options.sort_by_cached_key(|p| {
+            (
+                border_hugs(p, boxes, from, to),
+                side_penalty(p),
+                crossings(p, routed, from, to),
+                short_segments(p),
+                bends(p),
+                length(p).to_bits(),
+            )
+        });
+        return;
+    }
+    if strict {
+        options.sort_by_cached_key(|p| {
+            (
+                border_hugs(p, boxes, from, to),
+                crossings(p, routed, from, to),
+                source_slot.map_or(0, |slot| {
+                    ((p[0].x - slot.x).abs() + (p[0].y - slot.y).abs()).to_bits()
+                }),
+                side_penalty(p),
+                length(p).to_bits(),
+                bends(p),
+                short_segments(p),
+            )
+        });
+        return;
+    }
     options.sort_by(|a, b| {
         border_hugs(a, boxes, from, to)
             .cmp(&border_hugs(b, boxes, from, to))
@@ -188,7 +233,7 @@ mod tests {
             vec![p(0.0, 0.0), p(120.0, 0.0)],
             vec![p(0.0, 0.0), p(0.0, 10.0), p(120.0, 10.0), p(120.0, 0.0)],
         ];
-        order(&mut options, &[], &[], 0, 1, false, false);
+        order(&mut options, &[], &[], 0, 1, false, false, None);
         assert_eq!(options[0].len(), 2);
         assert_eq!(options[1][1].y, 10.0);
     }
