@@ -169,10 +169,22 @@ fn flow_label_orientation_can_be_auto_horizontal_or_vertical() {
     let unlabeled =
         format!("{source}\nlayout {{\nflow[Accept->Pack] : label-orientation=vertical\n}}");
     assert!(bpmn::parse(&unlabeled).is_err());
-    let impossible = source.replace("Reply --> ShopDone", "Reply --> ShopDone : done");
-    let impossible =
-        format!("{impossible}\nlayout {{\nflow[Reply->ShopDone] : label-orientation=vertical\n}}");
-    assert!(bpmn::validate_geometry(&bpmn::parse(&impossible).unwrap()).is_err());
+}
+
+#[test]
+fn vertical_flow_label_can_use_a_detour_when_the_direct_route_is_too_short() {
+    let source = include_str!("../examples/bpmn-order.laml")
+        .replace("Reply --> ShopDone", "Reply --> ShopDone : done");
+    let source =
+        format!("{source}\nlayout {{\nflow[Reply->ShopDone] : label-orientation=vertical\n}}");
+    let doc = bpmn::parse(&source).unwrap();
+    bpmn::validate_geometry(&doc).unwrap();
+    let svg = bpmn::render(&doc, TextMode::System).unwrap();
+    let label = svg
+        .lines()
+        .find(|line| line.ends_with(">done</text>"))
+        .expect("the detour must retain the complete flow label");
+    assert!(label.contains("rotate(-90"), "{label}");
 }
 
 #[test]
