@@ -58,6 +58,7 @@ pub fn png(svg: &str) -> Result<Vec<u8>, String> {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub fn pdf(svg: &str) -> Result<Vec<u8>, String> {
     let document = tree(svg)?;
     let converted = svg2pdf::to_pdf(

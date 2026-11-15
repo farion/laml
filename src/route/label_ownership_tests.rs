@@ -84,6 +84,7 @@ fn later_arrows_cannot_steal_an_already_positioned_label() {
 fn a_new_caption_must_not_steal_an_existing_caption_either() {
     let old = label();
     let route = Route {
+        source_line: 0,
         points: vec![Point { x: 108., y: -20. }, Point { x: 108., y: 120. }],
         qualifiers: vec![],
         bridges: vec![],

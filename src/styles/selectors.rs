@@ -1,7 +1,7 @@
 //! CSS-like LSS selectors and contextual sequence visual parts.
 use crate::syntax::MemberKind;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum Selector {
     All,
     AllNodes,
@@ -118,7 +118,8 @@ impl Selector {
         }
     }
 
-    pub(super) fn parse(text: &str) -> Self {
+    /// Parse a selector without loading stylesheets or accessing the filesystem.
+    pub fn parse(text: &str) -> Self {
         if let Some((parent, child)) = text.split_once(' ') {
             let child_node = child
                 .strip_prefix("node[")

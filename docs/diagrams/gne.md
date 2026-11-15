@@ -85,8 +85,13 @@ layout {
 |---|---|
 | `A < B` / `A left of B` | A left of B. `>` reverses it. |
 | `A above B` / `A ^ B` | A above B. `below` / `v` reverses it. |
+| `A ? B : align=left` / `right` / `top` / `bottom` | Match the specified edges without adding an order or a gap. |
+| `A ? B : align=center-x` / `center-y` | Match only the X / Y midpoints. |
+| `A ? B : align=center` | Match both midpoints; explicitly overlap these nodes at a shared center. |
 | `gap=120` | Minimum empty space between boxes. |
 | `align=center`, `align=top` or `align=left` | Align on the perpendicular axis; left/right placement accepts `top`, `center`, `bottom`; above/below accepts `left`, `center`, `right`. |
+
+Independent `?` rules belong in `layout`, not `semantics`. Shared-center overlap applies within one container; unrelated nodes still have to remain separate. Routes are checked normally even when nodes intentionally overlap. See the [alignment reference](../language-reference.md#layout).
 
 Parallel relations get separate routes; supported crossings draw a bridge, as above. The crossing example opts into diagonal connectors; other diagrams default to orthogonal segments. The bridge arches upward on predominantly horizontal relations or leftward on predominantly vertical ones, regardless of arrow direction. Impossible placement or unsafe routing fails during `build`.
 

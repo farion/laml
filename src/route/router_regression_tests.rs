@@ -66,7 +66,11 @@ fn nested_fanout_uses_local_corridors_without_crossings_or_left_loops() {
     );
     let artifact = &routes[4];
     assert!(
-        artifact.points.iter().all(|p| p.x >= 360.0),
+        artifact.points.windows(2).all(|p| {
+            // A short normal departure above Backend is fine; only a long
+            // left-side descent recreates the unwanted exterior loop.
+            (p[1].y - p[0].y).abs() <= 80.0 || p[0].x >= 360.0
+        }),
         "artifact corridor: {:?}",
         artifact.points
     );

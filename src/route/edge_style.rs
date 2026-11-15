@@ -2,7 +2,7 @@
 use crate::styles::{Element, StyleSheet, Value};
 use crate::syntax::RelationDecl;
 
-pub(super) fn style(relation: &RelationDecl, sheet: &StyleSheet) -> (String, f64, f64) {
+pub fn style(relation: &RelationDecl, sheet: &StyleSheet) -> (String, f64, f64) {
     let element = Element::Relation {
         name: relation.name.as_deref(),
         classes: &relation.classes,

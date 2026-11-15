@@ -64,8 +64,8 @@ Charge --> Complete
 ```
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../images/interaction-overview-parallel-modern-dark.png?v=9a1cc8b566">
-  <img src="../images/interaction-overview-parallel-modern.png?v=9a1cc8b566" alt="Parallel interaction uses with fork and join">
+  <source media="(prefers-color-scheme: dark)" srcset="../images/interaction-overview-parallel-modern-dark.png?v=9908520111">
+  <img src="../images/interaction-overview-parallel-modern.png?v=9908520111" alt="Parallel interaction uses with fork and join">
 </picture>
 
 [Complete source](../../examples/interaction-overview-parallel.laml). `fork` and `join` delimit parallel paths. Common placement: [GNE](gne.md). [Full syntax](../language-reference.md#interaction-overview-diagrams).

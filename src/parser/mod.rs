@@ -8,6 +8,7 @@ use crate::lex::{
 use crate::syntax::{Diagram, DiagramType, Property, RelationDecl, StyleEntry, StyleRule};
 
 mod activity;
+mod alignment;
 mod bindings;
 mod bodies;
 mod component;
@@ -313,6 +314,8 @@ pub(crate) fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, 
                                 .relation_layout
                                 .push(parse_relation_label(text, line)?);
                         }
+                    } else if text.split_whitespace().nth(1) == Some("?") {
+                        diagram.alignments.push(alignment::parse(text, line)?);
                     } else {
                         diagram.layout.push(parse_layout(text, line)?);
                     }
@@ -381,6 +384,7 @@ pub(crate) fn parse_document(source: &str, stylesheet: bool) -> Result<Diagram, 
         return Err(error(1, "missing semantics section"));
     }
     references::resolve_and_validate(&mut diagram)?;
+    alignment::validate(&diagram)?;
     state::validate(&diagram)?;
     activity::validate(&diagram)?;
     usecase::validate(&diagram)?;

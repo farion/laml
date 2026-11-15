@@ -105,6 +105,11 @@ impl Obstacles {
         {
             return false;
         }
+        self.clear_segments(points, previous)
+    }
+    // Search-grid subdivisions may be short; only the final simplified path
+    // needs the minimum segment length check above.
+    pub(super) fn clear_segments(&self, points: &[Point], previous: &[Route]) -> bool {
         points.windows(2).all(|p| {
             !self
                 .solids

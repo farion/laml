@@ -9,6 +9,7 @@ fn t_junction_is_a_forbidden_unbridged_intersection() {
 #[test]
 fn a_later_route_cannot_pass_through_an_existing_bridge_hump() {
     let mut older = Route {
+        source_line: 0,
         points: vec![p(0.0, 100.0), p(200.0, 100.0)],
         qualifiers: vec![],
         bridges: vec![],
@@ -44,6 +45,7 @@ fn marker_clearance_covers_the_largest_visible_diamond() {
 #[test]
 fn new_routes_do_not_clip_existing_arrowheads() {
     let mut old = Route {
+        source_line: 0,
         points: vec![p(0.0, 100.0), p(200.0, 100.0)],
         qualifiers: vec![],
         bridges: vec![],
@@ -59,10 +61,15 @@ fn new_routes_do_not_clip_existing_arrowheads() {
         marker_end: false,
         appearance: Default::default(),
     };
-    let later = [p(190.0, 112.0), p(210.0, 112.0)];
+    let later = [p(190.0, 106.0), p(210.0, 106.0)];
     assert!(route_is_clear(&later, &[], &[old.clone()]));
     old.appearance.end = crate::syntax::EndSymbol::Arrow;
-    assert!(!route_is_clear(&later, &[], &[old]));
+    assert!(!route_is_clear(&later, &[], &[old.clone()]));
+    let adjacent = [p(190.0, 112.0), p(210.0, 112.0)];
+    assert!(
+        route_is_clear(&adjacent, &[], &[old]),
+        "the depth of an arrow is not its lateral width"
+    );
 }
 #[test]
 fn folded_note_uses_diagonal_stroke_for_ports_and_obstacles() {

@@ -1,14 +1,14 @@
-//! Decision entries use the visible arrow footprint so other branches can
-//! depart from the top or bottom of the same diamond.
+//! Open arrows use their directional visible footprint, not an oversized square.
+//! This preserves parallel lanes and branches beside the same endpoint.
 use super::{Point, Route, geometry::marker_radius, labels::segment_hits_rect};
 use crate::geometry::BoxNode;
-use crate::syntax::{EndSymbol, NodeKind};
+use crate::syntax::EndSymbol;
 
 pub(super) fn hits_segment(
     a: Point,
     b: Point,
     route: &Route,
-    boxes: &[BoxNode],
+    _boxes: &[BoxNode],
     at_start: bool,
 ) -> bool {
     let (tip, neighbour, symbol) = if at_start {
@@ -24,16 +24,9 @@ pub(super) fn hits_segment(
     if symbol == EndSymbol::None {
         return false;
     }
-    let endpoint = if at_start { route.from } else { route.to };
-    // Retain conservative clearance for other notations and endpoints.
-    if symbol != EndSymbol::Arrow
-        || boxes.get(endpoint).is_none_or(|node| {
-            !matches!(
-                node.kind,
-                NodeKind::ActivityDecision | NodeKind::ActivityMerge | NodeKind::StateChoice
-            )
-        })
-    {
+    // Every open arrow uses the same directional footprint. A square with
+    // the arrow's full depth as radius wrongly blocks adjacent parallel lanes.
+    if symbol != EndSymbol::Arrow {
         let radius = marker_radius(symbol, route.width);
         return segment_hits_rect(
             a,

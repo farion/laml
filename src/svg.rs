@@ -1,10 +1,12 @@
 //! SVG output with selectable or outlined text measured against bundled Inter.
 
+mod picking;
 use crate::geometry::{BoxNode, NodeShape};
 use crate::route::Route;
 use crate::syntax::{NodeKind, NodePart};
 use crate::text::{FONT, ITALIC_FONT, measure, measure_italic};
 use base64::Engine;
+pub use picking::route_pick_paths;
 use std::fmt::Write;
 mod activity;
 mod bounds;
@@ -20,6 +22,7 @@ mod markers;
 mod note;
 mod package;
 mod route_ends;
+mod routes;
 mod state;
 mod usecase;
 use escape::escape;
@@ -28,6 +31,11 @@ pub enum TextMode {
     Embedded,
     System,
     Paths,
+}
+
+/// Canvas bounds shared by rendering and editor hit testing (GNE, without C4 margins).
+pub fn canvas_bounds(boxes: &[BoxNode], routes: &[Route]) -> (f64, f64, f64, f64) {
+    bounds::measure(boxes, routes)
 }
 
 pub fn render(boxes: &[BoxNode], routes: &[Route]) -> Result<String, String> {
@@ -54,6 +62,30 @@ pub fn render_with_theme(
     } else {
         Ok(svg)
     }
+}
+
+/// Paint routes using exactly the document painter, without node backgrounds.
+/// Bounds can be the viewport, so a freely dragged endpoint is never clipped to
+/// the original document image.
+pub fn render_route_overlay(
+    boxes: &[BoxNode],
+    routes: &[Route],
+    theme: crate::theme::Theme,
+    bounds: (f64, f64, f64, f64),
+) -> Result<String, String> {
+    let (l, t, r, b) = bounds;
+    let mut svg = format!(
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{}\" height=\"{}\" viewBox=\"{l} {t} {} {}\"><defs>",
+        r - l,
+        b - t,
+        r - l,
+        b - t
+    );
+    markers::definitions(&mut svg, theme);
+    routes::draw(&mut svg, boxes, routes, theme)?;
+    routes::qualifiers(&mut svg, routes);
+    svg.push_str("</svg>");
+    Ok(svg)
 }
 
 fn render_svg(
@@ -131,64 +163,7 @@ fn render_svg(
     deployment::backgrounds(&mut svg, boxes);
     state::backgrounds(&mut svg, boxes);
     usecase::background(&mut svg, boxes);
-    for route in routes {
-        let (visual_start, visual_end) = route_ends::marker_tips(route, boxes, theme);
-        let start = markers::marker(route.appearance.start, true);
-        let end = markers::marker(route.appearance.end, false);
-        let start_marker = if start.is_empty() {
-            String::new()
-        } else {
-            format!(" marker-start=\"{start}\"")
-        };
-        let end_marker = if end.is_empty() {
-            String::new()
-        } else {
-            format!(" marker-end=\"{end}\"")
-        };
-        let dash = if route.appearance.dashed {
-            " stroke-dasharray=\"6 4\""
-        } else {
-            ""
-        };
-        if route.bridges.is_empty()
-            && route.gaps.is_empty()
-            && (!theme.modern() || !crate::svg_paths::has_rounded_corner(route, 9.0))
-        {
-            let last = route.points.len().saturating_sub(1);
-            let points: Vec<String> = route
-                .points
-                .iter()
-                .enumerate()
-                .map(|(i, p)| {
-                    let point = if i == 0 {
-                        visual_start.unwrap_or(*p)
-                    } else if i == last {
-                        visual_end.unwrap_or(*p)
-                    } else {
-                        *p
-                    };
-                    format!("{:.2},{:.2}", point.x, point.y)
-                })
-                .collect();
-            writeln!(svg,"<polyline points=\"{}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"{dash}{end_marker}{start_marker} />",
-                points.join(" "), route.color, route.width).unwrap();
-        } else {
-            let fragments = crate::svg_paths::fragments_with_ends_rounded(
-                route,
-                visual_start,
-                visual_end,
-                if theme.modern() { 9.0 } else { 0.0 },
-            )?;
-            let last = fragments.len() - 1;
-            for (i, path) in fragments.iter().enumerate() {
-                writeln!(svg,"<path d=\"{}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"{dash}{}{} />",
-                    path,route.color,route.width,
-                    if i==0 { &start_marker } else { "" },
-                    if i==last { &end_marker } else { "" }).unwrap();
-            }
-        }
-        edge_labels::draw(&mut svg, route, theme)?;
-    }
+    routes::draw(&mut svg, boxes, routes, theme)?;
     for (index, node) in boxes
         .iter()
         .enumerate()
@@ -465,17 +440,7 @@ fn render_svg(
         }
         svg.push_str("</g>\n");
     }
-    for route in routes {
-        for qualifier in &route.qualifiers {
-            writeln!(svg,"<rect x=\"{:.2}\" y=\"{:.2}\" width=\"{:.2}\" height=\"{:.2}\" fill=\"white\" stroke=\"{}\" stroke-width=\"{:.2}\" />",
-                qualifier.x, qualifier.y, qualifier.width, qualifier.height, route.color, route.width/2.0).unwrap();
-            for (index, line) in qualifier.lines.iter().enumerate() {
-                writeln!(svg,"<text x=\"{:.2}\" y=\"{:.2}\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\">{}</text>",
-                    qualifier.x+qualifier.width/2.0,qualifier.y+5.0+qualifier.font_size*1.25*(index as f64+0.78),
-                    qualifier.font_size,route.color,escape(line)).unwrap();
-            }
-        }
-    }
+    routes::qualifiers(&mut svg, routes);
     if c4_diagram.is_some() {
         c4::legend(&mut svg, left, bottom, theme);
     }

@@ -1,8 +1,10 @@
 //! Parsed language model. Geometry and SVG rendering are separate phases.
 
 use crate::RelationKind;
+mod alignment;
+pub use alignment::{AlignmentRule, FreeAlignment};
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum FlowDirection {
     #[default]
     LeftToRight,
@@ -11,7 +13,7 @@ pub enum FlowDirection {
     BottomToTop,
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum LabelPlacement {
     #[default]
     Near,
@@ -19,7 +21,7 @@ pub enum LabelPlacement {
     Inline,
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum DiagramType {
     #[default]
     Generic,
@@ -37,7 +39,7 @@ pub enum DiagramType {
     InteractionOverview,
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum NodeKind {
     #[default]
     Generic,
@@ -95,7 +97,7 @@ impl NodeKind {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MemberKind {
     Text,
     Field,
@@ -104,7 +106,7 @@ pub enum MemberKind {
     Literal,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum NodePart {
     Separator,
     Member {
@@ -119,19 +121,19 @@ pub enum NodePart {
     },
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum PortContract {
     Provides(String),
     Requires(String),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ActivityPinDirection {
     Input,
     Output,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct PortDecl {
     pub id: String,
     pub label: String,
@@ -142,7 +144,7 @@ pub struct PortDecl {
     pub line: usize,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct Settings {
     pub direction: FlowDirection,
     pub strict_case: bool,
@@ -156,7 +158,7 @@ pub struct Settings {
     pub font_italic_file: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct NodeDecl {
     pub id: String,
     /// An explicit @id remains globally addressable across package scopes.
@@ -213,7 +215,7 @@ impl NodeDecl {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum EndSymbol {
     #[default]
     None,
@@ -224,33 +226,33 @@ pub enum EndSymbol {
     FilledDiamond,
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct EdgeAppearance {
     pub start: EndSymbol,
     pub end: EndSymbol,
     pub dashed: bool,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq, Eq)]
 pub struct EndAnnotation {
     pub multiplicity: Option<String>,
     pub role: Option<String>,
     pub qualifier: Option<Vec<String>>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ConnectorKind {
     Assembly,
     Delegation,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ActivityFlow {
     Control,
     Object,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct RelationDecl {
     pub name: Option<String>,
     pub classes: Vec<String>,
@@ -270,7 +272,7 @@ pub struct RelationDecl {
     pub line: usize,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct EdgeAttachment {
     pub name: Option<String>,
     pub classes: Vec<String>,
@@ -308,7 +310,7 @@ impl RelationDecl {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Placement {
     Left,
     Right,
@@ -316,7 +318,7 @@ pub enum Placement {
     Below,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Alignment {
     Top,
     Center,
@@ -325,7 +327,7 @@ pub enum Alignment {
     Right,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq)]
 pub struct LayoutRule {
     pub first: String,
     pub second: String,
@@ -335,13 +337,13 @@ pub struct LayoutRule {
     pub line: usize,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Axis {
     Horizontal,
     Vertical,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq)]
 pub struct ScopedAlignment {
     pub first: String,
     pub second: String,
@@ -350,14 +352,14 @@ pub struct ScopedAlignment {
     pub line: usize,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct RelationLabelRule {
     pub name: String,
     pub placement: LabelPlacement,
     pub line: usize,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EndSide {
     Above,
     Below,
@@ -365,13 +367,13 @@ pub enum EndSide {
     Right,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EndPosition {
     Source,
     Target,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PortSide {
     Left,
     Right,
@@ -379,14 +381,14 @@ pub enum PortSide {
     Bottom,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct PortLayoutRule {
     pub id: String,
     pub side: PortSide,
     pub line: usize,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct RelationEndRule {
     pub name: String,
     pub end: EndPosition,
@@ -396,33 +398,34 @@ pub struct RelationEndRule {
     pub line: usize,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Property {
     pub name: String,
     pub value: String,
     pub line: usize,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct StyleRule {
     pub selector: String,
     pub properties: Vec<Property>,
     pub line: usize,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum StyleEntry {
     Import { path: String, line: usize },
     Rule(StyleRule),
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq)]
 pub struct Diagram {
     pub settings: Settings,
     pub nodes: Vec<NodeDecl>,
     pub relations: Vec<RelationDecl>,
     pub attachments: Vec<EdgeAttachment>,
     pub layout: Vec<LayoutRule>,
+    pub alignments: Vec<AlignmentRule>,
     pub scoped_alignments: Vec<ScopedAlignment>,
     pub relation_layout: Vec<RelationLabelRule>,
     pub relation_end_layout: Vec<RelationEndRule>,

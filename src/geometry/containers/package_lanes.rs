@@ -6,6 +6,7 @@ pub(super) fn open_package_lanes(diagram: &Diagram, local: &mut [BoxNode], paren
     if diagram.settings.diagram_type != crate::syntax::DiagramType::Package
         || parent.is_none()
         || !diagram.layout.is_empty()
+        || !diagram.alignments.is_empty()
     {
         return;
     }

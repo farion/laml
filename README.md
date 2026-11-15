@@ -14,6 +14,7 @@ Layout and Markup Language
 - [What is LAML?](#what-is-laml)
 - [Why LAML?](#why-laml)
 - [Installing & getting started](#installing--getting-started)
+- [Native GNE editor](#native-gne-editor)
 - [Basic examples](#basic-examples)
 - [Themes](#themes)
 - [Features and diagram types](#features)
@@ -69,6 +70,21 @@ irm https://raw.githubusercontent.com/farion/laml/main/scripts/install.ps1 | iex
 Installers select the platform, check the downloaded archive against `SHA256SUMS`, and install in your user directory. For environments requiring signed provenance, apply your organization's verification policy before running downloaded scripts. Release archives are also available for manual installation.
 
 **Next:** [Getting started — first build, core concepts, and all diagram types](docs/getting-started.md). To create and render diagrams from a local coding agent, see [OpenCode and Claude Code via MCP](docs/mcp.md).
+
+## Native GNE editor
+
+`laml-ui` combines editable GNE source, a compiler-rendered editing canvas and an
+inspector. Text and visual changes share undo/redo; visual edits are checked by the
+real compiler, including layout and routing, before being applied.
+
+```sh
+cargo build --release -p laml-ui
+./target/release/laml-ui examples/architecture.laml
+```
+
+See the [editor guide](docs/editor.md) for creation, selection, constraints, styles,
+source assistance, export and recovery, and [desktop installation](docs/editor-installation.md)
+for platform-specific startup. The standalone compiler remains `laml`.
 
 ## Basic examples
 

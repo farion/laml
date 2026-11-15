@@ -50,10 +50,9 @@ pub(super) fn offset(
     let available = span - 12.0;
     let step = 12.0_f64.min(available / (siblings.len() - 1) as f64);
     if step < widest + 6.0 || step < 9.0 {
-        return Err(format!(
-            "{} parallel relations cannot fit distinct ports on both node faces",
-            siblings.len()
-        ));
+        // Only the preferred facing pair is full. Other faces and exterior
+        // corridors remain valid; do not abort before the router can try them.
+        return Ok(0.0);
     }
     Ok((rank as f64 - (siblings.len() - 1) as f64 / 2.0) * step)
 }

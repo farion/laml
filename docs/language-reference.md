@@ -137,6 +137,32 @@ The alternatives `left of`, `right of`, `above`, and `below` have the same meani
 | left/right | `top`, `center`, `bottom` | Vertical edges or centres |
 | above/below | `left`, `center`, `right` | Horizontal edges or centres |
 
+Independent alignment uses `?` without adding a direction or a minimum gap:
+
+```laml
+// Layout excerpt; A and B are declared in semantics.
+layout {
+    A ? B : align=center-y
+}
+```
+
+| Independent `align` | Matched geometry |
+|---|---|
+| `left` / `right` | Left / right X edge |
+| `top` / `bottom` | Top / bottom Y edge |
+| `center-x` | X midpoint only |
+| `center-y` | Y midpoint only |
+| `center` | Both midpoints: intentional shared-center overlap |
+
+Independent rules require two distinct node references and exactly `align=value`.
+They use measured boxes, impose no ordering and accept no `gap`. Shared-center
+rules apply within one container (or between root-level nodes). Their transitive
+center groups may overlap; other nodes remain collision obstacles. Explicit
+`center-x` and `center-y` constraints that jointly connect the same centers have
+the same overlap effect. One-axis alignment alone does not permit overlap, and
+routing still has to succeed. In directional rules, `align=center` retains its
+perpendicular-axis meaning.
+
 Invalid alignment/direction combinations, unknown node IDs, duplicate or unknown attributes, and contradictory mandatory rules are errors. `check` detects directional placement cycles; `build` additionally checks alignments, actual dimensions, node collisions, and routing.
 
 For class diagrams, `relation[orders].source : multiplicity=above; role=below` and the corresponding `.target` rule fix end-label sides without reversing association semantics. A named relation can also use `relation[orders].source : side=left|right|top|bottom` to require a node boundary side; named ports also accept a matching relation-end side, and member rows can require left or right; self-loops can fix both ends independently, combined with end-label placement in one rule. `port[id] : side=left|right|top|bottom` fixes a named boundary port. Missing or hidden targets and impossible measured placement fail.

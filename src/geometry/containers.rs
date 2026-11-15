@@ -1,5 +1,6 @@
 //! Place children inside measured containers before solving the outer graph.
 use super::{BoxNode, GeometryError, constraints};
+mod alignment;
 mod package_lanes;
 use crate::styles::StyleSheet;
 use crate::syntax::{
@@ -110,12 +111,6 @@ fn relation_alignments(
     local: &[BoxNode],
     parent: Option<&str>,
 ) -> Vec<ScopedAlignment> {
-    if !matches!(
-        diagram.settings.direction,
-        FlowDirection::LeftToRight | FlowDirection::RightToLeft
-    ) {
-        return Vec::new();
-    }
     diagram
         .relations
         .iter()
@@ -217,15 +212,14 @@ fn relation_alignments(
             } else {
                 0.0
             };
-            // When an authored rule stacks the connected objects, the free
-            // axis is horizontal: align their centres instead of pulling the
-            // visitor aside through a left-to-right topology preference.
-            let stacked = from.kind == NodeKind::Object
-                && diagram.layout.iter().any(|rule| {
-                    matches!(rule.placement, Placement::Above | Placement::Below)
-                        && ((rule.first == from.id && rule.second == to.id)
-                            || (rule.first == to.id && rule.second == from.id))
-                });
+            // Center across the actual connection axis. Authored placement
+            // takes priority over the diagram-wide direction; this applies to
+            // generic nodes as well as object links and either flow direction.
+            let separation_axis = constraints::authored_relation_axis(diagram, &from.id, &to.id)
+                .unwrap_or_else(|| if matches!(diagram.settings.direction,
+                    FlowDirection::LeftToRight | FlowDirection::RightToLeft
+                ) { Axis::Horizontal } else { Axis::Vertical });
+            let stacked = separation_axis == Axis::Vertical;
             let x_center = |node: &BoxNode| node.x + node.width / 2.0;
             Some(ScopedAlignment {
                 first: a,
@@ -260,6 +254,7 @@ fn scope(
     boxes: &mut [BoxNode],
     styles: &StyleSheet,
     parent: Option<&str>,
+    spacing: f64,
 ) -> Result<(), GeometryError> {
     let children: Vec<_> = diagram
         .nodes
@@ -284,7 +279,7 @@ fn scope(
                     .iter()
                     .any(|part| part.parent.as_deref() == Some(child.as_str()))
         }) {
-            scope(diagram, boxes, styles, Some(child))?;
+            scope(diagram, boxes, styles, Some(child), spacing)?;
         }
     }
     let mut local: Vec<BoxNode> = children
@@ -322,6 +317,7 @@ fn scope(
         mapped.second = b;
         graph.layout.push(mapped);
     }
+    alignment::project(diagram, boxes, parent, &mut graph);
     graph.relations = diagram
         .relations
         .iter()
@@ -365,7 +361,7 @@ fn scope(
         .cloned()
         .collect();
     let preferred = relation_alignments(diagram, boxes, &local, parent);
-    constraints::place(&graph, &mut local, styles, &preferred, diagram)?;
+    constraints::place(&graph, &mut local, styles, &preferred, diagram, spacing)?;
     package_lanes::open_package_lanes(diagram, &mut local, parent);
     if local.is_empty() {
         return Ok(());
@@ -450,6 +446,7 @@ pub(super) fn place(
     diagram: &Diagram,
     boxes: &mut [BoxNode],
     styles: &StyleSheet,
+    spacing: f64,
 ) -> Result<(), GeometryError> {
     for rule in &diagram.layout {
         let a = diagram
@@ -469,5 +466,6 @@ pub(super) fn place(
             ));
         }
     }
-    scope(diagram, boxes, styles, None)
+    scope(diagram, boxes, styles, None, spacing)?;
+    alignment::validate(diagram, boxes)
 }

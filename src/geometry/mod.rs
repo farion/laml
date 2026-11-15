@@ -43,6 +43,14 @@ pub(crate) fn scoped_styles(diagram: &Diagram, node: &NodeDecl, sheet: &StyleShe
 }
 
 pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, GeometryError> {
+    place_with_spacing(diagram, styles, 0.0)
+}
+
+pub(crate) fn place_with_spacing(
+    diagram: &Diagram,
+    styles: &StyleSheet,
+    spacing: f64,
+) -> Result<Vec<BoxNode>, GeometryError> {
     let visible = visible_diagram(diagram, styles)
         .map_err(|(line, message)| GeometryError { line, message })?;
     let diagram = &visible;
@@ -186,7 +194,7 @@ pub fn place(diagram: &Diagram, styles: &StyleSheet) -> Result<Vec<BoxNode>, Geo
             });
         }
     }
-    containers::place(diagram, &mut boxes, styles)?;
+    containers::place(diagram, &mut boxes, styles, spacing)?;
     ports::position(diagram, &mut boxes);
     port_contours::validate(&boxes)?;
     Ok(boxes)

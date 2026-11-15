@@ -5,7 +5,7 @@ use crate::syntax::{
     DiagramType, NodeDecl, NodeKind, NodePart, PortContract, PortLayoutRule, PortSide,
 };
 use crate::text::{ellipsize, measure, measure_italic};
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NodeShape {
     Rectangle,
     Ellipse,
@@ -13,14 +13,14 @@ pub enum NodeShape {
     Note,
 }
 
-#[derive(Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct RowStyle {
     pub font_size: f64,
     pub color: String,
     pub icon: Option<String>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct BoxNode {
     pub id: String,
     pub label: String,

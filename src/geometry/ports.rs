@@ -2,7 +2,7 @@
 use super::{BoxNode, NodeShape};
 use crate::syntax::{Diagram, PortSide};
 
-#[derive(Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct BoxPort {
     pub id: String,
     pub label: String,

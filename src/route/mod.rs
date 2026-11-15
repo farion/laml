@@ -8,6 +8,7 @@ mod activity_preferred;
 mod attachments;
 mod bridges;
 mod clearance;
+mod crossing_fallback;
 mod detours;
 mod edge_style;
 mod end_labels;
@@ -26,6 +27,9 @@ mod parallel;
 mod preferred;
 mod qualifiers;
 mod ranking;
+mod reflow;
+mod rescue;
+mod replay;
 mod route_labels;
 mod router;
 mod routing_order;
@@ -36,15 +40,18 @@ use activity_preferred::{
     activity_decision_to_action, activity_decision_to_fork, activity_fork_to_action,
     activity_join_to_action, activity_object_to_input, activity_output_to_object,
 };
+pub use edge_style::style as relation_style;
 use geometry::{center, member_port, port};
 use preferred::{
     actor_side_detours, actor_usecase_straight, forced_port, horizontal_connection,
     named_port_candidates, normal_at_port,
 };
 pub use qualifiers::QualifierBox;
+pub use reflow::place_and_route;
+pub use replay::replay;
 pub use router::route;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq)]
 pub struct Point {
     pub x: f64,
     pub y: f64,
@@ -64,7 +71,7 @@ pub(crate) fn bridge_normal(unit: Point) -> Point {
     }
     normal
 }
-#[derive(Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Label {
     pub text: String,
     pub x: f64,
@@ -74,8 +81,10 @@ pub struct Label {
     pub angle: f64,
     pub placement: crate::syntax::LabelPlacement,
 }
-#[derive(Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Route {
+    /// Original declaration line, retained through visibility filtering and route ordering.
+    pub source_line: usize,
     pub points: Vec<Point>,
     pub qualifiers: Vec<QualifierBox>,
     pub bridges: Vec<Bridge>,
@@ -91,14 +100,14 @@ pub struct Route {
     pub marker_end: bool,
     pub appearance: crate::syntax::EdgeAppearance,
 }
-#[derive(Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Bridge {
     pub segment: usize,
     pub distance: f64,
     pub radius: f64,
     pub height: f64,
 }
-#[derive(Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Gap {
     pub segment: usize,
     pub distance: f64,

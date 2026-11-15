@@ -56,6 +56,7 @@ pub(crate) fn png_notice(png: Vec<u8>) -> Result<Vec<u8>, String> {
     Ok(result)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn pdf_notice(pdf: Vec<u8>) -> Result<Vec<u8>, String> {
     let mut document = lopdf::Document::load_mem(&pdf)
         .map_err(|e| format!("cannot read PDF for Phosphor attribution: {e}"))?;

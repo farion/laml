@@ -163,7 +163,10 @@ mod tests {
         )
         .unwrap();
         let points = [Point { x: 0.0, y: 0.0 }, Point { x: 280.0, y: 0.0 }];
-        let plan = BridgePlan { events: Vec::new() };
+        let plan = BridgePlan {
+            events: Vec::new(),
+            cuts: Vec::new(),
+        };
         let (title, ends, _) = select(
             &diagram.relations[0],
             &points,

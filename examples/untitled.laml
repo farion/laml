@@ -1,0 +1,14 @@
+semantics {
+    A
+    B
+    A -> B
+    @Relation1 A -> B
+    @Relation2 A -> B
+}
+
+layout {
+    relation[Relation1].source : side=top
+    relation[Relation1].target : side=top
+    relation[Relation2].source : side=right
+    relation[Relation2].target : side=left
+}

@@ -18,6 +18,38 @@ pub fn route(
     boxes: &[BoxNode],
     sheet: &StyleSheet,
 ) -> Result<Vec<Route>, RouteError> {
+    let failure = match route_fast(diagram, boxes, sheet) {
+        Ok(routes) => return Ok(routes),
+        Err(error) => error,
+    };
+    if !matches!(
+        diagram.settings.diagram_type,
+        crate::syntax::DiagramType::Generic | crate::syntax::DiagramType::Package
+    ) {
+        return Err(failure);
+    }
+    let visible = crate::geometry::visible_diagram(diagram, sheet)
+        .map_err(|(line, message)| RouteError { line, message })?;
+    let order: Vec<_> = (0..visible.relations.len()).collect();
+    let mut orders = vec![order];
+    if visible.relations.iter().all(|r| r.from != r.to) {
+        orders.extend(super::routing_order::alternatives(&visible, boxes));
+    }
+    for order in orders {
+        if let Ok(routes) =
+            route_in_order_mode(&visible, boxes, sheet, Some(usize::MAX), &order, true, None)
+        {
+            return Ok(routes);
+        }
+    }
+    Err(failure)
+}
+
+fn route_fast(
+    diagram: &Diagram,
+    boxes: &[BoxNode],
+    sheet: &StyleSheet,
+) -> Result<Vec<Route>, RouteError> {
     let visible = crate::geometry::visible_diagram(diagram, sheet)
         .map_err(|(line, message)| RouteError { line, message })?;
     let diagram = &visible;
@@ -131,6 +163,18 @@ pub(super) fn route_in_order(
     ranked_until: Option<usize>,
     order: &[usize],
 ) -> Result<Vec<Route>, RouteError> {
+    route_in_order_mode(diagram, boxes, sheet, ranked_until, order, false, None)
+}
+
+pub(super) fn route_in_order_mode(
+    diagram: &Diagram,
+    boxes: &[BoxNode],
+    sheet: &StyleSheet,
+    ranked_until: Option<usize>,
+    order: &[usize],
+    rescue: bool,
+    seeds: Option<&std::collections::BTreeMap<usize, Vec<super::Point>>>,
+) -> Result<Vec<Route>, RouteError> {
     // The public entry point resolves visibility and notation exactly once.
     let mut routed = Vec::new();
     for &index in order {
@@ -166,7 +210,9 @@ pub(super) fn route_in_order(
                 message: "composite connector stroke must remain visible".into(),
             });
         }
-        let mut options = if from == to {
+        let mut options = if let Some(seeds) = seeds {
+            seeds.get(&relation.line).cloned().into_iter().collect()
+        } else if from == to {
             let rank = diagram.relations[..index]
                 .iter()
                 .filter(|r| r.from == relation.from && r.to == relation.to)
@@ -243,7 +289,15 @@ pub(super) fn route_in_order(
         let label_line = label_rule.map_or(relation.line, |rule| rule.line);
         let mut choice = None;
         let mut label_error = None;
-        for mut points in options {
+        let extra = std::iter::once_with(|| {
+            if rescue {
+                super::rescue::candidates(diagram, index, boxes, &routed)
+            } else {
+                Vec::new()
+            }
+        })
+        .flatten();
+        for mut points in options.into_iter().chain(extra) {
             let qualifier_boxes = match qualifiers::attach(
                 relation,
                 &mut points,
@@ -295,7 +349,13 @@ pub(super) fn route_in_order(
             ) {
                 continue;
             }
-            let Some(plan) = bridges::plan(&points, boxes, &routed, from, to, width) else {
+            let Some(plan) =
+                bridges::plan(&points, boxes, &routed, from, to, width).or_else(|| {
+                    rescue
+                        .then(|| super::crossing_fallback::plan(&points, &routed, from, to, width))
+                        .flatten()
+                })
+            else {
                 continue;
             };
             if qualifier_boxes
@@ -333,9 +393,9 @@ pub(super) fn route_in_order(
                 let label_failed = label_error.is_some();
                 let reason = label_error.unwrap_or_else(|| {
                     if diagram.settings.allow_diagonal {
-                        "no safe path around nodes, other connections, and crossings"
+                        "routing search found no acceptable path around nodes, other connections, and crossings"
                     } else {
-                        "no safe orthogonal path around nodes, other connections, and crossings"
+                        "routing search found no acceptable orthogonal path around nodes, other connections, and crossings"
                     }.into()
                 });
                 let identity = relation.name.as_deref().unwrap_or("unnamed");
@@ -360,6 +420,7 @@ pub(super) fn route_in_order(
             })?;
         let new_bridges = plan.apply(&mut routed);
         routed.push(Route {
+            source_line: relation.line,
             points,
             qualifiers: qualifier_boxes,
             bridges: new_bridges,
@@ -390,34 +451,5 @@ pub(super) fn route_in_order(
 mod regression_tests;
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{geometry::place, parser::parse};
-
-    #[test]
-    fn later_failure_is_not_hidden_by_an_earlier_failed_pass() {
-        let failure = |line, message: &str| RouteError {
-            line,
-            message: message.into(),
-        };
-        let reported = furthest_failure(failure(4, "early"), failure(9, "later"));
-        assert_eq!((reported.line, reported.message.as_str()), (9, "later"));
-        let reported = furthest_failure(failure(9, "later"), failure(4, "early"));
-        assert_eq!((reported.line, reported.message.as_str()), (9, "later"));
-    }
-
-    #[test]
-    fn picks_shorter_clear_corridor_over_first_external_detour() {
-        let source = "semantics {\nA\nB\nC\nA -> C\n}\nlayout {\nA < B : align=center; gap=90\nB < C : align=center; gap=90\n}\n";
-        let diagram = parse(source).unwrap();
-        let sheet = StyleSheet::default();
-        let boxes = place(&diagram, &sheet).unwrap();
-        let stable = route_pass(&diagram, &boxes, &sheet, None).unwrap();
-        let chosen = route(&diagram, &boxes, &sheet).unwrap();
-        assert!(
-            ranking::better_than_orthogonal(&chosen, &stable),
-            "bounded auto-routing should shorten a safe detour"
-        );
-        assert!(ranking::visibly_clear(&chosen, &boxes));
-    }
-}
+#[path = "router_tests.rs"]
+mod tests;

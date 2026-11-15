@@ -27,14 +27,25 @@ pub mod syntax;
 pub mod text;
 pub mod theme;
 pub mod timing;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod update;
+
+/// Names in the bundled Phosphor catalogue, shared with native editor discovery.
+pub fn bundled_icon_names() -> impl Iterator<Item = &'static str> {
+    include_str!("../assets/phosphor/icons.txt").lines()
+}
+
+/// Original vendored SVG for native catalogue previews (no network access).
+pub fn bundled_icon_svg(name: &str) -> Option<&'static str> {
+    svg_icons::source(name)
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Node {
     pub id: String,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RelationKind {
     Directed,
     Bidirectional,

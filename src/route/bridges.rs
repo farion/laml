@@ -8,6 +8,7 @@ use crate::geometry::BoxNode;
 
 pub(super) struct BridgePlan {
     pub events: Vec<(usize, Bridge, Gap)>, // older route index, new bridge, old gap
+    pub cuts: Vec<(usize, Gap)>,           // compact last-resort underpasses, including bends
 }
 
 fn cross(a: Point, b: Point) -> f64 {
@@ -248,7 +249,10 @@ pub(super) fn plan_except(
             }
         }
     }
-    Some(BridgePlan { events })
+    Some(BridgePlan {
+        events,
+        cuts: Vec::new(),
+    })
 }
 
 impl BridgePlan {
@@ -285,6 +289,30 @@ impl BridgePlan {
 
     pub fn apply(self, routed: &mut [Route]) -> Vec<Bridge> {
         let mut bridges = Vec::new();
+        for (older, gap) in self.cuts {
+            let gaps = &mut routed[older].gaps;
+            gaps.push(gap);
+            gaps.sort_by(|a, b| {
+                a.segment
+                    .cmp(&b.segment)
+                    .then((a.distance - a.half).total_cmp(&(b.distance - b.half)))
+            });
+            let mut merged: Vec<Gap> = Vec::new();
+            for gap in gaps.drain(..) {
+                if let Some(last) = merged.last_mut()
+                    && last.segment == gap.segment
+                    && last.distance + last.half >= gap.distance - gap.half
+                {
+                    let lo = last.distance - last.half;
+                    let hi = (last.distance + last.half).max(gap.distance + gap.half);
+                    last.distance = (lo + hi) / 2.0;
+                    last.half = (hi - lo) / 2.0;
+                } else {
+                    merged.push(gap);
+                }
+            }
+            *gaps = merged;
+        }
         for (older, bridge, gap) in self.events {
             routed[older].gaps.push(gap);
             bridges.push(bridge);
@@ -302,6 +330,7 @@ mod tests {
     #[test]
     fn perpendicular_center_crossing_belongs_to_later_route() {
         let first = Route {
+            source_line: 0,
             points: vec![p(0.0, 100.0), p(200.0, 100.0)],
             qualifiers: vec![],
             bridges: vec![],
@@ -330,6 +359,7 @@ mod tests {
     #[test]
     fn bridge_arcs_do_not_cover_existing_end_text_or_qualifiers() {
         let mut first = Route {
+            source_line: 0,
             points: vec![p(0.0, 100.0), p(200.0, 100.0)],
             qualifiers: vec![],
             bridges: vec![],
@@ -371,6 +401,7 @@ mod tests {
     #[test]
     fn close_to_endpoint_is_not_silently_bridged() {
         let first = Route {
+            source_line: 0,
             points: vec![p(0.0, 100.0), p(200.0, 100.0)],
             qualifiers: vec![],
             bridges: vec![],

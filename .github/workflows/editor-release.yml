@@ -1,0 +1,142 @@
+name: Editor Release
+
+on:
+  push:
+    tags: ['ui-v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: editor-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Validate separate editor tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF_NAME" =~ ^ui-v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          version="$(sed -n 's/^version = "\([^"]*\)"$/\1/p' crates/laml-ui/Cargo.toml | head -1)"
+          test "$GITHUB_REF_NAME" = "ui-v${version}"
+  build:
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+          - os: macos-15
+            target: aarch64-apple-darwin
+          - os: windows-2025
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    env:
+      LAML_NO_UPDATE_CHECK: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install Rust
+        shell: bash
+        run: rustup toolchain install stable --profile minimal
+      - name: Workspace tests and editor build
+        shell: bash
+        run: |
+          cargo +stable test --locked --workspace --all-targets
+          cargo +stable build --locked --release -p laml-ui
+      - name: Linux native capture smoke
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth libgl1-mesa-dri libxkbcommon-x11-0
+          LAML_UI_STATE_DIR="$RUNNER_TEMP/laml-ui" timeout 30s xvfb-run -a env -u WAYLAND_DISPLAY -u WAYLAND_SOCKET target/release/laml-ui --capture "$RUNNER_TEMP/editor.png" examples/architecture.laml
+          test -s "$RUNNER_TEMP/editor.png"
+      - name: Package Unix editor
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          name="laml-ui-${GITHUB_REF_NAME#ui-}-${TARGET}"
+          folder="stage/$name"
+          mkdir -p "$folder" dist
+          cp LICENSE assets/INTER-LICENSE.txt assets/GEIST-LICENSE.txt assets/GEIST-SOURCE.txt "$folder/"
+          cp assets/phosphor/LICENSE "$folder/PHOSPHOR-LICENSE.txt"
+          cp docs/editor-installation.md "$folder/README.md"
+          cp docs/editor.md "$folder/EDITOR.md"
+          if [[ "$RUNNER_OS" == macOS ]]; then
+            mkdir -p "$folder/LAML Editor.app/Contents/MacOS" "$folder/LAML Editor.app/Contents/Resources"
+            cp target/release/laml-ui "$folder/LAML Editor.app/Contents/MacOS/laml-ui"
+            cp LICENSE assets/*LICENSE.txt "$folder/LAML Editor.app/Contents/Resources/"
+            cp assets/phosphor/LICENSE "$folder/LAML Editor.app/Contents/Resources/PHOSPHOR-LICENSE.txt"
+            version="${GITHUB_REF_NAME#ui-v}"
+            printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>' '<plist version="1.0"><dict>' '<key>CFBundleExecutable</key><string>laml-ui</string>' '<key>CFBundleIdentifier</key><string>org.laml.editor</string>' '<key>CFBundleName</key><string>LAML Editor</string>' "<key>CFBundleVersion</key><string>$version</string>" '<key>CFBundlePackageType</key><string>APPL</string>' '<key>NSHighResolutionCapable</key><true/>' '</dict></plist>' > "$folder/LAML Editor.app/Contents/Info.plist"
+          else
+            cp target/release/laml-ui "$folder/"
+          fi
+          tar -czf "dist/$name.tar.gz" -C stage "$name"
+      - name: Package Windows editor
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = $env:GITHUB_REF_NAME -replace '^ui-', ''
+          $name = "laml-ui-$version-$env:TARGET"
+          $folder = "stage/$name"
+          New-Item -ItemType Directory -Path $folder, 'dist' -Force | Out-Null
+          Copy-Item target/release/laml-ui.exe, LICENSE, assets/INTER-LICENSE.txt, assets/GEIST-LICENSE.txt, assets/GEIST-SOURCE.txt -Destination $folder
+          Copy-Item assets/phosphor/LICENSE -Destination "$folder/PHOSPHOR-LICENSE.txt"
+          Copy-Item docs/editor-installation.md -Destination "$folder/README.md"
+          Copy-Item docs/editor.md -Destination "$folder/EDITOR.md"
+          Compress-Archive -Path $folder -DestinationPath "dist/$name.zip"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: editor-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          pattern: editor-*
+          merge-multiple: true
+          path: dist
+      - name: Verify all platforms and publish separate editor assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#ui-}"
+          for target in x86_64-unknown-linux-gnu x86_64-apple-darwin aarch64-apple-darwin; do
+            test -s "dist/laml-ui-$version-$target.tar.gz"
+          done
+          test -s "dist/laml-ui-$version-x86_64-pc-windows-msvc.zip"
+          (cd dist && sha256sum laml-ui-* > SHA256SUMS)
+          # Never replace the CLI's releases/latest update channel.
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+            gh release edit "$GITHUB_REF_NAME" --latest=false
+          else
+            gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --latest=false --generate-notes --title "LAML Editor $version"
+          fi

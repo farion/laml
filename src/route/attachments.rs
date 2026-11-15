@@ -164,6 +164,7 @@ pub(super) fn route_attachments(
         let target_node = routed[target_index].from;
         let bridges = plan.apply(routed);
         routed.push(Route {
+            source_line: attachment.line,
             points,
             qualifiers: Vec::new(),
             bridges,

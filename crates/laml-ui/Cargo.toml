@@ -1,0 +1,40 @@
+[package]
+name = "laml-ui"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Source-first LAML diagram editor"
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+web-time = "=1.1.0"
+laml = { path = "../.." }
+eframe = { version = "=0.37.0", default-features = false, features = ["default_fonts", "glow", "x11", "wayland", "clipboard"] }
+egui_extras = { version = "=0.37.0", default-features = false, features = ["svg"] }
+
+serde_json = { version = "=1.0.154", features = ["float_roundtrip"] }
+serde = { version = "1", features = ["derive"] }
+png = "=0.18.1"
+egui-phosphor = "=0.14.0"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tempfile = "=3.27.0"
+rfd = "=0.15.4"
+axum = "=0.8.9"
+cap-std = "=4.0.3"
+getrandom = "=0.4.3"
+sha2 = "=0.10.9"
+libc = "0.2"
+tokio = { version = "1", features = ["rt-multi-thread", "net", "time", "sync", "macros", "process", "io-util"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+uuid = { version = "=1.29.0", default-features = false, features = ["js"] }
+wasm-bindgen = "=0.2.129"
+wasm-bindgen-futures = "=0.4.79"
+js-sys = "=0.3.106"
+web-sys = { version = "=0.3.106", features = ["Storage", "AbortController", "AbortSignal", "Headers", "ReadableStream", "ReadableStreamDefaultReader", "Request", "RequestInit", "RequestMode", "Response", "Window", "Document", "HtmlCanvasElement", "Element", "Event", "BeforeUnloadEvent", "EventTarget"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "=0.61.2", features = ["Win32_System_JobObjects", "Win32_System_Threading", "Win32_Security", "Win32_System_Console"] }

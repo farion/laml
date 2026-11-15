@@ -2,10 +2,9 @@
 
 mod mcp;
 
-use laml::geometry::place;
 use laml::layout::validate_ordering;
 use laml::parser::parse;
-use laml::route::route;
+use laml::route::place_and_route;
 use laml::styles::load;
 use laml::svg::{TextMode, render_with_theme};
 use std::env;
@@ -193,9 +192,7 @@ fn compile_document(
         if svg_text_option && format != "svg" {
             return Err("--svg-text is only available for SVG output".into());
         }
-        let boxes = place(&document.graph, &styles)
-            .map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?;
-        let routes = route(&document.graph, &boxes, &styles)
+        let (boxes, routes) = place_and_route(&document.graph, &styles)
             .map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?;
         let svg = laml::communication::render(&document, &boxes, &routes, render_mode)
             .map_err(|e| format!("{}: communication rendering failed: {e}", path.display()))?;
@@ -333,9 +330,7 @@ fn compile_document(
     if svg_text_option && format != "svg" {
         return Err("--svg-text is only available for SVG output".into());
     }
-    let boxes = place(&diagram, &styles)
-        .map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?;
-    let routes = route(&diagram, &boxes, &styles)
+    let (boxes, routes) = place_and_route(&diagram, &styles)
         .map_err(|e| format!("{}:{}: {}", path.display(), e.line, e.message))?;
     let svg = if let Some(doc) = &overview {
         laml::interaction_overview::render(doc, &boxes, &routes, render_mode)

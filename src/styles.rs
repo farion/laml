@@ -7,14 +7,14 @@ pub use selectors::{Element, Selector};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq)]
 pub enum Value {
     Number(f64),
     Color(String), // canonical #rrggbb or "none"
     Keyword(String),
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq)]
 pub struct Declaration {
     pub name: String,
     pub value: Value,
@@ -22,13 +22,13 @@ pub struct Declaration {
     pub path: PathBuf,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq)]
 pub struct Rule {
     pub selector: Selector,
     pub declarations: Vec<Declaration>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default, PartialEq)]
 pub struct StyleSheet {
     pub rules: Vec<Rule>,
     pub theme: crate::theme::Theme,
@@ -36,6 +36,17 @@ pub struct StyleSheet {
 }
 
 impl StyleSheet {
+    /// Scoped cascade used by the compiler, exposed for editor property inspection.
+    pub fn for_node(&self, diagram: &Diagram, id: &str) -> Self {
+        diagram.nodes.iter().find(|node| node.id == id).map_or_else(
+            || self.clone(),
+            |node| crate::geometry::scoped_styles(diagram, node, self),
+        )
+    }
+    /// Inspect child elements such as ports with the same ancestor cascade as rendering.
+    pub fn with_node_ancestor(&self, id: &str, classes: &[String]) -> Self {
+        self.with_ancestor(id, classes)
+    }
     pub(crate) fn with_ancestor(&self, id: &str, classes: &[String]) -> Self {
         let mut scoped = self.clone();
         scoped.ancestors.push(id.into());
@@ -190,6 +201,19 @@ fn expand(
         }
     }
     Ok(())
+}
+
+/// Validate and normalize one delivered LSS property without filesystem access.
+pub fn property_value(name: &str, value: &str) -> Result<Value, String> {
+    validate_value(
+        &Property {
+            name: name.into(),
+            value: value.into(),
+            line: 0,
+        },
+        Path::new("inspector"),
+    )
+    .map_err(|error| error.message)
 }
 
 fn validate_value(property: &Property, path: &Path) -> Result<Value, StyleError> {

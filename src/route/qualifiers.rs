@@ -4,7 +4,7 @@ use crate::geometry::BoxNode;
 use crate::syntax::RelationDecl;
 use crate::text::measure;
 
-#[derive(Clone, Debug)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct QualifierBox {
     pub x: f64,
     pub y: f64,

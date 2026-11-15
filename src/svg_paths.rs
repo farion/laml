@@ -50,6 +50,7 @@ pub fn fragments_with_ends_rounded(
         .or_else(|| route.points.first().copied())
         .ok_or("empty route")?;
     let mut current = format!("M{:.2},{:.2}", first.x, first.y);
+    let mut visible = false;
     for (segment, pair) in route.points.windows(2).enumerate() {
         let length = (pair[1].x - pair[0].x).hypot(pair[1].y - pair[0].y);
         if length < 1e-9 {
@@ -85,14 +86,21 @@ pub fn fragments_with_ends_rounded(
             if start < cursor - 1e-6 || end > length + 1e-6 {
                 return Err("bridge/gap events overlap or leave their segment".into());
             }
-            append_line(&mut current, position(pair[0], unit, start));
+            if start > cursor + 1e-6 {
+                append_line(&mut current, position(pair[0], unit, start));
+                visible = true;
+            }
             match event {
                 Event::Gap => {
-                    paths.push(current);
+                    if visible {
+                        paths.push(current);
+                    }
                     let p = position(pair[0], unit, end);
                     current = format!("M{:.2},{:.2}", p.x, p.y);
+                    visible = false;
                 }
                 Event::Bridge(bridge) => {
+                    visible = true;
                     let midpoint = position(pair[0], unit, bridge.distance);
                     let control = Point {
                         x: midpoint.x + normal.x * bridge.height * 2.0,
@@ -108,12 +116,14 @@ pub fn fragments_with_ends_rounded(
             cursor = end;
         }
         if let Some((before, after)) = corners.get(segment).copied().flatten() {
+            visible = true;
             append_line(&mut current, before);
             current.push_str(&format!(
                 " Q{:.2},{:.2} {:.2},{:.2}",
                 pair[1].x, pair[1].y, after.x, after.y
             ));
-        } else {
+        } else if length > cursor + 1e-6 {
+            visible = true;
             append_line(
                 &mut current,
                 if segment + 2 == route.points.len() {
@@ -124,7 +134,9 @@ pub fn fragments_with_ends_rounded(
             );
         }
     }
-    paths.push(current);
+    if visible {
+        paths.push(current);
+    }
     Ok(paths)
 }
 
@@ -213,6 +225,7 @@ mod tests {
     }
     fn sample() -> Route {
         Route {
+            source_line: 0,
             points: vec![p(0.0, 0.0), p(200.0, 0.0)],
             qualifiers: vec![],
             bridges: vec![],

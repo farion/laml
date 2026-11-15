@@ -1,5 +1,7 @@
 mod activity_preference;
+mod alignment;
 mod attachment_preference;
+mod routing_space;
 mod soft;
 mod solver;
 use super::nodes::BoxNode;
@@ -29,6 +31,16 @@ struct Minimum {
     distance: f64,
     line: usize,
 }
+/// Axis separating two explicitly placed endpoints. Mixed-axis placement is
+/// intentionally diagonal; automatic centering must leave both axes authored.
+pub(super) fn authored_relation_axis(diagram: &Diagram, a: &str, b: &str) -> Option<Axis> {
+    diagram.layout.iter().find(|rule| {
+        (rule.first == a && rule.second == b) || (rule.first == b && rule.second == a)
+    }).map(|rule| if matches!(rule.placement, Placement::Left | Placement::Right) {
+        Axis::Horizontal
+    } else { Axis::Vertical })
+}
+
 fn err(line: usize, message: impl Into<String>) -> GeometryError {
     GeometryError {
         line,
@@ -41,6 +53,7 @@ pub fn place(
     styles: &StyleSheet,
     soft_alignments: &[ScopedAlignment],
     original: &Diagram,
+    spacing: f64,
 ) -> Result<(), GeometryError> {
     let n = boxes.len();
     // The preferred centre is independent of the measured size. Expansion
@@ -154,16 +167,21 @@ pub fn place(
             Axis::Vertical => eq_y.push(equality),
         }
     }
+    let allowed_overlap = alignment::apply(diagram, boxes, &mut eq_x, &mut eq_y);
     // Only explicit constraints may cause a hard failure at this point.
     solve_axis(n, &eq_x, &x, &pref_x)?;
     solve_axis(n, &eq_y, &y, &pref_y)?;
 
-    if diagram.relations.is_empty() && diagram.layout.is_empty() {
+    if diagram.relations.is_empty()
+        && diagram.layout.is_empty()
+        && diagram.alignments.is_empty()
+        && diagram.scoped_alignments.is_empty()
+    {
         for i in 1..n {
             y.push(Minimum {
                 a: i - 1,
                 b: i,
-                distance: boxes[i - 1].height + 24.0,
+                distance: boxes[i - 1].height + 24.0 + spacing,
                 line: 0,
             });
         }
@@ -188,16 +206,18 @@ pub fn place(
             let relation = &diagram.relations[index];
             let a = owner(&relation.from);
             let b = owner(&relation.to);
-            if activity_preference::prefers_below(diagram, boxes, relation, a, b) {
+            if activity_preference::prefers_below(diagram, boxes, relation, a, b)
+                || authored_relation_axis(diagram, &boxes[a].id, &boxes[b].id).is_some()
+            {
                 continue;
             }
             let distance = if matches!(
                 diagram.settings.direction,
                 FlowDirection::LeftToRight | FlowDirection::RightToLeft
             ) {
-                boxes[a].width + 96.0
+                boxes[a].width + 96.0 + spacing
             } else {
-                boxes[a].height + 64.0
+                boxes[a].height + 64.0 + spacing
             };
             let reverse = matches!(
                 diagram.settings.direction,
@@ -209,7 +229,7 @@ pub fn place(
                 } else {
                     boxes[b].height
                 };
-                (b, a, extent + 64.0)
+                (b, a, extent + 64.0 + spacing)
             } else {
                 (a, b, distance)
             };
@@ -241,15 +261,9 @@ pub fn place(
             if a == b {
                 continue;
             }
-            // A vertical authored separation takes precedence over the
-            // left-to-right preference of an undirected object link.
-            if boxes[a].kind == NodeKind::Object
-                && diagram.layout.iter().any(|rule| {
-                    matches!(rule.placement, Placement::Above | Placement::Below)
-                        && ((rule.first == boxes[a].id && rule.second == boxes[b].id)
-                            || (rule.first == boxes[b].id && rule.second == boxes[a].id))
-                })
-            {
+            // Authored placement determines the connection's axis before the
+            // diagram-wide direction preference, for every relation kind.
+            if authored_relation_axis(diagram, &boxes[a].id, &boxes[b].id).is_some() {
                 continue;
             }
             let (first, second) = (a.min(b), a.max(b));
@@ -385,12 +399,19 @@ pub fn place(
         let collision = (0..n)
             .flat_map(|a| (a + 1..n).map(move |b| (a, b)))
             .find(|&(a, b)| {
-                xs[a] < xs[b] + boxes[b].width - 1e-6
-                    && xs[b] < xs[a] + boxes[a].width - 1e-6
-                    && ys[a] < ys[b] + boxes[b].height - 1e-6
-                    && ys[b] < ys[a] + boxes[a].height - 1e-6
+                !allowed_overlap.contains(&(a, b))
+                    && xs[a] < xs[b] + boxes[b].width + spacing - 1e-6
+                    && xs[b] < xs[a] + boxes[a].width + spacing - 1e-6
+                    && ys[a] < ys[b] + boxes[b].height + spacing - 1e-6
+                    && ys[b] < ys[a] + boxes[a].height + spacing - 1e-6
             });
         if let Some((a, b)) = collision {
+            if spacing > 0.0 {
+                routing_space::separate(
+                    boxes, a, b, spacing, &xs, &ys, &eq_x, &eq_y, &mut x, &mut y, &pref_x, &pref_y,
+                )?;
+                continue;
+            }
             let automatic_gap = if diagram.settings.diagram_type
                 == crate::syntax::DiagramType::Package
                 && diagram.layout.is_empty()

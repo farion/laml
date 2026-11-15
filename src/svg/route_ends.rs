@@ -58,6 +58,7 @@ mod tests {
     #[test]
     fn arrow_tips_do_not_move_without_a_matching_named_port() {
         let route = Route {
+            source_line: 0,
             points: vec![Point { x: 0.0, y: 0.0 }, Point { x: 20.0, y: 0.0 }],
             qualifiers: vec![],
             bridges: vec![],

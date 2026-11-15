@@ -3,7 +3,7 @@ use super::{Point, Route, preferred::forced_port};
 use crate::geometry::{BoxNode, NodeShape};
 use crate::syntax::PortSide;
 
-fn endpoints(
+pub(super) fn endpoints(
     node: &BoxNode,
     member: Option<&str>,
     side: Option<PortSide>,

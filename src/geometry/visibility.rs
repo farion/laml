@@ -196,6 +196,16 @@ pub(crate) fn filtered(diagram: &Diagram, sheet: &StyleSheet) -> Result<Diagram,
             }
         }
     }
+    for rule in &visible.alignments {
+        for id in [&rule.first, &rule.second] {
+            if !visible.nodes.iter().any(|node| &node.id == id) {
+                return Err((
+                    rule.line,
+                    format!("mandatory alignment targets hidden node '{id}'"),
+                ));
+            }
+        }
+    }
     for rule in &visible.relation_end_layout {
         if !visible
             .relations

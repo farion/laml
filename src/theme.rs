@@ -4,7 +4,7 @@
 
 use crate::syntax::NodeKind;
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Theme {
     Plain,
     #[default]

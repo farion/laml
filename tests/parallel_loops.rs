@@ -47,19 +47,30 @@ fn appending_a_parallel_relation_does_not_move_nodes() {
 }
 
 #[test]
-fn overfull_parallel_face_fails_instead_of_overdrawing() {
+fn overfull_preferred_face_uses_other_faces_and_crossings_instead_of_failing() {
     let mut source = "semantics {\nA\nB\n".to_string();
     source.push_str(&"A -> B\n".repeat(7));
     source.push_str("}\n");
     let diagram = parse(&source).unwrap();
     let sheet = StyleSheet::default();
     let boxes = place(&diagram, &sheet).unwrap();
-    let error = route(&diagram, &boxes, &sheet).unwrap_err();
+    let routes = route(&diagram, &boxes, &sheet).unwrap();
+    assert_eq!(routes.len(), 7);
+    for (i, a) in routes.iter().enumerate() {
+        assert!(
+            a.points
+                .windows(2)
+                .all(|p| (p[0].x - p[1].x).abs() < 1e-6 || (p[0].y - p[1].y).abs() < 1e-6)
+        );
+        for b in routes.iter().skip(i + 1) {
+            assert_ne!(a.points, b.points);
+        }
+    }
     assert!(
-        error
-            .message
-            .contains("parallel relations cannot fit distinct ports")
+        routes.iter().any(|r| !r.gaps.is_empty()),
+        "the fallback may use crossings"
     );
+    laml::svg::render(&boxes, &routes).unwrap();
 }
 
 #[test]
