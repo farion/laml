@@ -11,10 +11,29 @@ fn release_packages_bundled_font_notices() {
     let workflow = fs::read_to_string(root.join(".github/workflows/release.yml")).unwrap();
     for name in ["INTER-LICENSE.txt", "GEIST-LICENSE.txt", "GEIST-SOURCE.txt"] {
         assert!(root.join("assets").join(name).is_file());
-        assert_eq!(
-            workflow.matches(&format!("assets/{name}")).count(),
-            2,
-            "{name} must be in Unix and Windows archives"
+        for step in [
+            "Package (Unix)",
+            "Package (Windows)",
+            "Package Unix editor",
+            "Package Windows editor",
+        ] {
+            let marker = format!("      - name: {step}\n");
+            let body = workflow
+                .split_once(&marker)
+                .unwrap_or_else(|| panic!("missing release step: {step}"))
+                .1
+                .split("      - ")
+                .next()
+                .unwrap();
+            assert!(
+                body.contains(&format!("assets/{name}")),
+                "{step} must include {name}"
+            );
+        }
+        let server = fs::read_to_string(root.join("scripts/package-server-bundle.sh")).unwrap();
+        assert!(
+            server.contains(&format!("assets/{name}")),
+            "server bundle must include {name}"
         );
     }
 }
@@ -51,7 +70,9 @@ fn assert_preview_matches(root: &Path, path: &Path, _svg: &str) {
     fs::remove_file(destination).unwrap();
     assert_eq!(
         (expected.width(), expected.height()),
-        (actual.width(), actual.height())
+        (actual.width(), actual.height()),
+        "{} is out of sync",
+        preview.display()
     );
     let changed = expected
         .pixels()
@@ -120,7 +141,8 @@ fn every_example_has_two_transparent_theme_images() {
         let stem = source.file_stem().unwrap().to_str().unwrap();
         for theme in ["modern", "modern-dark"] {
             let path = root.join(format!("docs/images/{stem}-{theme}.png"));
-            let image = resvg::tiny_skia::Pixmap::decode_png(&fs::read(&path).unwrap()).unwrap();
+            let bytes = fs::read(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+            let image = resvg::tiny_skia::Pixmap::decode_png(&bytes).unwrap();
             assert_eq!(image.pixels()[0].alpha(), 0, "{}", path.display());
         }
     }
