@@ -60,7 +60,9 @@ impl Editor {
                                 1 => self.notation_ui.navigator = true,
                                 _ => self.open_construct_dialog(),
                             }
-                            if in_menu { ui.close(); }
+                            if in_menu {
+                                ui.close();
+                            }
                         }
                     });
                 });
@@ -75,15 +77,15 @@ impl Editor {
 
     pub(super) fn alignment_overlay(&mut self, ui: &egui::Ui, viewport: egui::Rect) -> bool {
         self.graph.hover_align = None;
-        if self.specialized() || self.selection.ids.len() < 2
+        if self.specialized()
+            || self.selection.ids.len() < 2
             || !self.selection.ports.is_empty()
             || !self.selection.relations.is_empty()
         {
             return false;
         }
-        let enabled = self.can_edit_visually()
-            && !self.graph.dialog_open()
-            && self.graph.gesture.is_none();
+        let enabled =
+            self.can_edit_visually() && !self.graph.dialog_open() && self.graph.gesture.is_none();
         let mut clicked = None;
         let overlay = egui::Area::new(ui.make_persistent_id("alignment-overlay"))
             .order(egui::Order::Foreground)
@@ -121,7 +123,8 @@ impl Editor {
     }
 
     pub(super) fn align_selected(&mut self, align: FreeAlignment) {
-        if self.specialized() || self.selection.ids.len() < 2
+        if self.specialized()
+            || self.selection.ids.len() < 2
             || !self.selection.ports.is_empty()
             || !self.selection.relations.is_empty()
         {

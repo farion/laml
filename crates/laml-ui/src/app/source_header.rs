@@ -30,7 +30,11 @@ impl Editor {
     #[cfg(target_arch = "wasm32")]
     pub(super) fn download_laml(&self) {
         let name = self.path.file_name().unwrap_or_default().to_string_lossy();
-        crate::browser_storage::download(&name, self.document.source().as_bytes(), "text/plain;charset=utf-8");
+        crate::browser_storage::download(
+            &name,
+            self.document.source().as_bytes(),
+            "text/plain;charset=utf-8",
+        );
     }
     pub(super) fn document_title_actions(&mut self, ui: &mut egui::Ui) {
         let can_save = self.pending_command != Some(self.document.revision())
@@ -38,29 +42,43 @@ impl Editor {
             && !self.workflow.writing();
         #[cfg(target_arch = "wasm32")]
         if laml_ui::services::browser_mode() {
-            if workspace::icon(ui, egui_phosphor::regular::DOWNLOAD_SIMPLE, "Download LAML (Ctrl/Cmd+S)").clicked() { self.download_laml(); }
+            if workspace::icon(
+                ui,
+                egui_phosphor::regular::DOWNLOAD_SIMPLE,
+                "Download LAML (Ctrl/Cmd+S)",
+            )
+            .clicked()
+            {
+                self.download_laml();
+            }
         }
-        if !laml_ui::services::browser_mode() { ui.add_enabled_ui(can_save, |ui| {
-            if workspace::icon(ui, FLOPPY_DISK, "Save (Ctrl/Cmd+S)").clicked() {
-                self.save_file(ui.ctx());
-            }
-            let save_as = workspace::icon(ui, FLOPPY_DISK, "Save as… (Ctrl/Cmd+Shift+S)");
-            let mark = egui::Rect::from_center_size(
-                save_as.rect.right_bottom() - egui::vec2(7.0, 7.0),
-                egui::vec2(14.0, 14.0),
-            );
-            ui.painter().rect_filled(mark, 2.0, appearance::HEADER);
-            ui.painter().text(
-                mark.center(),
-                egui::Align2::CENTER_CENTER,
-                PENCIL_SIMPLE,
-                egui::FontId::new(14.0, egui::FontFamily::Name("phosphor".into())),
-                if can_save { appearance::TEXT } else { appearance::MUTED },
-            );
-            if save_as.clicked() {
-                self.save_as_dialog(ui.ctx());
-            }
-        }); }
+        if !laml_ui::services::browser_mode() {
+            ui.add_enabled_ui(can_save, |ui| {
+                if workspace::icon(ui, FLOPPY_DISK, "Save (Ctrl/Cmd+S)").clicked() {
+                    self.save_file(ui.ctx());
+                }
+                let save_as = workspace::icon(ui, FLOPPY_DISK, "Save as… (Ctrl/Cmd+Shift+S)");
+                let mark = egui::Rect::from_center_size(
+                    save_as.rect.right_bottom() - egui::vec2(7.0, 7.0),
+                    egui::vec2(14.0, 14.0),
+                );
+                ui.painter().rect_filled(mark, 2.0, appearance::HEADER);
+                ui.painter().text(
+                    mark.center(),
+                    egui::Align2::CENTER_CENTER,
+                    PENCIL_SIMPLE,
+                    egui::FontId::new(14.0, egui::FontFamily::Name("phosphor".into())),
+                    if can_save {
+                        appearance::TEXT
+                    } else {
+                        appearance::MUTED
+                    },
+                );
+                if save_as.clicked() {
+                    self.save_as_dialog(ui.ctx());
+                }
+            });
+        }
         ui.separator();
         ui.add_enabled_ui(self.document.undo_label().is_some(), |ui| {
             if workspace::icon(ui, ARROW_COUNTER_CLOCKWISE, "Undo (Ctrl/Cmd+Z)").clicked()

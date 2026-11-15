@@ -15,7 +15,10 @@ fn workspace() -> (Workspace, egui::Context) {
     let ctx = egui::Context::default();
     appearance::install(&ctx);
     egui_extras::install_image_loaders(&ctx);
-    (Workspace::new(Editor::new(SOURCE.into(), None)), ctx)
+    let mut app = Workspace::new(Editor::new(SOURCE.into(), None));
+    // These tests exercise workspace actions, not the first-run modal.
+    app.welcome_open = false;
+    (app, ctx)
 }
 
 fn frame(app: &mut Workspace, ctx: &egui::Context, events: Vec<egui::Event>) -> egui::FullOutput {
@@ -198,14 +201,32 @@ fn application_close_checks_inactive_dirty_tabs_and_cancel_stops_closing() {
 }
 
 #[test]
-fn closing_last_clean_tab_creates_a_new_untitled_document() {
+fn closing_last_clean_tab_leaves_the_workspace_empty() {
     let (mut app, ctx) = workspace();
-    let old = app.tabs[0].id;
+    app.welcome_open = false;
     app.request_close(0, &ctx);
-    assert_eq!(app.tabs.len(), 1);
-    assert_ne!(app.tabs[0].id, old);
+    assert!(app.tabs.is_empty());
     assert!(!app.allow_close);
-    assert!(app.tabs[0].file.path.is_none());
+    frame(&mut app, &ctx, vec![]);
+    assert!(app.tabs.is_empty());
+}
+
+#[test]
+fn empty_startup_does_not_create_a_document_and_named_creation_is_explicit() {
+    let ctx = egui::Context::default();
+    appearance::install(&ctx);
+    let mut app = Workspace::empty(Editor::new(SOURCE.into(), None));
+    app.welcome_open = false;
+    let output = frame(&mut app, &ctx, vec![]);
+    assert!(app.tabs.is_empty());
+    assert!(output.shapes.iter().any(|s| matches!(&s.shape,
+        egui::Shape::Text(t) if t.galley.job.text == "No file open")));
+    app.begin_new_diagram();
+    assert!(app.tabs.is_empty());
+    app.new_typed_tab(laml_ui::notation::Notation::Bpmn, "Process.laml".into());
+    assert_eq!(app.tabs.len(), 1);
+    assert_eq!(app.tabs[0].path, PathBuf::from("Process.laml"));
+    assert!(app.tabs[0].document.source().contains("type: bpmn"));
 }
 
 #[test]
@@ -258,6 +279,9 @@ fn title_new_button_and_file_tabs_dispatch_to_the_right_document() {
         .replace_text(format!("{SOURCE}// mine\n"))
         .unwrap();
     click(&mut app, &ctx, PLUS);
+    assert!(app.new_diagram.is_some());
+    assert_eq!(app.tabs.len(), 1);
+    click(&mut app, &ctx, "Create");
     assert_eq!(app.tabs.len(), 2);
     assert_eq!(app.active, 1);
     assert!(app.tabs[0].document.is_dirty());
@@ -401,6 +425,8 @@ fn tabs_reuse_the_injected_backend_including_after_the_last_tab_closes() {
     ));
     workspace.tabs.clear();
     workspace.finish_close(&ctx);
+    assert!(workspace.tabs.is_empty());
+    workspace.new_tab();
     assert_eq!(workspace.tabs.len(), 1);
     assert!(std::sync::Arc::ptr_eq(
         workspace.backend.native_handle(),

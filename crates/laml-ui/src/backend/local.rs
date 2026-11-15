@@ -15,7 +15,11 @@ impl Backend for LocalBackend {
         preview::build_presented(source, path, presentation)
     }
     fn compile_relations(
-        &self, source: &str, path: &Path, presentation: Presentation, previous: &Preview,
+        &self,
+        source: &str,
+        path: &Path,
+        presentation: Presentation,
+        previous: &Preview,
     ) -> Result<Preview, Diagnostic> {
         preview::build_relations(source, path, presentation.theme_override(), previous)
     }

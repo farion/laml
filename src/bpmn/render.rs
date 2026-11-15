@@ -202,7 +202,11 @@ pub fn render_with_styles(
 ) -> Result<String, String> {
     render_for_editor(doc, sheet, mode).map(|(svg, _)| svg)
 }
-pub fn render_for_editor(doc: &Document, sheet: &StyleSheet, mode: TextMode) -> Result<(String, Vec<crate::authoring::Region>), String> {
+pub fn render_for_editor(
+    doc: &Document,
+    sheet: &StyleSheet,
+    mode: TextMode,
+) -> Result<(String, Vec<crate::authoring::Region>), String> {
     let mut effective = sheet.clone();
     effective.theme = doc.theme;
     let sheet = &effective;
@@ -371,7 +375,12 @@ pub fn render_for_editor(doc: &Document, sheet: &StyleSheet, mode: TextMode) -> 
     let (paths, routes) = plan::all(doc, &geom, &ports)?;
     svg.push_str(&paths);
     for (i, route) in routes.iter().enumerate() {
-        regions.push(crate::authoring::Region::stroke(format!("flow:{i}"), "flow", doc.edges[i].line, route.points.clone()));
+        regions.push(crate::authoring::Region::stroke(
+            format!("flow:{i}"),
+            "flow",
+            doc.edges[i].line,
+            route.points.clone(),
+        ));
     }
     for (n, &b) in doc
         .nodes
@@ -393,21 +402,52 @@ pub fn render_for_editor(doc: &Document, sheet: &StyleSheet, mode: TextMode) -> 
     svg.push_str("</svg>\n");
     let svg = if mode == TextMode::Paths {
         crate::export_metadata::preserve_svg_notice(&svg, crate::export::outlines(&svg)?)?
-    } else { svg };
+    } else {
+        svg
+    };
     Ok((svg, regions))
 }
 fn authoring_regions(doc: &Document, geom: &Geometry) -> Vec<crate::authoring::Region> {
     use crate::authoring::Region;
-    let mut regions: Vec<_> = doc.nodes.iter().zip(&geom.nodes).map(|(n, b)|
-        Region::rect(&n.id, "node", n.line, b.x - b.w / 2.0, b.y - b.h / 2.0, b.w, b.h)).collect();
+    let mut regions: Vec<_> = doc
+        .nodes
+        .iter()
+        .zip(&geom.nodes)
+        .map(|(n, b)| {
+            Region::rect(
+                &n.id,
+                "node",
+                n.line,
+                b.x - b.w / 2.0,
+                b.y - b.h / 2.0,
+                b.w,
+                b.h,
+            )
+        })
+        .collect();
     for (pool, b) in doc.pools.iter().zip(&geom.pools) {
-        regions.push(Region::rect(&pool.id, "pool", pool.line, b.x, b.y, b.w, b.h));
+        regions.push(Region::rect(
+            &pool.id, "pool", pool.line, b.x, b.y, b.w, b.h,
+        ));
         for band in &b.bands {
             if let Some(id) = &band.id {
                 let (x, y, w, h) = if doc.direction == crate::syntax::FlowDirection::TopToBottom {
                     (band.y, b.y + 30.0, band.h, b.h - 30.0)
-                } else { (b.x + 30.0, band.y, b.w - 30.0, band.h) };
-                regions.push(Region::rect(format!("{}.{}", pool.id, id), "lane", pool.lanes.iter().find(|l| &l.id == id).map_or(0, |l| l.line), x, y, w, h));
+                } else {
+                    (b.x + 30.0, band.y, b.w - 30.0, band.h)
+                };
+                regions.push(Region::rect(
+                    format!("{}.{}", pool.id, id),
+                    "lane",
+                    pool.lanes
+                        .iter()
+                        .find(|l| &l.id == id)
+                        .map_or(0, |l| l.line),
+                    x,
+                    y,
+                    w,
+                    h,
+                ));
             }
         }
     }

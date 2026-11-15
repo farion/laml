@@ -7,9 +7,9 @@ use serde::{Deserialize, Serialize};
 
 pub mod codec;
 #[cfg(not(target_arch = "wasm32"))]
-pub mod dispatch;
-#[cfg(not(target_arch = "wasm32"))]
 mod compiled;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod dispatch;
 #[cfg(not(target_arch = "wasm32"))]
 mod gesture;
 #[cfg(test)]

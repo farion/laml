@@ -54,7 +54,11 @@ impl State {
                     Err(e) => self.error = Some(e.to_string()),
                     _ => self.error = Some("Invalid recovery acknowledgement".into()),
                 }
-            } else if let Some(id) = self.discards.iter().find_map(|(id, (stamp, _))| (*stamp == response.stamp).then(|| id.clone())) {
+            } else if let Some(id) = self
+                .discards
+                .iter()
+                .find_map(|(id, (stamp, _))| (*stamp == response.stamp).then(|| id.clone()))
+            {
                 let result = match response.result {
                     Ok(Reply::Unit) => Ok(()),
                     Ok(_) => Err("Invalid recovery discard acknowledgement".into()),
@@ -180,9 +184,16 @@ impl Store {
             return Ok(false);
         }
         let document = state.document;
-        let stamp = state.client.submit(document, 0, Operation::RecoveryDiscard {
-            id: record.file.to_string_lossy().into_owned(),
-        }).map_err(|e| e.to_string())?;
+        let stamp = state
+            .client
+            .submit(
+                document,
+                0,
+                Operation::RecoveryDiscard {
+                    id: record.file.to_string_lossy().into_owned(),
+                },
+            )
+            .map_err(|e| e.to_string())?;
         state.discards.insert(record.file.clone(), (stamp, None));
         Ok(false)
     }

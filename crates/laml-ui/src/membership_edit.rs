@@ -33,10 +33,11 @@ pub fn plan(source: &str, id: &str, parent: Option<&str>) -> Result<Move, String
         return Err("Node already belongs to this container.".into());
     }
     if let Some(parent) = parent
-        && !diagram
-            .nodes
-            .iter()
-            .any(|n| n.id == parent && crate::notation::container_kind(n.kind) && node_edit::blocks(source, &diagram).is_ok_and(|b| b.contains_key(&n.line)))
+        && !diagram.nodes.iter().any(|n| {
+            n.id == parent
+                && crate::notation::container_kind(n.kind)
+                && node_edit::blocks(source, &diagram).is_ok_and(|b| b.contains_key(&n.line))
+        })
     {
         return Err("Choose a notation-compatible container block.".into());
     }

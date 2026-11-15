@@ -85,11 +85,18 @@ impl Backend for Scoped {
         stage.translate(result).map_err(Diagnostic::from)?
     }
     fn compile_relations(
-        &self, source: &str, path: &Path, presentation: Presentation, previous: &Preview,
+        &self,
+        source: &str,
+        path: &Path,
+        presentation: Presentation,
+        previous: &Preview,
     ) -> Result<Preview, Diagnostic> {
         let stage = self.stage(source, path, true)?;
         let result = crate::backend::LocalBackend.compile_relations(
-            source, &stage.path, presentation, previous,
+            source,
+            &stage.path,
+            presentation,
+            previous,
         );
         stage.translate(result).map_err(Diagnostic::from)?
     }

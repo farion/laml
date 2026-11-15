@@ -19,6 +19,9 @@ pub fn router(state: Arc<HttpState>) -> Router {
         .route("/", get(index))
         .route("/bootstrap.js", get(bootstrap))
         .route("/style.css", get(css))
+        .route("/favicon.svg", get(favicon_svg))
+        .route("/favicon.png", get(favicon_png))
+        .route("/favicon.ico", get(favicon_ico))
         .route("/api/options", get(options))
         .route("/api/session", post(browser::heartbeat))
         .route("/api/editor", post(editor))
@@ -31,7 +34,9 @@ pub fn router(state: Arc<HttpState>) -> Router {
 // pagehide beacon, not a timer: reloading/closing can release recovery leases.
 // Requests already holding a worker Arc still finish their accepted operations.
 async fn depart(State(state): State<Arc<HttpState>>, body: Bytes) -> StatusCode {
-    if state.config.browser { return StatusCode::NO_CONTENT; }
+    if state.config.browser {
+        return StatusCode::NO_CONTENT;
+    }
     let Ok(client) = serde_json::from_slice::<u64>(&body) else {
         return StatusCode::BAD_REQUEST;
     };
@@ -115,7 +120,9 @@ async fn editor(
     {
         return StatusCode::UNSUPPORTED_MEDIA_TYPE.into_response();
     }
-    if state.config.browser { return browser::editor(state, headers, body).await; }
+    if state.config.browser {
+        return browser::editor(state, headers, body).await;
+    }
     let request = match codec::decode_request_with_limits(&body, state.config.limits) {
         Ok(r) => r,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),
@@ -169,6 +176,24 @@ async fn css() -> impl IntoResponse {
     (
         [(header::CONTENT_TYPE, "text/css; charset=utf-8")],
         include_str!("../../web/style.css"),
+    )
+}
+async fn favicon_svg() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "image/svg+xml")],
+        include_bytes!("../../assets/favicon.svg").as_slice(),
+    )
+}
+async fn favicon_png() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "image/png")],
+        include_bytes!("../../assets/favicon.png").as_slice(),
+    )
+}
+async fn favicon_ico() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "image/x-icon")],
+        include_bytes!("../../assets/favicon.ico").as_slice(),
     )
 }
 async fn asset(State(state): State<Arc<HttpState>>, Path(path): Path<String>) -> Response {

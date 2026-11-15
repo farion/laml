@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/laml-logo-dark.svg">
+  <img src="docs/images/laml-logo.svg" alt="LAML" width="390">
+</picture>
+
 # LAML
 
 Layout and Markup Language
@@ -77,6 +82,8 @@ Installers select the platform, check the downloaded archive against `SHA256SUMS
 an inspector for Generic node-edge (GNE), UML, BPMN and C4 diagrams. Text and visual
 changes share undo/redo; visual edits are checked by the real compiler, including
 layout and routing, before being applied.
+
+![LAML Editor showing editable source, an architecture diagram and the Properties inspector](docs/images/editor-screenshot.png)
 
 ```sh
 cargo build --release -p laml-ui

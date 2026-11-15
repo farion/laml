@@ -18,7 +18,11 @@ impl Editor {
         )
     }
     pub(super) fn has_selection(&self) -> bool {
-        self.notation_ui.selected.as_ref().is_some_and(|s| s.2 == self.document.revision()) || !self.selection.ids.is_empty()
+        self.notation_ui
+            .selected
+            .as_ref()
+            .is_some_and(|s| s.2 == self.document.revision())
+            || !self.selection.ids.is_empty()
             || !self.selection.relations.is_empty()
             || !self.selection.ports.is_empty()
     }
@@ -69,10 +73,17 @@ impl Editor {
         if let Some(key) = key
             && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, key))
         {
-            if let Some((line, id, revision)) = self.notation_ui.selected.clone().filter(|s| s.2 == self.document.revision()) {
+            if let Some((line, id, revision)) = self
+                .notation_ui
+                .selected
+                .clone()
+                .filter(|s| s.2 == self.document.revision())
+            {
                 let _ = revision;
                 self.notation_delete(line, id.as_deref(), false);
-            } else { self.propose_delete(ContainerMode::WithContents); }
+            } else {
+                self.propose_delete(ContainerMode::WithContents);
+            }
         }
     }
     pub(super) fn deletion_window(&mut self, ctx: &egui::Context) {

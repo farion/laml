@@ -22,6 +22,7 @@ enum Action {
     Open(PathBuf),
     Reload,
     Close,
+    #[cfg_attr(not(test), allow(dead_code))] // Standalone recovery regression path.
     Recover(laml_ui::recovery::Record),
 }
 #[derive(Clone, Copy)]
@@ -143,6 +144,7 @@ impl Editor {
     pub(super) fn save_as_dialog(&mut self, ctx: &egui::Context) {
         self.browse_file(Dialog::SaveAs, ctx);
     }
+    #[cfg(test)]
     pub(super) fn request_recovery(
         &mut self,
         record: laml_ui::recovery::Record,

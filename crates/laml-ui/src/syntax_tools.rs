@@ -50,7 +50,9 @@ pub fn scan(source: &str) -> Scan {
             }
             if relation
                 && c == ':'
-                && ["->", "<-", "--", "..>"].iter().any(|op| text[..i].contains(op))
+                && ["->", "<-", "--", "..>"]
+                    .iter()
+                    .any(|op| text[..i].contains(op))
                 && depth == 0
                 && !text[i..].starts_with("::")
                 && !text[..i].ends_with(':')
@@ -201,7 +203,11 @@ pub fn complete(source: &str, caret: usize, diagram: Option<&laml::syntax::Diagr
         if let Some((key, _)) = line.split_once(':') {
             match key.trim() {
                 "type" => {
-                    let types: Vec<_> = crate::notation::Notation::ALL.into_iter().filter(|n| *n != crate::notation::Notation::Gne).map(|n| n.key()).collect();
+                    let types: Vec<_> = crate::notation::Notation::ALL
+                        .into_iter()
+                        .filter(|n| *n != crate::notation::Notation::Gne)
+                        .map(|n| n.key())
+                        .collect();
                     add(&types);
                 }
                 "semantic-check" => add(&["on", "off"]),
@@ -287,35 +293,49 @@ pub fn complete(source: &str, caret: usize, diagram: Option<&laml::syntax::Diagr
         if notation != crate::notation::Notation::Gne {
             let mut words = Vec::new();
             if notation.graph() && !notation.c4() {
-                words.extend(crate::element_edit::ElementKind::available(source).into_iter().map(|k| k.keyword().trim()));
+                words.extend(
+                    crate::element_edit::ElementKind::available(source)
+                        .into_iter()
+                        .map(|k| k.keyword().trim()),
+                );
             }
-            for recipe in crate::notation_edit::catalog::recipes(notation).into_iter().filter(|r| r.section == "semantics") {
-                if let Some(word) = recipe.body.split_whitespace().next().filter(|s| !s.contains('{')) { words.push(word); }
+            for recipe in crate::notation_edit::catalog::recipes(notation)
+                .into_iter()
+                .filter(|r| r.section == "semantics")
+            {
+                if let Some(word) = recipe
+                    .body
+                    .split_whitespace()
+                    .next()
+                    .filter(|s| !s.contains('{'))
+                {
+                    words.push(word);
+                }
             }
             add(&words);
         } else {
-        if nested_body {
-            if body_heading.contains("enum ") {
-                add(&["VALUE"]);
-            } else if body_heading.contains("object ") {
-                add(&["value = ", "text"]);
+            if nested_body {
+                if body_heading.contains("enum ") {
+                    add(&["VALUE"]);
+                } else if body_heading.contains("object ") {
+                    add(&["value = ", "text"]);
+                } else {
+                    add(&[
+                        "field", "method", "text", "static", "abstract", "port", "--",
+                    ]);
+                }
             } else {
                 add(&[
-                    "field", "method", "text", "static", "abstract", "port", "--",
+                    "package",
+                    "note",
+                    "class",
+                    "interface",
+                    "enum",
+                    "datatype",
+                    "object",
+                    "junction",
                 ]);
             }
-        } else {
-            add(&[
-                "package",
-                "note",
-                "class",
-                "interface",
-                "enum",
-                "datatype",
-                "object",
-                "junction",
-            ]);
-        }
         }
     } else {
         add(&["semantics {", "settings {", "layout {", "styling {"]);
@@ -338,20 +358,49 @@ pub fn complete(source: &str, caret: usize, diagram: Option<&laml::syntax::Diagr
     if section == "settings" && !line.contains(':') {
         values.insert("type:".into());
         match notation {
-            crate::notation::Notation::Sequence => { values.retain(|v| !["direction:", "relation-label:", "naming-convention:"].contains(&v.as_str())); values.insert("semantic-check:".into()); }
-            crate::notation::Notation::Timing => { values.retain(|v| !["direction:", "relation-label:", "naming-convention:"].contains(&v.as_str())); values.extend(["interaction:", "time-unit:"].map(str::to_owned)); }
-            crate::notation::Notation::Bpmn => { values.retain(|v| !["relation-label:", "naming-convention:"].contains(&v.as_str())); }
-            crate::notation::Notation::Communication | crate::notation::Notation::InteractionOverview => { values.insert("interaction:".into()); }
-            ty if ty.c4() => { values.insert("scope:".into()); }
-            _ => {},
+            crate::notation::Notation::Sequence => {
+                values.retain(|v| {
+                    !["direction:", "relation-label:", "naming-convention:"].contains(&v.as_str())
+                });
+                values.insert("semantic-check:".into());
+            }
+            crate::notation::Notation::Timing => {
+                values.retain(|v| {
+                    !["direction:", "relation-label:", "naming-convention:"].contains(&v.as_str())
+                });
+                values.extend(["interaction:", "time-unit:"].map(str::to_owned));
+            }
+            crate::notation::Notation::Bpmn => {
+                values.retain(|v| !["relation-label:", "naming-convention:"].contains(&v.as_str()));
+            }
+            crate::notation::Notation::Communication
+            | crate::notation::Notation::InteractionOverview => {
+                values.insert("interaction:".into());
+            }
+            ty if ty.c4() => {
+                values.insert("scope:".into());
+            }
+            _ => {}
         }
     }
     if matches!(section, "semantics" | "layout" | "styling") {
         match notation {
-            crate::notation::Notation::Bpmn => { if let Ok(doc) = laml::bpmn::parse(source) { values.extend(doc.nodes.into_iter().map(|n| n.id)); } }
-            crate::notation::Notation::Sequence => { if let Ok(doc) = laml::sequence::parse(source) { values.extend(doc.participants.into_iter().map(|n| n.id)); } }
-            crate::notation::Notation::Timing => { if let Ok(doc) = laml::timing::parse(source) { values.extend(doc.lifelines.into_iter().map(|n| n.id)); } }
-            _ => {},
+            crate::notation::Notation::Bpmn => {
+                if let Ok(doc) = laml::bpmn::parse(source) {
+                    values.extend(doc.nodes.into_iter().map(|n| n.id));
+                }
+            }
+            crate::notation::Notation::Sequence => {
+                if let Ok(doc) = laml::sequence::parse(source) {
+                    values.extend(doc.participants.into_iter().map(|n| n.id));
+                }
+            }
+            crate::notation::Notation::Timing => {
+                if let Ok(doc) = laml::timing::parse(source) {
+                    values.extend(doc.lifelines.into_iter().map(|n| n.id));
+                }
+            }
+            _ => {}
         }
     }
     Completion {

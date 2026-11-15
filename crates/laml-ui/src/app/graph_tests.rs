@@ -35,6 +35,7 @@ fn header_frame(
         },
         |ui| {
             editor.graph_heading(ui);
+            editor.canvas(ui);
             editor.graph_windows(ui.ctx());
         },
     );
@@ -274,7 +275,13 @@ fn context_menu_does_not_change_selection_and_has_two_distinct_delete_actions() 
         .shapes
         .iter()
         .filter_map(|s| match &s.shape {
-            egui::Shape::Text(t) => Some(t.galley.job.text.as_str()),
+            egui::Shape::Text(t) => Some(
+                t.galley
+                    .job
+                    .text
+                    .split_once("  ")
+                    .map_or(t.galley.job.text.as_str(), |(_, label)| label),
+            ),
             _ => None,
         })
         .collect();
@@ -313,7 +320,11 @@ fn alignment_guides_extend_past_selection_and_common_axes_remain_subtle() {
                 events: vec![egui::Event::PointerMoved(egui::pos2(-10.0, -10.0))],
                 ..Default::default()
             },
-            |ui| editor.canvas(ui),
+            |ui| {
+                editor.canvas(ui);
+                editor.graph.hover_align = Some(FreeAlignment::Left);
+                editor.alignment_guides(ui, editor.creation.canvas_rect.unwrap());
+            },
         );
         out.textures_delta.clear();
         out
@@ -327,7 +338,7 @@ fn alignment_guides_extend_past_selection_and_common_axes_remain_subtle() {
         preview.nodes.iter().find(|n| n.id == "B").unwrap(),
     );
     assert!(out.shapes.iter().any(|s| matches!(&s.shape,
-        egui::Shape::LineSegment {points,stroke} if stroke.color==alignment_guides::ACTIVE && stroke.width==2.5
+        egui::Shape::LineSegment {points,stroke} if stroke.color==appearance::SELECTED.gamma_multiply(0.5) && stroke.width==1.0
             && (points[0].x-reference.left()).abs()<0.01 && points[0].x==points[1].x && points[0].y<reference.top())));
     editor.align_selected(FreeAlignment::Left);
     changed(&mut editor, &ctx, 1);

@@ -10,18 +10,26 @@ impl Editor {
             return false;
         };
         let bounds = preview.bounds;
-        let pointer = ui.input(|i| i.pointer.hover_pos()).filter(|p| ui.clip_rect().contains(*p));
+        let pointer = ui
+            .input(|i| i.pointer.hover_pos())
+            .filter(|p| ui.clip_rect().contains(*p));
         let mut owned = false;
         let mut start = None;
         let mut select = None;
-        for r in preview.regions.iter().filter(|r| r.kind == "flow" && !r.path.is_empty()) {
-            let Some(index) = r.id.strip_prefix("flow:").and_then(|s| s.parse::<usize>().ok()) else {
+        for r in preview
+            .regions
+            .iter()
+            .filter(|r| r.kind == "flow" && !r.path.is_empty())
+        {
+            let Some(index) =
+                r.id.strip_prefix("flow:")
+                    .and_then(|s| s.parse::<usize>().ok())
+            else {
                 continue;
             };
-            let selected =
-                self.notation_ui.selected.as_ref().is_some_and(|s| {
-                    s.1.as_deref() == Some(r.id.as_str()) && s.2 == self.document.revision()
-                });
+            let selected = self.notation_ui.selected.as_ref().is_some_and(|s| {
+                s.1.as_deref() == Some(r.id.as_str()) && s.2 == self.document.revision()
+            });
             if !selected && !pointer.is_some_and(|p| near(r, p, rect, bounds)) {
                 continue;
             }
@@ -32,7 +40,11 @@ impl Editor {
                     ui.scope_id().with(("bpmn-end", self.id, index, from)),
                     egui::Sense::click_and_drag(),
                 );
-                ui.painter().circle_filled(center, 5.5, appearance::color(ui.ctx(), appearance::PANEL));
+                ui.painter().circle_filled(
+                    center,
+                    5.5,
+                    appearance::color(ui.ctx(), appearance::PANEL),
+                );
                 ui.painter().circle_stroke(
                     center,
                     5.5,
@@ -102,7 +114,8 @@ impl Editor {
         let color = appearance::color(ui.ctx(), appearance::ACCENT);
         for r in preview.regions.iter().filter(|r| r.kind == "node") {
             let eligible = if let Some((index, moving_source)) = reconnect {
-                edit::bpmn_inline::reconnect(self.document.source(), index, moving_source, &r.id).is_ok()
+                edit::bpmn_inline::reconnect(self.document.source(), index, moving_source, &r.id)
+                    .is_ok()
             } else {
                 edit::bpmn_inline::connect(
                     self.document.source(),
@@ -121,7 +134,11 @@ impl Editor {
                 point(rect, bounds, r.x + r.width, r.y + r.height),
             );
             let tint = if eligible { color } else { egui::Color32::RED };
-            ui.painter().rect_filled(area, 3.0, tint.gamma_multiply(if hot { 0.22 } else { 0.06 }));
+            ui.painter().rect_filled(
+                area,
+                3.0,
+                tint.gamma_multiply(if hot { 0.22 } else { 0.06 }),
+            );
             ui.painter().rect_stroke(
                 area.expand(2.0),
                 3.0,
@@ -129,11 +146,21 @@ impl Editor {
                 egui::StrokeKind::Outside,
             );
         }
-        let path =
-            reconnect.and_then(|(index, _)| preview.regions.iter().find(|r| r.id == format!("flow:{index}")));
+        let path = reconnect.and_then(|(index, _)| {
+            preview
+                .regions
+                .iter()
+                .find(|r| r.id == format!("flow:{index}"))
+        });
         let fixed = if let Some((_, moving_source)) = reconnect {
-            path.and_then(|r| if moving_source { r.path.last() } else { r.path.first() })
-                .map(|p| point(rect, bounds, p.0, p.1))
+            path.and_then(|r| {
+                if moving_source {
+                    r.path.last()
+                } else {
+                    r.path.first()
+                }
+            })
+            .map(|p| point(rect, bounds, p.0, p.1))
         } else {
             preview
                 .regions
@@ -153,14 +180,22 @@ impl Editor {
                     egui::pos2(area.center().x, area.top()),
                     egui::pos2(area.center().x, area.bottom()),
                 ];
-                *candidates.iter().min_by(|a, b| a.distance(pointer).total_cmp(&b.distance(pointer))).unwrap()
+                *candidates
+                    .iter()
+                    .min_by(|a, b| a.distance(pointer).total_cmp(&b.distance(pointer)))
+                    .unwrap()
             })
             .unwrap_or(pointer);
         if let Some(fixed) = fixed {
-            let (a, b) =
-                if reconnect.is_some_and(|(_, from)| from) { (snapped, fixed) } else { (fixed, snapped) };
+            let (a, b) = if reconnect.is_some_and(|(_, from)| from) {
+                (snapped, fixed)
+            } else {
+                (fixed, snapped)
+            };
             let stroke = egui::Stroke::new(1.5, color);
-            let kind = reconnect.and_then(|(i, _)| doc.edges.get(i)).map(|e| e.kind);
+            let kind = reconnect
+                .and_then(|(i, _)| doc.edges.get(i))
+                .map(|e| e.kind);
             if matches!(
                 kind,
                 Some(
@@ -169,15 +204,18 @@ impl Editor {
                         | laml::bpmn::EdgeKind::Association
                 )
             ) {
-                ui.painter().add(egui::Shape::dashed_line(&[a, b], stroke, 5.0, 4.0));
+                ui.painter()
+                    .add(egui::Shape::dashed_line(&[a, b], stroke, 5.0, 4.0));
             } else {
                 ui.painter().line_segment([a, b], stroke);
             }
             if kind != Some(laml::bpmn::EdgeKind::Association) {
                 let d = (b - a).normalized();
                 let n = egui::vec2(-d.y, d.x);
-                ui.painter().line_segment([b, b - d * 9.0 + n * 4.0], stroke);
-                ui.painter().line_segment([b, b - d * 9.0 - n * 4.0], stroke);
+                ui.painter()
+                    .line_segment([b, b - d * 9.0 + n * 4.0], stroke);
+                ui.painter()
+                    .line_segment([b, b - d * 9.0 - n * 4.0], stroke);
             }
             ui.painter().circle_filled(snapped, 4.5, color);
         }

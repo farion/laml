@@ -34,11 +34,17 @@ struct Minimum {
 /// Axis separating two explicitly placed endpoints. Mixed-axis placement is
 /// intentionally diagonal; automatic centering must leave both axes authored.
 pub(super) fn authored_relation_axis(diagram: &Diagram, a: &str, b: &str) -> Option<Axis> {
-    diagram.layout.iter().find(|rule| {
-        (rule.first == a && rule.second == b) || (rule.first == b && rule.second == a)
-    }).map(|rule| if matches!(rule.placement, Placement::Left | Placement::Right) {
-        Axis::Horizontal
-    } else { Axis::Vertical })
+    diagram
+        .layout
+        .iter()
+        .find(|rule| (rule.first == a && rule.second == b) || (rule.first == b && rule.second == a))
+        .map(|rule| {
+            if matches!(rule.placement, Placement::Left | Placement::Right) {
+                Axis::Horizontal
+            } else {
+                Axis::Vertical
+            }
+        })
 }
 
 fn err(line: usize, message: impl Into<String>) -> GeometryError {

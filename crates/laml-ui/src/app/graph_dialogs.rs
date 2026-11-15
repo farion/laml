@@ -31,7 +31,13 @@ pub(super) struct DeleteDialog {
 
 impl Editor {
     pub(super) fn open_node_dialog(&mut self) {
-        if self.specialized() || self.notation() == laml_ui::notation::Notation::InteractionOverview || (self.notation().c4() && self.notation() != laml_ui::notation::Notation::C4Code) { self.open_construct_dialog(); return; }
+        if self.specialized()
+            || self.notation() == laml_ui::notation::Notation::InteractionOverview
+            || (self.notation().c4() && self.notation() != laml_ui::notation::Notation::C4Code)
+        {
+            self.open_construct_dialog();
+            return;
+        }
         if !self.can_edit_visually() {
             return;
         }
@@ -39,20 +45,50 @@ impl Editor {
         let available = ElementKind::available(self.document.source());
         let preferred = match laml_ui::notation::Notation::of(self.document.source()) {
             laml_ui::notation::Notation::Class => ElementKind::Class,
-            laml_ui::notation::Notation::Object | laml_ui::notation::Notation::Communication => ElementKind::Object,
+            laml_ui::notation::Notation::Object | laml_ui::notation::Notation::Communication => {
+                ElementKind::Object
+            }
             laml_ui::notation::Notation::Component => ElementKind::Component,
             laml_ui::notation::Notation::State => ElementKind::State,
             laml_ui::notation::Notation::Activity => ElementKind::Action,
             _ => available.first().copied().unwrap_or_default(),
         };
-        let kind = if available.contains(&preferred) { preferred } else { available.first().copied().unwrap_or_default() };
-        let parent = self.selection.ids.first().and_then(|id| self.preview.as_ref()
-            .and_then(|p| p.diagram.nodes.iter().find(|n| &n.id == id))
-            .filter(|n| matches!(n.kind, laml::syntax::NodeKind::Package | laml::syntax::NodeKind::Profile | laml::syntax::NodeKind::UseCaseSystem | laml::syntax::NodeKind::CompositeStructure))
-            .map(|n| n.id.clone())).or_else(|| {
+        let kind = if available.contains(&preferred) {
+            preferred
+        } else {
+            available.first().copied().unwrap_or_default()
+        };
+        let parent = self
+            .selection
+            .ids
+            .first()
+            .and_then(|id| {
+                self.preview
+                    .as_ref()
+                    .and_then(|p| p.diagram.nodes.iter().find(|n| &n.id == id))
+                    .filter(|n| {
+                        matches!(
+                            n.kind,
+                            laml::syntax::NodeKind::Package
+                                | laml::syntax::NodeKind::Profile
+                                | laml::syntax::NodeKind::UseCaseSystem
+                                | laml::syntax::NodeKind::CompositeStructure
+                        )
+                    })
+                    .map(|n| n.id.clone())
+            })
+            .or_else(|| {
                 if self.notation() == laml_ui::notation::Notation::C4Code {
-                    self.preview.as_ref()?.diagram.nodes.iter().find(|n| n.parent.is_none() && n.kind == laml::syntax::NodeKind::Package).map(|n| n.id.clone())
-                } else { None }
+                    self.preview
+                        .as_ref()?
+                        .diagram
+                        .nodes
+                        .iter()
+                        .find(|n| n.parent.is_none() && n.kind == laml::syntax::NodeKind::Package)
+                        .map(|n| n.id.clone())
+                } else {
+                    None
+                }
             });
         match element_edit::add(self.document.source(), kind, "", parent.as_deref(), None) {
             Ok((id, _)) => {
@@ -119,8 +155,13 @@ impl Editor {
         } else {
             &dialog.label
         };
-        let edits =
-            laml_ui::graph_edit::add_node_in(self.document.source(), dialog.kind, &dialog.id, label, dialog.parent.as_deref())?;
+        let edits = laml_ui::graph_edit::add_node_in(
+            self.document.source(),
+            dialog.kind,
+            &dialog.id,
+            label,
+            dialog.parent.as_deref(),
+        )?;
         self.submit_command(Command {
             edits,
             label: "Add node".into(),
@@ -178,16 +219,34 @@ impl Editor {
                     .selected_text(dialog.kind.title())
                     .show_ui(ui, |ui| {
                         for kind in ElementKind::available(self.document.source()) {
-                            let valid = element_edit::add(self.document.source(), kind, "", dialog.parent.as_deref(), None);
-                            let response = ui.add_enabled(valid.is_ok(), egui::Button::selectable(dialog.kind == kind, kind.title()));
-                            if let Err(error) = valid { response.clone().on_disabled_hover_text(error); }
-                            if response.clicked() { dialog.kind = kind; }
+                            let valid = element_edit::add(
+                                self.document.source(),
+                                kind,
+                                "",
+                                dialog.parent.as_deref(),
+                                None,
+                            );
+                            let response = ui.add_enabled(
+                                valid.is_ok(),
+                                egui::Button::selectable(dialog.kind == kind, kind.title()),
+                            );
+                            if let Err(error) = valid {
+                                response.clone().on_disabled_hover_text(error);
+                            }
+                            if response.clicked() {
+                                dialog.kind = kind;
+                            }
                         }
                     });
                 if previous != dialog.kind
                     && dialog.auto_id
-                    && let Ok((id, _)) =
-                        element_edit::add(self.document.source(), dialog.kind, "", dialog.parent.as_deref(), None)
+                    && let Ok((id, _)) = element_edit::add(
+                        self.document.source(),
+                        dialog.kind,
+                        "",
+                        dialog.parent.as_deref(),
+                        None,
+                    )
                 {
                     dialog.id = id.rsplit('.').next().unwrap_or(&id).into();
                     if dialog.auto_label {
@@ -201,12 +260,23 @@ impl Editor {
                         ui.selectable_value(&mut dialog.parent, None, "Root");
                         if let Some(preview) = &self.preview {
                             for node in &preview.diagram.nodes {
-                                if matches!(node.kind, laml::syntax::NodeKind::Package | laml::syntax::NodeKind::Profile
-                                    | laml::syntax::NodeKind::UseCaseSystem | laml::syntax::NodeKind::CompositeStructure
-                                    | laml::syntax::NodeKind::Component | laml::syntax::NodeKind::DeploymentNode
-                                    | laml::syntax::NodeKind::Device | laml::syntax::NodeKind::ExecutionEnvironment
-                                    | laml::syntax::NodeKind::State) {
-                                    ui.selectable_value(&mut dialog.parent, Some(node.id.clone()), &node.id);
+                                if matches!(
+                                    node.kind,
+                                    laml::syntax::NodeKind::Package
+                                        | laml::syntax::NodeKind::Profile
+                                        | laml::syntax::NodeKind::UseCaseSystem
+                                        | laml::syntax::NodeKind::CompositeStructure
+                                        | laml::syntax::NodeKind::Component
+                                        | laml::syntax::NodeKind::DeploymentNode
+                                        | laml::syntax::NodeKind::Device
+                                        | laml::syntax::NodeKind::ExecutionEnvironment
+                                        | laml::syntax::NodeKind::State
+                                ) {
+                                    ui.selectable_value(
+                                        &mut dialog.parent,
+                                        Some(node.id.clone()),
+                                        &node.id,
+                                    );
                                 }
                             }
                         }

@@ -254,7 +254,10 @@ mod tests {
         assert!(plan.source.contains(" B < C\n A above D\n"));
         assert!(plan.source.contains("A > C"));
         assert_eq!(
-            crate::notation::parse_graph(&plan.source).unwrap().relations.len(),
+            crate::notation::parse_graph(&plan.source)
+                .unwrap()
+                .relations
+                .len(),
             0
         );
     }

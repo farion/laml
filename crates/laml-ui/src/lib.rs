@@ -21,8 +21,8 @@ pub mod properties;
 pub mod relation_edit;
 pub mod relation_selection;
 pub mod selection;
-pub mod settings_edit;
 pub mod semantic_edit;
+pub mod settings_edit;
 pub mod source;
 mod source_patch;
 pub mod style_edit;
@@ -45,9 +45,9 @@ pub mod gesture_preview;
 
 extern crate self as laml_ui;
 pub mod app;
-pub mod services;
 #[cfg(target_arch = "wasm32")]
 pub(crate) mod browser_storage;
+pub mod services;
 #[cfg(target_arch = "wasm32")]
 mod web;
 

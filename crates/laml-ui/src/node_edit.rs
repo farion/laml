@@ -224,12 +224,52 @@ pub(crate) fn node_head(text: &str, node: &NodeDecl) -> Result<Range<usize>, Str
             break;
         }
     }
-    let keywords = ["association", "class", "profile", "stereotype", "metaclass", "package",
-        "structure", "part", "role", "component", "interface", "enum", "datatype", "device",
-        "executionEnvironment", "node", "artifact", "actor", "usecase", "system", "interaction-use",
-        "action", "objectNode", "activityFinal", "flowFinal", "decision", "merge", "fork", "join",
-        "state", "initial", "final", "choice", "object", "note", "junction", "external", "person", "container"];
-    while parts.get(first).is_some_and(|r| keywords.contains(&&text[r.clone()])) && first + 1 < parts.len() {
+    let keywords = [
+        "association",
+        "class",
+        "profile",
+        "stereotype",
+        "metaclass",
+        "package",
+        "structure",
+        "part",
+        "role",
+        "component",
+        "interface",
+        "enum",
+        "datatype",
+        "device",
+        "executionEnvironment",
+        "node",
+        "artifact",
+        "actor",
+        "usecase",
+        "system",
+        "interaction-use",
+        "action",
+        "objectNode",
+        "activityFinal",
+        "flowFinal",
+        "decision",
+        "merge",
+        "fork",
+        "join",
+        "state",
+        "initial",
+        "final",
+        "choice",
+        "object",
+        "note",
+        "junction",
+        "external",
+        "person",
+        "container",
+    ];
+    while parts.get(first).is_some_and(|r| {
+        let token = text[r.clone()].trim_start_matches(['+', '-', '#', '~']);
+        keywords.contains(&token)
+    }) && first + 1 < parts.len()
+    {
         first += 1;
     }
     parts

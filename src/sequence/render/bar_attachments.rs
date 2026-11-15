@@ -41,8 +41,20 @@ pub(super) fn anchors(
             end_line: bar.end_line,
         })
         .collect();
-    active.extend(open.iter().cloned().map(|bar| bar.finish(final_y + 64.0, None)));
-    attach(diagram, sheet, centers, widths, &active, messages, &mut anchors)?;
+    active.extend(
+        open.iter()
+            .cloned()
+            .map(|bar| bar.finish(final_y + 64.0, None)),
+    );
+    attach(
+        diagram,
+        sheet,
+        centers,
+        widths,
+        &active,
+        messages,
+        &mut anchors,
+    )?;
     Ok(anchors)
 }
 

@@ -120,15 +120,22 @@ impl Editor {
             let reference = self.selection.ids.last().unwrap();
             self.selection.ids.iter().all(|id| {
                 laml_ui::alignment_edit::connected_without(
-                    &preview.diagram, "", reference, id, axis_x, anchor,
+                    &preview.diagram,
+                    "",
+                    reference,
+                    id,
+                    axis_x,
+                    anchor,
                 )
             })
         };
         let mut axes = graph_header::ALIGNMENTS;
-        axes.sort_by_key(|(_, _, align)| (
-            configured(*align),
-            flash.is_some_and(|(active, _)| active == *align),
-        ));
+        axes.sort_by_key(|(_, _, align)| {
+            (
+                configured(*align),
+                flash.is_some_and(|(active, _)| active == *align),
+            )
+        });
         for (_, _, align) in axes {
             let (vertical, value) = coordinate(reference, align);
             let actual = rects
@@ -155,12 +162,20 @@ impl Editor {
                     egui::pos2(bounds.right(), value),
                 )
             };
-            let color = if active { ACTIVE } else { appearance::color(ui.ctx(), appearance::SELECTED) }.gamma_multiply(alpha);
+            let color = if active {
+                ACTIVE
+            } else {
+                appearance::color(ui.ctx(), appearance::SELECTED)
+            }
+            .gamma_multiply(alpha);
             let width = if active { 2.5 } else { 1.0 };
             if active {
                 ui.painter().line_segment(
                     [start, end],
-                    egui::Stroke::new(5.0, appearance::color(ui.ctx(), appearance::BACKGROUND).gamma_multiply(alpha)),
+                    egui::Stroke::new(
+                        5.0,
+                        appearance::color(ui.ctx(), appearance::BACKGROUND).gamma_multiply(alpha),
+                    ),
                 );
                 ui.painter()
                     .line_segment([start, end], egui::Stroke::new(width, color));

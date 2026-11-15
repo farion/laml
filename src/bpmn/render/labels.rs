@@ -325,14 +325,29 @@ pub(super) fn route_fits(
 ) -> Result<(), String> {
     let labelled = |i: usize| {
         let edge = &doc.edges[i];
-        edge.label.is_some() || doc.nodes.iter().any(|node|
-            node.id == edge.from && node.kind == Kind::Boundary && !node.label.is_empty())
+        edge.label.is_some()
+            || doc.nodes.iter().any(|node| {
+                node.id == edge.from && node.kind == Kind::Boundary && !node.label.is_empty()
+            })
     };
-    if !labelled(index) && previous.iter().all(|prior| !labelled(prior.index)) { return Ok(()); }
-    let mut routes: Vec<_> = doc.edges.iter().enumerate().map(|(i, edge)| Prior {
-        index: i, points: Vec::new(), kind: edge.kind, from: edge.from.clone(), to: edge.to.clone(),
-    }).collect();
-    for prior in previous { routes[prior.index] = prior.clone(); }
+    if !labelled(index) && previous.iter().all(|prior| !labelled(prior.index)) {
+        return Ok(());
+    }
+    let mut routes: Vec<_> = doc
+        .edges
+        .iter()
+        .enumerate()
+        .map(|(i, edge)| Prior {
+            index: i,
+            points: Vec::new(),
+            kind: edge.kind,
+            from: edge.from.clone(),
+            to: edge.to.clone(),
+        })
+        .collect();
+    for prior in previous {
+        routes[prior.index] = prior.clone();
+    }
     routes[index].points = points.to_vec();
     render(&mut String::new(), doc, geom, &routes)
 }
@@ -344,7 +359,9 @@ pub(super) fn render(
 ) -> Result<(), String> {
     let mut labels = Vec::new();
     for (index, edge) in doc.edges.iter().enumerate() {
-        if routes[index].points.is_empty() { continue; }
+        if routes[index].points.is_empty() {
+            continue;
+        }
         let source = doc.nodes.iter().find(|n| n.id == edge.from).unwrap();
         if let Some(name) = edge.label.as_ref().or_else(|| {
             (source.kind == Kind::Boundary && !source.label.is_empty()).then_some(&source.label)

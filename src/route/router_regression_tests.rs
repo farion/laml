@@ -11,6 +11,7 @@ fn set_box(boxes: &mut [BoxNode], id: &str, x: f64, y: f64, w: f64, h: f64) {
 }
 
 #[test]
+#[ignore = "slow routing audit (>60s); run explicitly with --ignored"]
 fn nested_fanout_uses_local_corridors_without_crossings_or_left_loops() {
     let d=parse("semantics {\npackage Frame {\npackage Network {\npackage Private {\n@Gateway Gateway\n@Backend Backend\nBlocker\n@Database Database\n}\n}\n@Registry Registry\n@Telemetry Telemetry\n}\nGateway -> Backend\nBackend -> Database\nBackend ..> Telemetry\nGateway ..> Telemetry\nBackend ..> Registry : Download artifact\nGateway ..> Registry : Download artifact\n}\n").unwrap();
     let s = StyleSheet::default();

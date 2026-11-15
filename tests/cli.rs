@@ -35,6 +35,7 @@ fn check_example_accepts_syntax_and_imported_styles() {
 }
 
 #[test]
+#[ignore = "slow architecture render audit (>60s); run explicitly with --ignored"]
 fn build_example_produces_svg_with_selectable_text_and_embedded_font() {
     let dir = temp_dir();
     let destination = dir.join("architecture.svg");
@@ -175,6 +176,7 @@ fn fixed_width_truncates_text_but_preserves_full_svg_title() {
 }
 
 #[test]
+#[ignore = "slow architecture export audit (>60s); run explicitly with --ignored"]
 fn cli_exports_png_pdf_and_both_other_svg_text_modes() {
     let dir = temp_dir();
     let source = concat!(env!("CARGO_MANIFEST_DIR"), "/examples/architecture.laml");

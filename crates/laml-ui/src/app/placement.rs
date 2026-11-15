@@ -102,9 +102,7 @@ impl Editor {
         ui.heading("Relative placement");
         match &self.placement.plan {
             None => {
-                ui.label(
-                    "Hover over a side of another node.",
-                );
+                ui.label("Hover over a side of another node.");
             }
             Some(Err(error)) => {
                 ui.colored_label(egui::Color32::LIGHT_RED, error);

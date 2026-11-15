@@ -35,7 +35,10 @@ fn text_center(out: &egui::FullOutput, label: &str) -> egui::Pos2 {
     out.shapes
         .iter()
         .find_map(|s| match &s.shape {
-            egui::Shape::Text(t) if t.galley.job.text == label => {
+            egui::Shape::Text(t)
+                if t.galley.job.text == label
+                    || t.galley.job.text.ends_with(&format!("  {label}")) =>
+            {
                 Some(t.pos + t.galley.size() * 0.5)
             }
             _ => None,

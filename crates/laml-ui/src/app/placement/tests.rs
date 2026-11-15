@@ -109,10 +109,7 @@ fn pointer_reorder_shows_rule_changes_then_commits_one_undo_step() {
     assert_eq!(editor.document.revision(), 1);
     assert_eq!(editor.rendered, Some(1));
     let preview = editor.preview.as_ref().unwrap();
-    assert_eq!(
-        preview.diagram.settings.theme,
-        laml::theme::Theme::Modern
-    );
+    assert_eq!(preview.diagram.settings.theme, laml::theme::Theme::Modern);
     assert!(!preview.diagram.settings.transparent);
     assert!(editor.document.source().contains(" B < C\n A above D\n"));
     assert!(editor.document.source().contains("A > C"));

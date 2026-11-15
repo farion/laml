@@ -5,13 +5,13 @@ use crate::lex::{find_arrow, quoted_string, split_once_top_level, valid_identifi
 use crate::parser::ParseError;
 use crate::syntax::StyleEntry;
 
+pub mod activation_layout;
 mod annotations;
 mod continuations;
 mod coregions;
 mod decompositions;
-mod document;
 pub mod destruction_layout;
-pub mod activation_layout;
+mod document;
 mod executions;
 mod fragments;
 mod frame_layout;

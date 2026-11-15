@@ -8,8 +8,11 @@ impl Editor {
             ui.painter().rect_filled(
                 viewport,
                 0,
-                if ui.visuals().dark_mode { egui::Color32::from_black_alpha(110) }
-                else { egui::Color32::from_white_alpha(150) },
+                if ui.visuals().dark_mode {
+                    egui::Color32::from_black_alpha(110)
+                } else {
+                    egui::Color32::from_white_alpha(150)
+                },
             );
             let rect = egui::Rect::from_center_size(viewport.center(), egui::vec2(220.0, 70.0));
             let mut loading = ui.new_child(
@@ -19,9 +22,16 @@ impl Editor {
                     .layout(egui::Layout::top_down(egui::Align::Center)),
             );
             loading.set_clip_rect(viewport);
-            loading.add(egui::Spinner::new().size(28.0).color(appearance::color(ui.ctx(), appearance::TEXT)));
+            loading.add(
+                egui::Spinner::new()
+                    .size(28.0)
+                    .color(appearance::color(ui.ctx(), appearance::TEXT)),
+            );
             loading.add_space(8.0);
-            loading.label(egui::RichText::new("Updating preview…").color(appearance::color(ui.ctx(), appearance::TEXT)));
+            loading.label(
+                egui::RichText::new("Updating preview…")
+                    .color(appearance::color(ui.ctx(), appearance::TEXT)),
+            );
         }
     }
 
@@ -118,8 +128,13 @@ impl Editor {
             return;
         }
         // Navigation may block gestures, but never the persistent selection overlays.
-        let relation_owned = self.relation_canvas(ui, rect, &response, panning || connection_owned || notation_owned)
-            || connection_owned || notation_owned;
+        let relation_owned = self.relation_canvas(
+            ui,
+            rect,
+            &response,
+            panning || connection_owned || notation_owned,
+        ) || connection_owned
+            || notation_owned;
         let preview = self.preview.as_ref().unwrap();
         if !panning
             && !relation_owned
@@ -230,7 +245,10 @@ impl Editor {
                 ui.painter().rect_stroke(
                     egui::Rect::from_min_size(min, size).expand(2.0),
                     2.0,
-                    egui::Stroke::new(if reference { 2.0 } else { 1.0 }, appearance::color(ui.ctx(), appearance::SELECTED)),
+                    egui::Stroke::new(
+                        if reference { 2.0 } else { 1.0 },
+                        appearance::color(ui.ctx(), appearance::SELECTED),
+                    ),
                     egui::StrokeKind::Outside,
                 );
             }

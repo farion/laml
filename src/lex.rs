@@ -98,6 +98,7 @@ pub(crate) fn find_arrow(input: &str) -> Option<usize> {
                         || input[index..].starts_with("->")
                         || input[index..].starts_with("<-")
                         || input[index..].starts_with("--")
+                        || input[index..].starts_with("<..")
                         || input[index..].starts_with("..>")
                         || input[index..].starts_with("..|>")
                         || input[index..].starts_with("<|")

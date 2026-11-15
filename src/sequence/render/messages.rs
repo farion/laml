@@ -20,14 +20,25 @@ pub(super) fn draw(
     let (end, receive_y) = anchor.receive;
     let paint = styles::message(sheet, m.name.as_deref(), &m.classes);
     let name = escape(m.name.as_deref().unwrap_or(""));
-    let dash = if super::message_geometry::dashed(m.kind) { " stroke-dasharray=\"7 5\"" } else { "" };
-    let points = super::message_geometry::path(anchor.send, anchor.receive, m.from == m.to, allow_diagonal);
+    let dash = if super::message_geometry::dashed(m.kind) {
+        " stroke-dasharray=\"7 5\""
+    } else {
+        ""
+    };
+    let points =
+        super::message_geometry::path(anchor.send, anchor.receive, m.from == m.to, allow_diagonal);
     let path = super::message_geometry::svg_path(&points, m.from == m.to);
     writeln!(svg, "<path d=\"{path}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\"{dash} data-message=\"{name}\" />", paint.color, paint.width).unwrap();
     if m.to != "?" && m.kind != MessageKind::Delete {
         let previous = points[points.len() - 2];
-        arrows::draw(svg, anchor.receive, (end - previous.0, receive_y - previous.1),
-            super::message_geometry::filled(m.kind, m.filled_reply), &paint.color, sheet.theme.modern());
+        arrows::draw(
+            svg,
+            anchor.receive,
+            (end - previous.0, receive_y - previous.1),
+            super::message_geometry::filled(m.kind, m.filled_reply),
+            &paint.color,
+            sheet.theme.modern(),
+        );
     }
     if m.from == "?" || m.to == "?" {
         let ((at, at_y), side) = if m.from == "?" {

@@ -167,7 +167,8 @@ impl Editor {
                                     egui::vec2(width.max(32.0), appearance::FIELD_HEIGHT),
                                 )),
                                 |ui| {
-                                    let field = inspector_ui::mixed_field(ui, "value", draft, false, mixed);
+                                    let field =
+                                        inspector_ui::mixed_field(ui, "value", draft, false, mixed);
                                     self.source_ui.extra_drafts.push(field.response.id);
                                     commit |= field.commit;
                                 },

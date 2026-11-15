@@ -37,11 +37,13 @@ pub(super) fn prepare(
                 .ok_or("unknown decomposed parent")?
                 .classes;
             let child_sheet = sheet.with_ancestor(&part.parent, classes);
-            let (svg, regions) = super::render_for_editor(&part.diagram, &child_sheet, TextMode::System)?;
+            let (svg, regions) =
+                super::render_for_editor(&part.diagram, &child_sheet, TextMode::System)?;
             Ok(Prepared {
                 width: dimension(&svg, "width")?,
                 height: dimension(&svg, "height")?,
-                svg, regions,
+                svg,
+                regions,
             })
         })
         .collect()

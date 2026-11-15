@@ -11,41 +11,54 @@ pub fn without_route(
     line: usize,
 ) -> Result<String, String> {
     let (_, _, _, font, italic) = laml::theme::preprocess_settings(source)?;
-    laml::text::with_fonts(path, preview.styles.theme.modern(), font.as_deref(), italic.as_deref(), || {
-        let routes: Vec<_> = preview
-            .routes
-            .iter()
-            .filter(|r| r.source_line != line)
-            .cloned()
-            .collect();
-        let mut svg = laml::svg::render_with_theme(
-            &preview.nodes,
-            &routes,
-            laml::svg::TextMode::Embedded,
-            preview.diagram.settings.theme,
-        )?;
-        let (left, top, right, bottom) = preview.bounds;
-        let end = svg.find('>').ok_or("Missing SVG root")?;
-        svg.replace_range(..=end, &format!("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{}\" height=\"{}\" viewBox=\"{} {} {} {}\">",
+    laml::text::with_fonts(
+        path,
+        preview.styles.theme.modern(),
+        font.as_deref(),
+        italic.as_deref(),
+        || {
+            let routes: Vec<_> = preview
+                .routes
+                .iter()
+                .filter(|r| r.source_line != line)
+                .cloned()
+                .collect();
+            let mut svg = laml::svg::render_with_theme(
+                &preview.nodes,
+                &routes,
+                laml::svg::TextMode::Embedded,
+                preview.diagram.settings.theme,
+            )?;
+            let (left, top, right, bottom) = preview.bounds;
+            let end = svg.find('>').ok_or("Missing SVG root")?;
+            svg.replace_range(..=end, &format!("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{}\" height=\"{}\" viewBox=\"{} {} {} {}\">",
             right-left, bottom-top, left, top, right-left, bottom-top));
-        let protected: Vec<String> = preview
-            .styles
-            .rules
-            .iter()
-            .flat_map(|r| &r.declarations)
-            .filter_map(|d| match &d.value {
-                laml::styles::Value::Color(color) => Some(color.clone()),
-                _ => None,
-            })
-            .collect();
-        let svg = laml::theme::tint_svg_defaults(&svg, preview.diagram.settings.theme, &protected);
-        let svg = laml::text::svg_fonts(&svg)?;
-        let svg = laml::theme::canvas(&svg, preview.diagram.settings.theme, preview.diagram.settings.transparent)?;
-        let svg = laml::export::outlines(&svg)?;
-        if preview.diagram.settings.transparent {
-            laml::theme::canvas(&svg, preview.diagram.settings.theme, true)
-        } else { Ok(svg) }
-    })?
+            let protected: Vec<String> = preview
+                .styles
+                .rules
+                .iter()
+                .flat_map(|r| &r.declarations)
+                .filter_map(|d| match &d.value {
+                    laml::styles::Value::Color(color) => Some(color.clone()),
+                    _ => None,
+                })
+                .collect();
+            let svg =
+                laml::theme::tint_svg_defaults(&svg, preview.diagram.settings.theme, &protected);
+            let svg = laml::text::svg_fonts(&svg)?;
+            let svg = laml::theme::canvas(
+                &svg,
+                preview.diagram.settings.theme,
+                preview.diagram.settings.transparent,
+            )?;
+            let svg = laml::export::outlines(&svg)?;
+            if preview.diagram.settings.transparent {
+                laml::theme::canvas(&svg, preview.diagram.settings.theme, true)
+            } else {
+                Ok(svg)
+            }
+        },
+    )?
 }
 
 pub fn build(source: &str, path: &Path) -> Result<Preview, String> {
@@ -67,19 +80,27 @@ pub fn build_dark_diagnostic(source: &str, path: &Path) -> Result<Preview, Diagn
 }
 
 pub fn build_relations(
-    source: &str, path: &Path, theme_override: Option<laml::theme::Theme>, previous: &Preview,
+    source: &str,
+    path: &Path,
+    theme_override: Option<laml::theme::Theme>,
+    previous: &Preview,
 ) -> Result<Preview, Diagnostic> {
     build_impl(source, path, theme_override, Some(previous))
 }
 
 pub fn build_presented(
-    source: &str, path: &Path, presentation: crate::backend::Presentation,
+    source: &str,
+    path: &Path,
+    presentation: crate::backend::Presentation,
 ) -> Result<Preview, Diagnostic> {
     build_impl(source, path, presentation.theme_override(), None)
 }
 
 fn build_impl(
-    source: &str, path: &Path, theme_override: Option<laml::theme::Theme>, previous: Option<&Preview>,
+    source: &str,
+    path: &Path,
+    theme_override: Option<laml::theme::Theme>,
+    previous: Option<&Preview>,
 ) -> Result<Preview, Diagnostic> {
     let (_, theme, transparent, font, italic) =
         laml::theme::preprocess_settings(source).map_err(Diagnostic::from)?;
@@ -303,14 +324,21 @@ mod tests {
     fn light_override_is_transparent_while_exports_keep_the_authored_theme() {
         let source = "settings {\n theme: plain-dark\n background: opaque\n}\nsemantics {\n A\n B\n A -> B\n}\n";
         let path = Path::new("preview.laml");
-        let light = build_presented(source, path, crate::backend::Presentation::EditorLight).unwrap();
+        let light =
+            build_presented(source, path, crate::backend::Presentation::EditorLight).unwrap();
         let document = build(source, path).unwrap();
         assert_eq!(light.diagram.settings.theme, laml::theme::Theme::Modern);
         assert!(light.diagram.settings.transparent);
         assert_eq!(corner_alpha(&light.svg), 0);
-        assert_eq!(document.diagram.settings.theme, laml::theme::Theme::PlainDark);
+        assert_eq!(
+            document.diagram.settings.theme,
+            laml::theme::Theme::PlainDark
+        );
         assert!(!document.diagram.settings.transparent);
-        assert_eq!(crate::output::render(source, path, crate::output::Format::Svg).unwrap(), document.svg.as_bytes());
+        assert_eq!(
+            crate::output::render(source, path, crate::output::Format::Svg).unwrap(),
+            document.svg.as_bytes()
+        );
         let base = without_route(&document, source, path, document.routes[0].source_line).unwrap();
         assert_eq!(corner_alpha(&base), 255);
     }

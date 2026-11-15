@@ -28,8 +28,7 @@ impl Process {
             #[cfg(target_os = "linux")]
             let executable = PathBuf::from("/proc/self/exe");
             #[cfg(not(target_os = "linux"))]
-            let executable = std::env::current_exe()
-                .map_err(|_| "Host executable unavailable")?;
+            let executable = std::env::current_exe().map_err(|_| "Host executable unavailable")?;
             let mut command = Command::new(executable);
             command
                 .arg("--host-worker")

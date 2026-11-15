@@ -11,7 +11,11 @@ pub(super) enum EditorTheme {
 }
 impl EditorTheme {
     pub fn label(self) -> &'static str {
-        match self { Self::Auto => "Auto", Self::Dark => "Dark", Self::Light => "Light" }
+        match self {
+            Self::Auto => "Auto",
+            Self::Dark => "Dark",
+            Self::Light => "Light",
+        }
     }
 }
 
@@ -44,12 +48,18 @@ impl Preferences {
         }
     }
     pub fn presentation(self, theme: egui::Theme) -> Presentation {
-        if !self.fit_preview { Presentation::Document }
-        else if theme == egui::Theme::Dark { Presentation::Editor }
-        else { Presentation::EditorLight }
+        if !self.fit_preview {
+            Presentation::Document
+        } else if theme == egui::Theme::Dark {
+            Presentation::Editor
+        } else {
+            Presentation::EditorLight
+        }
     }
     pub fn load() -> Self {
-        load().and_then(|text| serde_json::from_str(&text).ok()).unwrap_or_default()
+        load()
+            .and_then(|text| serde_json::from_str(&text).ok())
+            .unwrap_or_default()
     }
     pub fn save(self) -> Result<(), String> {
         save(&serde_json::to_string(&self).map_err(|e| e.to_string())?)
@@ -57,8 +67,14 @@ impl Preferences {
 }
 
 pub(super) fn new_source(theme: egui::Theme) -> String {
-    let theme = if theme == egui::Theme::Dark { "modern-dark" } else { "modern" };
-    format!("settings {{\n    theme: {theme}\n    background: transparent\n}}\n\nsemantics {{\n}}\n")
+    let theme = if theme == egui::Theme::Dark {
+        "modern-dark"
+    } else {
+        "modern"
+    };
+    format!(
+        "settings {{\n    theme: {theme}\n    background: transparent\n}}\n\nsemantics {{\n}}\n"
+    )
 }
 
 impl Workspace {
@@ -93,9 +109,11 @@ fn settings_path() -> Option<PathBuf> {
     #[cfg(target_os = "windows")]
     let root = std::env::var_os("APPDATA").map(PathBuf::from);
     #[cfg(target_os = "macos")]
-    let root = std::env::var_os("HOME").map(|p| PathBuf::from(p).join("Library/Application Support"));
+    let root =
+        std::env::var_os("HOME").map(|p| PathBuf::from(p).join("Library/Application Support"));
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-    let root = std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from)
+    let root = std::env::var_os("XDG_CONFIG_HOME")
+        .map(PathBuf::from)
         .or_else(|| std::env::var_os("HOME").map(|p| PathBuf::from(p).join(".config")));
     root.map(|p| p.join("laml/editor-settings.json"))
 }
@@ -111,14 +129,22 @@ fn save(text: &str) -> Result<(), String> {
 }
 #[cfg(target_arch = "wasm32")]
 fn load() -> Option<String> {
-    web_sys::window()?.local_storage().ok()??.get_item("laml.editor.settings").ok()?
+    web_sys::window()?
+        .local_storage()
+        .ok()??
+        .get_item("laml.editor.settings")
+        .ok()?
 }
 #[cfg(target_arch = "wasm32")]
 fn save(text: &str) -> Result<(), String> {
-    let storage = web_sys::window().ok_or("No browser window")?
-        .local_storage().map_err(|_| "Browser storage unavailable")?
+    let storage = web_sys::window()
+        .ok_or("No browser window")?
+        .local_storage()
+        .map_err(|_| "Browser storage unavailable")?
         .ok_or("Browser storage unavailable")?;
-    storage.set_item("laml.editor.settings", text).map_err(|_| "Could not save editor settings".into())
+    storage
+        .set_item("laml.editor.settings", text)
+        .map_err(|_| "Could not save editor settings".into())
 }
 
 #[cfg(test)]
@@ -139,7 +165,11 @@ mod tests {
         let ctx = egui::Context::default();
         let source = "settings {\n theme: plain\n}\nsemantics {\n A\n}\n";
         let mut workspace = Workspace::new(Editor::new(source.into(), None));
-        workspace.preferences = Preferences { editor_theme: EditorTheme::Light, fit_preview: true, ..Default::default() };
+        workspace.preferences = Preferences {
+            editor_theme: EditorTheme::Light,
+            fit_preview: true,
+            ..Default::default()
+        };
         workspace.sync_editor_theme(&ctx);
         let editor = &workspace.tabs[0];
         assert_eq!(editor.compiler.presentation, Presentation::EditorLight);
@@ -148,20 +178,28 @@ mod tests {
         assert!(!editor.document.is_dirty());
         workspace.preferences.fit_preview = false;
         workspace.sync_editor_theme(&ctx);
-        assert_eq!(workspace.tabs[0].compiler.presentation, Presentation::Document);
+        assert_eq!(
+            workspace.tabs[0].compiler.presentation,
+            Presentation::Document
+        );
         assert_eq!(workspace.tabs[0].document.source(), source);
     }
 
     #[test]
     fn new_files_author_explicit_settings_for_each_editor_theme() {
-        for (editor, diagram) in [(egui::Theme::Dark, laml::theme::Theme::ModernDark),
-            (egui::Theme::Light, laml::theme::Theme::Modern)] {
+        for (editor, diagram) in [
+            (egui::Theme::Dark, laml::theme::Theme::ModernDark),
+            (egui::Theme::Light, laml::theme::Theme::Modern),
+        ] {
             let source = new_source(editor);
             assert!(source.starts_with("settings {"));
             let parsed = laml::parser::parse(&source).unwrap();
             assert_eq!(parsed.settings.theme, diagram);
             assert!(parsed.settings.transparent);
-            let prefs = Preferences { fit_preview: true, ..Default::default() };
+            let prefs = Preferences {
+                fit_preview: true,
+                ..Default::default()
+            };
             assert_eq!(prefs.presentation(editor).theme_override(), Some(diagram));
         }
     }

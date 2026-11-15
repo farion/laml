@@ -43,13 +43,19 @@ pub(super) fn row<R>(ui: &mut egui::Ui, key: &str, draw: impl FnOnce(&mut egui::
 pub(super) fn category(ui: &mut egui::Ui, title: &str) {
     let (rect, _) =
         ui.allocate_exact_size(egui::vec2(ui.available_width(), 30.0), egui::Sense::hover());
-    ui.painter()
-        .rect_filled(rect, 0, appearance::color(ui.ctx(), appearance::HEADER).gamma_multiply(0.45));
+    ui.painter().rect_filled(
+        rect,
+        0,
+        appearance::color(ui.ctx(), appearance::HEADER).gamma_multiply(0.45),
+    );
     for y in [rect.top(), rect.bottom()] {
         ui.painter().hline(
             rect.x_range(),
             y,
-            egui::Stroke::new(1.0, appearance::color(ui.ctx(), appearance::BORDER).gamma_multiply(0.7)),
+            egui::Stroke::new(
+                1.0,
+                appearance::color(ui.ctx(), appearance::BORDER).gamma_multiply(0.7),
+            ),
         );
     }
     ui.painter().text(
@@ -93,7 +99,11 @@ pub(super) fn mixed_text() -> egui::RichText {
 }
 
 pub(super) fn value_text(value: &str) -> egui::RichText {
-    if value == "Mixed" { mixed_text() } else { egui::RichText::new(value) }
+    if value == "Mixed" {
+        mixed_text()
+    } else {
+        egui::RichText::new(value)
+    }
 }
 
 pub(super) fn mixed_field(
@@ -157,7 +167,8 @@ pub(super) fn mixed_field(
         && ui.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Enter));
     let modified = ui.ctx().data_mut(|data| {
         let changed = data.get_temp::<bool>(modified_id).unwrap_or(false)
-            || response.changed() || shift_enter;
+            || response.changed()
+            || shift_enter;
         data.insert_temp(modified_id, changed);
         changed
     });

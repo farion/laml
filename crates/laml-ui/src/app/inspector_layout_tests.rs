@@ -95,7 +95,7 @@ fn node_port_and_relation_keys_and_values_share_columns_and_categories_touch_bot
 }
 
 #[test]
-fn empty_selection_hint_has_padding_below_tabs_in_both_views() {
+fn empty_selection_shows_document_settings_with_padded_fields_in_both_views() {
     let (mut editor, ctx) = ready();
     egui_extras::install_image_loaders(&ctx);
     editor.selection.click(None, false);
@@ -124,14 +124,21 @@ fn empty_selection_hint_has_padding_below_tabs_in_both_views() {
             .iter()
             .find_map(|s| match &s.shape {
                 egui::Shape::Text(t)
-                    if t.galley.job.text == "Select an element in the diagram." =>
+                    if t.galley.job.text
+                        == if tab == inspector_ui::Tab::General {
+                            "Direction"
+                        } else {
+                            "Theme"
+                        } =>
                 {
                     Some(t)
                 }
                 _ => None,
             })
             .unwrap();
-        assert!((hint.pos.y - strip.bottom() - f32::from(inspector_ui::INSET)).abs() < 1.0);
+        assert!(hint.pos.y >= strip.bottom() + 30.0);
+        assert!(!out.shapes.iter().any(|s| matches!(&s.shape,
+            egui::Shape::Text(t) if t.galley.job.text == "Select an element in the diagram.")));
         assert!((hint.pos.x - strip.left() - f32::from(inspector_ui::INSET)).abs() < 1.0);
         assert_eq!(editor.document.revision(), 0);
     }

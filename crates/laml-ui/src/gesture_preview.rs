@@ -110,26 +110,32 @@ pub fn render(
     bounds: (f64, f64, f64, f64),
 ) -> Result<String, String> {
     let (_, _, _, font, italic) = laml::theme::preprocess_settings(source)?;
-    laml::text::with_fonts(path, preview.styles.theme.modern(), font.as_deref(), italic.as_deref(), || {
-        let svg = laml::svg::render_route_overlay(
-            &preview.nodes,
-            std::slice::from_ref(route),
-            preview.styles.theme,
-            bounds,
-        )?;
-        let protected: Vec<_> = preview
-            .styles
-            .rules
-            .iter()
-            .flat_map(|r| &r.declarations)
-            .filter_map(|d| match &d.value {
-                laml::styles::Value::Color(c) => Some(c.clone()),
-                _ => None,
-            })
-            .collect();
-        let svg = laml::theme::tint_svg_defaults(&svg, preview.styles.theme, &protected);
-        laml::export::outlines(&laml::text::svg_fonts(&svg)?)
-    })?
+    laml::text::with_fonts(
+        path,
+        preview.styles.theme.modern(),
+        font.as_deref(),
+        italic.as_deref(),
+        || {
+            let svg = laml::svg::render_route_overlay(
+                &preview.nodes,
+                std::slice::from_ref(route),
+                preview.styles.theme,
+                bounds,
+            )?;
+            let protected: Vec<_> = preview
+                .styles
+                .rules
+                .iter()
+                .flat_map(|r| &r.declarations)
+                .filter_map(|d| match &d.value {
+                    laml::styles::Value::Color(c) => Some(c.clone()),
+                    _ => None,
+                })
+                .collect();
+            let svg = laml::theme::tint_svg_defaults(&svg, preview.styles.theme, &protected);
+            laml::export::outlines(&laml::text::svg_fonts(&svg)?)
+        },
+    )?
 }
 
 #[cfg(test)]

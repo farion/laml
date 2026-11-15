@@ -3,8 +3,7 @@ use super::*;
 
 /// One representative per visual type; aliases and mirrored symbols are omitted.
 pub const TYPES: &[&str] = &[
-    "->", "<->", "--", "..", "..>", "--^>", "--|>", "..|>",
-    "--*", "--o", "*-->", "o-->",
+    "->", "<->", "--", "..", "..>", "--^>", "--|>", "..|>", "--*", "--o", "*-->", "o-->",
 ];
 
 pub fn relation_type(operator: &str) -> &str {
@@ -20,7 +19,10 @@ pub fn relation_type(operator: &str) -> &str {
 }
 
 fn mirrored(operator: &str) -> bool {
-    matches!(operator, "<-" | "<--" | "<.." | "<|--" | "<|.." | "*--" | "o--")
+    matches!(
+        operator,
+        "<-" | "<--" | "<.." | "<|--" | "<|.." | "*--" | "o--"
+    )
 }
 
 pub fn directional(kind: &str) -> bool {
@@ -50,14 +52,21 @@ fn set_type(source: &str, line: usize, kind: &str, reverse: bool) -> Result<Vec<
         "--o" => Some("o--"),
         _ => None,
     };
-    let mut edits = change_operator(source, line, if reverse { opposite.unwrap_or(kind) } else { kind })?;
+    let mut edits = change_operator(
+        source,
+        line,
+        if reverse {
+            opposite.unwrap_or(kind)
+        } else {
+            kind
+        },
+    )?;
     if reverse && opposite.is_none() && directional(kind) {
         // Existing syntax has no mirrored token for these types. Exchange whole
         // endpoint expressions, keeping adornments with their endpoint, not the side.
         let spans = endpoint_spans(source, line)?;
         let left_end = source[..spans.operator.start].trim_end().len();
-        let right_start = spans.operator.end
-            + source[spans.operator.end..].len()
+        let right_start = spans.operator.end + source[spans.operator.end..].len()
             - source[spans.operator.end..].trim_start().len();
         let left = spans.from.start..left_end;
         let right = right_start..spans.to.end;
@@ -66,12 +75,22 @@ fn set_type(source: &str, line: usize, kind: &str, reverse: bool) -> Result<Vec<
         let left_adornments = source[spans.from.end..left_end].trim();
         let right_adornments = source[right_start..spans.to.start].trim();
         let join = |a: &str, b: &str| {
-            if a.is_empty() { b.to_owned() }
-            else if b.is_empty() { a.to_owned() }
-            else { format!("{a} {b}") }
+            if a.is_empty() {
+                b.to_owned()
+            } else if b.is_empty() {
+                a.to_owned()
+            } else {
+                format!("{a} {b}")
+            }
         };
-        edits.push(Edit { range: left, replacement: join(right_node, right_adornments) });
-        edits.push(Edit { range: right, replacement: join(left_adornments, left_node) });
+        edits.push(Edit {
+            range: left,
+            replacement: join(right_node, right_adornments),
+        });
+        edits.push(Edit {
+            range: right,
+            replacement: join(left_adornments, left_node),
+        });
     }
     Ok(edits)
 }
@@ -105,7 +124,17 @@ mod tests {
     #[test]
     fn aliases_and_mirrors_have_one_type() {
         for op in OPERATORS {
-            assert!(TYPES.contains(&relation_type(op)), "{op}");
+            // Assembly/delegation are notation-specific composite connectors,
+            // not choices in the generic relation picker.
+            if ["==", "=>"].contains(op) {
+                assert!(
+                    crate::notation::Notation::Composite
+                        .operators()
+                        .contains(op)
+                );
+            } else {
+                assert!(TYPES.contains(&relation_type(op)), "{op}");
+            }
         }
         assert_eq!(relation_type("->"), relation_type("-->"));
         assert_eq!(relation_type("<--"), relation_type("->"));
@@ -121,17 +150,26 @@ mod tests {
         for kind in TYPES.iter().copied().filter(|kind| directional(kind)) {
             let source = format!("semantics {{\n A\n B\n @r A {kind} B : label // keep\n}}\n");
             let reverse = patched(&source, change_direction(&source, 4, false).unwrap());
-            assert_eq!(direction(&reverse, 4).unwrap(), ("B".into(), "A".into()), "{kind}");
+            assert_eq!(
+                direction(&reverse, 4).unwrap(),
+                ("B".into(), "A".into()),
+                "{kind}"
+            );
             assert!(reverse.contains(": label // keep"));
             assert_eq!(relation_type(&operator(&reverse, 4).unwrap()), kind);
             let forward = patched(&reverse, change_direction(&reverse, 4, true).unwrap());
-            assert_eq!(direction(&forward, 4).unwrap(), ("A".into(), "B".into()), "{kind}");
+            assert_eq!(
+                direction(&forward, 4).unwrap(),
+                ("A".into(), "B".into()),
+                "{kind}"
+            );
         }
     }
 
     #[test]
     fn type_changes_preserve_direction_and_endpoint_adornments() {
-        let source = "semantics {\r\n A\r\n B\r\n @r A \"1\"/owner <- /items B : label // keep\r\n}\r\n";
+        let source =
+            "semantics {\r\n A\r\n B\r\n @r A \"1\"/owner <- /items B : label // keep\r\n}\r\n";
         let updated = patched(source, change_type(source, 4, "--^>").unwrap());
         assert!(updated.contains("@r B /items --^> \"1\"/owner A : label // keep\r\n"));
         assert_eq!(direction(&updated, 4).unwrap(), ("B".into(), "A".into()));

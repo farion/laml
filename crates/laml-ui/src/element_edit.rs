@@ -244,14 +244,45 @@ impl ElementKind {
     }
     pub fn available(source: &str) -> Vec<Self> {
         let notation = crate::notation::Notation::of(source);
-        let Ok(graph) = crate::notation::parse_graph(source).or_else(|_| crate::notation::parse_graph(&notation.starter(false))) else { return vec![]; };
-        if crate::notation::Notation::of(source).c4() && crate::notation::Notation::of(source) != crate::notation::Notation::C4Code { return vec![]; }
-        Self::ALL.into_iter().filter(|k| {
-            if notation == crate::notation::Notation::Gne && !matches!(k, Self::Rectangle | Self::Ellipse | Self::Diamond | Self::Note | Self::Package | Self::Class | Self::Interface | Self::Enumeration | Self::DataType | Self::Object | Self::Junction) { return false; }
-            if matches!(k, Self::Association | Self::AssociationClass) { return false; }
-            (k.node_kind() != NodeKind::Generic || graph.settings.diagram_type == laml::syntax::DiagramType::Generic)
-                && laml::parser::allows_node_kind(k.node_kind(), graph.settings.diagram_type)
-        }).collect()
+        let Ok(graph) = crate::notation::parse_graph(source)
+            .or_else(|_| crate::notation::parse_graph(&notation.starter(false)))
+        else {
+            return vec![];
+        };
+        if crate::notation::Notation::of(source).c4()
+            && crate::notation::Notation::of(source) != crate::notation::Notation::C4Code
+        {
+            return vec![];
+        }
+        Self::ALL
+            .into_iter()
+            .filter(|k| {
+                if notation == crate::notation::Notation::Gne
+                    && !matches!(
+                        k,
+                        Self::Rectangle
+                            | Self::Ellipse
+                            | Self::Diamond
+                            | Self::Note
+                            | Self::Package
+                            | Self::Class
+                            | Self::Interface
+                            | Self::Enumeration
+                            | Self::DataType
+                            | Self::Object
+                            | Self::Junction
+                    )
+                {
+                    return false;
+                }
+                if matches!(k, Self::Association | Self::AssociationClass) {
+                    return false;
+                }
+                (k.node_kind() != NodeKind::Generic
+                    || graph.settings.diagram_type == laml::syntax::DiagramType::Generic)
+                    && laml::parser::allows_node_kind(k.node_kind(), graph.settings.diagram_type)
+            })
+            .collect()
     }
 }
 
@@ -268,10 +299,10 @@ pub fn add(
         node_edit::diagram(source)?
     };
     if let Some(parent) = parent
-        && !diagram
-            .nodes
-            .iter()
-            .any(|n| n.id == parent && node_edit::blocks(source, &diagram).is_ok_and(|b| b.contains_key(&n.line)))
+        && !diagram.nodes.iter().any(|n| {
+            n.id == parent
+                && node_edit::blocks(source, &diagram).is_ok_and(|b| b.contains_key(&n.line))
+        })
     {
         return Err("Destination must be a container block".into());
     }
@@ -297,15 +328,35 @@ pub fn add(
         format!("(label={})", quote(label))
     };
     let declaration = match kind {
-        ElementKind::Package | ElementKind::Profile | ElementKind::System | ElementKind::Structure
-        | ElementKind::DeploymentNode | ElementKind::Device | ElementKind::Environment =>
-            format!("{}{name}{attrs} {{{newline}}}", kind.keyword()),
+        ElementKind::Package
+        | ElementKind::Profile
+        | ElementKind::System
+        | ElementKind::Structure
+        | ElementKind::DeploymentNode
+        | ElementKind::Device
+        | ElementKind::Environment => format!("{}{name}{attrs} {{{newline}}}", kind.keyword()),
         ElementKind::Part | ElementKind::CompositePart | ElementKind::Role => {
-            let expected = if kind == ElementKind::Part { NodeKind::Component } else { NodeKind::Class };
-            let classifier = diagram.nodes.iter().find(|n| n.kind == expected).ok_or("Create a matching classifier first")?;
-            format!("{}{name}(of={}; label={})", kind.keyword(), classifier.id, quote(label))
-        },
-        ElementKind::Interaction => format!("interaction-use {name}(ref=Interaction; label={})", quote(label)),
+            let expected = if kind == ElementKind::Part {
+                NodeKind::Component
+            } else {
+                NodeKind::Class
+            };
+            let classifier = diagram
+                .nodes
+                .iter()
+                .find(|n| n.kind == expected)
+                .ok_or("Create a matching classifier first")?;
+            format!(
+                "{}{name}(of={}; label={})",
+                kind.keyword(),
+                classifier.id,
+                quote(label)
+            )
+        }
+        ElementKind::Interaction => format!(
+            "interaction-use {name}(ref=Interaction; label={})",
+            quote(label)
+        ),
         ElementKind::Note => format!(
             "note {name} {}",
             quote(if label.trim().is_empty() {

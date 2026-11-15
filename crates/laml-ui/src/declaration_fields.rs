@@ -98,8 +98,14 @@ pub fn change(source: &str, id: &str, change: Change) -> Result<Vec<Edit>, Strin
                 return Err("This structural element cannot change kind in Properties.".into());
             }
             let declared = keyword(node.kind);
-            let old = if !declared.is_empty() && text[p.kind..].starts_with(declared)
-                && text[p.kind + declared.len()..].starts_with(char::is_whitespace) { declared } else { "" };
+            let old = if !declared.is_empty()
+                && text[p.kind..].starts_with(declared)
+                && text[p.kind + declared.len()..].starts_with(char::is_whitespace)
+            {
+                declared
+            } else {
+                ""
+            };
             let new = keyword(*kind);
             if !old.is_empty()
                 && (!text[p.kind..].starts_with(old)

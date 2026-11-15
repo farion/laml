@@ -60,8 +60,12 @@ closing a tab is blocked until its browser writes are acknowledged.
 
 The library offers Open, Rename, Download and Move to trash. Trash entries can be
 restored or permanently deleted. Empty trash and Delete everything require
-confirmation. A pristine placeholder is not added back to an emptied library.
-Reload restores this tab's open documents. Libraries are shared across browser
+confirmation. Clearing the library leaves no open document or automatic replacement.
+Reload restores this tab's open documents. With no open documents, the editor
+shows Create new file and Open from library instead of creating a placeholder.
+The New file dialog requires a name, prefilled with an unused default; a newly
+created file is saved in the library immediately, before its first edit.
+Destructive library actions use a separate modal confirmation. Libraries are shared across browser
 tabs; if two tabs edit the same document concurrently, the other version is
 preserved as a separate library entry instead of silently overwritten.
 

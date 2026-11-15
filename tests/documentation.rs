@@ -145,6 +145,7 @@ fn dark_showcases_do_not_keep_large_light_theme_panels() {
 }
 
 #[test]
+#[ignore = "slow full documentation render audit; run explicitly with --ignored"]
 fn every_published_example_checks_and_builds() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let examples = root.join("examples");

@@ -27,8 +27,8 @@ mod deletion;
 mod deletion_tests;
 mod dialogs;
 mod document_settings;
-mod element_tree;
 mod editor_theme;
+mod element_tree;
 mod file_ui;
 mod footer_status;
 mod graph;
@@ -54,10 +54,10 @@ mod inspector_ui;
 mod membership;
 #[cfg(test)]
 mod membership_tests;
+mod notation_ui;
 #[cfg(test)]
 mod object_tests;
 mod objects;
-mod notation_ui;
 #[cfg(test)]
 mod palette;
 #[cfg(test)]
@@ -248,28 +248,39 @@ impl Editor {
             format!("bytes://preview-{}-{revision}.svg", self.id),
             preview.svg.as_bytes().to_vec(),
         ));
-        if self.preview.as_ref().is_none_or(|old| old.notation != preview.notation) {
+        if self
+            .preview
+            .as_ref()
+            .is_none_or(|old| old.notation != preview.notation)
+        {
             self.graph.operator = match preview.notation {
                 laml_ui::notation::Notation::Bpmn => "-->",
                 laml_ui::notation::Notation::Composite => "==",
                 laml_ui::notation::Notation::Communication => "--",
                 laml_ui::notation::Notation::Activity => "control",
-                laml_ui::notation::Notation::InteractionOverview | laml_ui::notation::Notation::State => "-->",
+                laml_ui::notation::Notation::InteractionOverview
+                | laml_ui::notation::Notation::State => "-->",
                 laml_ui::notation::Notation::Object | laml_ui::notation::Notation::UseCase => "--",
-                laml_ui::notation::Notation::Package | laml_ui::notation::Notation::Component => "..>",
+                laml_ui::notation::Notation::Package | laml_ui::notation::Notation::Component => {
+                    "..>"
+                }
                 laml_ui::notation::Notation::Deployment => "--",
                 laml_ui::notation::Notation::Profile => "--^>",
                 _ => "->",
-            }.into();
+            }
+            .into();
             self.notation_ui.selected = None;
             self.property_drafts.clear();
             self.graph.cancel_gesture();
             self.placement.cancel();
         }
-        if let Some((line, Some(id), revision)) = &mut self.notation_ui.selected {
-            if *revision == self.document.revision() {
-                if let Some(region) = preview.regions.iter().find(|r| &r.id == id) { *line = region.line; }
-                else if let Some(node) = preview.diagram.nodes.iter().find(|n| &n.id == id) { *line = node.line; }
+        if let Some((line, Some(id), revision)) = &mut self.notation_ui.selected
+            && *revision == self.document.revision()
+        {
+            if let Some(region) = preview.regions.iter().find(|r| &r.id == id) {
+                *line = region.line;
+            } else if let Some(node) = preview.diagram.nodes.iter().find(|n| &n.id == id) {
+                *line = node.line;
             }
         }
         self.preview = Some(preview);
@@ -327,7 +338,8 @@ impl Editor {
                             continue;
                         }
                         if let worker::Expectation::Notation { line, id } = &command.expectation {
-                            self.notation_ui.selected = line.map(|line| (line, id.clone(), self.document.revision()));
+                            self.notation_ui.selected =
+                                line.map(|line| (line, id.clone(), self.document.revision()));
                         }
                         if let worker::Expectation::Port(id) = &command.expectation {
                             self.selection.click_port(id, false);

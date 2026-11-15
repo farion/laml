@@ -246,6 +246,7 @@ fn score(
     cost += (points.len().saturating_sub(2)) as f64 * 100.0;
     Some((crossings, cost))
 }
+#[allow(clippy::too_many_arguments)] // One candidate uses the complete routing context.
 pub(super) fn route(
     doc: &Document,
     geom: &Geometry,
@@ -339,14 +340,25 @@ pub(super) fn route(
     // A clear line is not enough: retain a candidate only when its labels and
     // those of earlier routes also fit. Try longer detours before failing.
     let mut label_error = None;
-    let (crossings, cost, best) = scored.into_iter().find(|(_, _, points)| {
-        match super::labels::route_fits(doc, geom, index, points, previous) {
-            Ok(()) => true,
-            Err(error) => { label_error = Some(error); false }
-        }
-    }).ok_or_else(|| label_error.unwrap_or_else(|| format!(
-        "no obstacle-free orthogonal BPMN route for {} -> {}", e.from, e.to
-    )))?;
+    let (crossings, cost, best) = scored
+        .into_iter()
+        .find(|(_, _, points)| {
+            match super::labels::route_fits(doc, geom, index, points, previous) {
+                Ok(()) => true,
+                Err(error) => {
+                    label_error = Some(error);
+                    false
+                }
+            }
+        })
+        .ok_or_else(|| {
+            label_error.unwrap_or_else(|| {
+                format!(
+                    "no obstacle-free orthogonal BPMN route for {} -> {}",
+                    e.from, e.to
+                )
+            })
+        })?;
     Ok(Plan {
         points: best,
         cost,

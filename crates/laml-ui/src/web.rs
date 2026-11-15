@@ -2,7 +2,9 @@
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use wasm_bindgen::{JsCast, prelude::*};
 static BROWSER: AtomicBool = AtomicBool::new(false);
-pub(crate) fn browser_mode() -> bool { BROWSER.load(Ordering::Relaxed) }
+pub(crate) fn browser_mode() -> bool {
+    BROWSER.load(Ordering::Relaxed)
+}
 static LIMITS: AtomicBool = AtomicBool::new(false);
 pub(crate) fn limits() -> bool {
     LIMITS.load(Ordering::Relaxed)
@@ -36,9 +38,15 @@ pub(crate) fn set_document(
     }
 }
 #[wasm_bindgen]
-pub async fn start_editor(canvas: web_sys::HtmlCanvasElement, limits: bool, browser: bool) -> Result<(), JsValue> {
+pub async fn start_editor(
+    canvas: web_sys::HtmlCanvasElement,
+    limits: bool,
+    browser: bool,
+) -> Result<(), JsValue> {
     BROWSER.store(browser, Ordering::Relaxed);
-    if browser { crate::browser_storage::initialize().await?; }
+    if browser {
+        crate::browser_storage::initialize().await?;
+    }
     LIMITS.store(limits, Ordering::Relaxed);
     CLIENT.store(
         (js_sys::Math::random() * 4_503_599_627_370_496.0) as u64 + 1,
@@ -70,8 +78,10 @@ pub async fn start_editor(canvas: web_sys::HtmlCanvasElement, limits: bool, brow
                     None,
                     crate::services::Services::browser("/api/editor".into(), limits),
                 );
-                let mut workspace = crate::app::Workspace::new(editor);
-                if browser { workspace.load_browser_tabs(); }
+                let mut workspace = crate::app::Workspace::empty(editor);
+                if browser {
+                    workspace.load_browser_tabs();
+                }
                 Ok(Box::new(workspace))
             }),
         )

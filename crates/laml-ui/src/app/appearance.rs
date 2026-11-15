@@ -212,7 +212,11 @@ pub(super) fn alignment_button(
             .min_size(egui::vec2(width, 44.0)),
     );
     let painter = ui.painter().with_clip_rect(response.rect);
-    let color = if enabled { color(ui.ctx(), TEXT) } else { color(ui.ctx(), MUTED) };
+    let color = if enabled {
+        color(ui.ctx(), TEXT)
+    } else {
+        color(ui.ctx(), MUTED)
+    };
     let center = response.rect.center_top() + egui::vec2(0.0, 8.0);
     let stroke = egui::Stroke::new(1.0, color);
     if horizontal {
@@ -286,6 +290,28 @@ pub(super) fn property_action(ui: &mut egui::Ui, reset: bool) -> egui::Response 
     })
 }
 
+/// The custom chrome uses the same palette as the active egui editor theme.
+pub(super) fn color(ctx: &egui::Context, dark: egui::Color32) -> egui::Color32 {
+    if ctx.theme() == egui::Theme::Dark {
+        dark
+    } else {
+        light(dark)
+    }
+}
+fn light(dark: egui::Color32) -> egui::Color32 {
+    match dark {
+        BACKGROUND => egui::Color32::from_rgb(250, 251, 253),
+        PANEL => egui::Color32::from_rgb(244, 246, 250),
+        HEADER => egui::Color32::from_rgb(233, 237, 244),
+        BORDER => egui::Color32::from_rgb(199, 205, 216),
+        TEXT => egui::Color32::from_rgb(30, 36, 48),
+        MUTED => egui::Color32::from_rgb(96, 105, 123),
+        ACCENT => egui::Color32::from_rgb(46, 86, 194),
+        SELECTED => egui::Color32::from_rgb(106, 74, 194),
+        _ => dark,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -337,23 +363,5 @@ mod tests {
         );
         assert_eq!(style.visuals.widgets.hovered.expansion, 0.0);
         assert_eq!(style.visuals.extreme_bg_color, BACKGROUND);
-    }
-}
-
-/// The custom chrome uses the same palette as the active egui editor theme.
-pub(super) fn color(ctx: &egui::Context, dark: egui::Color32) -> egui::Color32 {
-    if ctx.theme() == egui::Theme::Dark { dark } else { light(dark) }
-}
-fn light(dark: egui::Color32) -> egui::Color32 {
-    match dark {
-        BACKGROUND => egui::Color32::from_rgb(250, 251, 253),
-        PANEL => egui::Color32::from_rgb(244, 246, 250),
-        HEADER => egui::Color32::from_rgb(233, 237, 244),
-        BORDER => egui::Color32::from_rgb(199, 205, 216),
-        TEXT => egui::Color32::from_rgb(30, 36, 48),
-        MUTED => egui::Color32::from_rgb(96, 105, 123),
-        ACCENT => egui::Color32::from_rgb(46, 86, 194),
-        SELECTED => egui::Color32::from_rgb(106, 74, 194),
-        _ => dark,
     }
 }

@@ -70,11 +70,19 @@ impl Picker {
 
 /// Use the exact compiler SVG rather than a similarly named font glyph.
 pub(super) fn image(ui: &egui::Ui, name: &str) -> egui::Image<'static> {
-    let svg = laml::bundled_icon_svg(name)
-        .unwrap_or_default()
-        .replace("currentColor", if ui.visuals().dark_mode { "#e8eef2" } else { "#1e2430" });
+    let svg = laml::bundled_icon_svg(name).unwrap_or_default().replace(
+        "currentColor",
+        if ui.visuals().dark_mode {
+            "#e8eef2"
+        } else {
+            "#1e2430"
+        },
+    );
     egui::Image::from_bytes(
-        format!("bytes://phosphor-catalog-{}-{name}.svg", ui.visuals().dark_mode),
+        format!(
+            "bytes://phosphor-catalog-{}-{name}.svg",
+            ui.visuals().dark_mode
+        ),
         svg.into_bytes(),
     )
     .fit_to_exact_size(egui::vec2(32.0, 32.0))
@@ -108,7 +116,9 @@ impl Editor {
                         } else {
                             egui::Button::new(if mixed {
                                 inspector_ui::mixed_text()
-                            } else { egui::RichText::new(title) })
+                            } else {
+                                egui::RichText::new(title)
+                            })
                         };
                         open = ui
                             .add_sized(
@@ -215,7 +225,10 @@ impl Editor {
                 }
             });
             let names = picker.filtered();
-            ui.colored_label(appearance::color(ui.ctx(), appearance::MUTED), format!("{} matching icons", names.len()));
+            ui.colored_label(
+                appearance::color(ui.ctx(), appearance::MUTED),
+                format!("{} matching icons", names.len()),
+            );
             if names.is_empty() {
                 ui.label("No matching icons. Try another name or choose All.");
                 ui.add_space(80.0);
@@ -261,7 +274,10 @@ impl Editor {
                     ui.add(egui::Label::new(name).truncate())
                         .on_hover_text(name);
                 } else {
-                    ui.colored_label(appearance::color(ui.ctx(), appearance::MUTED), "Select an icon to preview it here.");
+                    ui.colored_label(
+                        appearance::color(ui.ctx(), appearance::MUTED),
+                        "Select an icon to preview it here.",
+                    );
                 }
             });
             ui.horizontal(|ui| {
@@ -323,7 +339,8 @@ fn tile(ui: &mut egui::Ui, name: &str, width: f32, selected: bool) -> egui::Resp
             egui::FontId::proportional(12.0),
         );
         let pos = label.center() - galley.size() * 0.5;
-        ui.painter().galley(pos, galley, appearance::color(ui.ctx(), appearance::TEXT));
+        ui.painter()
+            .galley(pos, galley, appearance::color(ui.ctx(), appearance::TEXT));
     }
     response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, ui.is_enabled(), name));
     response

@@ -6,9 +6,9 @@ mod label_modes;
 mod mapping;
 mod sides;
 mod types;
-pub use types::{TYPES, change_direction, change_type, direction, directional, relation_type};
 pub use label_modes::label_modes;
 pub use mapping::remap_line;
+pub use types::{TYPES, change_direction, change_type, direction, directional, relation_type};
 #[cfg(test)]
 mod tests;
 pub use sides::{endpoint_side, endpoint_sides};
@@ -95,7 +95,9 @@ pub(crate) fn spans(source: &str, line: usize) -> Result<Spans, String> {
         .iter()
         .skip(op + 1)
         .take_while(|r| r.end <= end)
-        .take_while(|r| !text[(*r).clone()].starts_with('«') && !text[(*r).clone()].starts_with("<<"))
+        .take_while(|r| {
+            !text[(*r).clone()].starts_with('«') && !text[(*r).clone()].starts_with("<<")
+        })
         .last()
         .ok_or("Missing relation endpoint")?
         .clone();
@@ -131,7 +133,13 @@ pub(crate) fn endpoint_spans(source: &str, line: usize) -> Result<Spans, String>
             .position(|r| &text[r.clone()] == ":" && range.start + r.start < result.operator.start)
             .map_or(0, |i| i + 1)
     };
-    let first = first + usize::from(crate::notation::Notation::of(source) == crate::notation::Notation::Activity && parts.get(first).is_some_and(|r| ["control", "object"].contains(&&text[r.clone()])));
+    let first = first
+        + usize::from(
+            crate::notation::Notation::of(source) == crate::notation::Notation::Activity
+                && parts
+                    .get(first)
+                    .is_some_and(|r| ["control", "object"].contains(&&text[r.clone()])),
+        );
     let token = parts.get(first).ok_or("Missing source endpoint")?;
     result.from = range.start + token.start..range.start + token.end;
     Ok(result)

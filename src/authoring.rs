@@ -15,12 +15,50 @@ pub struct Region {
     pub path: Vec<(f64, f64)>,
 }
 impl Region {
-    pub fn rect(id: impl Into<String>, kind: &str, line: usize, x: f64, y: f64, width: f64, height: f64) -> Self {
-        Self { id: id.into(), kind: kind.into(), line, end_line: None, x, y, width, height, path: vec![] }
+    pub fn rect(
+        id: impl Into<String>,
+        kind: &str,
+        line: usize,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+    ) -> Self {
+        Self {
+            id: id.into(),
+            kind: kind.into(),
+            line,
+            end_line: None,
+            x,
+            y,
+            width,
+            height,
+            path: vec![],
+        }
     }
     pub fn stroke(id: impl Into<String>, kind: &str, line: usize, path: Vec<(f64, f64)>) -> Self {
-        let (mut x, mut y, mut r, mut b) = (f64::INFINITY, f64::INFINITY, f64::NEG_INFINITY, f64::NEG_INFINITY);
-        for &(px, py) in &path { x = x.min(px); y = y.min(py); r = r.max(px); b = b.max(py); }
-        Self { id: id.into(), kind: kind.into(), line, end_line: None, x, y, width: r - x, height: b - y, path }
+        let (mut x, mut y, mut r, mut b) = (
+            f64::INFINITY,
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+            f64::NEG_INFINITY,
+        );
+        for &(px, py) in &path {
+            x = x.min(px);
+            y = y.min(py);
+            r = r.max(px);
+            b = b.max(py);
+        }
+        Self {
+            id: id.into(),
+            kind: kind.into(),
+            line,
+            end_line: None,
+            x,
+            y,
+            width: r - x,
+            height: b - y,
+            path,
+        }
     }
 }

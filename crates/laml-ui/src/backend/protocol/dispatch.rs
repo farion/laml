@@ -57,14 +57,23 @@ impl Dispatcher {
                 route,
                 bounds,
                 remove_line,
-            } => self
-                .gestures
-                .render(backend, stamp, source, address, route, bounds, remove_line, presentation),
+            } => self.gestures.render(
+                backend,
+                stamp,
+                source,
+                address,
+                route,
+                bounds,
+                remove_line,
+                presentation,
+            ),
             Operation::Compile {
                 source,
                 address,
                 presentation,
-            } => Ok(self.compiled.compile(backend, stamp, source, address, presentation)),
+            } => Ok(self
+                .compiled
+                .compile(backend, stamp, source, address, presentation)),
 
             Operation::RenderExport {
                 source,

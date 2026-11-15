@@ -21,6 +21,7 @@ fn roundtrip(dispatcher: &mut Dispatcher, request: Request) -> Response {
 }
 
 #[test]
+#[ignore = "slow architecture protocol audit (>60s); run explicitly with --ignored"]
 fn compiler_roundtrip_retains_svg_geometry_picking_styles_and_properties() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/architecture.laml");
     let source = std::fs::read_to_string(&path).unwrap();

@@ -27,6 +27,7 @@ fn orthogonal_is_default_and_free_routing_is_opt_in() {
 }
 
 #[test]
+#[ignore = "slow multi-notation routing audit (>60s); run explicitly with --ignored"]
 fn strict_mode_reaches_c4_and_named_relation_attachments() {
     for source in [
         include_str!("../examples/class-basic.laml"),

@@ -101,7 +101,13 @@ pub fn add_relation(
 ) -> Result<(String, Vec<Edit>), String> {
     add_relation_operator(source, from, to, kind.operator(), None)
 }
-pub fn add_relation_operator(source: &str, from: &str, to: &str, operator: &str, label: Option<&str>) -> Result<(String, Vec<Edit>), String> {
+pub fn add_relation_operator(
+    source: &str,
+    from: &str,
+    to: &str,
+    operator: &str,
+    label: Option<&str>,
+) -> Result<(String, Vec<Edit>), String> {
     let diagram = parse(source)?;
     for id in [from, to] {
         if !diagram.nodes.iter().any(|node| node.has_endpoint(id)) {
@@ -114,10 +120,16 @@ pub fn add_relation_operator(source: &str, from: &str, to: &str, operator: &str,
         "Relation"
     };
     let id = fresh_id(&diagram, prefix);
-    let relation = crate::notation::Notation::of(source).relation(operator).ok_or("Choose a relationship supported by this diagram")?;
+    let relation = crate::notation::Notation::of(source)
+        .relation(operator)
+        .ok_or("Choose a relationship supported by this diagram")?;
     let mut declaration = format!("@{id} {}{from} {} {to}", relation.prefix, relation.operator);
-    if !relation.stereotype.is_empty() { declaration.push_str(&format!(" <<{}>>", relation.stereotype)); }
-    if let Some(label) = label.filter(|s| !s.is_empty()) { declaration.push_str(&format!(" : {}", quote(label))); }
+    if !relation.stereotype.is_empty() {
+        declaration.push_str(&format!(" <<{}>>", relation.stereotype));
+    }
+    if let Some(label) = label.filter(|s| !s.is_empty()) {
+        declaration.push_str(&format!(" : {}", quote(label)));
+    }
     Ok((id, vec![insert_semantic(source, &diagram, &declaration)?]))
 }
 

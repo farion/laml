@@ -163,7 +163,11 @@ impl Editor {
                 ("End", EndPosition::Target, &first.to),
             ] {
                 let mixed = relations.iter().any(|r| {
-                    (if end == EndPosition::Source { &r.from } else { &r.to }) != original
+                    (if end == EndPosition::Source {
+                        &r.from
+                    } else {
+                        &r.to
+                    }) != original
                 });
                 let before = if mixed { "Mixed" } else { original.as_str() };
                 let mut value = before.to_owned();
@@ -212,48 +216,92 @@ impl Editor {
                 .map(|l| relation_edit::operator(self.document.source(), *l).unwrap_or_default())
                 .collect();
             if self.notation() == laml_ui::notation::Notation::Gne {
-            let first_type = relation_edit::relation_type(&operators[0]);
-            let original = if operators.iter().all(|op| relation_edit::relation_type(op) == first_type) {
-                first_type
-            } else {
-                "Mixed"
-            };
-            let mut op = original.to_string();
-            inspector_ui::row(ui, "Type", |ui| {
-                relation_picker::combo(
-                    ui, "relation-operator", &mut op,
-                    self.notation().operators(), ui.available_width(),
-                );
-            });
-            if op != original {
-                self.relation_edits("Change relation operator", |source, line| {
-                    relation_edit::change_type(source, line, &op)
+                let first_type = relation_edit::relation_type(&operators[0]);
+                let original = if operators
+                    .iter()
+                    .all(|op| relation_edit::relation_type(op) == first_type)
+                {
+                    first_type
+                } else {
+                    "Mixed"
+                };
+                let mut op = original.to_string();
+                inspector_ui::row(ui, "Type", |ui| {
+                    relation_picker::combo(
+                        ui,
+                        "relation-operator",
+                        &mut op,
+                        self.notation().operators(),
+                        ui.available_width(),
+                    );
                 });
-            }
+                if op != original {
+                    self.relation_edits("Change relation operator", |source, line| {
+                        relation_edit::change_type(source, line, &op)
+                    });
+                }
             } else {
                 let choices = self.notation().relation_types();
                 let key = |r: &laml::syntax::RelationDecl, op: &str| {
-                    if let Some(stereotype) = r.stereotypes.first() { stereotype.clone() }
-                    else if self.notation() == laml_ui::notation::Notation::Activity {
-                        match r.activity_flow { Some(laml::syntax::ActivityFlow::Object) => "object", _ => "control" }.into()
-                    } else { relation_edit::relation_type(op).into() }
+                    if let Some(stereotype) = r.stereotypes.first() {
+                        stereotype.clone()
+                    } else if self.notation() == laml_ui::notation::Notation::Activity {
+                        match r.activity_flow {
+                            Some(laml::syntax::ActivityFlow::Object) => "object",
+                            _ => "control",
+                        }
+                        .into()
+                    } else {
+                        relation_edit::relation_type(op).into()
+                    }
                 };
                 let selected = key(&relations[0], &operators[0]);
-                let mixed = relations.iter().zip(&operators).any(|(r, op)| key(r, op) != selected);
+                let mixed = relations
+                    .iter()
+                    .zip(&operators)
+                    .any(|(r, op)| key(r, op) != selected);
                 let mut chosen = selected.clone();
                 inspector_ui::row(ui, "Type", |ui| {
-                    egui::ComboBox::from_id_salt("semantic-relation-type").width(ui.available_width())
-                        .selected_text(if mixed { "Mixed" } else { choices.iter().find(|c| c.key == selected).map_or("Relationship", |c| c.title) })
+                    egui::ComboBox::from_id_salt("semantic-relation-type")
+                        .width(ui.available_width())
+                        .selected_text(if mixed {
+                            "Mixed"
+                        } else {
+                            choices
+                                .iter()
+                                .find(|c| c.key == selected)
+                                .map_or("Relationship", |c| c.title)
+                        })
                         .show_ui(ui, |ui| {
                             for choice in choices {
-                                let valid = lines.iter().all(|line| laml_ui::notation_edit::relationship_type(self.document.source(), *line, choice.key).is_ok());
-                                if ui.add_enabled(valid, egui::Button::selectable(!mixed && chosen == choice.key, choice.title)).clicked() {
+                                let valid = lines.iter().all(|line| {
+                                    laml_ui::notation_edit::relationship_type(
+                                        self.document.source(),
+                                        *line,
+                                        choice.key,
+                                    )
+                                    .is_ok()
+                                });
+                                if ui
+                                    .add_enabled(
+                                        valid,
+                                        egui::Button::selectable(
+                                            !mixed && chosen == choice.key,
+                                            choice.title,
+                                        ),
+                                    )
+                                    .clicked()
+                                {
                                     chosen = choice.key.into();
                                 }
                             }
                         });
                 });
-                if chosen != selected { self.relation_edits("Change relationship type", |source, line| laml_ui::notation_edit::relationship_type(source, line, &chosen)); }
+                if chosen != selected {
+                    self.relation_edits("Change relationship type", |source, line| {
+                        laml_ui::notation_edit::relationship_type(source, line, &chosen)
+                    });
+                }
             }
             self.relation_direction_control(ui, &operators, &lines);
             inspector_ui::category(ui, "Layout");

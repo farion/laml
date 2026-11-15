@@ -36,9 +36,16 @@ shows the introduction again.
 
 ## Browser-local documents
 
-In default browser hosting, **Browser library** manages locally stored documents,
-with rename, import/download, trash, restore and confirmed permanent deletion.
-Edits are saved automatically, even while markup is invalid. The footer reports
+In default browser hosting, **Browser library** is a compact file manager for locally
+stored documents. The sidebar switches between Documents and Trash; search filters
+file names, and the scrollable list sorts them alphabetically and shows diagram
+types. Click to select, double-click to open, or right-click for file actions:
+open, rename, download and move to trash; trashed files offer restore and permanent
+deletion. Icon actions below the list operate on the selected file. Import is in
+the top toolbar; the bottom **…** menu contains whole-library deletion and empty trash.
+Delete everything, empty trash and individual permanent deletion open a separate
+modal confirmation; the library stays behind it. New files are added immediately,
+even before their first edit. Edits are saved automatically, even while markup is invalid. The footer reports
 browser-save status. **Download LAML** replaces Save/Save as; Export downloads an
 SVG, PNG or PDF. Browser mode accepts self-contained sources, inline styles and
 bundled fonts/icons, not external assets. Clearing site data deletes the library;
@@ -48,8 +55,10 @@ apply to desktop and explicit server-workspace mode.
 
 ## Diagram types
 
-**New** opens a family/type chooser for Generic node–edge (GNE), the fourteen UML
-diagram types, BPMN and the four C4 levels. Opening a file detects its source type.
+**New** opens a dialog with an editable **File name**, prefilled with an unused
+default name, and a family/type chooser for Generic node–edge (GNE), the fourteen
+UML diagram types, BPMN and the four C4 levels. A name is required; `.laml` is
+appended when omitted. Opening a file detects its source type.
 Tools and properties adapt to that notation; changing a valid source `type:`
 declaration switches them without converting the document.
 
@@ -96,7 +105,7 @@ the pointer leaves the image or preview.
   normal file-status windows are centered without blocking editing.
 - The tab bar lists open files, marks unsaved changes with a dot and provides an
   **X** to close each tab. It scrolls horizontally when needed. **New** creates a
-  separate untitled document; **Open** adds a tab or activates the file's existing
+  separate named document after confirmation in the New file dialog; **Open** adds a tab or activates the file's existing
   tab without replacing any buffer. Each tab keeps its own source, undo/redo,
   text cursor, selection, view, preview, compiler worker and recovery snapshot.
 - The source pane has one **Source** header: icon buttons for **Save**, **Undo** and
@@ -404,7 +413,15 @@ overwrite a file already open in another tab.
 
 Closing a dirty tab offers keep editing, save or discard. Closing the application
 checks all tabs, including inactive ones; cancelling leaves remaining tabs open.
-Closing the last tab creates a fresh untitled document. A close requested during
+Startup without an explicit file and closing the last tab show an empty workspace,
+not an automatically created document. Its icon buttons **Create new file** and
+**Open from library** (browser storage) or **Open file** (desktop/server workspace)
+open the corresponding dialogs. The empty view disappears while any tab is open.
+The New file dialog includes **Include example diagram**, enabled by default:
+every diagram type starts with a small, editable example. Uncheck it to create
+only the selected type's settings and an empty semantics block. New examples
+follow the editor's light or dark theme and use a transparent background.
+A close requested during
 an accepted write waits for its acknowledgement. Changes typed during that wait
 are preserved and checked again before closing. Recovery opens separate unsaved
 tabs, leaving existing buffers untouched.

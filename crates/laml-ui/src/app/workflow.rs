@@ -76,9 +76,12 @@ impl Workflow {
         self.export.is_some() || self.picker.is_some()
     }
     pub fn processing(&self) -> bool {
-        self.export.as_ref().is_some_and(|job| matches!(
-            job.stage, Stage::Preparing(_) | Stage::Committing(_) | Stage::Cancelling(_)
-        ))
+        self.export.as_ref().is_some_and(|job| {
+            matches!(
+                job.stage,
+                Stage::Preparing(_) | Stage::Committing(_) | Stage::Cancelling(_)
+            )
+        })
     }
     pub fn writing(&self) -> bool {
         self.export
@@ -113,7 +116,11 @@ impl Editor {
         }
         let operation = protocol::address(&path).and_then(|address| {
             if laml_ui::services::browser_mode() {
-                return Ok(Operation::RenderExport { source: self.document.source().into(), address: protocol::address(&self.path)?, format });
+                return Ok(Operation::RenderExport {
+                    source: self.document.source().into(),
+                    address: protocol::address(&self.path)?,
+                    format,
+                });
             }
             Ok(Operation::BeginExport {
                 address,
@@ -153,44 +160,57 @@ impl Editor {
     }
     pub(super) fn export_windows(&mut self, ctx: &egui::Context) {
         if self.workflow.export_open {
-            let dismissed = dialogs::show(ctx, ("export-options", self.id), "Export", 360.0, |ui| {
-                ui.label("Format");
-                for (format, label) in [
-                    (Format::Svg, "SVG · Vector image"),
-                    (Format::Png, "PNG · Raster image"),
-                    (Format::Pdf, "PDF · Vector document"),
-                ] {
-                    if ui.radio(self.workflow.export_format.extension() == format.extension(), label).clicked() {
-                        self.workflow.export_format = format;
-                    }
-                }
-                ui.add_space(12.0);
-                ui.horizontal(|ui| {
-                    let enabled = self.can_edit_visually()
-                        && !self.workflow.busy()
-                        && !self.file_ui.busy();
-                    if ui.add_enabled(enabled, egui::Button::new("Export…")).clicked() {
-                        let format = self.workflow.export_format;
-                        let name = self.path.file_stem().unwrap_or_default().to_string_lossy();
-                        if laml_ui::services::browser_mode() {
-                            self.start_export(PathBuf::from(format!("{name}.{}", format.extension())), format);
-                        } else {
-                        self.workflow.picker = Some((
-                            format,
-                            host_dialogs::Picker::save(
-                                format!("{name}.{}", format.extension()),
-                                format.extension(),
-                            ),
-                            ctx.clone(),
-                        ));
+            let dismissed =
+                dialogs::show(ctx, ("export-options", self.id), "Export", 360.0, |ui| {
+                    ui.label("Format");
+                    for (format, label) in [
+                        (Format::Svg, "SVG · Vector image"),
+                        (Format::Png, "PNG · Raster image"),
+                        (Format::Pdf, "PDF · Vector document"),
+                    ] {
+                        if ui
+                            .radio(
+                                self.workflow.export_format.extension() == format.extension(),
+                                label,
+                            )
+                            .clicked()
+                        {
+                            self.workflow.export_format = format;
                         }
-                        self.workflow.export_open = false;
                     }
-                    if ui.button("Cancel").clicked() {
-                        self.workflow.export_open = false;
-                    }
+                    ui.add_space(12.0);
+                    ui.horizontal(|ui| {
+                        let enabled = self.can_edit_visually()
+                            && !self.workflow.busy()
+                            && !self.file_ui.busy();
+                        if ui
+                            .add_enabled(enabled, egui::Button::new("Export…"))
+                            .clicked()
+                        {
+                            let format = self.workflow.export_format;
+                            let name = self.path.file_stem().unwrap_or_default().to_string_lossy();
+                            if laml_ui::services::browser_mode() {
+                                self.start_export(
+                                    PathBuf::from(format!("{name}.{}", format.extension())),
+                                    format,
+                                );
+                            } else {
+                                self.workflow.picker = Some((
+                                    format,
+                                    host_dialogs::Picker::save(
+                                        format!("{name}.{}", format.extension()),
+                                        format.extension(),
+                                    ),
+                                    ctx.clone(),
+                                ));
+                            }
+                            self.workflow.export_open = false;
+                        }
+                        if ui.button("Cancel").clicked() {
+                            self.workflow.export_open = false;
+                        }
+                    });
                 });
-            });
             if dismissed {
                 self.workflow.export_open = false;
             }

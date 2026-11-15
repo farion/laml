@@ -54,7 +54,9 @@ impl Editor {
                         .property_drafts
                         .entry("node-id".into())
                         .or_insert_with(|| if count > 1 { String::new() } else { id.clone() });
-                    if count > 1 { draft.clear(); }
+                    if count > 1 {
+                        draft.clear();
+                    }
                     let field = inspector_ui::mixed_field(ui, "node-id", draft, false, count > 1);
                     self.source_ui.extra_drafts.push(field.response.id);
                     let value = draft.clone();

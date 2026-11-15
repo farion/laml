@@ -47,9 +47,14 @@ impl Config {
                 .ok_or_else(|| format!("Missing value for {key}"))?;
             match key {
                 "--max-users" => {
-                    max_users = value.to_str().ok_or("Invalid max-users")?.parse::<usize>()
+                    max_users = value
+                        .to_str()
+                        .ok_or("Invalid max-users")?
+                        .parse::<usize>()
                         .map_err(|_| "--max-users must be a positive integer")?;
-                    if max_users == 0 { return Err("--max-users must be positive".into()); }
+                    if max_users == 0 {
+                        return Err("--max-users must be positive".into());
+                    }
                 }
                 "--workspace" => workspace = Some(PathBuf::from(value)),
                 "--assets" => assets = Some(PathBuf::from(value)),
@@ -82,20 +87,31 @@ impl Config {
         if browser && (limits || parallelism.is_some()) {
             return Err("--limits and --parallelism apply only to --workspace mode; browser mode uses --max-users".into());
         }
-        let assets = std::fs::canonicalize(assets.unwrap_or_else(|| PathBuf::from("target/editor-web")))
-            .map_err(|_| "Web assets directory does not exist; specify --assets DIR")?;
+        let assets =
+            std::fs::canonicalize(assets.unwrap_or_else(|| PathBuf::from("target/editor-web")))
+                .map_err(|_| "Web assets directory does not exist; specify --assets DIR")?;
         let (workspace, state) = if let Some(workspace) = workspace {
-            let workspace = std::fs::canonicalize(workspace).map_err(|_| "Workspace does not exist")?;
-            if workspace.parent().is_none() { return Err("Choose a workspace, not a filesystem root".into()); }
-            let state = state.ok_or("Workspace mode requires --state-dir DIR outside the workspace")?;
+            let workspace =
+                std::fs::canonicalize(workspace).map_err(|_| "Workspace does not exist")?;
+            if workspace.parent().is_none() {
+                return Err("Choose a workspace, not a filesystem root".into());
+            }
+            let state =
+                state.ok_or("Workspace mode requires --state-dir DIR outside the workspace")?;
             private_dir(&state)?;
-            let state = std::fs::canonicalize(state).map_err(|_| "Could not resolve host state directory")?;
-            if state.starts_with(&workspace) || workspace.starts_with(&state) || state.starts_with(&assets) {
+            let state = std::fs::canonicalize(state)
+                .map_err(|_| "Could not resolve host state directory")?;
+            if state.starts_with(&workspace)
+                || workspace.starts_with(&state)
+                || state.starts_with(&assets)
+            {
                 return Err("Keep host state outside workspace and public assets".into());
             }
             (workspace, state)
         } else {
-            if state.is_some() { return Err("--state-dir is only used with --workspace; browser mode stores no user data on the server".into()); }
+            if state.is_some() {
+                return Err("--state-dir is only used with --workspace; browser mode stores no user data on the server".into());
+            }
             (PathBuf::new(), PathBuf::new())
         };
         Ok(Self {
@@ -160,10 +176,14 @@ mod tests {
         let mut explicit = args.clone();
         explicit.extend(["--max-users".into(), "3".into()]);
         assert_eq!(Config::parse(&explicit).unwrap().max_users, 3);
-        explicit.pop(); explicit.push("0".into());
+        explicit.pop();
+        explicit.push("0".into());
         assert!(Config::parse(&explicit).is_err());
         let mut rejected = args;
-        rejected.extend(["--state-dir".into(), dir.path().join("state").into_os_string()]);
+        rejected.extend([
+            "--state-dir".into(),
+            dir.path().join("state").into_os_string(),
+        ]);
         assert!(Config::parse(&rejected).is_err());
         assert!(!dir.path().join("state").exists());
     }

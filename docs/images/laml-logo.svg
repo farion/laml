@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="240" viewBox="0 0 1560 480" role="img" aria-labelledby="title desc">
+  <title id="title">LAML</title>
+  <desc id="desc">LAML wordmark. The first L connects to a small diagram node.</desc>
+  <g fill="#0b1f27">
+  <path d="M32 40h68v334h138v58H32Z"/>
+  <path fill-rule="evenodd" d="M496 40h74l146 392h-72l-38-104H462l-38 104h-72Zm38 76-52 154h104Z"/>
+  <path d="M792 40h104l98 310 98-310h104v392h-66V102l-104 330h-64L858 102v330h-66Z"/>
+  <path d="M1284 40h68v334h176v58h-244Z"/>
+  </g>
+  <path d="M238 403h28" fill="none" stroke="#438c89" stroke-width="10"/>
+  <path d="M266 378h50v50h-50Z" fill="none" stroke="#438c89" stroke-width="10"/>
+</svg>

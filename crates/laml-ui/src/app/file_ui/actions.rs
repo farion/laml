@@ -99,7 +99,9 @@ impl Editor {
         self.file = FileState::new(path, &baseline);
         self.document.replace_loaded(baseline);
         let _ = self.document.replace_text(record.source.clone());
-        if self.file.path.is_none() { self.document.mark_unsaved(); }
+        if self.file.path.is_none() {
+            self.document.mark_unsaved();
+        }
         self.reset_view(ctx);
         if self.file.path.is_none() {
             self.recovery.origin = record.path.clone();
@@ -123,7 +125,10 @@ impl Editor {
     }
     pub(in crate::app) fn save_file(&mut self, ctx: &egui::Context) {
         #[cfg(target_arch = "wasm32")]
-        if laml_ui::services::browser_mode() { self.download_laml(); return; }
+        if laml_ui::services::browser_mode() {
+            self.download_laml();
+            return;
+        }
         if self.file_ui.busy() {
             return;
         }

@@ -216,9 +216,16 @@ fn relation_alignments(
             // takes priority over the diagram-wide direction; this applies to
             // generic nodes as well as object links and either flow direction.
             let separation_axis = constraints::authored_relation_axis(diagram, &from.id, &to.id)
-                .unwrap_or_else(|| if matches!(diagram.settings.direction,
-                    FlowDirection::LeftToRight | FlowDirection::RightToLeft
-                ) { Axis::Horizontal } else { Axis::Vertical });
+                .unwrap_or(
+                    if matches!(
+                        diagram.settings.direction,
+                        FlowDirection::LeftToRight | FlowDirection::RightToLeft
+                    ) {
+                        Axis::Horizontal
+                    } else {
+                        Axis::Vertical
+                    },
+                );
             let stacked = separation_axis == Axis::Vertical;
             let x_center = |node: &BoxNode| node.x + node.width / 2.0;
             Some(ScopedAlignment {

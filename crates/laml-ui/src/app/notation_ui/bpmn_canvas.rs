@@ -23,17 +23,28 @@ struct Form {
 }
 fn point(rect: egui::Rect, bounds: (f64, f64, f64, f64), x: f64, y: f64) -> egui::Pos2 {
     let scale = f64::from(rect.width()) / (bounds.2 - bounds.0);
-    rect.min + egui::vec2(((x - bounds.0) * scale) as f32, ((y - bounds.1) * scale) as f32)
+    rect.min
+        + egui::vec2(
+            ((x - bounds.0) * scale) as f32,
+            ((y - bounds.1) * scale) as f32,
+        )
 }
 fn plus_at(r: &Region) -> (f64, f64) {
     if !r.path.is_empty() {
-        let length: f64 = r.path.windows(2).map(|p| (p[1].0 - p[0].0).hypot(p[1].1 - p[0].1)).sum();
+        let length: f64 = r
+            .path
+            .windows(2)
+            .map(|p| (p[1].0 - p[0].0).hypot(p[1].1 - p[0].1))
+            .sum();
         let mut rest = length / 2.0;
         for pair in r.path.windows(2) {
             let len = (pair[1].0 - pair[0].0).hypot(pair[1].1 - pair[0].1);
             if rest <= len && len > 0.0 {
                 let t = rest / len;
-                return (pair[0].0 + t * (pair[1].0 - pair[0].0), pair[0].1 + t * (pair[1].1 - pair[0].1));
+                return (
+                    pair[0].0 + t * (pair[1].0 - pair[0].0),
+                    pair[0].1 + t * (pair[1].1 - pair[0].1),
+                );
             }
             rest -= len;
         }
@@ -57,7 +68,11 @@ fn near(r: &Region, p: egui::Pos2, rect: egui::Rect, bounds: (f64, f64, f64, f64
         let a = point(rect, bounds, v[0].0, v[0].1);
         let b = point(rect, bounds, v[1].0, v[1].1);
         let d = b - a;
-        let t = if d.length_sq() < 0.01 { 0.0 } else { ((p - a).dot(d) / d.length_sq()).clamp(0.0, 1.0) };
+        let t = if d.length_sq() < 0.01 {
+            0.0
+        } else {
+            ((p - a).dot(d) / d.length_sq()).clamp(0.0, 1.0)
+        };
         p.distance(a + t * d) < 10.0
     })
 }
@@ -68,7 +83,10 @@ impl Editor {
             || !self.can_edit_visually()
             || ui.input(|i| i.key_pressed(egui::Key::Escape))
         {
-            self.notation_ui.bpmn = State { revision: Some(revision), ..Default::default() };
+            self.notation_ui.bpmn = State {
+                revision: Some(revision),
+                ..Default::default()
+            };
         }
         if !self.can_edit_visually() {
             return false;
@@ -84,12 +102,18 @@ impl Editor {
         };
         let bounds = preview.bounds;
         let regions = &preview.regions;
-        let pointer = ui.input(|i| i.pointer.hover_pos()).filter(|p| ui.clip_rect().contains(*p));
+        let pointer = ui
+            .input(|i| i.pointer.hover_pos())
+            .filter(|p| ui.clip_rect().contains(*p));
         if !self.notation_ui.bpmn.menu_open {
             let retained = self.notation_ui.bpmn.anchor.as_ref().is_some_and(|r| {
                 let (x, y) = plus_at(r);
                 let at = point(rect, bounds, x, y)
-                    + if r.kind == "node" { egui::vec2(15.0, 0.0) } else { egui::Vec2::ZERO };
+                    + if r.kind == "node" {
+                        egui::vec2(15.0, 0.0)
+                    } else {
+                        egui::Vec2::ZERO
+                    };
                 pointer.is_some_and(|p| p.distance(at) < 22.0)
             });
             if !retained {
@@ -105,9 +129,9 @@ impl Editor {
                                     "lane" => 2,
                                     _ => 3,
                                 };
-                                rank(a)
-                                    .cmp(&rank(b))
-                                    .then_with(|| (a.width * a.height).total_cmp(&(b.width * b.height)))
+                                rank(a).cmp(&rank(b)).then_with(|| {
+                                    (a.width * a.height).total_cmp(&(b.width * b.height))
+                                })
                             })
                             .cloned()
                     })
@@ -128,18 +152,25 @@ impl Editor {
         };
         let (x, y) = plus_at(&anchor);
         let center = point(rect, bounds, x, y)
-            + if anchor.kind == "node" { egui::vec2(15.0, 0.0) } else { egui::Vec2::ZERO };
+            + if anchor.kind == "node" {
+                egui::vec2(15.0, 0.0)
+            } else {
+                egui::Vec2::ZERO
+            };
         let response = ui
             .push_id(("bpmn-plus", self.id), |ui| {
                 ui.put(
                     egui::Rect::from_center_size(center, egui::Vec2::splat(24.0)),
-                    egui::Button::new(egui::RichText::new(egui_phosphor::regular::PLUS)
-                        .font(egui::FontId::new(16.0, egui::FontFamily::Name("phosphor".into())))).corner_radius(12),
+                    egui::Button::new(egui::RichText::new(egui_phosphor::regular::PLUS).font(
+                        egui::FontId::new(16.0, egui::FontFamily::Name("phosphor".into())),
+                    ))
+                    .corner_radius(12),
                 )
             })
             .inner;
-        let owned =
-            response.hovered() || response.is_pointer_button_down_on() || self.notation_ui.bpmn.menu_open;
+        let owned = response.hovered()
+            || response.is_pointer_button_down_on()
+            || self.notation_ui.bpmn.menu_open;
         let popup = egui::Popup::menu(&response);
         self.notation_ui.bpmn.menu_open = popup.is_open();
         let Ok(doc) = laml::bpmn::parse(self.document.source()) else {
@@ -219,7 +250,9 @@ impl Editor {
             }
         });
         if let Some(action) = chosen {
-            let ty = self.bpmn_initial_type(&action).unwrap_or_else(|| "task".into());
+            let ty = self
+                .bpmn_initial_type(&action)
+                .unwrap_or_else(|| "task".into());
             self.notation_ui.bpmn.form = Some(Form {
                 action,
                 ty,
@@ -247,13 +280,23 @@ impl Editor {
             .map(|(key, _)| *key)
             .chain(std::iter::once("subprocess"))
             .find(|ty| {
-                edit::bpmn_inline::create(self.document.source(), action, ty, &fresh, "New element", "")
-                    .is_ok()
+                edit::bpmn_inline::create(
+                    self.document.source(),
+                    action,
+                    ty,
+                    &fresh,
+                    "New element",
+                    "",
+                )
+                .is_ok()
             })
             .map(str::to_owned)
     }
     fn bpmn_fresh_id(&self) -> String {
-        (1..).map(|i| format!("Element{i}")).find(|id| !self.document.source().contains(id)).unwrap()
+        (1..)
+            .map(|i| format!("Element{i}"))
+            .find(|id| !self.document.source().contains(id))
+            .unwrap()
     }
     pub(in crate::app) fn bpmn_inline_window(&mut self, ctx: &egui::Context) {
         let Some(mut form) = self.notation_ui.bpmn.form.take() else {
@@ -305,12 +348,18 @@ impl Editor {
                     });
             }
             ui.label("ID");
-            self.source_ui.extra_drafts.push(ui.text_edit_singleline(&mut form.id).id);
+            self.source_ui
+                .extra_drafts
+                .push(ui.text_edit_singleline(&mut form.id).id);
             ui.label("Label");
-            self.source_ui.extra_drafts.push(ui.text_edit_singleline(&mut form.label).id);
+            self.source_ui
+                .extra_drafts
+                .push(ui.text_edit_singleline(&mut form.label).id);
             if matches!(form.action, Action::Successor(_)) {
                 ui.label("Flow label");
-                self.source_ui.extra_drafts.push(ui.text_edit_singleline(&mut form.flow_label).id);
+                self.source_ui
+                    .extra_drafts
+                    .push(ui.text_edit_singleline(&mut form.flow_label).id);
             }
             if matches!(form.action, Action::Boundary(_, _)) {
                 ui.label(format!("Creates outgoing target: {}Target", form.id));

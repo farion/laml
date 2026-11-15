@@ -25,7 +25,11 @@ impl Default for State {
             }
         }
         let selected = discovery.records.iter().map(|r| r.file.clone()).collect();
-        let details = discovery.records.iter().map(|r| (r.file.clone(), details::Details::new(&r.source))).collect();
+        let details = discovery
+            .records
+            .iter()
+            .map(|r| (r.file.clone(), details::Details::new(&r.source)))
+            .collect();
         let open = !discovery.records.is_empty() || discovery.error.is_some();
         let now = Instant::now();
         Self {
@@ -50,7 +54,8 @@ impl State {
                 continue;
             }
             self.selected.insert(record.file.clone());
-            self.details.insert(record.file.clone(), details::Details::new(&record.source));
+            self.details
+                .insert(record.file.clone(), details::Details::new(&record.source));
             self.discovery.records.push(record);
             added = true;
         }
@@ -59,7 +64,12 @@ impl State {
         }
     }
     fn chosen(&self) -> Vec<Record> {
-        self.discovery.records.iter().filter(|r| self.selected.contains(&r.file)).cloned().collect()
+        self.discovery
+            .records
+            .iter()
+            .filter(|r| self.selected.contains(&r.file))
+            .cloned()
+            .collect()
     }
     fn remove(&mut self, file: &PathBuf) {
         self.handled.insert(file.clone());
@@ -74,25 +84,51 @@ impl State {
 impl Workspace {
     pub(super) fn recovery_button(&mut self, ui: &mut egui::Ui) {
         let count = self.recovery.discovery.records.len();
-        if count == 0 { return; }
-        let badge = (count > 0).then(|| ui.painter().layout_no_wrap(count.to_string(),
-            egui::FontId::new(10.0, egui::FontFamily::Name("bold".into())), egui::Color32::WHITE));
-        let badge_width = badge.as_ref().map_or(0.0, |text| (text.size().x + 8.0).max(16.0));
+        if count == 0 {
+            return;
+        }
+        let badge = (count > 0).then(|| {
+            ui.painter().layout_no_wrap(
+                count.to_string(),
+                egui::FontId::new(10.0, egui::FontFamily::Name("bold".into())),
+                egui::Color32::WHITE,
+            )
+        });
+        let badge_width = badge
+            .as_ref()
+            .map_or(0.0, |text| (text.size().x + 8.0).max(16.0));
         let width = (badge_width + 24.0).max(40.0);
         let label = format!("Restore unsaved work ({count})");
-        let response = ui.add_sized([width, 32.0], egui::Button::new(
-            egui::RichText::new(egui_phosphor::regular::CLOCK_COUNTER_CLOCKWISE)
-                .font(egui::FontId::new(19.0, egui::FontFamily::Name("phosphor".into()))))
-            .frame_when_inactive(false));
-        response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, ui.is_enabled(), &label));
+        let response = ui.add_sized(
+            [width, 32.0],
+            egui::Button::new(
+                egui::RichText::new(egui_phosphor::regular::CLOCK_COUNTER_CLOCKWISE).font(
+                    egui::FontId::new(19.0, egui::FontFamily::Name("phosphor".into())),
+                ),
+            )
+            .frame_when_inactive(false),
+        );
+        response
+            .widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, ui.is_enabled(), &label));
         if let Some(text) = badge {
             let rect = egui::Rect::from_min_size(
-                egui::pos2(response.rect.right() - badge_width - 1.0, response.rect.top() + 1.0),
-                egui::vec2(badge_width, 16.0));
-            ui.painter().rect_filled(rect, 8.0, egui::Color32::from_rgb(205, 43, 57));
-            ui.painter().galley(rect.center() - text.size() / 2.0, text, egui::Color32::WHITE);
+                egui::pos2(
+                    response.rect.right() - badge_width - 1.0,
+                    response.rect.top() + 1.0,
+                ),
+                egui::vec2(badge_width, 16.0),
+            );
+            ui.painter()
+                .rect_filled(rect, 8.0, egui::Color32::from_rgb(205, 43, 57));
+            ui.painter().galley(
+                rect.center() - text.size() / 2.0,
+                text,
+                egui::Color32::WHITE,
+            );
         }
-        if response.on_hover_text(label).clicked() { self.recovery.open = true; }
+        if response.on_hover_text(label).clicked() {
+            self.recovery.open = true;
+        }
     }
     #[cfg(target_arch = "wasm32")]
     pub(super) fn recovery_count(&self) -> usize {
@@ -102,7 +138,8 @@ impl Workspace {
         self.poll_recovery_discard();
         // Existing editor instances may already hold initial discovery results.
         for tab in &mut self.tabs {
-            self.recovery.collect(std::mem::take(&mut tab.recovery.records));
+            self.recovery
+                .collect(std::mem::take(&mut tab.recovery.records));
             // Backup/restore-completion failures belong to the live document,
             // not to discovery. Keep them visible in its footer without reopening
             // an empty chooser after Restore.
@@ -175,7 +212,11 @@ impl Workspace {
         }
     }
     pub(super) fn recovery_window(&mut self, ctx: &egui::Context) {
-        if !self.recovery.open || self.closing_all || self.settings_open || self.new_diagram.is_some() {
+        if !self.recovery.open
+            || self.closing_all
+            || self.settings_open
+            || self.new_diagram.is_some()
+        {
             return;
         }
         if self.recovery.confirm_discard {
@@ -186,101 +227,210 @@ impl Workspace {
         let mut restore = false;
         let mut later = false;
         let mut discard = false;
-        let dismissed = dialogs::show(ctx, "workspace-recovery", "Restore unsaved work?", 520.0, |ui| {
-            if self.recovery.discovery.records.is_empty() {
-                ui.label("No unsaved work to restore.");
-            } else {
-                ui.label("Choose the drafts you want to continue working on.");
+        let dismissed = dialogs::show(
+            ctx,
+            "workspace-recovery",
+            "Restore unsaved work?",
+            520.0,
+            |ui| {
+                if self.recovery.discovery.records.is_empty() {
+                    ui.label("No unsaved work to restore.");
+                } else {
+                    ui.label("Choose the drafts you want to continue working on.");
+                    ui.add_space(8.0);
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            egui::RichText::new(format!(
+                                "{} of {} selected",
+                                self.recovery.selected.len(),
+                                self.recovery.discovery.records.len()
+                            ))
+                            .strong(),
+                        );
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if ui
+                                .add_enabled(!busy, egui::Button::new("Select none"))
+                                .clicked()
+                            {
+                                self.recovery.selected.clear();
+                            }
+                            if ui
+                                .add_enabled(!busy, egui::Button::new("Select all"))
+                                .clicked()
+                            {
+                                self.recovery.selected = self
+                                    .recovery
+                                    .discovery
+                                    .records
+                                    .iter()
+                                    .map(|r| r.file.clone())
+                                    .collect();
+                            }
+                        });
+                    });
+                    ui.add_space(4.0);
+                    egui::ScrollArea::vertical()
+                        .max_height(320.0)
+                        .show(ui, |ui| {
+                            for (index, record) in
+                                self.recovery.discovery.records.iter().enumerate()
+                            {
+                                ui.push_id(&record.file, |ui| {
+                                    let mut selected =
+                                        self.recovery.selected.contains(&record.file);
+                                    let name = record
+                                        .path
+                                        .as_ref()
+                                        .and_then(|p| p.file_name())
+                                        .map(|n| n.to_string_lossy().into_owned())
+                                        .unwrap_or_else(|| {
+                                            format!("Untitled diagram {}", index + 1)
+                                        });
+                                    let fill = if selected {
+                                        ui.visuals().selection.bg_fill.gamma_multiply(0.22)
+                                    } else {
+                                        ui.visuals().faint_bg_color
+                                    };
+                                    egui::Frame::new()
+                                        .fill(fill)
+                                        .corner_radius(6)
+                                        .inner_margin(egui::Margin {
+                                            left: 12,
+                                            right: 12,
+                                            top: 6,
+                                            bottom: 8,
+                                        })
+                                        .stroke(egui::Stroke::new(
+                                            1.0,
+                                            if selected {
+                                                ui.visuals()
+                                                    .selection
+                                                    .stroke
+                                                    .color
+                                                    .gamma_multiply(0.6)
+                                            } else {
+                                                ui.visuals().widgets.noninteractive.bg_stroke.color
+                                            },
+                                        ))
+                                        .show(ui, |ui| {
+                                            ui.set_width(ui.available_width());
+                                            ui.spacing_mut().item_spacing.y = 3.0;
+                                            ui.add_enabled(
+                                                !busy,
+                                                egui::Checkbox::new(
+                                                    &mut selected,
+                                                    egui::RichText::new(name).size(16.0).strong(),
+                                                ),
+                                            );
+                                            ui.horizontal_top(|ui| {
+                                                let inset = ui.spacing().icon_width
+                                                    + ui.spacing().icon_spacing
+                                                    - ui.spacing().item_spacing.x;
+                                                ui.add_space(inset.max(0.0));
+                                                ui.vertical(|ui| {
+                                                    if let Some(detail) =
+                                                        self.recovery.details.get(&record.file)
+                                                    {
+                                                        ui.horizontal_wrapped(|ui| {
+                                                            ui.label(
+                                                                egui::RichText::new(&detail.kind)
+                                                                    .size(13.0)
+                                                                    .strong(),
+                                                            );
+                                                            ui.label(
+                                                                egui::RichText::new(format!(
+                                                                    "· {}",
+                                                                    detail.count
+                                                                ))
+                                                                .size(12.0)
+                                                                .weak(),
+                                                            );
+                                                        });
+                                                        ui.add(
+                                                            egui::Label::new(
+                                                                egui::RichText::new(
+                                                                    &detail.contents,
+                                                                )
+                                                                .size(12.0),
+                                                            )
+                                                            .wrap(),
+                                                        );
+                                                    }
+                                                    if let Some(parent) = record
+                                                        .path
+                                                        .as_ref()
+                                                        .and_then(|p| p.parent())
+                                                        .filter(|p| !p.as_os_str().is_empty())
+                                                    {
+                                                        ui.add(
+                                                            egui::Label::new(
+                                                                egui::RichText::new(
+                                                                    parent.display().to_string(),
+                                                                )
+                                                                .size(11.0)
+                                                                .weak(),
+                                                            )
+                                                            .wrap(),
+                                                        );
+                                                    }
+                                                });
+                                            });
+                                        });
+                                    if selected {
+                                        self.recovery.selected.insert(record.file.clone());
+                                    } else {
+                                        self.recovery.selected.remove(&record.file);
+                                    }
+                                    ui.add_space(2.0);
+                                });
+                            }
+                        });
+                }
+                if let Some(error) = &self.recovery.discovery.error {
+                    command_errors::details(ui, error);
+                }
+                ui.add_space(12.0);
+                if busy {
+                    ui.horizontal(|ui| {
+                        ui.spinner();
+                        ui.label("Discarding selected changes…");
+                    });
+                }
+                ui.separator();
                 ui.add_space(8.0);
                 ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new(format!("{} of {} selected",
-                        self.recovery.selected.len(), self.recovery.discovery.records.len())).strong());
+                    if !self.recovery.discovery.records.is_empty() {
+                        discard = ui
+                            .add_enabled(
+                                !busy && !self.recovery.selected.is_empty(),
+                                egui::Button::new("Discard selected…"),
+                            )
+                            .clicked();
+                    }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.add_enabled(!busy, egui::Button::new("Select none")).clicked() {
-                            self.recovery.selected.clear();
+                        if !self.recovery.discovery.records.is_empty() {
+                            restore = ui
+                                .add_enabled(
+                                    !busy && !self.recovery.selected.is_empty(),
+                                    egui::Button::new(format!(
+                                        "Restore ({})",
+                                        self.recovery.selected.len()
+                                    ))
+                                    .fill(ui.visuals().selection.bg_fill),
+                                )
+                                .clicked();
                         }
-                        if ui.add_enabled(!busy, egui::Button::new("Select all")).clicked() {
-                            self.recovery.selected = self.recovery.discovery.records.iter().map(|r| r.file.clone()).collect();
-                        }
+                        later = ui
+                            .button(if self.recovery.discovery.records.is_empty() {
+                                "Close"
+                            } else {
+                                "Not now"
+                            })
+                            .clicked();
                     });
                 });
-                ui.add_space(4.0);
-                egui::ScrollArea::vertical().max_height(320.0).show(ui, |ui| {
-                    for (index, record) in self.recovery.discovery.records.iter().enumerate() {
-                        ui.push_id(&record.file, |ui| {
-                            let mut selected = self.recovery.selected.contains(&record.file);
-                            let name = record.path.as_ref().and_then(|p| p.file_name())
-                                .map(|n| n.to_string_lossy().into_owned())
-                                .unwrap_or_else(|| format!("Untitled diagram {}", index + 1));
-                            let fill = if selected { ui.visuals().selection.bg_fill.gamma_multiply(0.22) }
-                                else { ui.visuals().faint_bg_color };
-                            egui::Frame::new().fill(fill).corner_radius(6)
-                                .inner_margin(egui::Margin { left: 12, right: 12, top: 6, bottom: 8 })
-                                .stroke(egui::Stroke::new(1.0, if selected {
-                                    ui.visuals().selection.stroke.color.gamma_multiply(0.6)
-                                } else { ui.visuals().widgets.noninteractive.bg_stroke.color }))
-                                .show(ui, |ui| {
-                                    ui.set_width(ui.available_width());
-                                    ui.spacing_mut().item_spacing.y = 3.0;
-                                    ui.add_enabled(!busy, egui::Checkbox::new(&mut selected,
-                                        egui::RichText::new(name).size(16.0).strong()));
-                                    ui.horizontal_top(|ui| {
-                                        let inset = ui.spacing().icon_width + ui.spacing().icon_spacing
-                                            - ui.spacing().item_spacing.x;
-                                        ui.add_space(inset.max(0.0));
-                                        ui.vertical(|ui| {
-                                            if let Some(detail) = self.recovery.details.get(&record.file) {
-                                                ui.horizontal_wrapped(|ui| {
-                                                    ui.label(egui::RichText::new(&detail.kind).size(13.0).strong());
-                                                    ui.label(egui::RichText::new(format!("· {}", detail.count)).size(12.0).weak());
-                                                });
-                                                ui.add(egui::Label::new(egui::RichText::new(&detail.contents).size(12.0)).wrap());
-                                            }
-                                            if let Some(parent) = record.path.as_ref().and_then(|p| p.parent())
-                                                .filter(|p| !p.as_os_str().is_empty()) {
-                                                ui.add(egui::Label::new(egui::RichText::new(parent.display().to_string())
-                                                    .size(11.0).weak()).wrap());
-                                            }
-                                        });
-                                    });
-                                });
-                            if selected { self.recovery.selected.insert(record.file.clone()); }
-                            else { self.recovery.selected.remove(&record.file); }
-                            ui.add_space(2.0);
-                        });
-                    }
-                });
-
-            }
-            if let Some(error) = &self.recovery.discovery.error {
-                command_errors::details(ui, error);
-            }
-            ui.add_space(12.0);
-            if busy {
-                ui.horizontal(|ui| {
-                    ui.spinner();
-                    ui.label("Discarding selected changes…");
-                });
-            }
-            ui.separator();
-            ui.add_space(8.0);
-            ui.horizontal(|ui| {
-                if !self.recovery.discovery.records.is_empty() {
-                    discard = ui.add_enabled(!busy && !self.recovery.selected.is_empty(),
-                        egui::Button::new("Discard selected…")).clicked();
-                }
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if !self.recovery.discovery.records.is_empty() {
-                        restore = ui.add_enabled(!busy && !self.recovery.selected.is_empty(),
-                            egui::Button::new(format!("Restore ({})", self.recovery.selected.len()))
-                                .fill(ui.visuals().selection.bg_fill)).clicked();
-                    }
-                    later = ui.button(if self.recovery.discovery.records.is_empty() {
-                        "Close"
-                    } else { "Not now" }).clicked();
-                });
-            });
-        });
+            },
+        );
         if dismissed || later {
             self.recovery.open = false;
         }
@@ -294,15 +444,24 @@ impl Workspace {
     fn recovery_discard_window(&mut self, ctx: &egui::Context) {
         let mut discard = false;
         let mut cancel = false;
-        let dismissed = dialogs::show(ctx, "discard-unsaved-work", "Discard unsaved changes?", 440.0, |ui| {
-            ui.label("Discard these unsaved changes? Saved files remain unchanged.");
-            ui.label(format!("Selected diagrams: {}", self.recovery.selected.len()));
-            ui.add_space(12.0);
-            ui.horizontal(|ui| {
-                discard = ui.button("Discard changes").clicked();
-                cancel = ui.button("Cancel").clicked();
-            });
-        });
+        let dismissed = dialogs::show(
+            ctx,
+            "discard-unsaved-work",
+            "Discard unsaved changes?",
+            440.0,
+            |ui| {
+                ui.label("Discard these unsaved changes? Saved files remain unchanged.");
+                ui.label(format!(
+                    "Selected diagrams: {}",
+                    self.recovery.selected.len()
+                ));
+                ui.add_space(12.0);
+                ui.horizontal(|ui| {
+                    discard = ui.button("Discard changes").clicked();
+                    cancel = ui.button("Cancel").clicked();
+                });
+            },
+        );
         if discard {
             self.discard_recovery();
         }

@@ -42,7 +42,10 @@ impl Cache {
         }
         let owner = (stamp.session, stamp.document);
         let current = self.contexts.get(&owner).is_some_and(|c| {
-            c.presentation == presentation && c.source == source && c.address == address && c.revision == stamp.revision
+            c.presentation == presentation
+                && c.source == source
+                && c.address == address
+                && c.revision == stamp.revision
         });
         if !current {
             // Bound retained geometry as well as owner count; no unbounded gesture history.

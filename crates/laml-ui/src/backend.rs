@@ -74,7 +74,11 @@ pub trait Backend: Send + Sync + Debug {
     /// Reuse a server-owned preview only when node/layout inputs are unchanged.
     /// Backends without incremental compilation retain the full compiler path.
     fn compile_relations(
-        &self, source: &str, path: &Path, presentation: Presentation, previous: &Preview,
+        &self,
+        source: &str,
+        path: &Path,
+        presentation: Presentation,
+        previous: &Preview,
     ) -> Result<Preview, Diagnostic> {
         let _ = previous;
         self.compile(source, path, presentation)

@@ -23,10 +23,16 @@ pub(super) fn show(ui: &mut egui::Ui, editor: &Editor) {
         }
     });
     #[cfg(target_arch = "wasm32")]
-    let connection = if laml_ui::services::browser_mode() { crate::browser_storage::connection_status() } else { String::new() };
+    let connection = if laml_ui::services::browser_mode() {
+        crate::browser_storage::connection_status()
+    } else {
+        String::new()
+    };
     #[cfg(not(target_arch = "wasm32"))]
     let connection = String::new();
-    let text = if !connection.is_empty() { &connection } else if let Some(error) = recovery_error.as_deref() {
+    let text = if !connection.is_empty() {
+        &connection
+    } else if let Some(error) = recovery_error.as_deref() {
         error
     } else if preview_busy {
         "Updating preview…"
@@ -42,9 +48,16 @@ pub(super) fn show(ui: &mut egui::Ui, editor: &Editor) {
             })
     };
     if busy {
-        ui.add(egui::Spinner::new().size(14.0).color(appearance::color(ui.ctx(), appearance::TEXT)));
+        ui.add(
+            egui::Spinner::new()
+                .size(14.0)
+                .color(appearance::color(ui.ctx(), appearance::TEXT)),
+        );
     }
-    let color = if !connection.is_empty() || recovery_error.is_some() || (editor.error.is_some() && !preview_busy) {
+    let color = if !connection.is_empty()
+        || recovery_error.is_some()
+        || (editor.error.is_some() && !preview_busy)
+    {
         egui::Color32::LIGHT_RED
     } else {
         appearance::color(ui.ctx(), appearance::TEXT)

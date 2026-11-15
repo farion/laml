@@ -214,7 +214,11 @@ impl Editor {
     }
     fn select_source_line(&mut self, line: usize) {
         if self.specialized() {
-            let id = self.preview.as_ref().and_then(|p| p.regions.iter().find(|r| r.line == line)).map(|r| r.id.clone());
+            let id = self
+                .preview
+                .as_ref()
+                .and_then(|p| p.regions.iter().find(|r| r.line == line))
+                .map(|r| r.id.clone());
             if laml_ui::notation_edit::record(self.document.source(), line).is_ok() {
                 self.notation_ui.selected = Some((line, id, self.document.revision()));
                 self.property_drafts.clear();
@@ -367,13 +371,23 @@ fn highlight(text: &str, normal: egui::Color32) -> LayoutJob {
         };
         let color = if normal.r() < 128 {
             match color {
-                _ if color == egui::Color32::from_rgb(130, 150, 130) => egui::Color32::from_rgb(70, 110, 70),
-                _ if color == egui::Color32::from_rgb(210, 180, 110) => egui::Color32::from_rgb(140, 90, 20),
-                _ if color == egui::Color32::from_rgb(115, 190, 230) => egui::Color32::from_rgb(25, 95, 155),
-                _ if color == egui::Color32::from_rgb(180, 150, 220) => egui::Color32::from_rgb(120, 65, 165),
+                _ if color == egui::Color32::from_rgb(130, 150, 130) => {
+                    egui::Color32::from_rgb(70, 110, 70)
+                }
+                _ if color == egui::Color32::from_rgb(210, 180, 110) => {
+                    egui::Color32::from_rgb(140, 90, 20)
+                }
+                _ if color == egui::Color32::from_rgb(115, 190, 230) => {
+                    egui::Color32::from_rgb(25, 95, 155)
+                }
+                _ if color == egui::Color32::from_rgb(180, 150, 220) => {
+                    egui::Color32::from_rgb(120, 65, 165)
+                }
                 _ => color,
             }
-        } else { color };
+        } else {
+            color
+        };
         job.append(
             &text[start..i],
             0.0,

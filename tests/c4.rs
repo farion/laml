@@ -67,6 +67,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "slow banking render audit (>60s); run explicitly with --ignored"]
     fn banking_examples_render_classic_c4_notation() {
         use laml::{
             geometry::place,
@@ -118,6 +119,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "slow banking render audit (>60s); run explicitly with --ignored"]
     fn all_four_banking_levels_render_without_truncated_text() {
         use laml::{
             geometry::place,

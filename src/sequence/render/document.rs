@@ -1,0 +1,485 @@
+//! Complete compiler rendering with source-linked editor geometry.
+use super::*;
+
+pub fn render_for_editor(
+    diagram: &SequenceDiagram,
+    sheet: &StyleSheet,
+    mode: TextMode,
+) -> Result<(String, Vec<crate::authoring::Region>), String> {
+    let mut regions = Vec::new();
+    let mut effective = sheet.clone();
+    effective.theme = diagram.theme;
+    let sheet = &effective;
+    let (centers, widths, base_canvas_width) = lanes(diagram, sheet)?;
+    let canvas_width =
+        geometry::canvas_width(diagram, sheet, &centers, &widths, base_canvas_width)?;
+    let nested = decompositions::prepare(diagram, sheet)?;
+    let header_height = diagram
+        .participants
+        .iter()
+        .map(|p| {
+            let size = styles::node(sheet, &p.id, &p.classes).font_size;
+            size * 1.25 * head_label(diagram, p).split('\n').count() as f64 + 20.0
+        })
+        .fold(HEADER_HEIGHT, f64::max);
+    let header_bottom = HEADER_Y + header_height;
+    let mut positioned = Vec::new();
+    let mut references = Vec::new();
+    let mut visible_annotations = Vec::new();
+    let mut visible_orders = Vec::new();
+    let mut visible_notes = Vec::new();
+    let mut visible_continuations = Vec::new();
+    let mut visible_decompositions = Vec::new();
+    let mut destructions: Vec<(String, f64)> = Vec::new();
+    let mut branch_starts = Vec::new();
+    let mut event_positions: Vec<(usize, f64)> = Vec::new();
+    let mut drawn_frames: Vec<DrawnFrame> = Vec::new();
+    let mut frames: Vec<OpenFrame> = Vec::new();
+    let mut bars: Vec<DrawnExecution> = Vec::new();
+    let mut open: Vec<OpenExecution> = Vec::new();
+    let mut y = header_bottom + 44.0;
+    let mut previous_line = 0;
+    for event in &diagram.events {
+        let line = authoring::event_line(event);
+        if line != previous_line {
+            if previous_line != 0 {
+                y += 48.0;
+            }
+            previous_line = line;
+        }
+        let event_y = y;
+        match event {
+            Event::Decomposition { index, .. } => {
+                visible_decompositions.push((*index, y));
+                y += nested
+                    .get(*index)
+                    .ok_or("missing inline decomposition")?
+                    .height
+                    + 24.0;
+            }
+            Event::Continuation(cont) => {
+                let placement = diagram
+                    .continuation_layout
+                    .iter()
+                    .find(|p| p.id == cont.id)
+                    .ok_or("continuation has no placement")?;
+                y += placement.gap;
+                visible_continuations.push((cont, y));
+                y += continuations::height(cont, sheet);
+            }
+            Event::Note(note) => {
+                let placement = diagram
+                    .note_layout
+                    .iter()
+                    .find(|p| p.note == note.id)
+                    .ok_or("note has no placement")?;
+                if placement.side == crate::sequence::notes::NoteSide::Over {
+                    y += placement.gap;
+                }
+                visible_notes.push((note, y));
+                y += notes::height(note, sheet);
+            }
+            Event::Annotation(annotation) => {
+                y = annotations::reserve_row(
+                    diagram,
+                    annotation,
+                    &visible_annotations,
+                    &event_positions,
+                    sheet,
+                    y,
+                )?;
+                visible_annotations.push(annotation);
+            }
+            Event::Ordering(rule) => visible_orders.push(rule),
+            Event::Destroy { participant, .. } => {
+                destructions.push((participant.clone(), y));
+                let mut i = 0;
+                while i < open.len() {
+                    if open[i].participant == *participant {
+                        bars.push(open.remove(i).finish(y, Some(line)));
+                    } else {
+                        i += 1;
+                    }
+                }
+            }
+            Event::FrameStart {
+                operator,
+                id,
+                guard,
+                ..
+            } => {
+                frames.push(OpenFrame {
+                    line,
+                    operator: operator.clone(),
+                    id: id.clone(),
+                    guard: guard.clone(),
+                    top: y - 22.0,
+                    separators: Vec::new(),
+                    incoming_execution: open.clone(),
+                    messages: Vec::new(),
+                });
+                let font =
+                    styles::fragment(sheet, geometry::operator_name(operator), id.as_deref())
+                        .font_size;
+                y += (frames::descriptor_height(font) - 26.0).max(0.0);
+            }
+            Event::FrameBranch { guard, .. } => {
+                let frame = frames.last_mut().ok_or("fragment branch without frame")?;
+                frame.separators.push((guard.clone(), y - 26.0));
+                branch_starts.push(y - 26.0);
+                executions::next_operand(&mut open, &frame.incoming_execution, y - 26.0);
+                let font = styles::fragment(
+                    sheet,
+                    geometry::operator_name(&frame.operator),
+                    frame.id.as_deref(),
+                )
+                .font_size;
+                y += (frames::descriptor_height(font) - 26.0).max(0.0);
+            }
+            Event::FrameEnd { .. } => {
+                let frame = frames.pop().ok_or("fragment end without frame")?;
+                drawn_frames.push(DrawnFrame {
+                    line: frame.line,
+                    operator: frame.operator,
+                    id: frame.id,
+                    guard: frame.guard,
+                    top: frame.top,
+                    bottom: y - 24.0,
+                    separators: frame.separators,
+                    messages: frame.messages,
+                });
+            }
+            Event::Reference { label, .. } => {
+                references.push((label.as_str(), y));
+                y += frames::reference_height(sheet) - 50.0;
+            }
+            Event::Message(m) => {
+                if m.label.is_some() {
+                    let font = styles::message(sheet, m.name.as_deref(), &m.classes).font_size;
+                    y = y.max(header_bottom + font + 20.0);
+                }
+                let lines = m
+                    .label
+                    .as_deref()
+                    .map(|text| text.split('\n').count())
+                    .unwrap_or(1);
+                if lines > 1 {
+                    y += styles::message(sheet, m.name.as_deref(), &m.classes).font_size
+                        * 1.25
+                        * (lines - 1) as f64;
+                }
+                for frame in &mut frames {
+                    frame.messages.push(positioned.len());
+                }
+                positioned.push((m, y));
+                if !event_positions.iter().any(|(at, _)| *at == line) {
+                    event_positions.push((line, y));
+                }
+                if m.from == m.to {
+                    y += 24.0;
+                }
+            }
+            Event::Activate {
+                participant,
+                id,
+                label,
+                ..
+            } => {
+                if !event_positions.iter().any(|(at, _)| *at == line) {
+                    event_positions.push((line, y));
+                }
+                let depth = open
+                    .iter()
+                    .filter(|bar| bar.participant == *participant)
+                    .count();
+                let created_here = diagram
+                    .participants
+                    .iter()
+                    .any(|p| p.id == *participant && p.created_line == Some(line));
+                let from = if created_here {
+                    let incoming = diagram.events.iter().any(|event| {
+                        matches!(event,
+                        Event::Message(m) if m.line == line && m.to == *participant)
+                    });
+                    y + if incoming {
+                        header_height / 2.0
+                    } else {
+                        header_height
+                    }
+                } else {
+                    y
+                };
+                open.push(OpenExecution {
+                    participant: participant.clone(),
+                    line,
+                    id: id.clone(),
+                    label: label.clone(),
+                    from,
+                    depth,
+                });
+                if let Some(label) = label {
+                    let classes = &diagram
+                        .participants
+                        .iter()
+                        .find(|p| p.id == *participant)
+                        .ok_or("unknown execution participant")?
+                        .classes;
+                    let font =
+                        styles::activation(sheet, participant, id.as_deref(), classes).font_size;
+                    let text_height = font * 1.25 * label.split('\n').count() as f64 + 12.0;
+                    y = y.max(from + text_height - 48.0);
+                    y += font * 1.25 * (label.split('\n').count().saturating_sub(1)) as f64;
+                }
+            }
+            Event::Deactivate { participant, .. } => {
+                let index = open
+                    .iter()
+                    .rposition(|bar| bar.participant == *participant)
+                    .ok_or_else(|| format!("unmatched execution for '{participant}'"))?;
+                bars.push(open.remove(index).finish(y, Some(line)));
+            }
+        }
+        if !event_positions.iter().any(|(at, _)| *at == line) {
+            event_positions.push((line, event_y));
+        }
+    }
+    let mut message_anchors = bar_attachments::anchors(
+        diagram,
+        sheet,
+        &centers,
+        &widths,
+        &positioned,
+        &bars,
+        &open,
+        y,
+    )?;
+    for region in &diagram.coregions {
+        let (threshold, delta) = coregions::reorder_region(diagram, region, &mut message_anchors)?;
+        let mut timeline = retime::Shiftables {
+            anchors: &mut message_anchors,
+            frames: &mut drawn_frames,
+            bars: &mut bars,
+            open: &mut open,
+            positions: &mut event_positions,
+            deaths: &mut destructions,
+            branches: &mut branch_starts,
+            decompositions: &mut visible_decompositions,
+            notes: &mut visible_notes,
+            continuations: &mut visible_continuations,
+            references: &mut references,
+            final_y: &mut y,
+        };
+        timeline.expand(region, threshold, delta);
+    }
+    activation_layout::apply(
+        diagram,
+        &mut positioned,
+        &mut message_anchors,
+        &mut bars,
+        &mut open,
+        &mut event_positions,
+        &mut destructions,
+    )?;
+    {
+        let mut timeline = retime::Shiftables {
+            anchors: &mut message_anchors,
+            frames: &mut drawn_frames,
+            bars: &mut bars,
+            open: &mut open,
+            positions: &mut event_positions,
+            deaths: &mut destructions,
+            branches: &mut branch_starts,
+            decompositions: &mut visible_decompositions,
+            notes: &mut visible_notes,
+            continuations: &mut visible_continuations,
+            references: &mut references,
+            final_y: &mut y,
+        };
+        reflow::message_text(
+            diagram,
+            &positioned,
+            &centers,
+            &widths,
+            &mut timeline,
+            sheet,
+        )?;
+    }
+    destruction_layout::apply(diagram, &mut destructions, &mut event_positions, &mut bars)?;
+    activation_layout::verify(diagram, &bars, &open)?;
+    coregions::validate_downward(&message_anchors)?;
+    for frame in &drawn_frames {
+        for &index in &frame.messages {
+            let anchor = &message_anchors[index];
+            if anchor.send.1 < frame.top + 20.0 || anchor.receive.1 > frame.bottom - 8.0 {
+                return Err("mandatory occurrence layout exceeds its fragment frame".into());
+            }
+        }
+    }
+    let bottom = message_anchors
+        .iter()
+        .fold(y, |max, a| max.max(a.send.1).max(a.receive.1))
+        + 48.0;
+    for bar in open {
+        bars.push(bar.finish(bottom - 16.0, None));
+    }
+    bar_attachments::attach(
+        diagram,
+        sheet,
+        &centers,
+        &widths,
+        &bars,
+        &positioned,
+        &mut message_anchors,
+    )?;
+    let mut svg = String::new();
+    writeln!(svg, "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{canvas_width:.2}\" height=\"{bottom:.2}\" viewBox=\"0 0 {canvas_width:.2} {bottom:.2}\">").unwrap();
+    if mode == TextMode::Embedded {
+        let font = base64::engine::general_purpose::STANDARD.encode(FONT);
+        writeln!(svg, "<style>@font-face {{ font-family: 'Inter'; src: url('data:font/otf;base64,{font}') format('opentype'); }}</style>").unwrap();
+    }
+    svg.push_str("<defs><marker id=\"filled\" markerWidth=\"10\" markerHeight=\"8\" refX=\"9\" refY=\"4\" orient=\"auto\" markerUnits=\"userSpaceOnUse\"><path d=\"M0,0 L10,4 L0,8 Z\" fill=\"#20252b\"/></marker><marker id=\"open\" markerWidth=\"10\" markerHeight=\"8\" refX=\"9\" refY=\"4\" orient=\"auto\" markerUnits=\"userSpaceOnUse\"><path d=\"M0,0 L10,4 L0,8\" fill=\"none\" stroke=\"#20252b\" stroke-width=\"1.5\"/></marker></defs>\n");
+    let timeline = lifetimes::Timeline {
+        diagram,
+        positions: &event_positions,
+        deaths: &destructions,
+        branches: &branch_starts,
+        header_height,
+        bottom,
+    };
+    let frame_left = geometry::frame_left(diagram, sheet, &centers, &widths)?;
+    let base_right = centers
+        .last()
+        .zip(widths.last())
+        .map(|(x, w)| x + w / 2.0 + 16.0)
+        .unwrap_or(112.0);
+    let frame_width = frame_right(diagram, frame_left, base_right, sheet)? - frame_left;
+    let reserved_frame_text =
+        text_collision::frame_regions(diagram, sheet, &centers, &widths, &drawn_frames)?;
+    drawn_frames.sort_by(|a, b| {
+        a.top
+            .total_cmp(&b.top)
+            .then_with(|| b.bottom.total_cmp(&a.bottom))
+    });
+    let right = frame_left + frame_width;
+    authoring::regions(
+        &mut regions,
+        diagram,
+        sheet,
+        &centers,
+        &widths,
+        &timeline,
+        &positioned,
+        &message_anchors,
+        &drawn_frames,
+        frame_left,
+        right,
+    )?;
+    for frame in drawn_frames {
+        let (left, right) =
+            geometry::frame_bounds(diagram, sheet, &centers, &widths, &frame, frame_left, right)?;
+        frames::fragment(&mut svg, frame, left, right - left, sheet)?;
+    }
+    lifetimes::draw_lines(&mut svg, sheet, &centers, &timeline)?;
+    authoring::decompositions(
+        &mut regions,
+        diagram,
+        &centers,
+        &nested,
+        &visible_decompositions,
+    );
+    decompositions::draw(
+        &mut svg,
+        diagram,
+        &centers,
+        &nested,
+        &visible_decompositions,
+    )?;
+    bars.sort_by_key(|bar| bar.opened.depth);
+    executions::draw(&mut svg, diagram, sheet, &centers, &bars, &mut regions)?;
+    let mut drawn_gates = Vec::new();
+    for ((m, _), anchor) in positioned.iter().zip(&message_anchors) {
+        messages::draw(
+            &mut svg,
+            sheet,
+            m,
+            anchor,
+            &mut drawn_gates,
+            diagram.allow_diagonal,
+        )?;
+    }
+    coregions::draw(&mut svg, diagram, &centers, &message_anchors, sheet)?;
+    let annotation_regions = annotations::draw(
+        &mut svg,
+        &visible_annotations,
+        &message_anchors,
+        sheet,
+        diagram,
+        &centers,
+        &bars,
+        &positioned,
+        &visible_notes,
+        &visible_continuations,
+        &reserved_frame_text,
+        header_bottom,
+        bottom,
+        canvas_width,
+    )?;
+    order::draw(
+        &mut svg,
+        &visible_orders,
+        &message_anchors,
+        sheet,
+        diagram,
+        &centers,
+        &bars,
+    )?;
+    for (id, at) in &destructions {
+        let x = x_of(diagram, &centers, id)?;
+        writeln!(svg, "<path d=\"M{:.2},{:.2} L{:.2},{:.2} M{:.2},{:.2} L{:.2},{:.2}\" stroke=\"#20252b\" stroke-width=\"2\" fill=\"none\" data-destroy=\"{}\" />",
+            x - 7.0, at - 7.0, x + 7.0, at + 7.0,
+            x - 7.0, at + 7.0, x + 7.0, at - 7.0, escape(id)).unwrap();
+    }
+    for (label, y) in references {
+        let font = styles::fragment(sheet, "ref", None).font_size;
+        let width = (base_right - frame_left).max(label_width_at(label, font)? + 52.0);
+        frames::reference(&mut svg, label, frame_left, y, width, sheet)?;
+    }
+    continuations::draw(&mut svg, diagram, sheet, &centers, &visible_continuations)?;
+    let mut note_obstacles = text_collision::messages(&positioned, &message_anchors, sheet)?;
+    note_obstacles.extend_from_slice(&reserved_frame_text);
+    authoring::annotations(&mut regions, &visible_annotations, &annotation_regions);
+    note_obstacles.extend(annotation_regions);
+    let shapes = text_collision::note_regions(
+        diagram,
+        &message_anchors,
+        &centers,
+        &visible_notes,
+        &visible_continuations,
+        sheet,
+    )?;
+    authoring::notes(
+        &mut regions,
+        &visible_notes,
+        &visible_continuations,
+        &shapes,
+    );
+    note_obstacles.extend_from_slice(&shapes[visible_notes.len()..]);
+    notes::draw(
+        &mut svg,
+        diagram,
+        sheet,
+        &centers,
+        &visible_notes,
+        &message_anchors,
+        &note_obstacles,
+        &shapes[..visible_notes.len()],
+    )?;
+    lifetimes::draw_heads(&mut svg, sheet, &centers, &widths, &timeline)?;
+    svg.push_str("</svg>\n");
+    let svg = if mode == TextMode::Paths {
+        crate::export::outlines(&svg)?
+    } else {
+        svg
+    };
+    Ok((svg, regions))
+}

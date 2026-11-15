@@ -23,7 +23,11 @@ fn qualified(doc: &Bpmn, parent: Option<usize>, source: &str, id: &str) -> Strin
     let all = records(source);
     let mut at = parent;
     while let Some(line) = at {
-        if let Some(n) = doc.nodes.iter().find(|n| n.line == line && n.kind == Kind::Subprocess) {
+        if let Some(n) = doc
+            .nodes
+            .iter()
+            .find(|n| n.line == line && n.kind == Kind::Subprocess)
+        {
             return format!("{}.{id}", n.id);
         }
         if let Some(p) = doc.pools.iter().find(|p| p.line == line) {
@@ -35,7 +39,10 @@ fn qualified(doc: &Bpmn, parent: Option<usize>, source: &str, id: &str) -> Strin
 }
 fn decl(ty: &str, id: &str, label: &str) -> Result<String, String> {
     if ty == "subprocess" {
-        return Ok(format!("subprocess {id}(label={}) {{\n}}", crate::relation_edit::quote(label)));
+        return Ok(format!(
+            "subprocess {id}(label={}) {{\n}}",
+            crate::relation_edit::quote(label)
+        ));
     }
     if !bpmn::TYPES.iter().any(|(key, _)| *key == ty) {
         return Err("Choose a supported BPMN element".into());
@@ -47,7 +54,10 @@ fn decl(ty: &str, id: &str, label: &str) -> Result<String, String> {
     } else {
         format!("{ty} ")
     };
-    Ok(format!("{prefix}{id}(label={})", crate::relation_edit::quote(label)))
+    Ok(format!(
+        "{prefix}{id}(label={})",
+        crate::relation_edit::quote(label)
+    ))
 }
 /// Create a sibling successor, split one exact flow, add scoped content or attach an event.
 pub fn create(
@@ -65,10 +75,18 @@ pub fn create(
         return Err("Enter a single-line flow label".into());
     }
     let doc = laml::bpmn::parse(source)?;
-    let node = |id: &str| doc.nodes.iter().find(|n| n.id == id).ok_or("Missing BPMN element");
+    let node = |id: &str| {
+        doc.nodes
+            .iter()
+            .find(|n| n.id == id)
+            .ok_or("Missing BPMN element")
+    };
     let container = match action {
         Action::Successor(owner) | Action::Boundary(owner, _) => parent(source, node(owner)?)?,
-        Action::Insert(index) => parent(source, node(&doc.edges.get(*index).ok_or("Missing flow")?.from)?)?,
+        Action::Insert(index) => parent(
+            source,
+            node(&doc.edges.get(*index).ok_or("Missing flow")?.from)?,
+        )?,
         Action::Content(line) | Action::Lane(line) => Some(*line),
     };
     let new_id = qualified(&doc, container, source, id);
@@ -77,7 +95,11 @@ pub fn create(
     }
     let label = if label.is_empty() { id } else { label };
     let declaration = decl(ty, id, label)?;
-    let flow_suffix = if flow_label.trim().is_empty() { String::new() } else { format!(" : {flow_label}") };
+    let flow_suffix = if flow_label.trim().is_empty() {
+        String::new()
+    } else {
+        format!(" : {flow_label}")
+    };
     let mut candidate = source.to_owned();
     let body = match action {
         Action::Content(_) => declaration,
@@ -85,7 +107,10 @@ pub fn create(
             if !doc.pools.iter().any(|p| p.line == *line) {
                 return Err("Lanes belong directly to pools".into());
             }
-            format!("lane {id}(label={}) {{\n}}", crate::relation_edit::quote(label))
+            format!(
+                "lane {id}(label={}) {{\n}}",
+                crate::relation_edit::quote(label)
+            )
         }
         Action::Successor(owner) => format!("{declaration}\n{owner} --> {new_id}{flow_suffix}"),
         Action::Boundary(owner, marker) => {
@@ -112,27 +137,37 @@ pub fn create(
             let mut changed = doc.clone();
             changed.edges[*index].to = new_id.clone();
             // Preserve the original label on the original (upstream) flow.
-            let edit = rewrite_line(source, &changed, edge.line, &BTreeSet::new(), &BTreeSet::new(), None)?;
-            candidate = apply(source, &[edit])?;
-            let declaration_line = node(&edge.from)?.line;
-            let mapped_line = crate::relation_edit::remap_line(
+            let mut edit = rewrite_line(
                 source,
-                declaration_line,
-                &crate::graph_edit::difference(source, &candidate),
+                &changed,
+                edge.line,
+                &BTreeSet::new(),
+                &BTreeSet::new(),
+                None,
+            )?;
+            // Keep the new declaration in the exact owner of the inline flow,
+            // before qualified references to it. Rewriting the chain invalidates
+            // the old source-line address, so do this in one replacement.
+            let raw = &source[record(source, edge.line)?.range];
+            let indent = &raw[..raw.len() - raw.trim_start().len()];
+            let nl = crate::element_edit::newline(source);
+            let declaration = declaration
+                .lines()
+                .map(|line| format!("{indent}{line}{nl}"))
+                .collect::<String>();
+            edit.replacement = format!(
+                "{declaration}{}{indent}{new_id} --> {}{nl}",
+                edit.replacement, edge.to
             );
-            let edits = insert(&candidate, "semantics", None, Some(mapped_line), &declaration)?;
-            candidate = apply(&candidate, &edits)?;
-            let mapped = container.map(|l| {
-                crate::relation_edit::remap_line(
-                    source,
-                    l,
-                    &crate::graph_edit::difference(source, &candidate),
-                )
-            });
-            let edits = insert(&candidate, "semantics", mapped, None, &format!("{new_id} --> {}", edge.to))?;
-            candidate = apply(&candidate, &edits)?;
-            candidate =
-                flow_rules(&candidate, &edge.from, &edge.to, &edge.from, &new_id, Some((&new_id, &edge.to)))?;
+            candidate = apply(source, &[edit])?;
+            candidate = flow_rules(
+                &candidate,
+                &edge.from,
+                &edge.to,
+                &edge.from,
+                &new_id,
+                Some((&new_id, &edge.to)),
+            )?;
             return checked(source, candidate);
         }
     };
@@ -145,14 +180,28 @@ pub fn connect(source: &str, from: &str, to: &str, operator: &str) -> Result<Vec
         return Err("Choose a BPMN flow type".into());
     }
     let doc = laml::bpmn::parse(source)?;
-    if ![from, to].iter().all(|id| doc.nodes.iter().any(|n| &n.id == id)) {
+    if ![from, to]
+        .iter()
+        .all(|id| doc.nodes.iter().any(|n| &n.id == id))
+    {
         return Err("Choose two BPMN nodes".into());
     }
-    let edits = insert(source, "semantics", None, None, &format!("{from} {operator} {to}"))?;
+    let edits = insert(
+        source,
+        "semantics",
+        None,
+        None,
+        &format!("{from} {operator} {to}"),
+    )?;
     checked(source, apply(source, &edits)?)
 }
 /// Reconnect by exact edge index, retaining labels, types and attachment intent.
-pub fn reconnect(source: &str, index: usize, from: bool, target: &str) -> Result<Vec<Edit>, String> {
+pub fn reconnect(
+    source: &str,
+    index: usize,
+    from: bool,
+    target: &str,
+) -> Result<Vec<Edit>, String> {
     let mut doc = laml::bpmn::parse(source)?;
     if !doc.nodes.iter().any(|n| n.id == target) {
         return Err("Choose a BPMN node".into());
@@ -169,10 +218,18 @@ pub fn reconnect(source: &str, index: usize, from: bool, target: &str) -> Result
         return Ok(Vec::new());
     }
     // Boundary source syntax defines ownership; moving that source would delete the event.
-    if from && doc.nodes.iter().any(|n| n.id == old_from && n.kind == Kind::Boundary) {
+    if from
+        && doc
+            .nodes
+            .iter()
+            .any(|n| n.id == old_from && n.kind == Kind::Boundary)
+    {
         return Err("Move the owning activity to relocate a boundary event".into());
     }
-    let boundary = doc.nodes.iter().find(|n| n.id == old_from && n.kind == Kind::Boundary);
+    let boundary = doc
+        .nodes
+        .iter()
+        .find(|n| n.id == old_from && n.kind == Kind::Boundary);
     let owner_parent = boundary.map(|n| parent(source, n)).transpose()?.flatten();
     let edge = &doc.edges[index];
     let body = if let Some(n) = boundary {
@@ -196,18 +253,27 @@ pub fn reconnect(source: &str, index: usize, from: bool, target: &str) -> Result
             "{} {op} {}{}",
             edge.from,
             edge.to,
-            edge.label.as_ref().map_or(String::new(), |l| format!(" : {l}"))
+            edge.label
+                .as_ref()
+                .map_or(String::new(), |l| format!(" : {l}"))
         )
     };
     let removed = BTreeSet::from([index]);
     let edit = rewrite_line(source, &doc, line, &BTreeSet::new(), &removed, None)?;
     let mut candidate = apply(source, &[edit])?;
     let mapped = owner_parent.map(|l| {
-        crate::relation_edit::remap_line(source, l, &crate::graph_edit::difference(source, &candidate))
+        crate::relation_edit::remap_line(
+            source,
+            l,
+            &crate::graph_edit::difference(source, &candidate),
+        )
     });
     let edits = insert(&candidate, "semantics", mapped, None, &body)?;
     candidate = apply(&candidate, &edits)?;
-    checked(source, flow_rules(&candidate, &old_from, &old_to, &new_from, &new_to, None)?)
+    checked(
+        source,
+        flow_rules(&candidate, &old_from, &old_to, &new_from, &new_to, None)?,
+    )
 }
 
 fn flow_rules(
@@ -219,7 +285,10 @@ fn flow_rules(
     downstream: Option<(&str, &str)>,
 ) -> Result<String, String> {
     let mut edits = Vec::new();
-    for r in records(source).into_iter().filter(|r| r.section == "layout") {
+    for r in records(source)
+        .into_iter()
+        .filter(|r| r.section == "layout")
+    {
         let Some(rest) = r.heading.strip_prefix("flow[") else {
             continue;
         };
@@ -229,8 +298,9 @@ fn flow_rules(
         let Some((a, b)) = ends.split_once("->") else {
             continue;
         };
-        let matches =
-            |full: &str, short: &str| full == short.trim() || full.ends_with(&format!(".{}", short.trim()));
+        let matches = |full: &str, short: &str| {
+            full == short.trim() || full.ends_with(&format!(".{}", short.trim()))
+        };
         if !matches(from, a) || !matches(to, b) {
             continue;
         }
@@ -257,13 +327,22 @@ fn flow_rules(
             body = if upstream.is_empty() {
                 format!("{indent}{comment}{nl}")
             } else {
-                format!("{indent}flow[{new_from}->{new_to}] : {}{comment}{nl}", upstream.join("; "))
+                format!(
+                    "{indent}flow[{new_from}->{new_to}] : {}{comment}{nl}",
+                    upstream.join("; ")
+                )
             };
             if !properties.is_empty() {
-                body.push_str(&format!("{indent}flow[{a}->{b}] : {}{nl}", properties.join("; ")));
+                body.push_str(&format!(
+                    "{indent}flow[{a}->{b}] : {}{nl}",
+                    properties.join("; ")
+                ));
             }
         }
-        edits.push(Edit { range: r.block, replacement: body });
+        edits.push(Edit {
+            range: r.block,
+            replacement: body,
+        });
     }
     apply(source, &edits)
 }
@@ -285,11 +364,18 @@ mod tests {
     }
     #[test]
     fn successors_and_boundaries_use_owner_scope() {
-        for action in [Action::Successor("P.B".into()), Action::Boundary("P.B".into(), "timer+".into())] {
+        for action in [
+            Action::Successor("P.B".into()),
+            Action::Boundary("P.B".into(), "timer+".into()),
+        ] {
             let edits = create(SOURCE, &action, "task", "Added", "Added", "yes").unwrap();
             let candidate = apply(SOURCE, &edits).unwrap();
             let doc = laml::bpmn::parse(&candidate).unwrap();
-            assert!(doc.nodes.iter().any(|n| n.id == "P.Added" && n.lane.as_deref() == Some("L")));
+            assert!(
+                doc.nodes
+                    .iter()
+                    .any(|n| n.id == "P.Added" && n.lane.as_deref() == Some("L"))
+            );
         }
     }
     #[test]

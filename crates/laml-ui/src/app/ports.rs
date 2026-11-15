@@ -21,8 +21,16 @@ impl Editor {
         let value = first.label.clone();
         let mixed = ports.iter().any(|p| p.label != value);
         let explicit = ports.iter().all(|p| p.explicit);
-        let inherited = ids.iter().any(|id| port_edit::find(&preview.diagram, id).is_some_and(|(n, _)|
-            matches!(n.kind, laml::syntax::NodeKind::ComponentPart | laml::syntax::NodeKind::CompositePart | laml::syntax::NodeKind::CompositeRole)));
+        let inherited = ids.iter().any(|id| {
+            port_edit::find(&preview.diagram, id).is_some_and(|(n, _)| {
+                matches!(
+                    n.kind,
+                    laml::syntax::NodeKind::ComponentPart
+                        | laml::syntax::NodeKind::CompositePart
+                        | laml::syntax::NodeKind::CompositeRole
+                )
+            })
+        });
         let sides: Vec<_> = ids
             .iter()
             .map(|id| {
@@ -88,9 +96,18 @@ impl Editor {
                     let draft = self
                         .property_drafts
                         .entry("port-id".into())
-                        .or_insert_with(|| if ids.len() > 1 { String::new() } else { original.clone() });
-                    if ids.len() > 1 { draft.clear(); }
-                    let field = inspector_ui::mixed_field(ui, "port-id", draft, false, ids.len() > 1);
+                        .or_insert_with(|| {
+                            if ids.len() > 1 {
+                                String::new()
+                            } else {
+                                original.clone()
+                            }
+                        });
+                    if ids.len() > 1 {
+                        draft.clear();
+                    }
+                    let field =
+                        inspector_ui::mixed_field(ui, "port-id", draft, false, ids.len() > 1);
                     self.source_ui.extra_drafts.push(field.response.id);
                     let value = draft.clone();
                     if field.commit && value != original {
@@ -107,7 +124,9 @@ impl Editor {
                     .width(ui.available_width())
                     .selected_text(if chosen == "Mixed" {
                         inspector_ui::mixed_text()
-                    } else { egui::RichText::new(chosen) })
+                    } else {
+                        egui::RichText::new(chosen)
+                    })
                     .show_ui(ui, |ui| {
                         for value in ["auto", "left", "right", "top", "bottom"] {
                             ui.selectable_value(&mut chosen, value, value);

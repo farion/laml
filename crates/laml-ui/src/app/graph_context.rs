@@ -1,24 +1,38 @@
 //! Context picking shares the exact visible-route/label geometry with left-click.
 use super::*;
-use laml_ui::delete_edit::ContainerMode;
 use egui_phosphor::regular::{BOX_ARROW_UP, PLUG, PLUS, TRASH};
+use laml_ui::delete_edit::ContainerMode;
 
 fn action(ui: &mut egui::Ui, enabled: bool, icon: &str, label: &str) -> egui::Response {
-    let color = if enabled { appearance::color(ui.ctx(), appearance::TEXT) } else { appearance::color(ui.ctx(), appearance::MUTED) };
+    let color = if enabled {
+        appearance::color(ui.ctx(), appearance::TEXT)
+    } else {
+        appearance::color(ui.ctx(), appearance::MUTED)
+    };
     let mut text = egui::text::LayoutJob::default();
-    text.append(&format!("{icon}  "), 0.0, egui::TextFormat {
-        font_id: egui::FontId::new(18.0, egui::FontFamily::Name("phosphor".into())),
-        color,
-        ..Default::default()
-    });
-    text.append(label, 0.0, egui::TextFormat {
-        font_id: egui::FontId::proportional(15.0),
-        color,
-        ..Default::default()
-    });
+    text.append(
+        &format!("{icon}  "),
+        0.0,
+        egui::TextFormat {
+            font_id: egui::FontId::new(18.0, egui::FontFamily::Name("phosphor".into())),
+            color,
+            ..Default::default()
+        },
+    );
+    text.append(
+        label,
+        0.0,
+        egui::TextFormat {
+            font_id: egui::FontId::proportional(15.0),
+            color,
+            ..Default::default()
+        },
+    );
     // Natural text width: never stretch the popup to the canvas's available width.
-    ui.add_enabled(enabled, egui::Button::new(text)
-        .min_size(egui::vec2(0.0, 32.0)))
+    ui.add_enabled(
+        enabled,
+        egui::Button::new(text).min_size(egui::vec2(0.0, 32.0)),
+    )
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -96,8 +110,7 @@ impl Editor {
                                 )
                         })
                     });
-                    if action(ui, enabled && ports, PLUG, "Add port…").clicked()
-                    {
+                    if action(ui, enabled && ports, PLUG, "Add port…").clicked() {
                         self.open_port_dialog(id, side.unwrap_or("right"));
                         ui.close();
                     }
@@ -127,13 +140,25 @@ impl Editor {
                 }
                 ui.add(egui::Separator::default().spacing(8.0));
             }
-            if action(ui, enabled && self.has_selection(), TRASH, "Delete selection…").clicked()
+            if action(
+                ui,
+                enabled && self.has_selection(),
+                TRASH,
+                "Delete selection…",
+            )
+            .clicked()
             {
                 self.propose_delete(ContainerMode::WithContents);
                 ui.close();
             }
             if self.selected_container()
-                && action(ui, enabled, BOX_ARROW_UP, "Remove container, keep contents…").clicked()
+                && action(
+                    ui,
+                    enabled,
+                    BOX_ARROW_UP,
+                    "Remove container, keep contents…",
+                )
+                .clicked()
             {
                 self.propose_delete(ContainerMode::KeepContents);
                 ui.close();

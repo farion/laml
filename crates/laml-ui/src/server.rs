@@ -1,11 +1,11 @@
 //! Host for the shared Rust/WASM editor. Deployment policies are opt-in.
-mod config;
 mod browser;
-mod sessions;
+mod config;
 mod http;
 mod limits;
 mod process;
 mod scoped;
+mod sessions;
 mod stage;
 mod worker;
 mod workspace;
@@ -62,7 +62,9 @@ pub fn run(args: &[std::ffi::OsString]) -> Result<(), String> {
             return Err("Build web assets first with scripts/build-editor-web.sh".into());
         }
     }
-    if !config.browser { config::private_dir(&config.state.join("recovery"))?; }
+    if !config.browser {
+        config::private_dir(&config.state.join("recovery"))?;
+    }
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()

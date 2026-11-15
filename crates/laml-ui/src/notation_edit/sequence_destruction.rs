@@ -6,20 +6,34 @@ pub fn align(source: &str, owner: &str, target: &str) -> Result<Vec<Edit>, Strin
     let doc = laml::sequence::parse(source).map_err(|e| e.message)?;
     standalone_line(&doc, owner)?;
     standalone_line(&doc, target)?;
-    if owner == target { return Err("Choose another destruction occurrence".into()); }
-    let group = groups(&doc).into_iter().find(|g| g.iter().any(|id| id == owner));
-    if group.as_ref().is_some_and(|g| g.iter().any(|id| id == target)) { return Ok(vec![]); }
+    if owner == target {
+        return Err("Choose another destruction occurrence".into());
+    }
+    let group = groups(&doc)
+        .into_iter()
+        .find(|g| g.iter().any(|id| id == owner));
+    if group
+        .as_ref()
+        .is_some_and(|g| g.iter().any(|id| id == target))
+    {
+        return Ok(vec![]);
+    }
     let mut edits = Vec::new();
     let mut declarations = Vec::new();
     if let Some(group) = group {
         // Detach just the dragged member, retaining the old peers' alignment.
         for rule in &doc.destruction_layout {
-            if !group.contains(&rule.first) { continue; }
+            if !group.contains(&rule.first) {
+                continue;
+            }
             let record = record(source, rule.line)?;
             let raw = &source[record.range.clone()];
             let body = code(raw);
-            edits.push(Edit { range: record.range.start + body.len() - body.trim_start().len()
-                ..record.range.start + body.trim_end().len(), replacement: String::new() });
+            edits.push(Edit {
+                range: record.range.start + body.len() - body.trim_start().len()
+                    ..record.range.start + body.trim_end().len(),
+                replacement: String::new(),
+            });
         }
         let peers: Vec<_> = group.iter().filter(|id| id.as_str() != owner).collect();
         for pair in peers.windows(2) {
@@ -27,7 +41,13 @@ pub fn align(source: &str, owner: &str, target: &str) -> Result<Vec<Edit>, Strin
         }
     }
     declarations.push(format!("{owner}! ? {target}! : align=center-y"));
-    edits.extend(insert(source, "layout", None, None, &declarations.join("\n"))?);
+    edits.extend(insert(
+        source,
+        "layout",
+        None,
+        None,
+        &declarations.join("\n"),
+    )?);
     let candidate = apply(source, &edits)?;
     laml::sequence::parse(&candidate).map_err(|e| e.message)?;
     Ok(edits)
@@ -38,7 +58,8 @@ mod tests {
     use super::*;
     #[test]
     fn adds_layout_without_changing_semantics_and_keeps_crlf() {
-        let source = "settings {\r\n type: sequence\r\n}\r\nsemantics {\r\n A\r\n B\r\n A!\r\n B!\r\n}\r\n";
+        let source =
+            "settings {\r\n type: sequence\r\n}\r\nsemantics {\r\n A\r\n B\r\n A!\r\n B!\r\n}\r\n";
         let edits = align(source, "A", "B").unwrap();
         let result = apply(source, &edits).unwrap();
         assert!(result.starts_with(source));
@@ -52,7 +73,15 @@ mod tests {
         assert!(result.contains("// retain this"));
         let doc = laml::sequence::parse(&result).unwrap();
         let groups = groups(&doc);
-        assert!(groups.iter().any(|g| g.len() == 2 && g.contains(&"B".into()) && g.contains(&"C".into())));
-        assert!(groups.iter().any(|g| g.len() == 2 && g.contains(&"A".into()) && g.contains(&"D".into())));
+        assert!(
+            groups
+                .iter()
+                .any(|g| g.len() == 2 && g.contains(&"B".into()) && g.contains(&"C".into()))
+        );
+        assert!(
+            groups
+                .iter()
+                .any(|g| g.len() == 2 && g.contains(&"A".into()) && g.contains(&"D".into()))
+        );
     }
 }

@@ -5,7 +5,7 @@ resolver = "3"
 
 [package]
 name = "laml"
-version = "1.17.0"
+version = "1.17.1"
 edition = "2024"
 description = "Deterministic diagram markup compiler"
 license = "MIT"

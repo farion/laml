@@ -99,11 +99,20 @@ fn main() -> eframe::Result {
         Box::new(move |cc| {
             egui_extras::install_image_loaders(&cc.egui_ctx);
             app::Editor::install_appearance(&cc.egui_ctx);
-            let source = if path.is_none() { app::Editor::new_source(&cc.egui_ctx) } else { source };
+            let source = if path.is_none() {
+                app::Editor::new_source(&cc.egui_ctx)
+            } else {
+                source
+            };
+            let empty = path.is_none() && !capturing;
             let mut editor = app::Editor::new(source, path);
             editor.set_capture(capture, success);
             editor.set_capture_view(capture_view);
-            Ok(Box::new(app::Workspace::new(editor)))
+            Ok(Box::new(if empty {
+                app::Workspace::empty(editor)
+            } else {
+                app::Workspace::new(editor)
+            }))
         }),
     );
     if capturing && !captured.load(std::sync::atomic::Ordering::Acquire) {

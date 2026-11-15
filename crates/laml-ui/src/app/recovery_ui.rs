@@ -95,9 +95,13 @@ impl Editor {
         if let Some(record) = self.recovery.restoring.take() {
             if let Some(store) = &self.recovery.store {
                 match store.discard_confirmed(&record) {
-                    Ok(true) => { self.recovery.error = None; },
+                    Ok(true) => {
+                        self.recovery.error = None;
+                    }
                     result => {
-                        if let Err(error) = result { self.recovery.error = Some(error); }
+                        if let Err(error) = result {
+                            self.recovery.error = Some(error);
+                        }
                         self.recovery.restoring = Some(record);
                         return;
                     }
@@ -111,7 +115,8 @@ impl Editor {
         if self.recovery.checked.elapsed() >= Duration::from_secs(1) {
             self.recovery.checked = Instant::now();
             if (self.recovery.last.as_ref() != Some(&(self.document.revision(), self.path.clone()))
-                || self.recovery.restoring.is_some()) && self.checkpoint()
+                || self.recovery.restoring.is_some())
+                && self.checkpoint()
             {
                 self.finish_recovery();
             }

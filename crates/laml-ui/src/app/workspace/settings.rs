@@ -8,7 +8,11 @@ pub(super) enum Category {
     About,
 }
 
-pub(super) fn content(ui: &mut egui::Ui, category: &mut Category, preferences: &mut editor_theme::Preferences) {
+pub(super) fn content(
+    ui: &mut egui::Ui,
+    category: &mut Category,
+    preferences: &mut editor_theme::Preferences,
+) {
     let width = ui.available_width();
     // Include the shared title row and 16-point frame padding in the 4:3 size.
     let height = ((width + 32.0) * 0.75 - 86.0).max(120.0);
@@ -51,13 +55,23 @@ pub(super) fn content(ui: &mut egui::Ui, category: &mut Category, preferences: &
                             .width(140.0)
                             .selected_text(preferences.editor_theme.label())
                             .show_ui(ui, |ui| {
-                                for theme in [editor_theme::EditorTheme::Auto,
-                                    editor_theme::EditorTheme::Dark, editor_theme::EditorTheme::Light] {
-                                    ui.selectable_value(&mut preferences.editor_theme, theme, theme.label());
+                                for theme in [
+                                    editor_theme::EditorTheme::Auto,
+                                    editor_theme::EditorTheme::Dark,
+                                    editor_theme::EditorTheme::Light,
+                                ] {
+                                    ui.selectable_value(
+                                        &mut preferences.editor_theme,
+                                        theme,
+                                        theme.label(),
+                                    );
                                 }
                             });
                         ui.add_space(16.0);
-                        ui.checkbox(&mut preferences.fit_preview, "Ignore LAML theme and fit to editor theme");
+                        ui.checkbox(
+                            &mut preferences.fit_preview,
+                            "Ignore LAML theme and fit to editor theme",
+                        );
                     }
                     Category::About => {
                         ui.heading(format!("LAML Editor {}", env!("CARGO_PKG_VERSION")));

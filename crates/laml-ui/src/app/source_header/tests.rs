@@ -27,8 +27,16 @@ fn frame(
             ..Default::default()
         },
         |ui| {
+            // Document actions live in the global titlebar, not Source.
+            if width >= 900.0 {
+                ui.horizontal(|ui| {
+                    editor.document_title_actions(ui);
+                    editor.export_controls(ui);
+                });
+            }
             editor.source_heading(ui);
             editor.source_editor(ui);
+            editor.export_windows(ui.ctx());
         },
     );
     output.textures_delta.clear();
@@ -92,7 +100,10 @@ fn header_is_single_and_responsive_without_clipping_or_old_actions() {
                         ]
                         .contains(&label)
                     );
-                    if text.pos.y < appearance::HEADER_HEIGHT {
+                    let source_top = if width >= 900.0 { 42.0 } else { 0.0 };
+                    if text.pos.y >= source_top
+                        && text.pos.y < source_top + appearance::HEADER_HEIGHT
+                    {
                         assert!(text.pos.x >= 14.0);
                         assert!(
                             text.pos.x + text.galley.size().x <= width - 13.0,
@@ -103,7 +114,9 @@ fn header_is_single_and_responsive_without_clipping_or_old_actions() {
                 }
                 if let egui::Shape::Rect(rect) = &shape.shape
                     && rect.rect.width() < 150.0
-                    && rect.rect.center().y < appearance::HEADER_HEIGHT
+                    && rect.rect.center().y >= if width >= 900.0 { 42.0 } else { 0.0 }
+                    && rect.rect.center().y
+                        < if width >= 900.0 { 42.0 } else { 0.0 } + appearance::HEADER_HEIGHT
                 {
                     assert!(
                         rect.rect.right() <= width - 13.0,
@@ -121,9 +134,9 @@ fn header_is_single_and_responsive_without_clipping_or_old_actions() {
 #[test]
 fn narrow_header_overflow_contains_hidden_actions_with_icon_and_text() {
     let (mut editor, ctx) = ready();
-    click(&mut editor, &ctx, 280.0, egui_phosphor::regular::DOTS_THREE);
-    let output = frame(&mut editor, &ctx, 280.0, vec![]);
-    for label in ["Save as…", "Export…", "Find / replace…", "Format source"] {
+    click(&mut editor, &ctx, 140.0, egui_phosphor::regular::DOTS_THREE);
+    let output = frame(&mut editor, &ctx, 140.0, vec![]);
+    for label in ["Find / replace…", "Format source"] {
         assert!(output.shapes.iter().any(|s| matches!(&s.shape,
             egui::Shape::Text(t) if t.galley.job.text == label || t.galley.job.text.ends_with(&format!("  {label}"))
         )), "missing overflow entry {label}");
@@ -148,7 +161,7 @@ fn narrow_header_overflow_contains_hidden_actions_with_icon_and_text() {
             egui::FontFamily::Proportional
         );
     }
-    click(&mut editor, &ctx, 280.0, "Find / replace…");
+    click(&mut editor, &ctx, 140.0, "Find / replace…");
     assert!(editor.source_ui.find_open);
 }
 
@@ -163,8 +176,7 @@ fn wide_header_shows_all_actions_and_history_controls_work() {
         FLOPPY_DISK,
         ARROW_COUNTER_CLOCKWISE,
         ARROW_CLOCKWISE,
-        "Save as…",
-        "Export…",
+        egui_phosphor::regular::EXPORT,
         MAGNIFYING_GLASS,
         CODE,
     ] {
@@ -204,12 +216,15 @@ fn save_icon_writes_only_the_current_document() {
 }
 
 #[test]
-fn export_keeps_format_choices_inside_the_overflow_menu() {
+fn global_export_action_opens_the_format_dialog() {
     let (mut editor, ctx) = ready();
-    click(&mut editor, &ctx, 280.0, egui_phosphor::regular::DOTS_THREE);
-    click(&mut editor, &ctx, 280.0, "Export…");
-    let output = frame(&mut editor, &ctx, 280.0, vec![]);
-    for format in ["SVG", "PNG", "PDF"] {
+    click(&mut editor, &ctx, 1000.0, egui_phosphor::regular::EXPORT);
+    let output = frame(&mut editor, &ctx, 1000.0, vec![]);
+    for format in [
+        "SVG · Vector image",
+        "PNG · Raster image",
+        "PDF · Vector document",
+    ] {
         assert!(
             output.shapes.iter().any(|s| matches!(&s.shape,
             egui::Shape::Text(t) if t.galley.job.text == format)),

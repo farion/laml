@@ -89,7 +89,9 @@ impl Editor {
                 self.confirm_export();
             }
         }
-        if laml_ui::services::browser_mode() { return; }
+        if laml_ui::services::browser_mode() {
+            return;
+        }
         let changed = self.workflow.revision != Some(self.document.revision())
             || self.workflow.path != self.path;
         if changed {
@@ -156,8 +158,16 @@ impl Editor {
                 Ok(Reply::Export(bytes)) => {
                     let format = self.workflow.export_format;
                     let origin = &self.workflow.export.as_ref().unwrap().origin;
-                    let name = format!("{}.{}", origin.file_stem().unwrap_or_default().to_string_lossy(), format.extension());
-                    let mime = match format { Format::Svg => "image/svg+xml", Format::Png => "image/png", Format::Pdf => "application/pdf" };
+                    let name = format!(
+                        "{}.{}",
+                        origin.file_stem().unwrap_or_default().to_string_lossy(),
+                        format.extension()
+                    );
+                    let mime = match format {
+                        Format::Svg => "image/svg+xml",
+                        Format::Png => "image/png",
+                        Format::Pdf => "application/pdf",
+                    };
                     crate::browser_storage::download(&name, &bytes, mime);
                     self.workflow.export = None;
                     self.workflow.status = Some(format!("Downloaded {name}"));

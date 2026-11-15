@@ -209,7 +209,8 @@ pub(super) fn edge(
             } else {
                 None
             };
-            match super::orthogonal::route(doc, geom, e, index, source, target, preferred, previous) {
+            match super::orthogonal::route(doc, geom, e, index, source, target, preferred, previous)
+            {
                 Ok(plan)
                     if best.as_ref().is_none_or(|(current, _, _)| {
                         plan.crossings < current.crossings

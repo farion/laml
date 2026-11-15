@@ -5,7 +5,10 @@ mod client;
 pub use client::Client;
 
 pub enum Expectation {
-    Notation { line: Option<usize>, id: Option<String> },
+    Notation {
+        line: Option<usize>,
+        id: Option<String>,
+    },
     Settings(laml::syntax::Settings),
     CompartmentStyle {
         owner: String,
@@ -80,15 +83,25 @@ pub fn run(backend: &dyn laml_ui::backend::Backend, job: Job) -> BuildResult {
         .compile(&source, &path, laml_ui::backend::Presentation::Document)
         .and_then(|preview| {
             if let Some(command) = &command {
-                verify(&preview, &command.expectation, laml_ui::backend::Presentation::Document)?;
+                verify(
+                    &preview,
+                    &command.expectation,
+                    laml_ui::backend::Presentation::Document,
+                )?;
             }
             Ok(preview)
         });
     (revision, result, command)
 }
 
-fn verify(preview: &Preview, expectation: &Expectation, presentation: laml_ui::backend::Presentation) -> Result<(), String> {
-    if matches!(expectation, Expectation::Notation { .. }) { return Ok(()); }
+fn verify(
+    preview: &Preview,
+    expectation: &Expectation,
+    presentation: laml_ui::backend::Presentation,
+) -> Result<(), String> {
+    if matches!(expectation, Expectation::Notation { .. }) {
+        return Ok(());
+    }
     if let Expectation::Settings(expected) = expectation {
         let mut expected = expected.clone();
         // Match the selected preview presentation, while authored settings are
@@ -97,8 +110,11 @@ fn verify(preview: &Preview, expectation: &Expectation, presentation: laml_ui::b
             expected.theme = theme;
             expected.transparent = true;
         }
-        return if preview.diagram.settings == expected { Ok(()) }
-            else { Err("Document setting did not match the compiled result".into()) };
+        return if preview.diagram.settings == expected {
+            Ok(())
+        } else {
+            Err("Document setting did not match the compiled result".into())
+        };
     }
     if let Expectation::Styles { ids, properties } = expectation {
         for (property, value) in properties {
@@ -293,10 +309,7 @@ mod tests {
         );
         let preview = preview.unwrap();
         assert_eq!(revision, 0);
-        assert_eq!(
-            preview.diagram.settings.theme,
-            laml::theme::Theme::Modern
-        );
+        assert_eq!(preview.diagram.settings.theme, laml::theme::Theme::Modern);
         assert!(!preview.diagram.settings.transparent);
         assert!(preview.svg.contains("#ffffff"));
         assert_eq!(document.source(), source);
