@@ -21,6 +21,8 @@ impl Editor {
         let value = first.label.clone();
         let mixed = ports.iter().any(|p| p.label != value);
         let explicit = ports.iter().all(|p| p.explicit);
+        let inherited = ids.iter().any(|id| port_edit::find(&preview.diagram, id).is_some_and(|(n, _)|
+            matches!(n.kind, laml::syntax::NodeKind::ComponentPart | laml::syntax::NodeKind::CompositePart | laml::syntax::NodeKind::CompositeRole)));
         let sides: Vec<_> = ids
             .iter()
             .map(|id| {
@@ -62,7 +64,7 @@ impl Editor {
         inspector_ui::category(ui, "Identity");
         let enabled = self.can_edit_visually();
         ui.add_enabled_ui(enabled, |ui| {
-            ui.add_enabled_ui(explicit, |ui| {
+            ui.add_enabled_ui(explicit && !inherited, |ui| {
                 inspector_ui::row(ui, "Name", |ui| {
                     let draft = self
                         .property_drafts
@@ -76,7 +78,7 @@ impl Editor {
                     }
                 });
             });
-            ui.add_enabled_ui(ids.len() == 1, |ui| {
+            ui.add_enabled_ui(ids.len() == 1 && !inherited, |ui| {
                 inspector_ui::row(ui, "ID", |ui| {
                     let original = if first.explicit {
                         first.id.clone()
@@ -96,6 +98,7 @@ impl Editor {
                     }
                 });
             });
+            self.typed_port_attributes(ui);
             inspector_ui::category(ui, "Layout");
 
             let mut chosen = side;

@@ -43,7 +43,7 @@ impl Watch {
             return Self::default();
         };
         let mut paths = BTreeSet::new();
-        if let Ok(diagram) = laml::parser::parse(source) {
+        if let Ok((diagram, _, _)) = crate::notation::inspect(source) {
             for font in [
                 diagram.settings.font_file,
                 diagram.settings.font_italic_file,

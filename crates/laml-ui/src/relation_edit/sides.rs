@@ -20,7 +20,7 @@ pub fn endpoint_sides(
     if side.is_some_and(|s| !["left", "right", "top", "bottom"].contains(&s)) {
         return Err("Invalid endpoint side".into());
     }
-    let mut diagram = laml::parser::parse(source).map_err(|e| e.message)?;
+    let mut diagram = crate::notation::parse_graph(source).map_err(|e| e.message)?;
     let mut edits = Vec::new();
     let mut declarations = Vec::new();
     for line in lines

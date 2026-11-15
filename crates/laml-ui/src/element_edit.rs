@@ -18,9 +18,40 @@ pub enum ElementKind {
     DataType,
     Object,
     Junction,
+    Association,
+    AssociationClass,
+    Component,
+    Part,
+    Structure,
+    CompositePart,
+    Role,
+    Profile,
+    Stereotype,
+    Metaclass,
+    DeploymentNode,
+    Device,
+    Environment,
+    Artifact,
+    State,
+    StateInitial,
+    StateFinal,
+    Choice,
+    Action,
+    ActivityObject,
+    ActivityInitial,
+    ActivityFinal,
+    FlowFinal,
+    Decision,
+    Merge,
+    Fork,
+    Join,
+    Actor,
+    UseCase,
+    System,
+    Interaction,
 }
 impl ElementKind {
-    pub const ALL: [Self; 11] = [
+    pub const ALL: [Self; 42] = [
         Self::Rectangle,
         Self::Ellipse,
         Self::Diamond,
@@ -32,6 +63,37 @@ impl ElementKind {
         Self::DataType,
         Self::Object,
         Self::Junction,
+        Self::Association,
+        Self::AssociationClass,
+        Self::Component,
+        Self::Part,
+        Self::Structure,
+        Self::CompositePart,
+        Self::Role,
+        Self::Profile,
+        Self::Stereotype,
+        Self::Metaclass,
+        Self::DeploymentNode,
+        Self::Device,
+        Self::Environment,
+        Self::Artifact,
+        Self::State,
+        Self::StateInitial,
+        Self::StateFinal,
+        Self::Choice,
+        Self::Action,
+        Self::ActivityObject,
+        Self::ActivityInitial,
+        Self::ActivityFinal,
+        Self::FlowFinal,
+        Self::Decision,
+        Self::Merge,
+        Self::Fork,
+        Self::Join,
+        Self::Actor,
+        Self::UseCase,
+        Self::System,
+        Self::Interaction,
     ];
     pub fn title(self) -> &'static str {
         match self {
@@ -46,40 +108,150 @@ impl ElementKind {
             Self::DataType => "Data type",
             Self::Object => "Object",
             Self::Junction => "Junction",
-        }
-    }
-    pub fn shape(self) -> Option<&'static str> {
-        match self {
-            Self::Rectangle | Self::Package => Some("rectangle"),
-            Self::Ellipse => Some("ellipse"),
-            Self::Diamond => Some("diamond"),
-            Self::Note => Some("note"),
-            _ => None,
+            Self::Association => "N-ary association",
+            Self::AssociationClass => "Association class",
+            Self::Component => "Component",
+            Self::Part => "Component part",
+            Self::Structure => "Composite structure",
+            Self::CompositePart => "Composite part",
+            Self::Role => "Role",
+            Self::Profile => "Profile",
+            Self::Stereotype => "Stereotype",
+            Self::Metaclass => "Metaclass",
+            Self::DeploymentNode => "Deployment node",
+            Self::Device => "Device",
+            Self::Environment => "Execution environment",
+            Self::Artifact => "Artifact",
+            Self::State => "State",
+            Self::StateInitial => "Initial state",
+            Self::StateFinal => "Final state",
+            Self::Choice => "Choice",
+            Self::Action => "Action",
+            Self::ActivityObject => "Object node",
+            Self::ActivityInitial => "Initial node",
+            Self::ActivityFinal => "Activity final",
+            Self::FlowFinal => "Flow final",
+            Self::Decision => "Decision",
+            Self::Merge => "Merge",
+            Self::Fork => "Fork",
+            Self::Join => "Join",
+            Self::Actor => "Actor",
+            Self::UseCase => "Use case",
+            Self::System => "System boundary",
+            Self::Interaction => "Interaction use",
         }
     }
     pub fn keyword(self) -> &'static str {
         match self {
+            Self::Rectangle => "",
+            Self::Ellipse => "",
+            Self::Diamond => "",
+            Self::Note => "note ",
+            Self::Package => "package ",
             Self::Class => "class ",
             Self::Interface => "interface ",
             Self::Enumeration => "enum ",
             Self::DataType => "datatype ",
             Self::Object => "object ",
             Self::Junction => "junction ",
-            _ => "",
+            Self::Association => "association ",
+            Self::AssociationClass => "association class ",
+            Self::Component => "component ",
+            Self::Part => "part ",
+            Self::Structure => "structure ",
+            Self::CompositePart => "part ",
+            Self::Role => "role ",
+            Self::Profile => "profile ",
+            Self::Stereotype => "stereotype ",
+            Self::Metaclass => "metaclass ",
+            Self::DeploymentNode => "node ",
+            Self::Device => "device ",
+            Self::Environment => "executionEnvironment ",
+            Self::Artifact => "artifact ",
+            Self::State => "state ",
+            Self::StateInitial => "initial ",
+            Self::StateFinal => "final ",
+            Self::Choice => "choice ",
+            Self::Action => "action ",
+            Self::ActivityObject => "objectNode ",
+            Self::ActivityInitial => "initial ",
+            Self::ActivityFinal => "activityFinal ",
+            Self::FlowFinal => "flowFinal ",
+            Self::Decision => "decision ",
+            Self::Merge => "merge ",
+            Self::Fork => "fork ",
+            Self::Join => "join ",
+            Self::Actor => "actor ",
+            Self::UseCase => "usecase ",
+            Self::System => "system ",
+            Self::Interaction => "interaction-use ",
         }
     }
     pub fn node_kind(self) -> NodeKind {
         match self {
+            Self::Rectangle => NodeKind::Generic,
+            Self::Ellipse => NodeKind::Generic,
+            Self::Diamond => NodeKind::Generic,
+            Self::Note => NodeKind::Note,
+            Self::Package => NodeKind::Package,
             Self::Class => NodeKind::Class,
             Self::Interface => NodeKind::Interface,
             Self::Enumeration => NodeKind::Enumeration,
             Self::DataType => NodeKind::DataType,
             Self::Object => NodeKind::Object,
             Self::Junction => NodeKind::Junction,
-            Self::Package => NodeKind::Package,
-            Self::Note => NodeKind::Note,
-            _ => NodeKind::Generic,
+            Self::Association => NodeKind::Association,
+            Self::AssociationClass => NodeKind::AssociationClass,
+            Self::Component => NodeKind::Component,
+            Self::Part => NodeKind::ComponentPart,
+            Self::Structure => NodeKind::CompositeStructure,
+            Self::CompositePart => NodeKind::CompositePart,
+            Self::Role => NodeKind::CompositeRole,
+            Self::Profile => NodeKind::Profile,
+            Self::Stereotype => NodeKind::Stereotype,
+            Self::Metaclass => NodeKind::Metaclass,
+            Self::DeploymentNode => NodeKind::DeploymentNode,
+            Self::Device => NodeKind::Device,
+            Self::Environment => NodeKind::ExecutionEnvironment,
+            Self::Artifact => NodeKind::Artifact,
+            Self::State => NodeKind::State,
+            Self::StateInitial => NodeKind::StateInitial,
+            Self::StateFinal => NodeKind::StateFinal,
+            Self::Choice => NodeKind::StateChoice,
+            Self::Action => NodeKind::ActivityAction,
+            Self::ActivityObject => NodeKind::ActivityObject,
+            Self::ActivityInitial => NodeKind::ActivityInitial,
+            Self::ActivityFinal => NodeKind::ActivityFinal,
+            Self::FlowFinal => NodeKind::ActivityFlowFinal,
+            Self::Decision => NodeKind::ActivityDecision,
+            Self::Merge => NodeKind::ActivityMerge,
+            Self::Fork => NodeKind::ActivityFork,
+            Self::Join => NodeKind::ActivityJoin,
+            Self::Actor => NodeKind::UseCaseActor,
+            Self::UseCase => NodeKind::UseCase,
+            Self::System => NodeKind::UseCaseSystem,
+            Self::Interaction => NodeKind::InteractionUse,
         }
+    }
+    pub fn shape(self) -> Option<&'static str> {
+        match self {
+            Self::Rectangle => Some("rectangle"),
+            Self::Ellipse => Some("ellipse"),
+            Self::Diamond => Some("diamond"),
+            Self::Note => Some("note"),
+            _ => None,
+        }
+    }
+    pub fn available(source: &str) -> Vec<Self> {
+        let notation = crate::notation::Notation::of(source);
+        let Ok(graph) = crate::notation::parse_graph(source).or_else(|_| crate::notation::parse_graph(&notation.starter(false))) else { return vec![]; };
+        if crate::notation::Notation::of(source).c4() && crate::notation::Notation::of(source) != crate::notation::Notation::C4Code { return vec![]; }
+        Self::ALL.into_iter().filter(|k| {
+            if notation == crate::notation::Notation::Gne && !matches!(k, Self::Rectangle | Self::Ellipse | Self::Diamond | Self::Note | Self::Package | Self::Class | Self::Interface | Self::Enumeration | Self::DataType | Self::Object | Self::Junction) { return false; }
+            if matches!(k, Self::Association | Self::AssociationClass) { return false; }
+            (k.node_kind() != NodeKind::Generic || graph.settings.diagram_type == laml::syntax::DiagramType::Generic)
+                && laml::parser::allows_node_kind(k.node_kind(), graph.settings.diagram_type)
+        }).collect()
     }
 }
 
@@ -99,9 +271,9 @@ pub fn add(
         && !diagram
             .nodes
             .iter()
-            .any(|n| n.id == parent && n.kind == NodeKind::Package)
+            .any(|n| n.id == parent && node_edit::blocks(source, &diagram).is_ok_and(|b| b.contains_key(&n.line)))
     {
-        return Err("Destination must be a package".into());
+        return Err("Destination must be a container block".into());
     }
     let prefix = match kind {
         ElementKind::Package => "Group",
@@ -125,7 +297,15 @@ pub fn add(
         format!("(label={})", quote(label))
     };
     let declaration = match kind {
-        ElementKind::Package => format!("package {name}{attrs} {{{newline}}}"),
+        ElementKind::Package | ElementKind::Profile | ElementKind::System | ElementKind::Structure
+        | ElementKind::DeploymentNode | ElementKind::Device | ElementKind::Environment =>
+            format!("{}{name}{attrs} {{{newline}}}", kind.keyword()),
+        ElementKind::Part | ElementKind::CompositePart | ElementKind::Role => {
+            let expected = if kind == ElementKind::Part { NodeKind::Component } else { NodeKind::Class };
+            let classifier = diagram.nodes.iter().find(|n| n.kind == expected).ok_or("Create a matching classifier first")?;
+            format!("{}{name}(of={}; label={})", kind.keyword(), classifier.id, quote(label))
+        },
+        ElementKind::Interaction => format!("interaction-use {name}(ref=Interaction; label={})", quote(label)),
         ElementKind::Note => format!(
             "note {name} {}",
             quote(if label.trim().is_empty() {

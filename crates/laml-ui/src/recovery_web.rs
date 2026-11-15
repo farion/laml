@@ -23,6 +23,7 @@ struct State {
     list: Option<Stamp>,
     listed: bool,
     records: Vec<Record>,
+    discards: std::collections::BTreeMap<PathBuf, (Stamp, Option<Result<(), String>>)>,
     error: Option<String>,
 }
 #[derive(Clone, PartialEq, Eq)]
@@ -53,6 +54,13 @@ impl State {
                     Err(e) => self.error = Some(e.to_string()),
                     _ => self.error = Some("Invalid recovery acknowledgement".into()),
                 }
+            } else if let Some(id) = self.discards.iter().find_map(|(id, (stamp, _))| (*stamp == response.stamp).then(|| id.clone())) {
+                let result = match response.result {
+                    Ok(Reply::Unit) => Ok(()),
+                    Ok(_) => Err("Invalid recovery discard acknowledgement".into()),
+                    Err(error) => Err(error.to_string()),
+                };
+                self.discards.get_mut(&id).unwrap().1 = Some(result);
             } else if let Err(error) = response.result {
                 self.error = Some(error.to_string());
             }
@@ -73,6 +81,7 @@ impl Store {
                 list: None,
                 listed: false,
                 records: vec![],
+                discards: Default::default(),
                 error: None,
             }),
             closed: false,
@@ -158,6 +167,24 @@ impl Store {
             );
         }
         Ok(std::mem::take(&mut state.records))
+    }
+    /// Return true only after the host acknowledged removal of this exact record.
+    pub fn discard_confirmed(&self, record: &Record) -> Result<bool, String> {
+        let mut state = self.state.borrow_mut();
+        state.poll();
+        if let Some((_, result)) = state.discards.get_mut(&record.file) {
+            if let Some(result) = result.take() {
+                state.discards.remove(&record.file);
+                return result.map(|()| true);
+            }
+            return Ok(false);
+        }
+        let document = state.document;
+        let stamp = state.client.submit(document, 0, Operation::RecoveryDiscard {
+            id: record.file.to_string_lossy().into_owned(),
+        }).map_err(|e| e.to_string())?;
+        state.discards.insert(record.file.clone(), (stamp, None));
+        Ok(false)
     }
     pub fn discard(&self, record: &Record) -> Result<(), String> {
         let mut state = self.state.borrow_mut();

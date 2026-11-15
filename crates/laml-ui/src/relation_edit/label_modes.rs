@@ -9,7 +9,7 @@ pub fn label_modes(source: &str, lines: &[usize], mode: Option<&str>) -> Result<
     if mode.is_some_and(|m| !["near", "along", "inline"].contains(&m)) {
         return Err("Unknown relation label mode".into());
     }
-    let mut diagram = laml::parser::parse(source).map_err(|e| e.message)?;
+    let mut diagram = crate::notation::parse_graph(source).map_err(|e| e.message)?;
     let mut edits = Vec::new();
     let mut declarations = Vec::new();
     for line in lines

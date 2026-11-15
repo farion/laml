@@ -10,6 +10,19 @@ fn setup() -> (Document, Geometry) {
 }
 mod vertical;
 #[test]
+fn a_task_boundary_event_keeps_its_label_on_a_clear_detour() {
+    let source = "settings {\n type: bpmn\n}\nsemantics {\n startEvent Start\n Element1(label=\"Element1\")\n Start --> Element1\n Element2Target(label=\"Element2Target\")\n Element1 -(timer@Element2:\"Element2\")-> Element2Target\n}\n";
+    let doc = bpmn::parse(source).unwrap();
+    let geom = super::super::geometry::place(&doc).unwrap();
+    let ports = ports::assign(&doc, &geom).unwrap();
+    let (_, routes) = plan::all(&doc, &geom, &ports).unwrap();
+    let mut labels = String::new();
+    super::labels::render(&mut labels, &doc, &geom, &routes).unwrap();
+    assert!(labels.contains(">Element2</text>"));
+    assert_eq!(routes[1].from, "Element2");
+    assert_eq!(routes[1].to, "Element2Target");
+}
+#[test]
 fn renamed_order_nodes_still_avoid_archive_timer_crossing() {
     let source = include_str!("../../../examples/bpmn-order.laml")
         .replace("Review", "Inspect")

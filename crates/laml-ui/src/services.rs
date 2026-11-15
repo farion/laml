@@ -47,3 +47,11 @@ impl Services {
         }
     }
 }
+
+/// Hosting policy is independent of the shared native/browser editor logic.
+pub fn browser_mode() -> bool {
+    #[cfg(target_arch = "wasm32")]
+    { crate::web::browser_mode() }
+    #[cfg(not(target_arch = "wasm32"))]
+    { false }
+}

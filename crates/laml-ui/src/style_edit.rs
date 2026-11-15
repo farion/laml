@@ -58,7 +58,7 @@ pub fn node_property(
     if value.is_some_and(|v| v.contains(['\r', '\n', '{', '}'])) {
         return Err("Expected a single property value".into());
     }
-    let diagram = laml::parser::parse(source).map_err(|e| e.message)?;
+    let diagram = crate::notation::parse_graph(source).map_err(|e| e.message)?;
     for id in ids {
         if !diagram.nodes.iter().any(|node| &node.id == id) {
             return Err(format!("Unknown node: {id}"));
@@ -100,7 +100,7 @@ pub(crate) fn local_property(
     let diagram = if source.trim().is_empty() {
         laml::syntax::Diagram::default()
     } else {
-        laml::parser::parse(source).map_err(|e| e.message)?
+        crate::notation::parse_graph(source).map_err(|e| e.message)?
     };
     let index = SourceIndex::new(source);
     let lines: Vec<_> = source.lines().collect();
@@ -208,7 +208,7 @@ mod tests {
         .unwrap();
         let mut doc = Document::new(source.into());
         doc.apply(0, "Style", edits).unwrap();
-        laml::parser::parse(doc.source()).unwrap();
+        crate::notation::parse_graph(doc.source()).unwrap();
         doc.source().into()
     }
     #[test]

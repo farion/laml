@@ -38,10 +38,11 @@ pub(super) fn anchors(
         .map(|bar| DrawnExecution {
             opened: bar.opened.clone(),
             to: bar.to,
+            end_line: bar.end_line,
         })
         .collect();
-    active.extend(open.iter().cloned().map(|bar| bar.finish(final_y + 64.0)));
-    attach(diagram, sheet, &active, messages, &mut anchors)?;
+    active.extend(open.iter().cloned().map(|bar| bar.finish(final_y + 64.0, None)));
+    attach(diagram, sheet, centers, widths, &active, messages, &mut anchors)?;
     Ok(anchors)
 }
 
@@ -87,15 +88,22 @@ fn edge(
     Ok(Some(middle + side * width / 2.0))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn attach(
     diagram: &SequenceDiagram,
     sheet: &StyleSheet,
+    centers: &[f64],
+    widths: &[f64],
     bars: &[DrawnExecution],
     messages: &[(&Message, f64)],
     anchors: &mut [MessageAnchor],
 ) -> Result<(), String> {
     for ((message, _), anchor) in messages.iter().zip(anchors.iter_mut()) {
-        let (from, to) = (anchor.send.0, anchor.receive.0);
+        // Recompute from canonical lifeline centers: this pass is also used
+        // after occurrence reordering/reflow and must not accumulate edge offsets.
+        let (from, to) = geometry::message_endpoints(diagram, sheet, centers, widths, message)?;
+        anchor.send.0 = from;
+        anchor.receive.0 = to;
         if message.from == message.to {
             if let Some(right) = edge(
                 diagram,

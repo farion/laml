@@ -4,7 +4,7 @@ use crate::{
     document::{Document, Edit},
     source_patch::{insert_section, remove_line},
 };
-use laml::syntax::{DiagramType, LayoutRule, Placement};
+use laml::syntax::{LayoutRule, Placement};
 use std::collections::BTreeSet;
 
 #[derive(Clone, Debug)]
@@ -57,10 +57,7 @@ pub fn plan(
     if from == target {
         return Err("A node cannot be placed relative to itself".into());
     }
-    let diagram = laml::parser::parse(source).map_err(|e| e.message)?;
-    if diagram.settings.diagram_type != DiagramType::Generic || laml::c4::is_c4_source(source) {
-        return Err("Relative dragging currently supports GNE only".into());
-    }
+    let diagram = crate::notation::parse_graph(source).map_err(|e| e.message)?;
     let moved = diagram
         .nodes
         .iter()
@@ -233,7 +230,7 @@ pub fn plan(
     document
         .apply(0, "Relative placement", edits.clone())
         .map_err(|e| format!("Invalid edit plan: {e:?}"))?;
-    let changed = laml::parser::parse(document.source()).map_err(|e| e.message)?;
+    let changed = crate::notation::parse_graph(document.source()).map_err(|e| e.message)?;
     laml::layout::validate_ordering(&changed).map_err(|e| e.message)?;
     Ok(PlacementPlan {
         edits,
@@ -257,7 +254,7 @@ mod tests {
         assert!(plan.source.contains(" B < C\n A above D\n"));
         assert!(plan.source.contains("A > C"));
         assert_eq!(
-            laml::parser::parse(&plan.source).unwrap().relations.len(),
+            crate::notation::parse_graph(&plan.source).unwrap().relations.len(),
             0
         );
     }

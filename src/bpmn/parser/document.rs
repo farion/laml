@@ -154,6 +154,7 @@ pub fn parse(source: &str) -> Result<Document, String> {
                         return Err(error(line, "invalid or duplicate pool"));
                     }
                     doc.pools.push(Pool {
+                        line,
                         label: label.unwrap_or_else(|| id.clone()),
                         id: id.clone(),
                         lanes: vec![],
@@ -182,6 +183,7 @@ pub fn parse(source: &str) -> Result<Document, String> {
                         return Err(error(line, "duplicate lane"));
                     }
                     pool.lanes.push(Lane {
+                        line,
                         label: label.unwrap_or_else(|| id.clone()),
                         id: id.clone(),
                     });

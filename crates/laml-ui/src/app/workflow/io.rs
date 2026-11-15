@@ -54,7 +54,8 @@ impl Editor {
                     Ok(Reply::DependenciesChanged(true)) => {
                         self.document.invalidate();
                         self.source_mutated();
-                        self.changed = Instant::now() - Duration::from_secs(1);
+                        let now = Instant::now();
+                        self.changed = now.checked_sub(Duration::from_secs(1)).unwrap_or(now);
                         self.workflow.invalidate_watch();
                     }
                     Ok(Reply::DependenciesChanged(false)) => {}
@@ -88,6 +89,7 @@ impl Editor {
                 self.confirm_export();
             }
         }
+        if laml_ui::services::browser_mode() { return; }
         let changed = self.workflow.revision != Some(self.document.revision())
             || self.workflow.path != self.path;
         if changed {
@@ -146,6 +148,23 @@ impl Editor {
                 _ => false,
             });
         if !matches {
+            return;
+        }
+        #[cfg(target_arch = "wasm32")]
+        if laml_ui::services::browser_mode() {
+            match response.result {
+                Ok(Reply::Export(bytes)) => {
+                    let format = self.workflow.export_format;
+                    let origin = &self.workflow.export.as_ref().unwrap().origin;
+                    let name = format!("{}.{}", origin.file_stem().unwrap_or_default().to_string_lossy(), format.extension());
+                    let mime = match format { Format::Svg => "image/svg+xml", Format::Png => "image/png", Format::Pdf => "application/pdf" };
+                    crate::browser_storage::download(&name, &bytes, mime);
+                    self.workflow.export = None;
+                    self.workflow.status = Some(format!("Downloaded {name}"));
+                }
+                Err(error) => self.export_error(error),
+                _ => self.export_error("Unexpected download response"),
+            }
             return;
         }
         if let Err(error) = response.result {

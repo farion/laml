@@ -20,6 +20,7 @@ impl EditorTheme {
 pub(super) struct Preferences {
     pub editor_theme: EditorTheme,
     pub fit_preview: bool,
+    pub welcome_seen: bool,
 }
 impl Preferences {
     pub fn apply(self, ctx: &egui::Context) {
@@ -79,7 +80,9 @@ impl Workspace {
                 editor.submitted = None;
                 editor.rendered = None;
                 editor.retry_after = None;
-                editor.changed = Instant::now() - Duration::from_millis(300);
+                // Browser instants start at page load and cannot go below zero.
+                let now = Instant::now();
+                editor.changed = now.checked_sub(Duration::from_millis(300)).unwrap_or(now);
             }
         }
     }
@@ -136,7 +139,7 @@ mod tests {
         let ctx = egui::Context::default();
         let source = "settings {\n theme: plain\n}\nsemantics {\n A\n}\n";
         let mut workspace = Workspace::new(Editor::new(source.into(), None));
-        workspace.preferences = Preferences { editor_theme: EditorTheme::Light, fit_preview: true };
+        workspace.preferences = Preferences { editor_theme: EditorTheme::Light, fit_preview: true, ..Default::default() };
         workspace.sync_editor_theme(&ctx);
         let editor = &workspace.tabs[0];
         assert_eq!(editor.compiler.presentation, Presentation::EditorLight);

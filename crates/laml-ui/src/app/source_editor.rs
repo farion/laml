@@ -213,6 +213,15 @@ impl Editor {
         });
     }
     fn select_source_line(&mut self, line: usize) {
+        if self.specialized() {
+            let id = self.preview.as_ref().and_then(|p| p.regions.iter().find(|r| r.line == line)).map(|r| r.id.clone());
+            if laml_ui::notation_edit::record(self.document.source(), line).is_ok() {
+                self.notation_ui.selected = Some((line, id, self.document.revision()));
+                self.property_drafts.clear();
+            }
+            return;
+        }
+        self.notation_ui.selected = None;
         let Some(preview) = &self.preview else {
             return;
         };

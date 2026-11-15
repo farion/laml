@@ -11,7 +11,7 @@ fn apply(source: &str, edits: Vec<Edit>) -> Document {
 #[test]
 fn named_nodes_keep_crlf_comments_shapes_and_atomic_history() {
     let source = "// Grüße\r\nsemantics {\r\n A // keep\r\n}\r\n";
-    for kind in element_edit::ElementKind::ALL {
+    for kind in element_edit::ElementKind::available(source) {
         let edits = add_node(source, kind, "Custom", "Display label").unwrap();
         let mut doc = apply(source, edits);
         let model = node_edit::diagram(doc.source()).unwrap();

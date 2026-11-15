@@ -17,12 +17,13 @@ impl Item<'_> {
         if self.icon.is_some() {
             return ui.spacing().interact_size.y;
         }
+        let text_color = appearance::color(ui.ctx(), appearance::TEXT);
         ui.fonts_mut(|fonts| {
             fonts
                 .layout_no_wrap(
                     self.label.into(),
                     egui::FontId::proportional(15.0),
-                    appearance::color(ui.ctx(), appearance::TEXT),
+                    text_color,
                 )
                 .size()
                 .x

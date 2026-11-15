@@ -1,5 +1,7 @@
 //! Host for the shared Rust/WASM editor. Deployment policies are opt-in.
 mod config;
+mod browser;
+mod sessions;
 mod http;
 mod limits;
 mod process;
@@ -17,6 +19,7 @@ struct ClientProcess {
 }
 struct HttpState {
     config: Config,
+    sessions: Arc<Mutex<sessions::Sessions>>,
     origin: String,
     assets: cap_std::fs::Dir,
     processes: Mutex<BTreeMap<u64, ClientProcess>>,
@@ -43,11 +46,15 @@ impl HttpState {
 pub fn run(args: &[std::ffi::OsString]) -> Result<(), String> {
     if args.len() == 1 && args[0] == "--help" {
         println!(
-            "laml-ui serve --workspace DIR --assets DIR --state-dir DIR [--bind 127.0.0.1:7878] [--origin URL] [--limits] [--parallelism N] [--http-checks] [--require-https]"
+            "laml-ui serve [--workspace DIR --state-dir DIR] [--assets DIR] [--max-users 10] [--bind 127.0.0.1:7878] [--origin URL] [--limits] [--parallelism N] [--http-checks] [--require-https]"
         );
         return Ok(());
     }
     let config = Config::parse(args)?;
+    if config.browser {
+        // A compiler panic must not copy document values into host logs.
+        std::panic::set_hook(Box::new(|_| eprintln!("Browser compiler request failed")));
+    }
     let assets = cap_std::fs::Dir::open_ambient_dir(&config.assets, cap_std::ambient_authority())
         .map_err(|_| "Web assets unavailable")?;
     for file in ["laml_ui.js", "laml_ui_bg.wasm"] {
@@ -55,7 +62,7 @@ pub fn run(args: &[std::ffi::OsString]) -> Result<(), String> {
             return Err("Build web assets first with scripts/build-editor-web.sh".into());
         }
     }
-    config::private_dir(&config.state.join("recovery"))?;
+    if !config.browser { config::private_dir(&config.state.join("recovery"))?; }
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
@@ -73,7 +80,9 @@ pub fn run(args: &[std::ffi::OsString]) -> Result<(), String> {
             let workers = config
                 .parallelism
                 .map(|n| Arc::new(tokio::sync::Semaphore::new(n)));
+            let sessions = Arc::new(Mutex::new(sessions::Sessions::new(config.max_users)));
             let state = Arc::new(HttpState {
+                sessions,
                 config,
                 origin,
                 assets,

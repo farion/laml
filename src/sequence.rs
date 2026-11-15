@@ -10,6 +10,8 @@ mod continuations;
 mod coregions;
 mod decompositions;
 mod document;
+pub mod destruction_layout;
+pub mod activation_layout;
 mod executions;
 mod fragments;
 mod frame_layout;
@@ -136,6 +138,8 @@ pub struct SequenceDiagram {
     pub decompositions: Vec<Decomposition>,
     pub coregions: Vec<Coregion>,
     pub vertical_layout: Vec<VerticalRule>,
+    pub destruction_layout: Vec<destruction_layout::DestructionAlignment>,
+    pub activation_layout: Vec<activation_layout::Alignment>,
     pub styling: Vec<StyleEntry>,
 }
 

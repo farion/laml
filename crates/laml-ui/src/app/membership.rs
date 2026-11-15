@@ -46,7 +46,7 @@ impl Editor {
             .diagram
             .nodes
             .iter()
-            .filter(|n| n.kind == laml::syntax::NodeKind::Package)
+            .filter(|n| laml_ui::notation::container_kind(n.kind))
             .map(|n| n.id.clone())
             .collect();
 
@@ -59,7 +59,10 @@ impl Editor {
                     .show_ui(ui, |ui| {
                         ui.selectable_value(&mut target, String::new(), "Root");
                         for parent in packages {
-                            ui.selectable_value(&mut target, parent.clone(), &parent);
+                            let result = membership_edit::plan(self.document.source(), &selected, Some(&parent));
+                            let response = ui.add_enabled(parent == current || result.is_ok(), egui::Button::selectable(target == parent, &parent));
+                            if let Err(error) = result { response.clone().on_disabled_hover_text(error); }
+                            if response.clicked() { target = parent; }
                         }
                     });
             });

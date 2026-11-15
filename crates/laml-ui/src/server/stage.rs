@@ -21,9 +21,8 @@ impl Stage {
             .map_err(Diagnostic::from)?;
         extension(&address, &["laml", "lamlstyle"]).map_err(Diagnostic::from)?;
         // Parse first: invalid settings must not reach with_fonts before authorization.
-        let diagram =
-            laml::parser::parse(source).map_err(|e| Diagnostic::at(&address, e.line, e.message))?;
-        if workspace.limits && (diagram.nodes.len() > 512 || diagram.relations.len() > 2048) {
+        let (diagram, nodes, relations) = crate::notation::inspect_at(source, &address)?;
+        if workspace.limits && (nodes > 512 || relations > 2048) {
             return Err("Diagram exceeds host element limit".into());
         }
         let temp = tempfile::tempdir()

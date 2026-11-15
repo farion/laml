@@ -14,12 +14,7 @@ mod tests;
 pub use rename::rename_id;
 
 pub(crate) fn diagram(source: &str) -> Result<Diagram, String> {
-    let diagram = laml::parser::parse(source).map_err(|e| e.message)?;
-    if diagram.settings.diagram_type != laml::syntax::DiagramType::Generic
-        || laml::c4::is_c4_source(source)
-    {
-        return Err("Object editing currently supports GNE only".into());
-    }
+    let diagram = crate::notation::parse_graph(source).map_err(|e| e.message)?;
     Ok(diagram)
 }
 pub(crate) fn candidate(source: &str, edits: &[Edit]) -> Result<String, String> {
@@ -229,7 +224,12 @@ pub(crate) fn node_head(text: &str, node: &NodeDecl) -> Result<Range<usize>, Str
             break;
         }
     }
-    if node.kind != NodeKind::Generic {
+    let keywords = ["association", "class", "profile", "stereotype", "metaclass", "package",
+        "structure", "part", "role", "component", "interface", "enum", "datatype", "device",
+        "executionEnvironment", "node", "artifact", "actor", "usecase", "system", "interaction-use",
+        "action", "objectNode", "activityFinal", "flowFinal", "decision", "merge", "fork", "join",
+        "state", "initial", "final", "choice", "object", "note", "junction", "external", "person", "container"];
+    while parts.get(first).is_some_and(|r| keywords.contains(&&text[r.clone()])) && first + 1 < parts.len() {
         first += 1;
     }
     parts

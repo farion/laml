@@ -57,6 +57,7 @@ mod membership_tests;
 #[cfg(test)]
 mod object_tests;
 mod objects;
+mod notation_ui;
 #[cfg(test)]
 mod palette;
 #[cfg(test)]
@@ -130,6 +131,7 @@ pub struct Editor {
     command_error: Option<String>,
     pending_command: Option<u64>,
     creation: creation::Creation,
+    notation_ui: notation_ui::State,
     placement: placement::PlacementUi,
     alignment: Option<alignment::Proposal>,
     deletion: Option<deletion::Proposal>,
@@ -213,6 +215,7 @@ impl Editor {
             command_error: None,
             pending_command: None,
             creation: creation::Creation::default(),
+            notation_ui: Default::default(),
             alignment: None,
             relation_drag: None,
             deletion: None,
@@ -245,6 +248,30 @@ impl Editor {
             format!("bytes://preview-{}-{revision}.svg", self.id),
             preview.svg.as_bytes().to_vec(),
         ));
+        if self.preview.as_ref().is_none_or(|old| old.notation != preview.notation) {
+            self.graph.operator = match preview.notation {
+                laml_ui::notation::Notation::Bpmn => "-->",
+                laml_ui::notation::Notation::Composite => "==",
+                laml_ui::notation::Notation::Communication => "--",
+                laml_ui::notation::Notation::Activity => "control",
+                laml_ui::notation::Notation::InteractionOverview | laml_ui::notation::Notation::State => "-->",
+                laml_ui::notation::Notation::Object | laml_ui::notation::Notation::UseCase => "--",
+                laml_ui::notation::Notation::Package | laml_ui::notation::Notation::Component => "..>",
+                laml_ui::notation::Notation::Deployment => "--",
+                laml_ui::notation::Notation::Profile => "--^>",
+                _ => "->",
+            }.into();
+            self.notation_ui.selected = None;
+            self.property_drafts.clear();
+            self.graph.cancel_gesture();
+            self.placement.cancel();
+        }
+        if let Some((line, Some(id), revision)) = &mut self.notation_ui.selected {
+            if *revision == self.document.revision() {
+                if let Some(region) = preview.regions.iter().find(|r| &r.id == id) { *line = region.line; }
+                else if let Some(node) = preview.diagram.nodes.iter().find(|n| &n.id == id) { *line = node.line; }
+            }
+        }
         self.preview = Some(preview);
         self.rendered = Some(revision);
         self.error = None;
@@ -298,6 +325,9 @@ impl Editor {
                         {
                             self.command_error = Some(format!("Edit failed: {error:?}"));
                             continue;
+                        }
+                        if let worker::Expectation::Notation { line, id } = &command.expectation {
+                            self.notation_ui.selected = line.map(|line| (line, id.clone(), self.document.revision()));
                         }
                         if let worker::Expectation::Port(id) = &command.expectation {
                             self.selection.click_port(id, false);
@@ -369,9 +399,9 @@ impl Editor {
         self.deletion_window(&ctx);
         self.file_windows(&ctx);
         self.export_windows(&ctx);
-        self.recovery_window(&ctx);
         self.structure_window(&ctx);
         self.graph_windows(&ctx);
+        self.notation_windows(&ctx);
         self.icon_picker_window(&ctx);
         self.command_error_window(&ctx);
         self.capture_tick(&ctx);

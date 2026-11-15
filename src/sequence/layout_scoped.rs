@@ -18,7 +18,7 @@ fn strip_scope(text: &str, owner: &str, line: usize) -> Result<String, ParseErro
         .map(|word| {
             if matches!(
                 word,
-                "<" | ">" | "left" | "right" | "of" | "over" | "above" | "spans" | "covers"
+                "?" | "<" | ">" | "left" | "right" | "of" | "over" | "above" | "spans" | "covers"
             ) {
                 return Ok(word.to_string());
             }
@@ -57,7 +57,11 @@ pub(super) fn add(
         let local = strip_scope(text, owner, line)?;
         return add(&mut diagram.decompositions[index].diagram, &local, line);
     }
-    if let Some(coverage) = frame_layout::parse(text, line)? {
+    if let Some(rule) = super::activation_layout::parse(text, line)? {
+        diagram.activation_layout.push(rule);
+    } else if let Some(rule) = super::destruction_layout::parse(text, line)? {
+        diagram.destruction_layout.push(rule);
+    } else if let Some(coverage) = frame_layout::parse(text, line)? {
         diagram.frame_layout.push(coverage);
     } else if let Some(place) = notes::parse_placement(text, line)? {
         diagram.note_layout.push(place);
@@ -83,5 +87,7 @@ pub(super) fn validate(diagram: &mut SequenceDiagram) -> Result<(), ParseError> 
     continuations::validate(diagram)?;
     annotations::validate(diagram)?;
     coregions::validate(diagram)?;
+    super::destruction_layout::validate(diagram)?;
+    super::activation_layout::validate(diagram)?;
     Ok(())
 }

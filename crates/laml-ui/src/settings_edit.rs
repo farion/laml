@@ -39,7 +39,7 @@ pub fn property(source: &str, name: &str, value: Option<&str>) -> Result<Vec<Edi
         "theme", "background", "font-file", "font-italic-file"].contains(&name) {
         return Err("Unknown document setting".into());
     }
-    laml::parser::parse(source).map_err(|e| e.message)?;
+    crate::notation::parse_graph(source).map_err(|e| e.message)?;
     if value.is_some_and(|v| v.contains(['\r', '\n'])) {
         return Err("Enter a single setting value".into());
     }
@@ -94,6 +94,6 @@ pub fn property(source: &str, name: &str, value: Option<&str>) -> Result<Vec<Edi
         Edit { range: 0..0, replacement: format!("settings {{{eol}    {name}: {value}{eol}}}{eol}{eol}") }
     } else { return Ok(vec![]); };
     let candidate = crate::node_edit::candidate(source, std::slice::from_ref(&edit))?;
-    laml::parser::parse(&candidate).map_err(|e| e.message)?;
+    crate::notation::parse_graph(&candidate).map_err(|e| e.message)?;
     Ok(vec![edit])
 }

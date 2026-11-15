@@ -7,6 +7,7 @@ use crate::bpmn::{Edge, EdgeKind, Kind, Side};
 pub(super) type Point = (f64, f64);
 #[derive(Clone)]
 pub(super) struct Prior {
+    pub index: usize,
     pub points: Vec<Point>,
     pub kind: EdgeKind,
     pub from: String,
@@ -249,6 +250,7 @@ pub(super) fn route(
     doc: &Document,
     geom: &Geometry,
     e: &Edge,
+    index: usize,
     source: Attach,
     target: Attach,
     preferred: Option<Vec<Point>>,
@@ -324,7 +326,7 @@ pub(super) fn route(
             candidates.push(vec![first, s, (x, s.1), (x, y), (t.0, y), t, last]);
         }
     }
-    let (crossings, cost, best) = candidates
+    let mut scored: Vec<_> = candidates
         .into_iter()
         .enumerate()
         .filter_map(|(i, points)| {
@@ -332,13 +334,19 @@ pub(super) fn route(
             score(doc, geom, e, &points, previous)
                 .map(|(crossings, cost)| (crossings, cost + i as f64 * 0.001, points))
         })
-        .min_by(|a, b| a.0.cmp(&b.0).then(a.1.total_cmp(&b.1)))
-        .ok_or_else(|| {
-            format!(
-                "no obstacle-free orthogonal BPMN route for {} -> {}",
-                e.from, e.to
-            )
-        })?;
+        .collect();
+    scored.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.total_cmp(&b.1)));
+    // A clear line is not enough: retain a candidate only when its labels and
+    // those of earlier routes also fit. Try longer detours before failing.
+    let mut label_error = None;
+    let (crossings, cost, best) = scored.into_iter().find(|(_, _, points)| {
+        match super::labels::route_fits(doc, geom, index, points, previous) {
+            Ok(()) => true,
+            Err(error) => { label_error = Some(error); false }
+        }
+    }).ok_or_else(|| label_error.unwrap_or_else(|| format!(
+        "no obstacle-free orthogonal BPMN route for {} -> {}", e.from, e.to
+    )))?;
     Ok(Plan {
         points: best,
         cost,

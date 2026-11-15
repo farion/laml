@@ -17,6 +17,8 @@ pub struct PickRoute {
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Preview {
     pub svg: String,
+    pub notation: crate::notation::Notation,
+    pub regions: Vec<laml::authoring::Region>,
     pub diagram: laml::syntax::Diagram,
     pub styles: laml::styles::StyleSheet,
     pub nodes: Vec<laml::geometry::BoxNode>,
@@ -34,3 +36,6 @@ mod native;
 mod incremental;
 #[cfg(not(target_arch = "wasm32"))]
 pub use native::*;
+
+#[cfg(not(target_arch = "wasm32"))]
+mod special;

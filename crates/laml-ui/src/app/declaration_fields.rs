@@ -29,6 +29,7 @@ impl Editor {
                     let mut kind=node.kind;
                     egui::ComboBox::from_id_salt("node-kind-property").width(ui.available_width()).selected_text(declaration_fields::title(kind)).show_ui(ui,|ui| {
                         for option in KINDS {
+                            if self.preview.as_ref().is_some_and(|p| !laml::parser::allows_node_kind(option, p.diagram.settings.diagram_type)) { continue; }
                             let valid=declaration_fields::change(self.document.source(),&node.id,Change::Kind(option)).is_ok();
                             if ui.add_enabled(valid,egui::Button::selectable(kind==option,declaration_fields::title(option))).clicked(){kind=option;}
                         }
@@ -36,7 +37,8 @@ impl Editor {
                     if kind!=node.kind {self.change_declaration(&node.id,Change::Kind(kind));}
                 }else {ui.label(declaration_fields::title(node.kind));}
             });
-            if !matches!(node.kind,NodeKind::Object|NodeKind::Note|NodeKind::Junction) {
+            if !matches!(node.kind,NodeKind::Object|NodeKind::Note|NodeKind::Junction)
+                && declaration_fields::change(self.document.source(), &node.id, Change::Visibility(Some('+'))).is_ok() {
                 inspector_ui::row(ui,"Visibility",|ui| {
                     let mut visibility=node.visibility;
                     let title=visibility_title(visibility);

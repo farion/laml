@@ -1,16 +1,19 @@
 # Install the native LAML editor
 
 The editor is a separate application named `laml-ui`. The compiler CLI remains
-`laml`; both can be installed side by side. Editor release tags use `ui-vVERSION`
-and archives start with `laml-ui-vVERSION`.
+`laml`; both can be installed side by side. A single `vVERSION` release tag builds
+both applications for all supported platforms. Editor archives start with
+`laml-ui-vVERSION`.
 
 The same executable can host the shared editor in a browser with `laml-ui serve`.
 See [browser build, local archive and host startup](editor-host.md) for its matching
-WASM assets, authentication and server-side file workflow.
+WASM assets, Docker Compose deployment, browser-local documents and the optional
+server-side file workflow.
 
 Choose the archive matching the operating system and CPU, and compare its SHA-256
 with `SHA256SUMS` from that same release before extracting it. Keep the supplied
-license notices with redistributed copies.
+license notices with redistributed copies. The compiler is MIT-licensed; the
+editor is GPL-3.0-or-later. Matching source is supplied in the same release.
 
 ## Linux x86-64
 

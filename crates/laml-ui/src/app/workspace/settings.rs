@@ -48,6 +48,7 @@ pub(super) fn content(ui: &mut egui::Ui, category: &mut Category, preferences: &
                         ui.add_space(16.0);
                         ui.label("Editor theme");
                         egui::ComboBox::from_id_salt("editor-theme")
+                            .width(140.0)
                             .selected_text(preferences.editor_theme.label())
                             .show_ui(ui, |ui| {
                                 for theme in [editor_theme::EditorTheme::Auto,
@@ -64,7 +65,7 @@ pub(super) fn content(ui: &mut egui::Ui, category: &mut Category, preferences: &
                         ui.hyperlink("https://github.com/farion/laml");
                         ui.add_space(16.0);
                         ui.label("LAML License MIT");
-                        ui.label("Editor License GPL");
+                        ui.label("Editor License GPL-3.0-or-later");
                         ui.add_space(16.0);
                         ui.label("Maintainer: Frieder Reinhold<reinhold@trigon-media.com>");
                     }

@@ -187,7 +187,8 @@ impl Editor {
                 let was_current = task.stamp.revision == self.document.revision();
                 self.file
                     .acknowledge_save(address.into(), source, &mut self.document);
-                self.changed = Instant::now() - Duration::from_secs(1);
+                let now = Instant::now();
+                self.changed = now.checked_sub(Duration::from_secs(1)).unwrap_or(now);
                 self.saved(was_current, ctx);
             }
             _ => self.fail_file("Unexpected file service response"),

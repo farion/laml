@@ -2,7 +2,31 @@
 
 `laml-ui serve` hosts the same Rust/egui application as the desktop editor.
 Source editing, diagram gestures, properties, tabs and undo/redo are shared.
-Files, compilation, dependencies, exports and recovery snapshots stay on the host.
+By default, documents live in the visitor's browser. The host only compiles and
+renders complete requests in RAM. An explicit `--workspace` selects the separate
+file-based workspace mode.
+
+## Deploy a release with Docker Compose
+
+Download the release's `laml-server-vVERSION-linux-amd64.tar.gz` and `SHA256SUMS`,
+verify the archive, and extract it on a Linux x86-64 server. The archive contains
+both native binaries, matching browser assets, `Dockerfile` and `compose.yaml`.
+From its extracted directory:
+
+```sh
+docker compose up -d --build
+```
+
+Open port 7878 on the server. The image is assembled from the release's binaries;
+no Rust compilation or source checkout runs on the server. Port mapping and
+`--max-users` are configured directly in `compose.yaml`. Browser-local storage is
+the default; no data volume is needed. For a public deployment, use your existing
+HTTPS reverse proxy. See [the server bundle guide](../deploy/server/README.md) for
+verification, configuration and updates.
+
+A `vVERSION` Git tag builds CLI and editor archives for Linux x86-64, macOS
+Intel/ARM and Windows x86-64, plus browser assets, this Linux amd64 server bundle,
+a source archive and SHA-256 checksums. All artifacts come from that exact tag.
 
 ## Build
 
@@ -18,7 +42,66 @@ cargo build --locked --release -p laml-ui
 The executable is `target/release/laml-ui` (`.exe` on Windows); browser assets are
 in `target/editor-web`. The shell scripts can run in Git Bash on Windows.
 
-## Start
+## Start: browser storage (default)
+
+```sh
+./target/release/laml-ui serve --assets "$PWD/target/editor-web" --max-users 10
+```
+
+From the repository root, `--assets` defaults to `target/editor-web`, so
+`./target/release/laml-ui serve` is sufficient after building.
+
+The **Browser library** button lists diagrams stored in IndexedDB for this browser
+profile and site origin. **Open / Import .laml** reads local markup files; every
+source or accepted visual edit is saved automatically, including incomplete and
+invalid text. The footer distinguishes pending writes, acknowledged local saves
+and storage failures. A storage failure warns the user to download their work;
+closing a tab is blocked until its browser writes are acknowledged.
+
+The library offers Open, Rename, Download and Move to trash. Trash entries can be
+restored or permanently deleted. Empty trash and Delete everything require
+confirmation. A pristine placeholder is not added back to an emptied library.
+Reload restores this tab's open documents. Libraries are shared across browser
+tabs; if two tabs edit the same document concurrently, the other version is
+preserved as a separate library entry instead of silently overwritten.
+
+**Download LAML** (Ctrl/Cmd+S) downloads the editable source. **Export** downloads
+SVG, PNG or PDF. Downloads do not write host files. Sources must be self-contained:
+inline styles, bundled fonts and bundled icons are supported; imported stylesheets
+and local font files are rejected before compilation. No external assets can be
+uploaded or resolved from the host filesystem.
+
+Every compile, gesture and export request supplies its source. The host retains
+no document session or compiler cache between requests and creates no user-data
+files, temporary staging files or recovery snapshots. Native editing and workspace
+mode keep their existing file/recovery adapters. Browser mode has no recovery
+chooser because the library continuously stores edits locally.
+
+**Clearing browser/site data deletes the library.** A different browser, device,
+profile, host name or port has a different library. Keep `.laml` downloads as
+backups; storage availability and quota belong to the browser. If the connection
+is lost while the editor is open, source editing and browser storage remain
+available; compilation, exports and visual editing need a backend connection.
+Loading the application from scratch still requires the host.
+
+### Concurrent browser sessions
+
+`--max-users N` accepts a positive integer, default **10**. All tabs of the same
+browser profile and origin share one place, regardless of the number of documents.
+A place expires after **10 minutes without a heartbeat or request**; in-flight
+requests retain their place until completion even if the client disconnects.
+Returning sessions reacquire a place. A full server displays:
+
+> The server is full. All available places are occupied. Local editing remains
+> available; the connection will retry automatically.
+
+Admission is retried automatically. This limits browser sessions, not diagram
+size, request duration or the number of concurrent requests from one session.
+There are no configured size/time/resource caps in browser mode. The existing
+`--limits` and `--parallelism` switches belong to workspace mode; they are rejected
+without `--workspace` rather than silently changing browser-mode behavior.
+
+## Start: server workspace (explicit)
 
 ```sh
 ./target/release/laml-ui serve \
@@ -48,7 +131,7 @@ Source addresses end in `.laml`; stylesheet/font dependencies must resolve insid
 the workspace. Scope checks, typed protocol validation, checked overwrites,
 revision guards and source/dependency protection always preserve editing safety.
 
-## Optional deployment policies
+## Optional workspace deployment policies
 
 All options below are **off by default** and independent:
 
@@ -82,7 +165,7 @@ not enabled. Machine capacity, filesystem limits and representable wire-format
 lengths still apply. Requests sharing mutable compiler state are serialized for
 correctness; separate browser clients can run independently.
 
-## Saves and recovery
+## Workspace saves and recovery
 
 A save acknowledges the submitted snapshot; typing during the write remains
 dirty. Existing targets need explicit confirmation and are checked again before
@@ -101,7 +184,7 @@ that releases its worker after accepted requests finish. Its abandoned snapshots
 then become available. If the browser exits without delivering that notification,
 the leases remain until the host stops; snapshots are retained on disk.
 **Restore** changes an editor buffer, never the original source file; use **Save**
-explicitly. Application recovery is not written to browser storage. Navigation
+explicitly. Workspace recovery is not written to browser storage. Navigation
 warns about dirty buffers. Host backups remain useful for long-term retention.
 
 ## Local archive
@@ -112,16 +195,31 @@ warns about dirty buffers. Host backups remain useful for long-term retention.
 
 This creates a native host + matching browser assets, example and stylesheet,
 guides and license notices, alongside a SHA-256 file. Existing outputs are never
-replaced. Extract and start from the archive directory:
+replaced. Extract and start the default browser-storage mode from the archive directory:
 
 ```sh
-./laml-ui serve --workspace "$PWD/examples" --assets "$PWD/web" \
-  --state-dir "$HOME/.local/state/laml-editor-host/state"
+./laml-ui serve --assets "$PWD/web"
 ```
+
+Add `--workspace "$PWD/examples" --state-dir "$HOME/.local/state/laml-editor-host/state"`
+to use server-side files instead.
 
 Rust and Node are build/test tools, not runtime requirements for the archive.
 
-## Validation
+## Targeted browser-storage acceptance
+
+After building matching native/WASM debug artifacts and generating web assets:
+
+```sh
+node scripts/test-editor-browser-storage.mjs
+```
+
+This focused check covers browser writes/reload, invalid source, offline editing,
+LAML downloads, trash/clear, shared-tab admission, conflicting tab writes and a
+simulated storage failure. It uses an isolated browser profile and host directory.
+`LAML_TEST_PORT` overrides its default local test port 17883.
+
+## Workspace validation
 
 ```sh
 cargo test --locked --workspace --release

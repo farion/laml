@@ -329,6 +329,7 @@ pub(super) fn message_endpoints(
     }
     let (frame_left, frame_right) = if let Some((operator, id, guard)) = current.last() {
         let frame = super::DrawnFrame {
+            line: 0,
             operator: (*operator).clone(),
             id: (*id).clone(),
             guard: (*guard).clone(),

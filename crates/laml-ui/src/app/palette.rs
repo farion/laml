@@ -23,7 +23,7 @@ impl Editor {
         egui::ComboBox::from_id_salt("new-element-kind")
             .selected_text(self.creation.palette.kind.title())
             .show_ui(ui, |ui| {
-                for kind in ElementKind::ALL {
+                for kind in ElementKind::available(self.document.source()) {
                     ui.selectable_value(&mut self.creation.palette.kind, kind, kind.title());
                 }
             });

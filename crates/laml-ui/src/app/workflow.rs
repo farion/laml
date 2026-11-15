@@ -112,6 +112,9 @@ impl Editor {
             return;
         }
         let operation = protocol::address(&path).and_then(|address| {
+            if laml_ui::services::browser_mode() {
+                return Ok(Operation::RenderExport { source: self.document.source().into(), address: protocol::address(&self.path)?, format });
+            }
             Ok(Operation::BeginExport {
                 address,
                 source_address: protocol::address(&self.path)?,
@@ -126,6 +129,7 @@ impl Editor {
         });
         match result {
             Ok(stamp) => {
+                self.workflow.export_format = format;
                 self.workflow.export = Some(Export {
                     revision: self.document.revision(),
                     origin: self.path.clone(),
@@ -168,6 +172,9 @@ impl Editor {
                     if ui.add_enabled(enabled, egui::Button::new("Export…")).clicked() {
                         let format = self.workflow.export_format;
                         let name = self.path.file_stem().unwrap_or_default().to_string_lossy();
+                        if laml_ui::services::browser_mode() {
+                            self.start_export(PathBuf::from(format!("{name}.{}", format.extension())), format);
+                        } else {
                         self.workflow.picker = Some((
                             format,
                             host_dialogs::Picker::save(
@@ -176,6 +183,7 @@ impl Editor {
                             ),
                             ctx.clone(),
                         ));
+                        }
                         self.workflow.export_open = false;
                     }
                     if ui.button("Cancel").clicked() {

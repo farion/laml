@@ -5,6 +5,7 @@ mod client;
 pub use client::Client;
 
 pub enum Expectation {
+    Notation { line: Option<usize>, id: Option<String> },
     Settings(laml::syntax::Settings),
     CompartmentStyle {
         owner: String,
@@ -87,6 +88,7 @@ pub fn run(backend: &dyn laml_ui::backend::Backend, job: Job) -> BuildResult {
 }
 
 fn verify(preview: &Preview, expectation: &Expectation, presentation: laml_ui::backend::Presentation) -> Result<(), String> {
+    if matches!(expectation, Expectation::Notation { .. }) { return Ok(()); }
     if let Expectation::Settings(expected) = expectation {
         let mut expected = expected.clone();
         // Match the selected preview presentation, while authored settings are

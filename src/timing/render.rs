@@ -111,6 +111,11 @@ fn validate_ticks(doc: &Document, x0: f64) -> Result<(), String> {
 }
 
 pub fn render(doc: &Document, sheet: &StyleSheet, mode: TextMode) -> Result<String, String> {
+    render_for_editor(doc, sheet, mode).map(|(svg, _)| svg)
+}
+pub fn render_for_editor(doc: &Document, sheet: &StyleSheet, mode: TextMode) -> Result<(String, Vec<crate::authoring::Region>), String> {
+    use crate::authoring::Region;
+    let mut regions = Vec::new();
     let styles = doc
         .lifelines
         .iter()
@@ -148,6 +153,7 @@ pub fn render(doc: &Document, sheet: &StyleSheet, mode: TextMode) -> Result<Stri
             + (states.len() - 1) as f64 * 38.0
             + if lane.events.is_empty() { 0.0 } else { 24.0 })
         .max(measure(&caption, style.font)? + 36.0);
+        regions.push(Region::rect(&lane.id, "lifeline", lane.line, left, top, end_x - left, height));
         let base = top + 28.0;
         let center = top + height / 2.0;
         writeln!(drawing,"<text x=\"{:.2}\" y=\"{center:.2}\" text-anchor=\"middle\" transform=\"rotate(-90 {:.2} {center:.2})\" font-family=\"Inter\" font-size=\"{:.2}\" fill=\"{}\">{}</text>",
@@ -162,6 +168,8 @@ pub fn render(doc: &Document, sheet: &StyleSheet, mode: TextMode) -> Result<Stri
         let mut points = format!("{x0:.2},{:.2}", state_y(base, states, state));
         for change in &lane.changes {
             let x = x0 + change.time * doc.scale;
+            regions.push(Region::rect(format!("line:{}", change.line), "state-change", change.line,
+                x - 6.0, state_y(base, states, &change.state) - 12.0, 12.0, 24.0));
             if x - previous < 12.0 {
                 return Err(format!(
                     "state changes too close on lifeline '{}' at line {}; increase scale",
@@ -185,6 +193,8 @@ pub fn render(doc: &Document, sheet: &StyleSheet, mode: TextMode) -> Result<Stri
         for event in &lane.events {
             let x = x0 + event.time * doc.scale;
             let width = measure(&event.label, style.font)? + 8.0;
+            regions.push(Region::rect(format!("line:{}", event.line), "event", event.line,
+                x - width / 2.0, event_y - style.font - 6.0, width, style.font + 12.0));
             let interval = (x - width / 2.0, x + width / 2.0);
             if interval.0 < x0 - 4.0
                 || interval.1 > end_x - 4.0
@@ -213,6 +223,8 @@ pub fn render(doc: &Document, sheet: &StyleSheet, mode: TextMode) -> Result<Stri
     .unwrap();
     for tick in &doc.ticks {
         let x = x0 + tick.time * doc.scale;
+        regions.push(Region::rect(format!("line:{}", tick.line), "tick", tick.line,
+            x - 8.0, axis_y - 4.0, 16.0, 32.0));
         writeln!(drawing,"<path d=\"M{x:.2},{axis_y:.2} v8\" stroke=\"#395373\" /><text x=\"{x:.2}\" y=\"{:.2}\" text-anchor=\"middle\" font-family=\"Inter\" font-size=\"12\" fill=\"#17212e\">{}</text>",axis_y+23.0,escape(&tick.label)).unwrap();
     }
     let axis_title = doc
@@ -238,9 +250,6 @@ pub fn render(doc: &Document, sheet: &StyleSheet, mode: TextMode) -> Result<Stri
     svg.insert_str(end, &drawing);
     let opening = svg.find('>').ok_or("SVG missing opening tag")? + 1;
     svg.replace_range(..opening,&format!("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{:.2}\" height=\"{:.2}\" viewBox=\"0 0 {:.2} {:.2}\">",right+24.0,bottom+24.0,right+24.0,bottom+24.0));
-    if mode == TextMode::Paths {
-        crate::export::outlines(&svg)
-    } else {
-        Ok(svg)
-    }
+    let svg = if mode == TextMode::Paths { crate::export::outlines(&svg)? } else { svg };
+    Ok((svg, regions))
 }

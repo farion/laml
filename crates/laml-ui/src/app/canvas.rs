@@ -112,9 +112,14 @@ impl Editor {
             }
         }
         appearance::image_bounds(ui.painter(), rect);
+        let notation_owned = self.notation_reorder_overlay(ui, viewport, panning);
+        if self.specialized() {
+            self.notation_canvas(ui, rect, &response, panning || notation_owned);
+            return;
+        }
         // Navigation may block gestures, but never the persistent selection overlays.
-        let relation_owned = self.relation_canvas(ui, rect, &response, panning || connection_owned)
-            || connection_owned;
+        let relation_owned = self.relation_canvas(ui, rect, &response, panning || connection_owned || notation_owned)
+            || connection_owned || notation_owned;
         let preview = self.preview.as_ref().unwrap();
         if !panning
             && !relation_owned
@@ -137,6 +142,7 @@ impl Editor {
                 self.selection
                     .click(node.map(|node| node.id.as_str()), toggle);
             }
+            self.notation_ui.selected = None;
             self.property_drafts.clear();
             if self.rendered == Some(self.document.revision()) {
                 self.source_jump = port

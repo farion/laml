@@ -20,55 +20,14 @@ pub(super) fn draw(
     let (end, receive_y) = anchor.receive;
     let paint = styles::message(sheet, m.name.as_deref(), &m.classes);
     let name = escape(m.name.as_deref().unwrap_or(""));
-    let dash = if matches!(m.kind, MessageKind::Reply | MessageKind::Create) {
-        " stroke-dasharray=\"7 5\""
-    } else {
-        ""
-    };
-    if m.from == m.to {
-        let height = receive_y - y;
-        if (start - end).abs() < 0.01 {
-            writeln!(svg, "<path d=\"M{start:.2},{y:.2} h44 v{height:.2} h-44\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\"{dash} data-message=\"{name}\" />", paint.color, paint.width).unwrap();
-        } else {
-            writeln!(svg, "<path d=\"M{start:.2},{y:.2} h44 v{height:.2} H{end:.2}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\"{dash} data-message=\"{name}\" />", paint.color, paint.width).unwrap();
-        }
-        if m.kind != MessageKind::Delete {
-            arrows::draw(
-                svg,
-                (end, receive_y),
-                (-44.0, 0.0),
-                m.kind == MessageKind::Sync || m.filled_reply,
-                &paint.color,
-                sheet.theme.modern(),
-            );
-        }
-    } else {
-        let (path, tip_direction) = if allow_diagonal || (receive_y - y).abs() < 0.01 {
-            (
-                format!("M{start:.2},{y:.2} L{end:.2},{receive_y:.2}"),
-                (end - start, receive_y - y),
-            )
-        } else {
-            // Put the time-carrying leg beside the sender. A leg beside the
-            // receiver can cross another message that arrives earlier there.
-            let approach = 24.0_f64.min((end - start).abs() / 2.0);
-            let elbow = start + (end - start).signum() * approach;
-            (
-                format!("M{start:.2},{y:.2} H{elbow:.2} V{receive_y:.2} H{end:.2}"),
-                (end - elbow, 0.0),
-            )
-        };
-        writeln!(svg, "<path d=\"{path}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\"{dash} data-message=\"{name}\" />", paint.color, paint.width).unwrap();
-        if m.to != "?" && m.kind != MessageKind::Delete {
-            arrows::draw(
-                svg,
-                (end, receive_y),
-                tip_direction,
-                m.kind == MessageKind::Sync || m.filled_reply,
-                &paint.color,
-                sheet.theme.modern(),
-            );
-        }
+    let dash = if super::message_geometry::dashed(m.kind) { " stroke-dasharray=\"7 5\"" } else { "" };
+    let points = super::message_geometry::path(anchor.send, anchor.receive, m.from == m.to, allow_diagonal);
+    let path = super::message_geometry::svg_path(&points, m.from == m.to);
+    writeln!(svg, "<path d=\"{path}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\"{dash} data-message=\"{name}\" />", paint.color, paint.width).unwrap();
+    if m.to != "?" && m.kind != MessageKind::Delete {
+        let previous = points[points.len() - 2];
+        arrows::draw(svg, anchor.receive, (end - previous.0, receive_y - previous.1),
+            super::message_geometry::filled(m.kind, m.filled_reply), &paint.color, sheet.theme.modern());
     }
     if m.from == "?" || m.to == "?" {
         let ((at, at_y), side) = if m.from == "?" {

@@ -441,3 +441,8 @@ fn classes(value: &str, line: usize) -> Result<Vec<String>, ParseError> {
         })
         .collect()
 }
+
+/// Diagram-scoped element capabilities shared with authoring tools.
+pub fn allows_node_kind(kind: crate::syntax::NodeKind, diagram_type: DiagramType) -> bool {
+    node_kinds::allowed(kind, diagram_type)
+}

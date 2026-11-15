@@ -1,9 +1,15 @@
 //! Application-level chrome and independent, long-lived document tabs.
 use super::*;
-use egui_phosphor::regular::{FOLDER_OPEN, GEAR_SIX, PLUS, X};
+use egui_phosphor::regular::{FOLDER_OPEN, GEAR_SIX, PLUS, QUESTION, X};
 
 mod io;
+#[cfg(target_arch = "wasm32")]
+mod library;
 mod settings;
+mod new_diagram;
+mod recovery;
+mod welcome;
+mod help;
 #[cfg(test)]
 mod tests;
 
@@ -13,6 +19,8 @@ pub(super) enum Action {
 }
 
 pub struct Workspace {
+    #[cfg(target_arch = "wasm32")]
+    library: library::Library,
     backend: laml_ui::services::Services,
     service: laml_ui::backend::async_client::Client,
     opening: Option<laml_ui::backend::protocol::Stamp>,
@@ -22,6 +30,10 @@ pub struct Workspace {
     active: usize,
     next_untitled: usize,
     settings_open: bool,
+    welcome_open: bool,
+    help_open: bool,
+    recovery: recovery::State,
+    new_diagram: Option<new_diagram::Picker>,
     settings_category: settings::Category,
     reveal_active: bool,
     closing_all: bool,
@@ -34,16 +46,23 @@ impl Workspace {
     pub fn new(mut editor: Editor) -> Self {
         editor.managed = true;
         let next_untitled = if editor.file.path.is_none() { 2 } else { 1 };
+        let preferences = editor_theme::Preferences::load();
         Self {
+            #[cfg(target_arch = "wasm32")]
+            library: Default::default(),
             backend: editor.backend.clone(),
             service: editor.backend.client(),
             opening: None,
             tabs: vec![editor],
-            preferences: editor_theme::Preferences::load(),
+            preferences,
+            welcome_open: !preferences.welcome_seen,
+            help_open: false,
             editor_theme: egui::Theme::Dark,
             active: 0,
             next_untitled,
             settings_open: false,
+            recovery: Default::default(),
+            new_diagram: None,
             settings_category: settings::Category::default(),
             reveal_active: true,
             closing_all: false,
@@ -55,6 +74,7 @@ impl Workspace {
 
     fn add_tab(&mut self, mut editor: Editor) {
         editor.managed = true;
+        editor.recovery.records.clear();
         self.tabs.push(editor);
         self.active = self.tabs.len() - 1;
         self.reveal_active = true;
@@ -93,6 +113,8 @@ impl Workspace {
         });
         self.next_untitled += 1;
         self.add_tab(editor);
+        #[cfg(target_arch = "wasm32")]
+        if laml_ui::services::browser_mode() { self.library_placeholder(); }
     }
 
     fn request_close(&mut self, index: usize, ctx: &egui::Context) {
@@ -101,6 +123,15 @@ impl Workspace {
         }
         self.active = index;
         self.reveal_active = true;
+        #[cfg(target_arch = "wasm32")]
+        if laml_ui::services::browser_mode() {
+            if !crate::browser_storage::safe_to_close() {
+                self.error = Some(crate::browser_storage::storage_status()); return;
+            }
+            self.tabs[index].allow_close = true;
+            self.waiting_close = Some(self.tabs[index].id);
+            self.finish_close(ctx); return;
+        }
         let editor = &mut self.tabs[index];
         self.waiting_close = Some(editor.id);
         editor.request_tab_close(ctx);
@@ -143,7 +174,7 @@ impl Workspace {
     }
 
     fn chrome(&mut self, ui: &mut egui::Ui) {
-        let locked = self.opening.is_some()
+        let locked = self.welcome_open || self.opening.is_some()
             || self.waiting_close.is_some()
             || self
                 .tabs
@@ -169,6 +200,9 @@ impl Workspace {
                 ui.horizontal_centered(|ui| {
                     ui.add_enabled_ui(!locked, |ui| {
                         ui.horizontal(|ui| {
+                            if !laml_ui::services::browser_mode() { self.recovery_button(ui); }
+                            #[cfg(target_arch = "wasm32")]
+                            if laml_ui::services::browser_mode() && icon(ui, egui_phosphor::regular::BOOKS, "Browser library").clicked() { self.library.open = true; }
                             if icon(ui, PLUS, "New LAML (Ctrl/Cmd+N)").clicked() {
                                 action = Some(Action::New);
                             }
@@ -180,6 +214,9 @@ impl Workspace {
                         });
                     });
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if icon(ui, QUESTION, "Help").clicked() {
+                            self.help_open = true;
+                        }
                         if icon(ui, GEAR_SIX, "Settings").clicked() {
                             self.settings_open = true;
                         }
@@ -223,8 +260,9 @@ impl Workspace {
                                                         .unwrap_or_default()
                                                         .to_string_lossy();
                                                     let label = format!(
-                                                        "{name}{}",
-                                                        if editor.document.is_dirty() {
+                                                        "{name}{}{}",
+                                                        if editor.recovery.recovered && editor.file.path.is_none() { " (recovered)" } else { "" },
+                                                        if !laml_ui::services::browser_mode() && editor.document.is_dirty() {
                                                             " •"
                                                         } else {
                                                             ""
@@ -275,12 +313,12 @@ impl Workspace {
             self.request_close(index, ui.ctx());
         }
         if let Some(Action::New) = action {
-            self.new_tab();
+            self.new_diagram = Some(Default::default());
         }
     }
 
     fn shortcuts(&mut self, ctx: &egui::Context) {
-        if self.settings_open || dialogs::blocked(ctx) {
+        if self.welcome_open || self.help_open || self.settings_open || dialogs::blocked(ctx) {
             return;
         }
         if self.opening.is_some()
@@ -310,6 +348,7 @@ impl Workspace {
     }
 
     fn windows(&mut self, ctx: &egui::Context) {
+        self.new_diagram_window(ctx);
         if self.settings_open {
             let dismissed = dialogs::show(ctx, "global-settings", "Settings", 640.0, |ui| {
                 let before = self.preferences;
@@ -340,6 +379,8 @@ impl Workspace {
     }
 
     fn tick(&mut self, ui: &mut egui::Ui) {
+        #[cfg(target_arch = "wasm32")]
+        self.library_tick();
         self.sync_editor_theme(ui.ctx());
         #[cfg(target_arch = "wasm32")]
         crate::web::set_dirty(self.tabs.iter().any(|e| e.document.is_dirty()));
@@ -351,9 +392,9 @@ impl Workspace {
                     .and_then(|p| p.to_str())
                     .unwrap_or("Untitled"),
                 tab.rendered == Some(tab.document.revision()) && tab.view.image_ready,
-                tab.document.is_dirty(),
+                if laml_ui::services::browser_mode() { !crate::browser_storage::safe_to_close() } else { tab.document.is_dirty() },
                 tab.document.revision(),
-                tab.recovery.records.len(),
+                self.recovery_count(),
             );
         }
         let ctx = ui.ctx().clone();
@@ -388,12 +429,24 @@ impl Workspace {
         });
         if let Some(action) = self.tabs[self.active].workspace_action.take() {
             match action {
-                Action::New => self.new_tab(),
+                Action::New => self.new_diagram = Some(Default::default()),
                 Action::Open(path) => self.open_path(path),
             }
         }
         self.finish_close(&ctx);
-        self.windows(&ctx);
+        if !laml_ui::services::browser_mode() { self.recovery_tick(); }
+        #[cfg(target_arch = "wasm32")]
+        self.library_tick();
+        if self.welcome_open && !self.closing_all {
+            self.welcome_window(&ctx);
+        } else if self.help_open && !self.closing_all {
+            self.help_window(&ctx);
+        } else {
+            self.windows(&ctx);
+            if !laml_ui::services::browser_mode() { self.recovery_window(&ctx); }
+            #[cfg(target_arch = "wasm32")]
+            self.library_window(&ctx);
+        }
     }
 }
 

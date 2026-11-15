@@ -25,6 +25,16 @@ pub(super) fn install(ctx: &egui::Context) {
         .entry(egui::FontFamily::Proportional)
         .or_default()
         .insert(0, "Inter".into());
+    fonts.font_data.insert(
+        "Inter-Bold".into(),
+        std::sync::Arc::new(egui::FontData::from_static(include_bytes!(
+            "../../../../assets/Inter-Bold.otf"
+        ))),
+    );
+    fonts.families.insert(
+        egui::FontFamily::Name("bold".into()),
+        vec!["Inter-Bold".into(), "Inter".into()],
+    );
     // egui-phosphor currently targets egui 0.36; register its version-independent
     // font bytes in our egui 0.37 definitions rather than mixing egui types.
     fonts.font_data.insert(

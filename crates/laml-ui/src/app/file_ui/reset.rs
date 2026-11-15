@@ -43,6 +43,7 @@ impl Editor {
         self.alignment = None;
         self.command_error = None;
         self.error = None;
-        self.changed = Instant::now() - Duration::from_secs(1);
+        let now = Instant::now();
+        self.changed = now.checked_sub(Duration::from_secs(1)).unwrap_or(now);
     }
 }

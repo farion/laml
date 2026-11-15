@@ -94,13 +94,12 @@ fn build_impl(
         font.as_deref(),
         italic.as_deref(),
         || {
-            let mut diagram =
-                laml::parser::parse(source).map_err(|e| Diagnostic::at(path, e.line, e.message))?;
-            if diagram.settings.diagram_type != laml::syntax::DiagramType::Generic
-                || laml::c4::is_c4_source(source)
-            {
-                return Err("This editor preview currently supports GNE diagrams.".into());
+            let notation = crate::notation::Notation::of(source);
+            if !notation.graph() {
+                return super::special::build(source, path, notation, theme, transparent);
             }
+            let mut diagram = crate::notation::parse_graph(source)
+                .map_err(|e| Diagnostic::at(path, e.line, e.message))?;
             diagram.settings.theme = theme;
             diagram.settings.transparent = transparent;
             let styles = laml::styles::load(&diagram, path)
@@ -145,13 +144,25 @@ fn build_impl(
                     })
                 })
                 .collect::<Result<Vec<_>, String>>()?;
-            let bounds = laml::svg::canvas_bounds(&boxes, &routes);
-            let svg = laml::svg::render_with_theme(
-                &boxes,
-                &routes,
-                laml::svg::TextMode::Embedded,
-                theme,
-            )?;
+
+            let mode = laml::svg::TextMode::Embedded;
+            let svg = match notation {
+                crate::notation::Notation::Communication => {
+                    let mut doc = laml::communication::parse(source)
+                        .map_err(|e| Diagnostic::at(path, e.line, e.message))?;
+                    doc.graph = diagram.clone();
+                    laml::communication::render(&doc, &boxes, &routes, mode)
+                }
+                crate::notation::Notation::InteractionOverview => {
+                    let mut doc = laml::interaction_overview::parse(source)
+                        .map_err(|e| Diagnostic::at(path, e.line, e.message))?;
+                    doc.graph = diagram.clone();
+                    laml::interaction_overview::render(&doc, &boxes, &routes, mode)
+                }
+                ty if ty.c4() => laml::svg::c4::render(&boxes, &routes, mode, theme, &diagram),
+                _ => laml::svg::render_with_theme(&boxes, &routes, mode, theme),
+            }?;
+            let bounds = super::special::bounds(&svg)?;
             let protected: Vec<String> = styles
                 .rules
                 .iter()
@@ -192,6 +203,8 @@ fn build_impl(
             let port_properties = crate::properties::port_values(&diagram, &boxes, &styles);
             Ok(Preview {
                 svg,
+                notation,
+                regions: vec![],
                 diagram,
                 styles,
                 nodes: boxes,

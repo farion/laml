@@ -170,6 +170,14 @@ impl Editor {
             || self.workflow.writing()
     }
     fn browse_file(&mut self, dialog: Dialog, _ctx: &egui::Context) {
+        #[cfg(target_arch = "wasm32")]
+        if laml_ui::services::browser_mode() {
+            match dialog {
+                Dialog::Open => crate::browser_storage::import_laml(),
+                Dialog::SaveAs => self.download_laml(),
+            }
+            return;
+        }
         if self.file_ui.busy() {
             return;
         }

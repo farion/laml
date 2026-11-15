@@ -10,7 +10,7 @@ use axum::{
     routing::{get, post},
 };
 pub fn router(state: Arc<HttpState>) -> Router {
-    let body_limit = if state.config.limits {
+    let body_limit = if state.config.limits && !state.config.browser {
         DefaultBodyLimit::max(protocol::MAX_REQUEST_BYTES)
     } else {
         DefaultBodyLimit::disable()
@@ -20,6 +20,7 @@ pub fn router(state: Arc<HttpState>) -> Router {
         .route("/bootstrap.js", get(bootstrap))
         .route("/style.css", get(css))
         .route("/api/options", get(options))
+        .route("/api/session", post(browser::heartbeat))
         .route("/api/editor", post(editor))
         .route("/api/depart", post(depart))
         .route("/pkg/{*file}", get(asset))
@@ -30,6 +31,7 @@ pub fn router(state: Arc<HttpState>) -> Router {
 // pagehide beacon, not a timer: reloading/closing can release recovery leases.
 // Requests already holding a worker Arc still finish their accepted operations.
 async fn depart(State(state): State<Arc<HttpState>>, body: Bytes) -> StatusCode {
+    if state.config.browser { return StatusCode::NO_CONTENT; }
     let Ok(client) = serde_json::from_slice::<u64>(&body) else {
         return StatusCode::BAD_REQUEST;
     };
@@ -41,7 +43,7 @@ async fn depart(State(state): State<Arc<HttpState>>, body: Bytes) -> StatusCode 
 }
 async fn options(State(state): State<Arc<HttpState>>) -> impl IntoResponse {
     axum::Json(
-        serde_json::json!({"limits":state.config.limits,"parallelism":state.config.parallelism,"http_checks":state.config.http_checks,"require_https":state.config.require_https}),
+        serde_json::json!({"browser":state.config.browser,"max_users":state.config.max_users,"limits":state.config.limits && !state.config.browser,"parallelism":state.config.parallelism,"http_checks":state.config.http_checks,"require_https":state.config.require_https}),
     )
 }
 async fn guard(
@@ -74,7 +76,7 @@ async fn guard(
             return StatusCode::FORBIDDEN.into_response();
         }
     }
-    let mut response = if state.config.limits {
+    let mut response = if state.config.limits && !state.config.browser {
         tokio::time::timeout(std::time::Duration::from_secs(100), next.run(request))
             .await
             .unwrap_or_else(|_| StatusCode::REQUEST_TIMEOUT.into_response())
@@ -113,6 +115,7 @@ async fn editor(
     {
         return StatusCode::UNSUPPORTED_MEDIA_TYPE.into_response();
     }
+    if state.config.browser { return browser::editor(state, headers, body).await; }
     let request = match codec::decode_request_with_limits(&body, state.config.limits) {
         Ok(r) => r,
         Err(_) => return StatusCode::BAD_REQUEST.into_response(),

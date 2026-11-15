@@ -1,6 +1,6 @@
 //! Checked UML discrete timing diagrams; time values are explicit, never inferred from order.
 mod render;
-pub use render::render;
+pub use render::{render, render_for_editor};
 
 use crate::lex::{valid_identifier, valid_reference, without_comment};
 use crate::parser::ParseError;

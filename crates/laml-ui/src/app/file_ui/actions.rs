@@ -88,7 +88,7 @@ impl Editor {
             Err(error) => self.fail_file(error),
         }
     }
-    pub(super) fn apply_recovery(
+    pub(in crate::app) fn apply_recovery(
         &mut self,
         loaded: Option<(PathBuf, String)>,
         record: laml_ui::recovery::Record,
@@ -99,6 +99,7 @@ impl Editor {
         self.file = FileState::new(path, &baseline);
         self.document.replace_loaded(baseline);
         let _ = self.document.replace_text(record.source.clone());
+        if self.file.path.is_none() { self.document.mark_unsaved(); }
         self.reset_view(ctx);
         if self.file.path.is_none() {
             self.recovery.origin = record.path.clone();
@@ -106,6 +107,7 @@ impl Editor {
                 self.path = path.clone();
             }
         }
+        self.recovery.recovered = true;
         self.recovery.restoring = Some(record.clone());
         if self.checkpoint() {
             self.finish_recovery();
@@ -120,6 +122,8 @@ impl Editor {
         self.file_ui.conflict = false;
     }
     pub(in crate::app) fn save_file(&mut self, ctx: &egui::Context) {
+        #[cfg(target_arch = "wasm32")]
+        if laml_ui::services::browser_mode() { self.download_laml(); return; }
         if self.file_ui.busy() {
             return;
         }

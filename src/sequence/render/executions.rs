@@ -11,6 +11,7 @@ use std::fmt::Write;
 #[derive(Clone)]
 pub(super) struct OpenExecution {
     pub participant: String,
+    pub line: usize,
     pub id: Option<String>,
     pub label: Option<String>,
     pub from: f64,
@@ -20,6 +21,7 @@ pub(super) struct OpenExecution {
 pub(super) struct DrawnExecution {
     pub opened: OpenExecution,
     pub to: f64,
+    pub end_line: Option<usize>,
 }
 
 /// Re-enter the next operand without redrawing executions already closed in
@@ -41,10 +43,11 @@ pub(super) fn next_operand(open: &mut Vec<OpenExecution>, incoming: &[OpenExecut
 }
 
 impl OpenExecution {
-    pub(super) fn finish(self, to: f64) -> DrawnExecution {
+    pub(super) fn finish(self, to: f64, end_line: Option<usize>) -> DrawnExecution {
         DrawnExecution {
             to: to.max(self.from + 2.0),
             opened: self,
+            end_line,
         }
     }
 }
@@ -55,10 +58,11 @@ pub(super) fn draw(
     sheet: &StyleSheet,
     centers: &[f64],
     bars: &[DrawnExecution],
+    regions: &mut Vec<crate::authoring::Region>,
 ) -> Result<(), String> {
     for bar in bars {
         let OpenExecution {
-            participant: id,
+            participant: id, line,
             id: local_id,
             label,
             from,
@@ -80,6 +84,11 @@ pub(super) fn draw(
         };
         let x = x_of(diagram, centers, id)? - width / 2.0 + 5.0 * *depth as f64;
         let height = bar.to - from;
+        regions.retain(|r| r.line != *line || r.kind != "event");
+        let mut region = crate::authoring::Region::rect(format!("line:{line}"), "execution", *line, x, *from, width, height);
+        region.end_line = bar.end_line;
+        regions.push(region);
+        regions.push(crate::authoring::Region::rect(id, "sequence-execution", *line, x, *from, width, height));
         let radius = if sheet.theme.modern() { 3.0 } else { 0.0 };
         writeln!(svg, "<rect x=\"{x:.2}\" y=\"{from:.2}\" width=\"{width:.2}\" height=\"{height:.2}\" rx=\"{radius:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" data-activation-owner=\"{}\" data-activation-id=\"{}\" />",
             paint.fill, paint.border, paint.border_width, styles::escape(id),

@@ -4,7 +4,7 @@ use laml_ui::settings_edit;
 
 impl Editor {
     pub(super) fn document_settings(&mut self, ui: &mut egui::Ui) {
-        let Ok(diagram) = laml::parser::parse(self.document.source()) else { return; };
+        let Ok(diagram) = laml_ui::notation::parse_graph(self.document.source()) else { return; };
         let settings = diagram.settings;
         ui.add_enabled_ui(self.can_edit_visually(), |ui| {
             if self.inspector_tab == inspector_ui::Tab::General {
@@ -103,7 +103,7 @@ impl Editor {
         let result = settings_edit::property(self.document.source(), name, value)
             .and_then(|edits| {
                 let candidate = laml_ui::node_edit::candidate(self.document.source(), &edits)?;
-                let expected = laml::parser::parse(&candidate).map_err(|e| e.message)?.settings;
+                let expected = laml_ui::notation::parse_graph(&candidate).map_err(|e| e.message)?.settings;
                 Ok((edits, expected))
             });
         match result {

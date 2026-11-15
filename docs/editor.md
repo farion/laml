@@ -1,8 +1,10 @@
-# GNE editor
+# LAML editor
 
 The `laml-ui` application edits the same `.laml` source as the compiler CLI.
-Desktop and browser modes share the Rust/egui editor. In browser mode, files,
-compilation and exports stay on the host.
+Desktop and browser modes share the Rust/egui editor. The default browser host
+stores documents automatically in a browser-local library and offers source/image
+downloads; compilation runs transiently on the host. Explicit `--workspace` mode
+instead edits files on that host.
 Source editing, the rendered preview and the properties panel share one undo/redo
 history. A visual transaction is applied only after the compiler successfully
 builds its candidate source, including layout and routing. The preview and CLI
@@ -23,10 +25,48 @@ cargo build --release -p laml-ui
 
 Build the standalone CLI with `cargo build --release -p laml`.
 
+## First launch
+
+A welcome dialog explains LAML's markup-first workflow and the editor's role as
+an aid to writing source. It links to draw.io, yEd and OmniGraffle for users who
+prefer freeform drawing. Close it or choose **Continue to LAML Editor** to proceed;
+in desktop/workspace mode, any recovery chooser follows afterward. The dismissed state is saved with editor
+preferences, per browser origin/profile or native user. Clearing those preferences
+shows the introduction again.
+
+## Browser-local documents
+
+In default browser hosting, **Browser library** manages locally stored documents,
+with rename, import/download, trash, restore and confirmed permanent deletion.
+Edits are saved automatically, even while markup is invalid. The footer reports
+browser-save status. **Download LAML** replaces Save/Save as; Export downloads an
+SVG, PNG or PDF. Browser mode accepts self-contained sources, inline styles and
+bundled fonts/icons, not external assets. Clearing site data deletes the library;
+download important sources as backups. See [hosting modes](editor-host.md) for
+session admission and storage details. The file-save and recovery controls below
+apply to desktop and explicit server-workspace mode.
+
+## Diagram types
+
+**New** opens a family/type chooser for Generic node–edge (GNE), the fourteen UML
+diagram types, BPMN and the four C4 levels. Opening a file detects its source type.
+Tools and properties adapt to that notation; changing a valid source `type:`
+declaration switches them without converting the document.
+
+Use **Add construct…** and **Elements…** for notation-specific structures,
+including sequence fragments/annotations, BPMN memberships and timing records.
+See [diagram-specific editing and construct inventory](editor-notations.md) for
+creation forms, semantic dragging, structural actions and presentation controls.
+The graph-editing controls below apply where the selected notation supports them.
+
 ## Workspace and controls
 
 The editor uses a three-pane workspace: source on the left, interactive preview
 in the center and selection properties on the right. Pane dividers are resizable.
+
+The **Help** icon at the far right of the titlebar opens a compact explanation of
+source editing, visual editing, layout and export, with a link to the GitHub
+Getting Started documentation.
 
 **Editor theme** controls the application itself. **Settings → Theming** offers
 **Auto** (default), **Dark** and **Light**. Auto follows the browser or system
@@ -71,8 +111,9 @@ the pointer leaves the image or preview.
 - The footer contains **Fit**, **100%**, **−**, **+** and the current zoom percentage,
   left-aligned under the preview. **Fit** stays highlighted while automatic fitting
   is active; manual zooming, panning or **100%** exits that mode.
-- The **Diagram** header contains **Add node (+)** and the type selector for new
-  connections (default `->`). With two or more nodes selected, six alignment
+- The **Diagram** header contains notation-appropriate creation and navigation
+  actions. The footer's **Default Relation Type** selects the default for new
+  connections. With two or more graph nodes selected, six alignment
   buttons appear: left, horizontal center, right, top, vertical center and bottom.
   Alignment is checked and applied directly as one undo step. Hover rulers preview
   the axis; existing common alignments remain subtle and successful changes flash
@@ -99,7 +140,7 @@ the pointer leaves the image or preview.
 
 ## Create elements
 
-Select **+** in the Diagram header. The dialog offers **Rectangle** (default),
+Select **+** in the Diagram header. For GNE, the dialog offers **Rectangle** (default),
 **Ellipse**, **Diamond**, **Note**, **Package**, **Class**, **Interface**,
 **Enumeration**, **Data type**, **Object** and **Junction**. ID and label are
 prefilled and editable; automatic suggestions follow the type until you edit them.
@@ -365,8 +406,8 @@ Closing a dirty tab offers keep editing, save or discard. Closing the applicatio
 checks all tabs, including inactive ones; cancelling leaves remaining tabs open.
 Closing the last tab creates a fresh untitled document. A close requested during
 an accepted write waits for its acknowledgement. Changes typed during that wait
-are preserved and checked again before closing. Unsaved-change prompts also apply
-when restoring a recovery buffer.
+are preserved and checked again before closing. Recovery opens separate unsaved
+tabs, leaving existing buffers untouched.
 
 **Export…** builds SVG, PNG or vector PDF through the compiler. After rendering,
 existing output requires confirmation. The editor checks the source revision before
@@ -379,10 +420,21 @@ Imports (including nested or currently missing files) and local fonts are watche
 asynchronously for changes and trigger a fresh build rather than silently retaining
 an old picture.
 
-Dirty buffers receive private atomic recovery snapshots. At startup, recovery
-offers restore/discard for abandoned sessions, excluding live editor sessions. Restoration
-loads an unsaved buffer, never silently overwrites its original file, and participates
-in the normal save/conflict workflow. Desktop snapshots use the
+Dirty buffers receive private atomic recovery snapshots. At startup, **Restore
+unsaved work?** lists abandoned documents with all entries selected, excluding live
+editor sessions. **Restore** / **Restore selected** opens each selected document in
+its own tab marked **(recovered)** and unsaved, without replacing an open buffer or
+writing to a saved file. Use **Save As** to save the recovered document.
+
+**Not now**, closing the dialog or Escape keeps the drafts available through the
+**Restore unsaved work** icon button in the titlebar. Its red badge counts available
+recovery drafts; the entire button is hidden when none remain. Like the other
+titlebar icons, its background and frame appear only on hover. Clicking opens the
+chooser directly.
+**Discard selected…** requires confirmation and
+removes only the selected recovery drafts, never their saved files. In the browser,
+removal waits for host acknowledgement; restoring retains the old draft until the
+host confirms its replacement recovery snapshot. Desktop snapshots use the
 [local recovery locations](editor-installation.md#files-and-recovery); browser
 snapshots use the [host's private session state](editor-host.md#saves-and-recovery).
 Browser navigation warns about dirty documents.

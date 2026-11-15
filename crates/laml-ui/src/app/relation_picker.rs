@@ -44,7 +44,7 @@ fn description(operator: &str) -> &str {
 }
 
 fn swatch(ui: &egui::Ui, operator: &str, rect: egui::Rect) {
-    if let Some(index) = laml_ui::relation_edit::OPERATORS.iter().position(|op| *op == operator) {
+    if let Some(index) = laml_ui::relation_edit::OPERATORS.iter().position(|op| *op == operator).filter(|i| *i < SWATCHES.len()) {
         let dark = ui.visuals().dark_mode;
         let svg = if dark {
             SWATCHES[index].to_vec()
@@ -68,8 +68,9 @@ pub(super) fn combo(
 ) {
     let has_swatch = laml_ui::relation_edit::OPERATORS.contains(&operator.as_str());
     let font = egui::FontId::proportional(13.0);
+    let text_color = appearance::color(ui.ctx(), appearance::TEXT);
     let text_width = ui.fonts_mut(|fonts| operators.iter().map(|op| {
-        fonts.layout_no_wrap(description(op).into(), font.clone(), appearance::color(ui.ctx(), appearance::TEXT)).size().x
+        fonts.layout_no_wrap(description(op).into(), font.clone(), text_color).size().x
     }).fold(0.0_f32, f32::max));
     let popup_width = (92.0 + text_width + 10.0)
         .min((ui.ctx().content_rect().width() - 60.0).max(120.0));
@@ -193,13 +194,34 @@ impl Editor {
     }
 
     pub(super) fn arrow_type_control(&mut self, ui: &mut egui::Ui) {
+        if !self.specialized() && self.notation() != laml_ui::notation::Notation::Gne {
+            let choices = self.notation().relation_types();
+            let title = choices.iter().find(|r| r.key == self.graph.operator).map_or("Relationship", |r| r.title);
+            ui.add_enabled_ui(self.can_edit_visually(), |ui| {
+                egui::ComboBox::from_id_salt("typed-default-relation").width(270.0).selected_text(title)
+                    .show_ui(ui, |ui| { for relation in choices { ui.selectable_value(&mut self.graph.operator, relation.key.into(), relation.title); } });
+            });
+            return;
+        }
+        if self.specialized() {
+            let choices: &[(&str, &str)] = match self.notation() {
+                laml_ui::notation::Notation::Sequence => &[("->", "Synchronous"), ("->>", "Asynchronous"), ("<--", "Reply")],
+                laml_ui::notation::Notation::Bpmn => &[("-->", "Sequence flow"), ("~~>", "Message flow"), ("..>", "Data association"), ("..", "Annotation association")],
+                _ => &[],
+            };
+            if choices.is_empty() { return; }
+            ui.toggle_value(&mut self.notation_ui.connect, "Connect");
+            egui::ComboBox::from_id_salt("notation-relation-type").selected_text(choices.iter().find(|(op, _)| *op == self.graph.operator).map_or("Relationship", |(_, name)| *name))
+                .show_ui(ui, |ui| { for (op, title) in choices { ui.selectable_value(&mut self.graph.operator, (*op).into(), *title); } });
+            return;
+        }
         let enabled = self.can_edit_visually()
             && !self.graph.dialog_open()
             && self.graph.gesture.is_none();
         ui.add_enabled_ui(enabled, |ui| {
             let mut kind = laml_ui::relation_edit::relation_type(&self.graph.operator).to_owned();
             combo(ui, "new-arrow-type", &mut kind,
-                laml_ui::relation_edit::TYPES, 270.0);
+                self.notation().operators(), 270.0);
             self.graph.operator = kind;
         });
     }

@@ -31,6 +31,7 @@ pub enum EdgeKind {
 }
 #[derive(Clone, Debug)]
 pub struct Node {
+    pub line: usize,
     pub id: String,
     pub label: String,
     pub kind: Kind,
@@ -44,6 +45,7 @@ pub struct Node {
 }
 #[derive(Clone, Debug)]
 pub struct Edge {
+    pub line: usize,
     pub from: String,
     pub to: String,
     pub label: Option<String>,
@@ -51,11 +53,13 @@ pub struct Edge {
 }
 #[derive(Clone, Debug)]
 pub struct Lane {
+    pub line: usize,
     pub id: String,
     pub label: String,
 }
 #[derive(Clone, Debug)]
 pub struct Pool {
+    pub line: usize,
     pub id: String,
     pub label: String,
     pub lanes: Vec<Lane>,

@@ -97,7 +97,9 @@ pub fn change(source: &str, id: &str, change: Change) -> Result<Vec<Edit>, Strin
             if !KINDS.contains(&node.kind) || !KINDS.contains(kind) {
                 return Err("This structural element cannot change kind in Properties.".into());
             }
-            let old = keyword(node.kind);
+            let declared = keyword(node.kind);
+            let old = if !declared.is_empty() && text[p.kind..].starts_with(declared)
+                && text[p.kind + declared.len()..].starts_with(char::is_whitespace) { declared } else { "" };
             let new = keyword(*kind);
             if !old.is_empty()
                 && (!text[p.kind..].starts_with(old)
@@ -151,8 +153,7 @@ pub fn change(source: &str, id: &str, change: Change) -> Result<Vec<Edit>, Strin
                     "Enter template parameters only, without angle brackets or line breaks.".into(),
                 );
             }
-            let mut name = p.kind + keyword(node.kind).len();
-            name += text[name..].len() - text[name..].trim_start().len();
+            let name = node_edit::node_head(&text, node)?.start;
             let end = name
                 + text[name..]
                     .find(|c: char| c == '<' || c == '(' || c.is_whitespace())

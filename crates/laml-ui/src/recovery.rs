@@ -113,6 +113,9 @@ impl Store {
         records.sort_by(|a, b| a.file.cmp(&b.file));
         Ok(records)
     }
+    pub fn discard_confirmed(&self, record: &Record) -> Result<bool, String> {
+        self.discard(record).map(|()| true)
+    }
     pub fn discard(&self, record: &Record) -> Result<(), String> {
         if record.file.parent() != Some(self.root.as_path()) || !Self::abandoned(&record.file) {
             return Err("Recovery snapshot is no longer available".into());

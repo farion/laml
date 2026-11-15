@@ -28,6 +28,7 @@ struct Change {
 pub struct Document {
     source: String,
     saved: String,
+    unsaved: bool,
     revision: u64,
     undo: Vec<Change>,
     redo: Vec<Change>,
@@ -39,6 +40,7 @@ impl Document {
     pub fn new(source: String) -> Self {
         Self {
             saved: source.clone(),
+            unsaved: false,
             source,
             revision: 0,
             undo: Vec::new(),
@@ -55,7 +57,11 @@ impl Document {
         self.revision
     }
     pub fn is_dirty(&self) -> bool {
-        self.source != self.saved
+        self.unsaved || self.source != self.saved
+    }
+    /// Detached recovered documents need saving even when their source is empty.
+    pub fn mark_unsaved(&mut self) {
+        self.unsaved = true;
     }
     pub fn mark_saved(&mut self) {
         self.mark_saved_snapshot(self.source.clone());
@@ -63,11 +69,13 @@ impl Document {
     pub fn mark_saved_snapshot(&mut self, source: String) {
         self.break_typing_group();
         self.saved = source;
+        self.unsaved = false;
     }
     /// Changing files or accepting an external reload invalidates every pending command.
     pub fn replace_loaded(&mut self, source: String) {
         self.source = source.clone();
         self.saved = source;
+        self.unsaved = false;
         self.break_typing_group();
         self.undo.clear();
         self.redo.clear();

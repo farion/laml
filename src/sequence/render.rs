@@ -1,12 +1,13 @@
-//! First sequence renderer: lifelines, messages, self-calls and executions.
-//! This does not claim complete UML 2.5.1 coverage.
 mod anchors;
+mod authoring;
 mod annotations;
 mod arrows;
 mod bar_attachments;
 mod continuations;
 mod coregions;
 mod decompositions;
+mod destruction_layout;
+mod activation_layout;
 mod executions;
 mod frames;
 mod gates;
@@ -14,6 +15,7 @@ mod geometry;
 mod lane_gaps;
 mod lifetimes;
 mod messages;
+pub mod message_geometry;
 mod notes;
 mod order;
 mod reflow;
@@ -33,6 +35,7 @@ const HEADER_Y: f64 = 32.0;
 const HEADER_HEIGHT: f64 = 48.0;
 type Separator = (String, f64);
 struct OpenFrame {
+    line: usize,
     operator: String,
     id: Option<String>,
     guard: String,
@@ -42,6 +45,7 @@ struct OpenFrame {
     messages: Vec<usize>,
 }
 struct DrawnFrame {
+    line: usize,
     operator: String,
     id: Option<String>,
     guard: String,
@@ -50,18 +54,15 @@ struct DrawnFrame {
     separators: Vec<Separator>,
     messages: Vec<usize>,
 }
-
 use styles::styled_text;
-/// Render only the currently parsed subset. Other syntax must fail at parse time.
 pub fn render(diagram: &SequenceDiagram, mode: TextMode) -> Result<String, String> {
     render_with_styles(diagram, &StyleSheet::default(), mode)
 }
-
-pub fn render_with_styles(
-    diagram: &SequenceDiagram,
-    sheet: &StyleSheet,
-    mode: TextMode,
-) -> Result<String, String> {
+pub fn render_with_styles(diagram: &SequenceDiagram, sheet: &StyleSheet, mode: TextMode) -> Result<String, String> {
+    render_for_editor(diagram, sheet, mode).map(|(svg, _)| svg)
+}
+pub fn render_for_editor(diagram: &SequenceDiagram, sheet: &StyleSheet, mode: TextMode) -> Result<(String, Vec<crate::authoring::Region>), String> {
+    let mut regions = Vec::new();
     let mut effective = sheet.clone();
     effective.theme = diagram.theme;
     let sheet = &effective;
@@ -95,27 +96,14 @@ pub fn render_with_styles(
     let mut y = header_bottom + 44.0;
     let mut previous_line = 0;
     for event in &diagram.events {
-        let line = match event {
-            Event::Message(m) => m.line,
-            Event::Note(note) => note.line,
-            Event::Continuation(cont) => cont.line,
-            Event::Decomposition { line, .. } => *line,
-            Event::Annotation(annotation) => annotation.line,
-            Event::Ordering(rule) => rule.line,
-            Event::Reference { line, .. }
-            | Event::FrameStart { line, .. }
-            | Event::FrameBranch { line, .. }
-            | Event::FrameEnd { line }
-            | Event::Destroy { line, .. }
-            | Event::Activate { line, .. }
-            | Event::Deactivate { line, .. } => *line,
-        };
+        let line = authoring::event_line(event);
         if line != previous_line {
             if previous_line != 0 {
                 y += 48.0;
             }
             previous_line = line;
         }
+        let event_y = y;
         match event {
             Event::Decomposition { index, .. } => {
                 visible_decompositions.push((*index, y));
@@ -164,7 +152,7 @@ pub fn render_with_styles(
                 let mut i = 0;
                 while i < open.len() {
                     if open[i].participant == *participant {
-                        bars.push(open.remove(i).finish(y));
+                        bars.push(open.remove(i).finish(y, Some(line)));
                     } else {
                         i += 1;
                     }
@@ -177,6 +165,7 @@ pub fn render_with_styles(
                 ..
             } => {
                 frames.push(OpenFrame {
+                    line,
                     operator: operator.clone(),
                     id: id.clone(),
                     guard: guard.clone(),
@@ -206,6 +195,7 @@ pub fn render_with_styles(
             Event::FrameEnd { .. } => {
                 let frame = frames.pop().ok_or("fragment end without frame")?;
                 drawn_frames.push(DrawnFrame {
+                    line: frame.line,
                     operator: frame.operator,
                     id: frame.id,
                     guard: frame.guard,
@@ -276,7 +266,7 @@ pub fn render_with_styles(
                     y
                 };
                 open.push(OpenExecution {
-                    participant: participant.clone(),
+                    participant: participant.clone(), line,
                     id: id.clone(),
                     label: label.clone(),
                     from,
@@ -301,8 +291,11 @@ pub fn render_with_styles(
                     .iter()
                     .rposition(|bar| bar.participant == *participant)
                     .ok_or_else(|| format!("unmatched execution for '{participant}'"))?;
-                bars.push(open.remove(index).finish(y));
+                bars.push(open.remove(index).finish(y, Some(line)));
             }
+        }
+        if !event_positions.iter().any(|(at, _)| *at == line) {
+            event_positions.push((line, event_y));
         }
     }
     let mut message_anchors = bar_attachments::anchors(
@@ -333,6 +326,7 @@ pub fn render_with_styles(
         };
         timeline.expand(region, threshold, delta);
     }
+    activation_layout::apply(diagram, &mut positioned, &mut message_anchors, &mut bars, &mut open, &mut event_positions, &mut destructions)?;
     {
         let mut timeline = retime::Shiftables {
             anchors: &mut message_anchors,
@@ -357,6 +351,8 @@ pub fn render_with_styles(
             sheet,
         )?;
     }
+    destruction_layout::apply(diagram, &mut destructions, &mut event_positions, &mut bars)?;
+    activation_layout::verify(diagram, &bars, &open)?;
     coregions::validate_downward(&message_anchors)?;
     for frame in &drawn_frames {
         for &index in &frame.messages {
@@ -371,8 +367,9 @@ pub fn render_with_styles(
         .fold(y, |max, a| max.max(a.send.1).max(a.receive.1))
         + 48.0;
     for bar in open {
-        bars.push(bar.finish(bottom - 16.0));
+        bars.push(bar.finish(bottom - 16.0, None));
     }
+    bar_attachments::attach(diagram, sheet, &centers, &widths, &bars, &positioned, &mut message_anchors)?;
     let mut svg = String::new();
     writeln!(svg, "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{canvas_width:.2}\" height=\"{bottom:.2}\" viewBox=\"0 0 {canvas_width:.2} {bottom:.2}\">").unwrap();
     if mode == TextMode::Embedded {
@@ -403,13 +400,15 @@ pub fn render_with_styles(
             .then_with(|| b.bottom.total_cmp(&a.bottom))
     });
     let right = frame_left + frame_width;
+    authoring::regions(&mut regions, diagram, sheet, &centers, &widths,
+        &timeline, &positioned, &message_anchors, &drawn_frames, frame_left, right)?;
     for frame in drawn_frames {
         let (left, right) =
             geometry::frame_bounds(diagram, sheet, &centers, &widths, &frame, frame_left, right)?;
         frames::fragment(&mut svg, frame, left, right - left, sheet)?;
     }
-    // Frames are backgrounds; lifelines continue through them, beneath executions.
     lifetimes::draw_lines(&mut svg, sheet, &centers, &timeline)?;
+    authoring::decompositions(&mut regions, diagram, &centers, &nested, &visible_decompositions);
     decompositions::draw(
         &mut svg,
         diagram,
@@ -418,7 +417,7 @@ pub fn render_with_styles(
         &visible_decompositions,
     )?;
     bars.sort_by_key(|bar| bar.opened.depth);
-    executions::draw(&mut svg, diagram, sheet, &centers, &bars)?;
+    executions::draw(&mut svg, diagram, sheet, &centers, &bars, &mut regions)?;
     let mut drawn_gates = Vec::new();
     for ((m, _), anchor) in positioned.iter().zip(&message_anchors) {
         messages::draw(
@@ -470,7 +469,7 @@ pub fn render_with_styles(
     continuations::draw(&mut svg, diagram, sheet, &centers, &visible_continuations)?;
     let mut note_obstacles = text_collision::messages(&positioned, &message_anchors, sheet)?;
     note_obstacles.extend_from_slice(&reserved_frame_text);
-    note_obstacles.extend(annotation_regions);
+    authoring::annotations(&mut regions, &visible_annotations, &annotation_regions); note_obstacles.extend(annotation_regions);
     let shapes = text_collision::note_regions(
         diagram,
         &message_anchors,
@@ -479,6 +478,7 @@ pub fn render_with_styles(
         &visible_continuations,
         sheet,
     )?;
+    authoring::notes(&mut regions, &visible_notes, &visible_continuations, &shapes);
     note_obstacles.extend_from_slice(&shapes[visible_notes.len()..]);
     notes::draw(
         &mut svg,
@@ -492,9 +492,6 @@ pub fn render_with_styles(
     )?;
     lifetimes::draw_heads(&mut svg, sheet, &centers, &widths, &timeline)?;
     svg.push_str("</svg>\n");
-    if mode == TextMode::Paths {
-        crate::export::outlines(&svg)
-    } else {
-        Ok(svg)
-    }
+    let svg = if mode == TextMode::Paths { crate::export::outlines(&svg)? } else { svg };
+    Ok((svg, regions))
 }

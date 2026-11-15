@@ -9,7 +9,7 @@ use crate::{
     source_patch,
     style_edit::code,
 };
-use laml::syntax::{Diagram, NodeKind, NodePart, StyleEntry};
+use laml::syntax::{Diagram, NodePart, StyleEntry};
 use std::{
     collections::{BTreeMap, BTreeSet},
     ops::Range,
@@ -36,9 +36,9 @@ pub fn plan(source: &str, id: &str, parent: Option<&str>) -> Result<Move, String
         && !diagram
             .nodes
             .iter()
-            .any(|n| n.id == parent && n.kind == NodeKind::Package)
+            .any(|n| n.id == parent && crate::notation::container_kind(n.kind) && node_edit::blocks(source, &diagram).is_ok_and(|b| b.contains_key(&n.line)))
     {
-        return Err("Membership destination must be a package.".into());
+        return Err("Choose a notation-compatible container block.".into());
     }
     let mut moved = BTreeSet::from([id.to_string()]);
     for n in &diagram.nodes {

@@ -100,11 +100,13 @@ impl Editor {
         );
         status.set_clip_rect(source_rect);
         footer_status::show(&mut status, self);
+        let text_color = appearance::color(ui.ctx(), appearance::TEXT);
         let label_width = ui.fonts_mut(|fonts| fonts.layout_no_wrap(
             "Default Relation Type".into(), egui::FontId::proportional(15.0),
-            appearance::color(ui.ctx(), appearance::TEXT),
+            text_color,
         ).size().x);
-        let relation_width = label_width + 270.0 + 12.0;
+        let has_relations = self.notation() != laml_ui::notation::Notation::Timing;
+        let relation_width = if has_relations { label_width + 270.0 + 12.0 } else { 0.0 };
         let zoom_rect = egui::Rect::from_min_max(
             egui::pos2(left + 12.0, rect.top()),
             egui::pos2((right - relation_width - 20.0).max(left + 40.0), rect.bottom()),
@@ -130,8 +132,10 @@ impl Editor {
         arrow.set_clip_rect(arrow_rect);
         arrow.spacing_mut().interact_size.y = 24.0;
         arrow.spacing_mut().button_padding.y = 2.0;
-        self.arrow_type_control(&mut arrow);
-        arrow.label("Default Relation Type");
+        if has_relations {
+            self.arrow_type_control(&mut arrow);
+            arrow.label("Default Relation Type");
+        }
         let info_rect = egui::Rect::from_min_max(
             egui::pos2(right + 8.0, rect.top()),
             rect.max - egui::vec2(14.0, 0.0),
@@ -144,9 +148,13 @@ impl Editor {
         );
         info.set_clip_rect(info_rect);
         info.colored_label(appearance::color(ui.ctx(), appearance::MUTED), "LAML · UTF-8");
-        if self.document.is_dirty() {
-            info.label("Unsaved changes");
+        #[cfg(target_arch = "wasm32")]
+        if laml_ui::services::browser_mode() {
+            let status = crate::browser_storage::storage_status();
+            let color = if crate::browser_storage::storage_failed() { egui::Color32::LIGHT_RED } else { appearance::color(ui.ctx(), appearance::TEXT) };
+            info.add(egui::Label::new(egui::RichText::new(&status).color(color)).truncate()).on_hover_text(&status);
         }
+        if !laml_ui::services::browser_mode() && self.document.is_dirty() { info.label("Unsaved changes"); }
     }
 
     fn inspector_tabs(&mut self, ui: &mut egui::Ui) {

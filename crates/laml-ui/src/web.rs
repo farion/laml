@@ -1,6 +1,8 @@
 //! Browser entry for the exact same Editor/Workspace used natively.
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use wasm_bindgen::{JsCast, prelude::*};
+static BROWSER: AtomicBool = AtomicBool::new(false);
+pub(crate) fn browser_mode() -> bool { BROWSER.load(Ordering::Relaxed) }
 static LIMITS: AtomicBool = AtomicBool::new(false);
 pub(crate) fn limits() -> bool {
     LIMITS.load(Ordering::Relaxed)
@@ -34,7 +36,9 @@ pub(crate) fn set_document(
     }
 }
 #[wasm_bindgen]
-pub async fn start_editor(canvas: web_sys::HtmlCanvasElement, limits: bool) -> Result<(), JsValue> {
+pub async fn start_editor(canvas: web_sys::HtmlCanvasElement, limits: bool, browser: bool) -> Result<(), JsValue> {
+    BROWSER.store(browser, Ordering::Relaxed);
+    if browser { crate::browser_storage::initialize().await?; }
     LIMITS.store(limits, Ordering::Relaxed);
     CLIENT.store(
         (js_sys::Math::random() * 4_503_599_627_370_496.0) as u64 + 1,
@@ -43,7 +47,7 @@ pub async fn start_editor(canvas: web_sys::HtmlCanvasElement, limits: bool) -> R
     canvas.set_attribute("data-laml-client", &client_id().to_string())?;
     let before = Closure::<dyn FnMut(web_sys::BeforeUnloadEvent)>::new(
         |event: web_sys::BeforeUnloadEvent| {
-            if DIRTY.load(Ordering::Relaxed) {
+            if !browser_mode() && DIRTY.load(Ordering::Relaxed) {
                 event.prevent_default();
                 event.set_return_value("Unsaved changes");
             }
@@ -66,7 +70,9 @@ pub async fn start_editor(canvas: web_sys::HtmlCanvasElement, limits: bool) -> R
                     None,
                     crate::services::Services::browser("/api/editor".into(), limits),
                 );
-                Ok(Box::new(crate::app::Workspace::new(editor)))
+                let mut workspace = crate::app::Workspace::new(editor);
+                if browser { workspace.load_browser_tabs(); }
+                Ok(Box::new(workspace))
             }),
         )
         .await?;

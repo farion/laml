@@ -28,26 +28,39 @@ impl Editor {
                 ui.set_min_height(appearance::HEADER_HEIGHT - 12.0);
                 ui.set_min_width(ui.available_width());
                 ui.horizontal(|ui| {
-                    ui.label("Diagram");
-                    let item = toolbar::Item {
+                    ui.label(self.notation().title());
+                    let mut items = vec![toolbar::Item {
                         label: "Add node",
                         icon: Some(PLUS),
                         enabled: self.can_edit_visually()
                             && !self.graph.dialog_open()
                             && self.graph.gesture.is_none(),
                         separator_before: false,
-                    };
-                    toolbar::show_right(ui, &[item], |ui, _, in_menu| {
-                        let item = toolbar::Item {
-                            label: "Add node",
-                            icon: Some(PLUS),
-                            enabled: self.can_edit_visually()
-                                && !self.graph.dialog_open()
-                                && self.graph.gesture.is_none(),
+                    }];
+                    if self.notation() != laml_ui::notation::Notation::Gne {
+                        items.push(toolbar::Item {
+                            label: "Elements…",
+                            icon: None,
+                            enabled: true,
                             separator_before: false,
-                        };
-                        if toolbar::button(ui, &item, in_menu).clicked() {
-                            self.open_node_dialog();
+                        });
+                        if self.notation().graph() {
+                            items.push(toolbar::Item {
+                                label: "Add construct…",
+                                icon: None,
+                                enabled: items[0].enabled,
+                                separator_before: false,
+                            });
+                        }
+                    }
+                    toolbar::show_right(ui, &items, |ui, index, in_menu| {
+                        if toolbar::button(ui, &items[index], in_menu).clicked() {
+                            match index {
+                                0 => self.open_node_dialog(),
+                                1 => self.notation_ui.navigator = true,
+                                _ => self.open_construct_dialog(),
+                            }
+                            if in_menu { ui.close(); }
                         }
                     });
                 });
@@ -62,7 +75,7 @@ impl Editor {
 
     pub(super) fn alignment_overlay(&mut self, ui: &egui::Ui, viewport: egui::Rect) -> bool {
         self.graph.hover_align = None;
-        if self.selection.ids.len() < 2
+        if self.specialized() || self.selection.ids.len() < 2
             || !self.selection.ports.is_empty()
             || !self.selection.relations.is_empty()
         {
@@ -108,7 +121,7 @@ impl Editor {
     }
 
     pub(super) fn align_selected(&mut self, align: FreeAlignment) {
-        if self.selection.ids.len() < 2
+        if self.specialized() || self.selection.ids.len() < 2
             || !self.selection.ports.is_empty()
             || !self.selection.relations.is_empty()
         {

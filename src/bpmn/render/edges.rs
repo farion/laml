@@ -209,7 +209,7 @@ pub(super) fn edge(
             } else {
                 None
             };
-            match super::orthogonal::route(doc, geom, e, source, target, preferred, previous) {
+            match super::orthogonal::route(doc, geom, e, index, source, target, preferred, previous) {
                 Ok(plan)
                     if best.as_ref().is_none_or(|(current, _, _)| {
                         plan.crossings < current.crossings
@@ -270,6 +270,7 @@ pub(super) fn edge(
         .unwrap();
     }
     previous.push(super::orthogonal::Prior {
+        index,
         points: plan.points,
         kind: e.kind,
         from: e.from.clone(),

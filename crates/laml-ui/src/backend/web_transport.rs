@@ -111,6 +111,10 @@ impl Transport for WebTransport {
         init.set_body(&Uint8Array::from(bytes.as_slice()).into());
         let request =
             Request::new_with_str_and_init(&self.endpoint, &init).map_err(|_| network_error())?;
+        if crate::services::browser_mode() {
+            request.headers().set("X-LAML-Session", &crate::browser_storage::session_id())
+                .map_err(|_| network_error())?;
+        }
         request
             .headers()
             .set("Content-Type", "application/json")
@@ -219,6 +223,9 @@ async fn fetch(request: &Request, limits: bool) -> Result<Vec<u8>, Failure> {
         .map_err(|_| network_error())?
         .dyn_into()
         .map_err(|_| network_error())?;
+    if response.status() == 503 && crate::services::browser_mode() {
+        return Err(Failure::new(FailureCode::Busy, "The server is full. Local editing remains available; retrying automatically."));
+    }
     if !response.ok() {
         return Err(Failure::backend(format!(
             "Editor server rejected request (HTTP {})",

@@ -17,6 +17,21 @@ impl Editor {
         }
     }
     fn inspector_contents(&mut self, ui: &mut egui::Ui) {
+        if self.specialized() || (self.notation().c4() && self.selection.ids.is_empty() && self.selection.relations.is_empty() && self.selection.ports.is_empty()) || self.notation_ui.selected.as_ref().is_some_and(|s| s.2 == self.document.revision()) {
+            self.notation_inspector(ui); return;
+        }
+        if self.notation().c4() && !self.selection.relations.is_empty() {
+            let line = self.selection.relations[0];
+            let id = self.preview.as_ref().and_then(|p| p.diagram.relations.iter().find(|r| r.line == line)).and_then(|r| r.name.clone());
+            self.notation_select(line, id);
+            self.notation_inspector(ui); return;
+        }
+        if self.notation().c4() && !self.selection.ids.is_empty() {
+            if let Some(node) = self.preview.as_ref().and_then(|p| p.diagram.nodes.iter().find(|n| n.id == self.selection.ids[0])).cloned() {
+                self.notation_select(node.line, Some(node.id));
+                self.notation_inspector(ui); return;
+            }
+        }
         if self.selection.ids.is_empty()
             && self.selection.ports.is_empty()
             && self.selection.relations.is_empty()
@@ -31,6 +46,7 @@ impl Editor {
         } else if self.inspector_tab == inspector_ui::Tab::General {
             self.object_fields(ui);
             self.declaration_fields(ui);
+            self.typed_node_attributes(ui);
             inspector_ui::category(ui, "Layout");
             self.membership_controls(ui);
             self.structured_controls(ui);

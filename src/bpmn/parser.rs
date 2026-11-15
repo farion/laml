@@ -191,6 +191,7 @@ fn define(
         name
     };
     doc.nodes.push(Node {
+        line,
         id: id.clone(),
         label: label.unwrap_or(default_label),
         kind,
@@ -340,6 +341,7 @@ fn add_edge(
         }
     }
     doc.edges.push(Edge {
+        line,
         from,
         to,
         kind,

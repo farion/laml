@@ -45,12 +45,14 @@ pub fn add_node(
     id: &str,
     label: &str,
 ) -> Result<Vec<Edit>, String> {
+    add_node_in(source, kind, id, label, None)
+}
+
+pub fn add_node_in(source: &str, kind: element_edit::ElementKind, id: &str, label: &str, parent: Option<&str>) -> Result<Vec<Edit>, String> {
     if !identifier(id) {
-        return Err(
-            "ID must be an identifier (letters, digits, underscores; no leading digit).".into(),
-        );
+        return Err("ID must be an identifier (letters, digits, underscores; no leading digit).".into());
     }
-    let (fresh, edits) = element_edit::add(source, kind, label, None, None)?;
+    let (fresh, edits) = element_edit::add(source, kind, label, parent, None)?;
     let mut candidate = node_edit::candidate(source, &edits)?;
     if fresh != id {
         let rename = node_edit::rename_id(&candidate, &fresh, id)?;
@@ -97,14 +99,14 @@ pub fn add_relation(
     from_side: Option<&str>,
     to_side: Option<&str>,
 ) -> Result<(String, Vec<Edit>), String> {
-    if !OPERATORS.contains(&operator) {
+    add_relation_labeled(source, from, to, operator, None, from_side, to_side)
+}
+pub fn add_relation_labeled(source: &str, from: &str, to: &str, operator: &str, label: Option<&str>, from_side: Option<&str>, to_side: Option<&str>) -> Result<(String, Vec<Edit>), String> {
+    if crate::notation::Notation::of(source).relation(operator).is_none() {
         return Err("Unsupported relationship type".into());
     }
-    let (id, edits) =
-        semantic_edit::add_relation(source, from, to, semantic_edit::Connection::Directed)?;
+    let (id, edits) = semantic_edit::add_relation_operator(source, from, to, operator, label)?;
     let mut candidate = node_edit::candidate(source, &edits)?;
-    let edits = relation_edit::change_operator(&candidate, line(&candidate, &id)?, operator)?;
-    candidate = node_edit::candidate(&candidate, &edits)?;
     for (end, side) in [
         (EndPosition::Source, from_side),
         (EndPosition::Target, to_side),

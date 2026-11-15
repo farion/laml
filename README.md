@@ -14,7 +14,7 @@ Layout and Markup Language
 - [What is LAML?](#what-is-laml)
 - [Why LAML?](#why-laml)
 - [Installing & getting started](#installing--getting-started)
-- [Native GNE editor](#native-gne-editor)
+- [Native and browser editor](#native-and-browser-editor)
 - [Basic examples](#basic-examples)
 - [Themes](#themes)
 - [Features and diagram types](#features)
@@ -71,11 +71,12 @@ Installers select the platform, check the downloaded archive against `SHA256SUMS
 
 **Next:** [Getting started — first build, core concepts, and all diagram types](docs/getting-started.md). To create and render diagrams from a local coding agent, see [OpenCode and Claude Code via MCP](docs/mcp.md).
 
-## Native GNE editor
+## Native and browser editor
 
-`laml-ui` combines editable GNE source, a compiler-rendered editing canvas and an
-inspector. Text and visual changes share undo/redo; visual edits are checked by the
-real compiler, including layout and routing, before being applied.
+`laml-ui` combines editable diagram source, a compiler-rendered editing canvas and
+an inspector for Generic node-edge (GNE), UML, BPMN and C4 diagrams. Text and visual
+changes share undo/redo; visual edits are checked by the real compiler, including
+layout and routing, before being applied.
 
 ```sh
 cargo build --release -p laml-ui
@@ -85,6 +86,12 @@ cargo build --release -p laml-ui
 See the [editor guide](docs/editor.md) for creation, selection, constraints, styles,
 source assistance, export and recovery, and [desktop installation](docs/editor-installation.md)
 for platform-specific startup. The standalone compiler remains `laml`.
+
+For a Linux x86-64 server, releases include prebuilt binaries and browser assets
+with a Dockerfile and `compose.yaml`. Extract the server package and run
+`docker compose up -d --build`; Rust is not needed on the server. Documents remain
+in each visitor's browser. See [Docker Compose deployment](deploy/server/README.md)
+and [all supported editor notations](docs/editor-notations.md).
 
 ## Basic examples
 
@@ -318,4 +325,6 @@ Then ask the agent to save a `.laml` file in the project and build an SVG. The a
 
 ## License
 
-[MIT](LICENSE). Bundled fonts and optional icons have their own attribution: [Inter](assets/INTER-LICENSE.txt), [Geist](assets/GEIST-LICENSE.txt) and [Phosphor](assets/phosphor/README.md).
+The compiler is [MIT-licensed](LICENSE). The editor in `crates/laml-ui/` is
+[GPL-3.0-or-later](crates/laml-ui/README.md), with the GPL text in
+[its own license file](crates/laml-ui/LICENSE). Bundled fonts and optional icons have their own attribution: [Inter](assets/INTER-LICENSE.txt), [Geist](assets/GEIST-LICENSE.txt) and [Phosphor](assets/phosphor/README.md).

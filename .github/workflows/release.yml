@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Check tag matches package version
+      - name: Check tag matches compiler and editor versions
         shell: bash
         run: |
           set -euo pipefail
@@ -33,6 +33,8 @@ jobs:
             echo "Tag does not match Cargo.toml package version" >&2
             exit 1
           fi
+          editor_version="$(sed -n 's/^version = "\([^" ]*\)"$/\1/p' crates/laml-ui/Cargo.toml | head -n 1)"
+          test "$package_version" = "$editor_version"
 
   build:
     needs: validate-tag
@@ -49,7 +51,10 @@ jobs:
           - os: windows-2025
             target: x86_64-pc-windows-msvc
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
+    timeout-minutes: 60
+    env:
+      LAML_NO_UPDATE_CHECK: '1'
+      CARGO_PROFILE_DEV_DEBUG: '0'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -78,9 +83,11 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: '& .\tests\replace_windows.ps1'
-      - name: Build release binary
+      - name: Build standalone CLI and editor release binaries
         shell: bash
-        run: cargo +stable build --locked --release
+        run: |
+          cargo +stable build --locked --release -p laml
+          cargo +stable build --locked --release -p laml-ui
       - name: Smoke test (Unix)
         if: runner.os != 'Windows'
         shell: bash
@@ -128,6 +135,69 @@ jobs:
           Copy-Item assets/phosphor/LICENSE, assets/phosphor/README.md, assets/phosphor/icons.txt -Destination "$folder/assets/phosphor"
           Copy-Item docs, examples, scripts -Destination $folder -Recurse
           Compress-Archive -Path $folder -DestinationPath "dist/$name.zip"
+      - name: Package Unix editor
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          name="laml-ui-${GITHUB_REF_NAME}-${TARGET}"
+          folder="stage/$name"
+          mkdir -p "$folder" dist
+          cp LICENSE assets/INTER-LICENSE.txt assets/GEIST-LICENSE.txt assets/GEIST-SOURCE.txt "$folder/"
+          cp assets/phosphor/LICENSE "$folder/PHOSPHOR-LICENSE.txt"
+          cp crates/laml-ui/LICENSE "$folder/EDITOR-LICENSE.txt"
+          printf 'Source: https://github.com/farion/laml/tree/%s\nEditor: GPL-3.0-or-later. Compiler: MIT.\n' "$GITHUB_REF_NAME" > "$folder/SOURCE.txt"
+          cp docs/editor-installation.md "$folder/README.md"
+          cp docs/editor.md "$folder/EDITOR.md"
+          if [[ "$RUNNER_OS" == macOS ]]; then
+            mkdir -p "$folder/LAML Editor.app/Contents/MacOS" "$folder/LAML Editor.app/Contents/Resources"
+            cp target/release/laml-ui "$folder/LAML Editor.app/Contents/MacOS/laml-ui"
+            cp crates/laml-ui/LICENSE "$folder/LAML Editor.app/Contents/Resources/EDITOR-LICENSE.txt"
+            cp LICENSE assets/*LICENSE.txt "$folder/LAML Editor.app/Contents/Resources/"
+            cp assets/phosphor/LICENSE "$folder/LAML Editor.app/Contents/Resources/PHOSPHOR-LICENSE.txt"
+            version="${GITHUB_REF_NAME#v}"
+            printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>' '<plist version="1.0"><dict>' '<key>CFBundleExecutable</key><string>laml-ui</string>' '<key>CFBundleIdentifier</key><string>org.laml.editor</string>' '<key>CFBundleName</key><string>LAML Editor</string>' "<key>CFBundleVersion</key><string>$version</string>" '<key>CFBundlePackageType</key><string>APPL</string>' '<key>NSHighResolutionCapable</key><true/>' '</dict></plist>' > "$folder/LAML Editor.app/Contents/Info.plist"
+          else
+            cp target/release/laml-ui "$folder/"
+          fi
+          tar -czf "dist/$name.tar.gz" -C stage "$name"
+      - name: Package Windows editor
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = $env:GITHUB_REF_NAME
+          $name = "laml-ui-$version-$env:TARGET"
+          $folder = "stage/$name"
+          New-Item -ItemType Directory -Path $folder, 'dist' -Force | Out-Null
+          Copy-Item target/release/laml-ui.exe, LICENSE, assets/INTER-LICENSE.txt, assets/GEIST-LICENSE.txt, assets/GEIST-SOURCE.txt -Destination $folder
+          Copy-Item assets/phosphor/LICENSE -Destination "$folder/PHOSPHOR-LICENSE.txt"
+          Copy-Item crates/laml-ui/LICENSE -Destination "$folder/EDITOR-LICENSE.txt"
+          "Source: https://github.com/farion/laml/tree/$env:GITHUB_REF_NAME`nEditor: GPL-3.0-or-later. Compiler: MIT." | Set-Content "$folder/SOURCE.txt"
+          Copy-Item docs/editor-installation.md -Destination "$folder/README.md"
+          Copy-Item docs/editor.md -Destination "$folder/EDITOR.md"
+          Compress-Archive -Path $folder -DestinationPath "dist/$name.zip"
+      - name: Build matching browser assets and server bundle
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup target add wasm32-unknown-unknown --toolchain stable
+          cargo +stable install --locked wasm-bindgen-cli --version 0.2.129 --root target/web-tools
+          ./scripts/build-editor-web.sh
+          ./scripts/package-server-bundle.sh "dist/laml-server-${GITHUB_REF_NAME}-linux-amd64.tar.gz"
+          mkdir -p target/server-release-check
+          tar -xzf "dist/laml-server-${GITHUB_REF_NAME}-linux-amd64.tar.gz" -C target/server-release-check
+          bundle="target/server-release-check/laml-server-${GITHUB_REF_NAME}-linux-amd64"
+          python3 scripts/test-server-bundle.py "$bundle"
+          web="laml-web-${GITHUB_REF_NAME}"
+          mkdir -p "stage/$web"
+          cp -R "$bundle/web" "$bundle/licenses" "$bundle/SOURCE.txt" "stage/$web/"
+          tar -czf "dist/$web.tar.gz" -C stage "$web"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-${{ matrix.target }}
@@ -142,6 +212,9 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: release-*
@@ -153,8 +226,13 @@ jobs:
           set -euo pipefail
           for target in x86_64-unknown-linux-gnu x86_64-apple-darwin aarch64-apple-darwin; do
             test -s "dist/laml-${GITHUB_REF_NAME}-${target}.tar.gz"
+            test -s "dist/laml-ui-${GITHUB_REF_NAME}-${target}.tar.gz"
           done
           test -s "dist/laml-${GITHUB_REF_NAME}-x86_64-pc-windows-msvc.zip"
+          test -s "dist/laml-ui-${GITHUB_REF_NAME}-x86_64-pc-windows-msvc.zip"
+          test -s "dist/laml-server-${GITHUB_REF_NAME}-linux-amd64.tar.gz"
+          test -s "dist/laml-web-${GITHUB_REF_NAME}.tar.gz"
+          git archive --format=tar.gz --prefix="laml-${GITHUB_REF_NAME}/" HEAD > "dist/laml-${GITHUB_REF_NAME}-source.tar.gz"
           (cd dist && sha256sum laml-*.tar.gz laml-*.zip > SHA256SUMS)
       - name: Publish GitHub release
         shell: bash
@@ -164,7 +242,13 @@ jobs:
         run: |
           set -euo pipefail
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            test "$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft)" = true
             gh release upload "$GITHUB_REF_NAME" dist/* --clobber
           else
-            gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --generate-notes --title "$GITHUB_REF_NAME"
+            notes=()
+            if test -f "docs/releases/${GITHUB_REF_NAME}.md"; then
+              notes=(--notes-file "docs/releases/${GITHUB_REF_NAME}.md")
+            fi
+            gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --draft --generate-notes "${notes[@]}" --title "$GITHUB_REF_NAME"
           fi
+          gh release edit "$GITHUB_REF_NAME" --draft=false --latest

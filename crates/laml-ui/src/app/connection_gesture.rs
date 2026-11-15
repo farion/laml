@@ -30,6 +30,7 @@ impl Editor {
         response: &egui::Response,
         navigation: bool,
     ) -> bool {
+        if self.specialized() { return false; }
         let was_active = self.graph.gesture.is_some();
         let escape = ui.input(|i| i.key_pressed(egui::Key::Escape));
         let stale = self
@@ -110,8 +111,9 @@ impl Editor {
                 }
             } else if let Some(from) = geometry::source_at(preview, canvas, origin) {
                 let operator = self.graph.operator.clone();
-                let parsed =
-                    laml::parser::parse(&format!("semantics {{\n A\n B\n A {operator} B\n}}\n"));
+                let draft_operator = self.notation().relation(&operator).map_or(operator.as_str(), |r| r.operator);
+                let draft_operator = if matches!(draft_operator, "==" | "=>") { "--" } else { draft_operator };
+                let parsed = laml::parser::parse(&format!("semantics {{\n A\n B\n A {draft_operator} B\n}}\n"));
                 parsed.ok().map(|parsed| Gesture {
                     revision: self.document.revision(),
                     canvas,
@@ -167,6 +169,10 @@ impl Editor {
             return;
         }
         self.graph.report_errors = true;
+        if let Kind::New { from, operator } = &gesture.kind {
+            self.connect_notation_default(&from.id, &target.id, operator, from.side, target.side);
+            return;
+        }
         let result = match &gesture.kind {
             Kind::New { from, operator } => laml_ui::graph_edit::add_relation(
                 self.document.source(),

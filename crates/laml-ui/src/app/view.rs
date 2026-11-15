@@ -94,12 +94,13 @@ impl Editor {
                 separator_before: false,
             },
         ];
+        let text_color = appearance::color(ui.ctx(), appearance::TEXT);
         let percentage_width = ui.fonts_mut(|fonts| {
             fonts
                 .layout_no_wrap(
                     "6400%".into(),
                     egui::FontId::proportional(15.0),
-                    appearance::color(ui.ctx(), appearance::TEXT),
+                    text_color,
                 )
                 .size()
                 .x

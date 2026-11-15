@@ -4,7 +4,7 @@ fn apply(source: &str, edits: Vec<Edit>) -> String {
 }
 #[test]
 fn palette_builds_every_kind_from_an_empty_document() {
-    for kind in ElementKind::ALL {
+    for kind in ElementKind::available("") {
         let (id, edits) = add("", kind, "Hello \"world\"", None, None).unwrap();
         let source = apply("", edits);
         let preview = crate::preview::build(&source, std::path::Path::new("test.laml")).unwrap();

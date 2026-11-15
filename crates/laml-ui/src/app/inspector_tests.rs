@@ -202,7 +202,7 @@ fn both_header_action_groups_end_at_the_right_margin_at_multiple_widths() {
                 },
                 |ui| {
                     if diagram {
-                        editor.graph_heading(ui)
+                        editor.graph_heading(ui);
                     } else {
                         editor.source_heading(ui)
                     }

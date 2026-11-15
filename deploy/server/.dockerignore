@@ -1,0 +1,9 @@
+*
+!Dockerfile
+!bin/
+!bin/**
+!web/
+!web/**
+!licenses/
+!licenses/**
+!SOURCE.txt

@@ -251,6 +251,8 @@ fn element_and_source_limits_are_opt_in() {
 #[test]
 fn public_origin_accepts_http_unless_https_is_explicitly_required() {
     let mut config = Config {
+        browser: false,
+        max_users: 10,
         workspace: "workspace".into(),
         assets: "assets".into(),
         state: "state".into(),

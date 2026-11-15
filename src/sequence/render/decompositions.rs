@@ -1,6 +1,6 @@
 //! Inline subdiagrams are rendered from the same source without opening files.
 
-use super::{SequenceDiagram, render_with_styles, styles::escape};
+use super::{SequenceDiagram, styles::escape};
 use crate::{styles::StyleSheet, svg::TextMode};
 use std::fmt::Write;
 
@@ -8,6 +8,7 @@ pub(super) struct Prepared {
     pub svg: String,
     pub width: f64,
     pub height: f64,
+    pub regions: Vec<crate::authoring::Region>,
 }
 
 fn dimension(svg: &str, attribute: &str) -> Result<f64, String> {
@@ -36,11 +37,11 @@ pub(super) fn prepare(
                 .ok_or("unknown decomposed parent")?
                 .classes;
             let child_sheet = sheet.with_ancestor(&part.parent, classes);
-            let svg = render_with_styles(&part.diagram, &child_sheet, TextMode::System)?;
+            let (svg, regions) = super::render_for_editor(&part.diagram, &child_sheet, TextMode::System)?;
             Ok(Prepared {
                 width: dimension(&svg, "width")?,
                 height: dimension(&svg, "height")?,
-                svg,
+                svg, regions,
             })
         })
         .collect()

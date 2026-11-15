@@ -5,7 +5,7 @@ use crate::{
     source_patch::{insert_section, remove_line, replace_code},
     style_edit::code,
 };
-use laml::syntax::{Alignment, AlignmentRule, DiagramType, FreeAlignment, LayoutRule, Placement};
+use laml::syntax::{Alignment, AlignmentRule, FreeAlignment, LayoutRule, Placement};
 use std::collections::BTreeSet;
 #[cfg(test)]
 mod tests;
@@ -65,10 +65,7 @@ fn reachable(edges: &[(&str, &str)], from: &str, to: &str) -> bool {
 }
 
 pub fn plan(source: &str, ids: &[String], align: FreeAlignment) -> Result<AlignmentPlan, String> {
-    let graph = laml::parser::parse(source).map_err(|e| e.message)?;
-    if graph.settings.diagram_type != DiagramType::Generic || laml::c4::is_c4_source(source) {
-        return Err("Visual alignment currently supports GNE only".into());
-    }
+    let graph = crate::notation::parse_graph(source).map_err(|e| e.message)?;
     let Some(reference) = ids.last() else {
         return Err("Select at least two nodes".into());
     };
@@ -195,7 +192,7 @@ pub fn plan(source: &str, ids: &[String], align: FreeAlignment) -> Result<Alignm
     let mut doc = Document::new(source.into());
     doc.apply(0, "Align nodes", plan.edits.clone())
         .map_err(|e| format!("Invalid alignment edit: {e:?}"))?;
-    laml::parser::parse(doc.source()).map_err(|e| e.message)?;
+    crate::notation::parse_graph(doc.source()).map_err(|e| e.message)?;
     plan.source = doc.source().into();
     Ok(plan)
 }

@@ -47,6 +47,73 @@ A participant declaration draws its head and dashed lifeline. `API+` opens an ex
 
 A standalone `B+` starts an execution bar; `B-` closes the most recent open bar. Nested bars can have participant-local IDs and visible labels, e.g. `work: API+ : "Validate"`; `node[API] activation[work]` styles that bar. Lifeline births and deaths can occur inside an alternative operand: the same ID can have separate segments in different operands. References to a participant after its destruction are errors. See [created](../examples/sequence-created.laml), [execution](../examples/sequence-executions.laml) and [alternative-births](../examples/sequence-alternative-births.laml).
 
+## Align activation edges
+
+Use `+` for activation tops and `-` for activation bottoms in equal-height layout:
+
+```text
+settings {
+    type: sequence
+}
+semantics {
+    A
+    B
+    first: A+
+    second: B+
+    B-
+    A-
+}
+layout {
+    A.first+ ? B.second+ : align=center-y
+    A.first- ? B.second- : align=center-y
+}
+```
+
+`A+` or `A-` alone identifies an edge when A has exactly one activation; use
+`A.activationName` when there are several. A message name can identify the
+activation started by that message. Top alignment extends toward the earlier
+row; bottom alignment toward the later row. Attached messages move with their
+activation boundary. Rules that reverse events on a lifeline or cross fragment
+boundaries fail rather than silently change the interaction.
+
+Drag an activation edge near another matching edge to snap them flush. The editor
+adds `reference=second`, so the dragged edge follows the target's existing height
+in either direction rather than always extending the bars. For example, the layout
+entry `A.first- ? B.second- : align=center-y; reference=second` keeps B's end fixed.
+The editor adds stable names where needed and writes the rule in one undo step.
+Moving an open lower edge into alignment also creates its explicit close.
+
+## Align destruction markers
+
+Standalone destruction occurrences can share a horizontal row through an explicit
+layout rule:
+
+```text
+settings {
+    type: sequence
+}
+semantics {
+    Client
+    Worker
+    Client!
+    Worker!
+}
+layout {
+    Client! ? Worker! : align=center-y
+}
+```
+
+The rule aligns both X markers and their lifeline ends at the later row. Open
+activations terminated by those destructions extend to that row as well. Source
+event order stays unchanged; this is visual alignment, not a claim of simultaneous
+execution. Connected alignment rules form one group. Each reference must identify
+one standalone destruction; ambiguous reused lifetimes, message-bound destructions
+and rules crossing fragment or operand boundaries are rejected.
+
+In the editor, drag an X vertically toward another X's row. A horizontal guide
+shows the resulting alignment; release to write the rule. Escape or dropping away
+from a target cancels the gesture. Source, preview and exports use the same rule.
+
 ## Fragments and interaction uses
 
 ```text

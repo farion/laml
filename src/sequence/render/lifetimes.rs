@@ -4,10 +4,10 @@ use super::{Event, HEADER_Y, SequenceDiagram, geometry::head_label, styled_text,
 use crate::styles::StyleSheet;
 use std::fmt::Write;
 
-struct Segment {
-    head: Option<f64>,
-    start: f64,
-    end: f64,
+pub(super) struct Segment {
+    pub(super) head: Option<f64>,
+    pub(super) start: f64,
+    pub(super) end: f64,
 }
 
 pub(super) struct Timeline<'a> {
@@ -19,7 +19,7 @@ pub(super) struct Timeline<'a> {
     pub bottom: f64,
 }
 
-fn segments(
+pub(super) fn segments(
     diagram: &SequenceDiagram,
     id: &str,
     positions: &[(usize, f64)],

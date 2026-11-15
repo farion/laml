@@ -28,6 +28,9 @@ cp docs/editor.md docs/editor-host.md docs/editor-installation.md "$folder/docs/
 cp examples/architecture.laml examples/architecture.lamlstyle "$folder/examples/"
 cp LICENSE assets/INTER-LICENSE.txt assets/GEIST-LICENSE.txt assets/GEIST-SOURCE.txt "$folder/"
 cp assets/phosphor/LICENSE "$folder/PHOSPHOR-LICENSE.txt"
+cp crates/laml-ui/LICENSE "$folder/EDITOR-LICENSE.txt"
+printf '%s\n' 'Editor: GPL-3.0-or-later. Compiler: MIT.' \
+  'Matching source: https://github.com/farion/laml (release tag).' > "$folder/SOURCE.txt"
 printf '%s\n' '# LAML editor host' '' 'See docs/editor-host.md for startup and optional deployment policies.' 'The web/ directory contains the matching browser editor. Keep runtime state outside this folder.' > "$folder/README.md"
 tar -czf "$stage/archive.tar.gz" -C "$stage" "$name"
 if command -v sha256sum >/dev/null 2>&1; then

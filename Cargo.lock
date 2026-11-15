@@ -2323,7 +2323,7 @@ dependencies = [
 
 [[package]]
 name = "laml"
-version = "1.16.2"
+version = "1.17.0"
 dependencies = [
  "base64 0.22.1",
  "flate2",
@@ -2344,7 +2344,7 @@ dependencies = [
 
 [[package]]
 name = "laml-ui"
-version = "0.1.0"
+version = "1.17.0"
 dependencies = [
  "axum",
  "cap-std",

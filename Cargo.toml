@@ -5,9 +5,10 @@ resolver = "3"
 
 [package]
 name = "laml"
-version = "1.16.2"
+version = "1.17.0"
 edition = "2024"
 description = "Deterministic diagram markup compiler"
+license = "MIT"
 
 [dependencies]
 base64 = "=0.22.1"
