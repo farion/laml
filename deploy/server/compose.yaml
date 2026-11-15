@@ -1,7 +1,7 @@
 name: laml-editor
 services:
   editor:
-    image: laml-editor:1.17.1
+    image: laml-editor:1.17.2
     pull_policy: build
     platform: linux/amd64
     build:

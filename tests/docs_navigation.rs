@@ -96,7 +96,30 @@ fn entry_points_link_to_all_diagram_guides() {
         .split_once("## License")
         .unwrap()
         .0;
-    assert!(readme.starts_with("# LAML\n\nLayout and Markup Language\n"));
+    let (wordmark, introduction) = readme
+        .split_once("</picture>")
+        .expect("README must lead with the responsive LAML wordmark");
+    assert!(wordmark.starts_with("<picture>\n"));
+    assert!(wordmark.contains("prefers-color-scheme: dark"));
+    assert!(wordmark.contains("alt=\"LAML\""));
+    for filename in [
+        "docs/images/laml-logo.svg",
+        "docs/images/laml-logo-dark.svg",
+    ] {
+        assert!(
+            wordmark.contains(filename),
+            "missing wordmark variant {filename}"
+        );
+        assert!(
+            root.join(filename).is_file(),
+            "missing wordmark file {filename}"
+        );
+    }
+    assert!(
+        introduction
+            .trim_start()
+            .starts_with("# LAML\n\nLayout and Markup Language\n")
+    );
     for name in ["generic", "uml", "bpmn", "c4"] {
         for suffix in ["", "-dark"] {
             let filename = format!("docs/images/badge-{name}{suffix}.svg");
