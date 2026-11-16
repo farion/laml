@@ -27,7 +27,7 @@ pub(super) fn finish(
     styles: &StyleSheet,
     theme: Theme,
     transparent: bool,
-) -> Result<String, String> {
+) -> Result<(String, Vec<laml::authoring::TextRegion>), String> {
     let protected = styles
         .rules
         .iter()
@@ -43,12 +43,13 @@ pub(super) fn finish(
     let svg = laml::theme::tint_svg_defaults(svg, theme, &protected);
     let svg = laml::text::svg_fonts(&svg)?;
     let svg = laml::theme::canvas(&svg, theme, transparent)?;
-    let svg = laml::export::outlines(&svg)?;
-    if transparent {
-        laml::theme::canvas(&svg, theme, true)
+    let (svg, texts) = laml::export::outlines_for_editor(&svg, bounds(&svg)?)?;
+    let svg = if transparent {
+        laml::theme::canvas(&svg, theme, true)?
     } else {
-        Ok(svg)
-    }
+        svg
+    };
+    Ok((svg, texts))
 }
 
 pub(super) fn build(
@@ -101,9 +102,10 @@ pub(super) fn build(
         _ => return Err("Expected specialized diagram renderer".into()),
     };
     let bounds = bounds(&svg)?;
-    let svg = finish(&svg, &styles, theme, transparent)?;
+    let (svg, texts) = finish(&svg, &styles, theme, transparent)?;
     Ok(Preview {
         svg,
+        texts,
         notation,
         regions,
         diagram,

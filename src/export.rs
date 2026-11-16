@@ -25,6 +25,53 @@ pub fn outlines(svg: &str) -> Result<String, String> {
     )
 }
 
+/// Normalize once while retaining the actual text geometry before outlining.
+/// Bounds are the compiler SVG viewBox; usvg measures in viewport coordinates.
+pub fn outlines_for_editor(
+    svg: &str,
+    bounds: (f64, f64, f64, f64),
+) -> Result<(String, Vec<crate::authoring::TextRegion>), String> {
+    fn collect(group: &usvg::Group, out: &mut Vec<crate::authoring::TextRegion>) {
+        for node in group.children() {
+            match node {
+                usvg::Node::Group(group) => collect(group, out),
+                usvg::Node::Text(text) => {
+                    let b = text.abs_bounding_box();
+                    out.push(crate::authoring::TextRegion {
+                        text: text
+                            .chunks()
+                            .iter()
+                            .map(|c| c.text())
+                            .collect::<Vec<_>>()
+                            .join("\n"),
+                        x: f64::from(b.x()),
+                        y: f64::from(b.y()),
+                        width: f64::from(b.width()),
+                        height: f64::from(b.height()),
+                    });
+                }
+                _ => {}
+            }
+        }
+    }
+    let document = tree(svg)?;
+    let mut texts = Vec::new();
+    collect(document.root(), &mut texts);
+    let sx = (bounds.2 - bounds.0) / f64::from(document.size().width());
+    let sy = (bounds.3 - bounds.1) / f64::from(document.size().height());
+    for text in &mut texts {
+        text.x = bounds.0 + text.x * sx;
+        text.y = bounds.1 + text.y * sy;
+        text.width *= sx;
+        text.height *= sy;
+    }
+    let svg = crate::export_metadata::preserve_svg_notice(
+        svg,
+        document.to_string(&usvg::WriteOptions::default()),
+    )?;
+    Ok((svg, texts))
+}
+
 pub fn png(svg: &str) -> Result<Vec<u8>, String> {
     let document = tree(svg)?;
     let size = document.size().to_int_size();

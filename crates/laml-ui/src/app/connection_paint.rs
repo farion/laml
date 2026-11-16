@@ -19,7 +19,8 @@ impl Editor {
             let Some(pointer) = pointer else {
                 return;
             };
-            let target = geometry::target_at(preview, canvas, pointer);
+            let target =
+                geometry::target_at(preview, canvas, pointer, ui.input(|i| i.modifiers.shift));
             for node in &preview.nodes {
                 for handle in geometry::handles(preview, canvas, node, false) {
                     let hot = target
@@ -226,11 +227,13 @@ impl Editor {
                         handle.point,
                     )
                     .show(|ui| {
-                        ui.label(if handle.dock.side.is_none() {
-                            crate::i18n::tr("Drag a connection · automatic side")
-                        } else {
-                            crate::i18n::tr("Drag a connection · fixed side")
-                        });
+                        ui.label(crate::i18n::tr("Drag a connection · fixed sides"));
+                        ui.label(crate::i18n::tr(
+                            "Shift when starting: automatic source side",
+                        ));
+                        ui.label(crate::i18n::tr(
+                            "Shift when releasing: automatic target side",
+                        ));
                     });
                 }
             }

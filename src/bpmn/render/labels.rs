@@ -357,6 +357,15 @@ pub(super) fn render(
     geom: &Geometry,
     routes: &[Prior],
 ) -> Result<(), String> {
+    render_for_editor(svg, doc, geom, routes, &mut Vec::new())
+}
+pub(super) fn render_for_editor(
+    svg: &mut String,
+    doc: &Document,
+    geom: &Geometry,
+    routes: &[Prior],
+    regions: &mut Vec<crate::authoring::Region>,
+) -> Result<(), String> {
     let mut labels = Vec::new();
     for (index, edge) in doc.edges.iter().enumerate() {
         if routes[index].points.is_empty() {
@@ -413,6 +422,16 @@ pub(super) fn render(
             "#182330"
         };
         writeln!(svg,"<text class=\"bpmn-flow-label\" x=\"{x:.1}\" y=\"{y:.1}\"{transform} text-anchor=\"middle\" font-family=\"Inter\" font-size=\"{:.1}\" fill=\"{color}\">{}</text>",type_sizes::FLOW,escape(name)).unwrap();
+        let b = candidate.box_at;
+        regions.push(crate::authoring::Region::rect(
+            format!("flow:{index}"),
+            "flow",
+            doc.edges[index].line,
+            b.x - b.w / 2.0,
+            b.y - b.h / 2.0,
+            b.w,
+            b.h,
+        ));
         placed.push(candidate.box_at);
     }
     Ok(())

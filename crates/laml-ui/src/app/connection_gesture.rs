@@ -44,6 +44,19 @@ impl Editor {
             self.end_connection(ui.ctx());
             return was_active || self.graph.dialog_open();
         }
+        if let Some(shift) = ui.input(|i| {
+            i.events.iter().find_map(|event| match event {
+                egui::Event::PointerButton {
+                    button: egui::PointerButton::Primary,
+                    pressed: true,
+                    modifiers,
+                    ..
+                } => Some(modifiers.shift),
+                _ => None,
+            })
+        }) {
+            self.graph.connection_press_shift = shift;
+        }
         if self.graph.gesture.is_none()
             && !self.creation.connect
             && response.drag_started_by(egui::PointerButton::Primary)
@@ -112,6 +125,7 @@ impl Editor {
                     }
                 }
             } else if let Some(from) = geometry::source_at(preview, canvas, origin) {
+                let from = geometry::attachment(from, self.graph.connection_press_shift);
                 let operator = self.graph.operator.clone();
                 let draft_operator = self
                     .notation()
@@ -150,10 +164,26 @@ impl Editor {
             return false;
         };
         if response.drag_stopped_by(egui::PointerButton::Primary) {
+            let automatic = ui.input(|i| {
+                i.events
+                    .iter()
+                    .find_map(|event| match event {
+                        egui::Event::PointerButton {
+                            button: egui::PointerButton::Primary,
+                            pressed: false,
+                            modifiers,
+                            ..
+                        } => Some(modifiers.shift),
+                        _ => None,
+                    })
+                    .unwrap_or(i.modifiers.shift)
+            });
             let target = ui
                 .input(|i| i.pointer.interact_pos())
                 .filter(|p| ui.clip_rect().contains(*p))
-                .and_then(|p| geometry::target_at(self.preview.as_ref().unwrap(), canvas, p));
+                .and_then(|p| {
+                    geometry::target_at(self.preview.as_ref().unwrap(), canvas, p, automatic)
+                });
             self.end_connection(ui.ctx());
             if let Some(target) = target {
                 self.commit_connection(&gesture, &target);

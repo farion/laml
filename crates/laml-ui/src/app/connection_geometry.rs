@@ -46,7 +46,7 @@ pub(super) fn handles(
     let rect = node_rect(preview, canvas, node);
     let radius = radius(preview, canvas, node);
     let offset = radius * 1.4;
-    let mut handles: Vec<_> = [
+    [
         ("left", rect.left_center(), egui::vec2(-offset, 0.0)),
         ("right", rect.right_center(), egui::vec2(offset, 0.0)),
         ("top", rect.center_top(), egui::vec2(0.0, -offset)),
@@ -63,20 +63,7 @@ pub(super) fn handles(
             point,
         },
     })
-    .collect();
-    if source {
-        handles.push(Handle {
-            radius,
-            point: rect.center(),
-            dock: Dock {
-                id: node.id.clone(),
-                owner: node.id.clone(),
-                side: None,
-                point: rect.center(),
-            },
-        });
-    }
-    handles
+    .collect()
 }
 
 pub(super) fn hit_node(
@@ -125,7 +112,19 @@ pub(super) fn source_at(preview: &Preview, canvas: egui::Rect, point: egui::Pos2
             .map(|handle| handle.dock)
     })
 }
-pub(super) fn target_at(preview: &Preview, canvas: egui::Rect, point: egui::Pos2) -> Option<Dock> {
+/// Shift changes side selection only; explicit named ports remain semantic endpoints.
+pub(super) fn attachment(mut dock: Dock, automatic: bool) -> Dock {
+    if automatic && dock.id == dock.owner {
+        dock.side = None;
+    }
+    dock
+}
+pub(super) fn target_at(
+    preview: &Preview,
+    canvas: egui::Rect,
+    point: egui::Pos2,
+    automatic: bool,
+) -> Option<Dock> {
     port(preview, canvas, point)
         .or_else(|| {
             preview
@@ -137,13 +136,14 @@ pub(super) fn target_at(preview: &Preview, canvas: egui::Rect, point: egui::Pos2
                 .map(|handle| handle.dock)
         })
         .or_else(|| {
-            hit_node(preview, canvas, point).map(|node| Dock {
-                id: node.id.clone(),
-                owner: node.id.clone(),
-                side: None,
-                point,
-            })
+            let node = hit_node(preview, canvas, point)?;
+            let side = nearest_side(node_rect(preview, canvas, node), point);
+            handles(preview, canvas, node, false)
+                .into_iter()
+                .find(|handle| handle.dock.side == Some(side))
+                .map(|handle| handle.dock)
         })
+        .map(|dock| attachment(dock, automatic))
 }
 pub(super) fn direction(side: &str) -> egui::Vec2 {
     match side {

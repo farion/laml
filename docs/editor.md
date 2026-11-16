@@ -180,6 +180,13 @@ atomically; port names can subsequently be edited independently of their IDs.
 
 ## Select and inspect
 
+Double-click an editable text in the diagram to edit it in place, including node
+labels, arrow captions and sequence message labels. **Enter** or clicking outside
+the field confirms; **Esc** discards the draft. **Shift+Enter** inserts a newline
+where the notation supports it (for example node labels and sequence messages).
+Confirmation patches the `.laml` source as one compiler-checked undo step; element
+IDs and connection endpoints stay unchanged.
+
 - Click a node, boundary port or arrow. Shift-click adds/removes individual elements.
   Clicking an arrow label also selects that arrow.
 - **Diagram actions → Elements…** lists source elements, including overlapping or
@@ -242,16 +249,20 @@ existing layout, ports and relations.
 
 ## Ports and arrows
 
-Hover a node to show four edge-arrow grips and a center grip. Drag from the center
-for an automatic source side, or from an edge grip to fix the source side. The
+Hover a node to show four edge-arrow grips. Drag from an edge grip to fix the
+source side, or hold **Shift when pressing the grip** for an automatic source
+side. This choice is captured at the start and remains unchanged while dragging. The
 Diagram header's type selector applies only to new connections and is captured at
 drag start. Grips, their hit areas, port targets and endpoint handles scale with
 canvas zoom and object dimensions, not the UI font size. Self-connections and
 parallel relationships are supported.
 
-During dragging, node-side and port drop targets appear. Drop on a node's body for
-an automatic target side, on an edge target for a fixed side, or on a port to
-connect to that port rather than its owner. Ports can also be drag origins. These
+During dragging, node-side and port drop targets appear. Drop on an edge target
+for that fixed side, or on the node body to fix its nearest side. Hold **Shift when
+releasing** for an automatic target side, independently of the Shift state at the
+start. The preview follows this target-side choice. Drop on a port to connect to
+that port rather than its owner; Shift preserves explicit port endpoints. Ports
+can also be drag origins. Hover text on each grip explains both Shift gestures. These
 gestures add endpoint-side rules only when a side was explicitly chosen, never
 node-placement coordinates. Escape or dropping into empty space cancels.
 
@@ -266,8 +277,9 @@ arrow and its markers/labels follow the pointer. Transient orthogonal routes use
 the compiler's actual SVG painter, including theme corner treatment, line widths,
 colors, dashes, markers, label typography and backgrounds. The checked drop still
 computes the final obstacle-aware route. The same side/port targets apply.
-Dropping on a node body resets only the moved end's side to automatic; the opposite
-end and the relationship's type, label and style are retained. Escape or an empty
+Holding Shift when dropping resets only the moved end's side to automatic;
+otherwise the chosen target side is fixed. The opposite end and the relationship's
+type, label and style are retained. Escape or an empty
 drop restores the original arrow without changing source.
 Source/target side controls set `left`, `right`, `top` or `bottom`; `auto` removes
 only that end's side override, retaining role/multiplicity placement on the same rule.

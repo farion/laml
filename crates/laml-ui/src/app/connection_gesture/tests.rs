@@ -56,10 +56,22 @@ fn begin(
     from: egui::Pos2,
     to: egui::Pos2,
 ) -> egui::FullOutput {
+    begin_with_shift(editor, ctx, from, to, false)
+}
+fn begin_with_shift(
+    editor: &mut Editor,
+    ctx: &egui::Context,
+    from: egui::Pos2,
+    to: egui::Pos2,
+    shift: bool,
+) -> egui::FullOutput {
     frame(
         editor,
         ctx,
-        vec![egui::Event::PointerMoved(from), button(from, true)],
+        vec![
+            egui::Event::PointerMoved(from),
+            shifted_button(from, true, shift),
+        ],
     );
     let out = frame(editor, ctx, vec![egui::Event::PointerMoved(to)]);
     assert!(
@@ -69,8 +81,28 @@ fn begin(
     assert!(editor.placement.drag.is_none());
     out
 }
+fn shifted_button(point: egui::Pos2, pressed: bool, shift: bool) -> egui::Event {
+    egui::Event::PointerButton {
+        pos: point,
+        button: egui::PointerButton::Primary,
+        pressed,
+        modifiers: egui::Modifiers {
+            shift,
+            ..Default::default()
+        },
+    }
+}
 fn drop_at(editor: &mut Editor, ctx: &egui::Context, point: egui::Pos2, revision: u64) {
-    frame(editor, ctx, vec![button(point, false)]);
+    drop_with_shift(editor, ctx, point, revision, false);
+}
+fn drop_with_shift(
+    editor: &mut Editor,
+    ctx: &egui::Context,
+    point: egui::Pos2,
+    revision: u64,
+    shift: bool,
+) {
+    frame(editor, ctx, vec![shifted_button(point, false, shift)]);
     assert!(editor.graph.gesture.is_none());
     wait(editor, ctx, |e| {
         e.document.revision() == revision || e.pending_command.is_none()
@@ -80,14 +112,14 @@ fn drop_at(editor: &mut Editor, ctx: &egui::Context, point: egui::Pos2, revision
 }
 
 #[test]
-fn center_start_and_body_drop_leave_both_sides_automatic_and_undo_once() {
+fn shift_start_and_body_drop_leave_both_sides_automatic_and_undo_once() {
     let source = "semantics {\n A\n B\n}\n";
     let (mut editor, ctx) = ready(source);
-    let from = grip(&editor, "A", None, true);
+    let from = grip(&editor, "A", Some("right"), true);
     let to = body(&editor, "B");
-    begin(&mut editor, &ctx, from, to);
+    begin_with_shift(&mut editor, &ctx, from, to, true);
     assert_eq!(editor.document.source(), source);
-    drop_at(&mut editor, &ctx, to, 1);
+    drop_with_shift(&mut editor, &ctx, to, 1, true);
     let diagram = &editor.preview.as_ref().unwrap().diagram;
     assert_eq!(diagram.relations[0].from, "A");
     assert_eq!(diagram.relations[0].to, "B");
@@ -104,7 +136,7 @@ fn all_four_source_buttons_can_set_a_side_while_the_target_stays_automatic() {
         let from = grip(&editor, "A", Some(side), true);
         let to = body(&editor, "B");
         begin(&mut editor, &ctx, from, to);
-        drop_at(&mut editor, &ctx, to, 1);
+        drop_with_shift(&mut editor, &ctx, to, 1, true);
         let rules = &editor.preview.as_ref().unwrap().diagram.relation_end_layout;
         assert_eq!(rules.len(), 1);
         assert_eq!(rules[0].end, EndPosition::Source);
@@ -122,9 +154,9 @@ fn all_four_source_buttons_can_set_a_side_while_the_target_stays_automatic() {
 fn target_dock_fixes_the_target_side_and_type_is_frozen_at_drag_start() {
     let (mut editor, ctx) = ready("semantics {\n A\n B\n}\n");
     editor.graph.operator = "..>".into();
-    let from = grip(&editor, "A", None, true);
+    let from = grip(&editor, "A", Some("right"), true);
     let to = grip(&editor, "B", Some("top"), false);
-    begin(&mut editor, &ctx, from, to);
+    begin_with_shift(&mut editor, &ctx, from, to, true);
     editor.graph.operator = "--".into();
     drop_at(&mut editor, &ctx, to, 1);
     let diagram = &editor.preview.as_ref().unwrap().diagram;
@@ -156,10 +188,10 @@ fn ports_are_precise_start_and_drop_targets_not_their_owners() {
         let from = if from_port {
             port("P")
         } else {
-            grip(&editor, "A", None, true)
+            grip(&editor, "A", Some("right"), true)
         };
         let to = port("Q");
-        begin(&mut editor, &ctx, from, to);
+        begin_with_shift(&mut editor, &ctx, from, to, true);
         drop_at(&mut editor, &ctx, to, 1);
         let relation = &editor.preview.as_ref().unwrap().diagram.relations[0];
         assert_eq!(relation.from, if from_port { "P" } else { "A" });
@@ -179,8 +211,8 @@ fn ports_are_precise_start_and_drop_targets_not_their_owners() {
 #[test]
 fn self_connection_is_allowed_and_does_not_become_a_node_move() {
     let (mut editor, ctx) = ready("semantics {\n A\n}\n");
-    let from = grip(&editor, "A", None, true);
-    let to = from + egui::vec2(22.0, 15.0);
+    let from = grip(&editor, "A", Some("right"), true);
+    let to = grip(&editor, "A", Some("bottom"), false);
     begin(&mut editor, &ctx, from, to);
     drop_at(&mut editor, &ctx, to, 1);
     let diagram = &editor.preview.as_ref().unwrap().diagram;
@@ -194,7 +226,7 @@ fn escape_empty_drop_and_stale_revision_do_not_mutate_source() {
     for scenario in 0..3 {
         let source = "semantics {\n A\n B\n}\n";
         let (mut editor, ctx) = ready(source);
-        let from = grip(&editor, "A", None, true);
+        let from = grip(&editor, "A", Some("right"), true);
         let to = body(&editor, "B");
         begin(&mut editor, &ctx, from, to);
         match scenario {
@@ -268,7 +300,7 @@ fn either_endpoint_can_move_and_original_arrow_is_removed_during_drag() {
             g.route.label.as_ref().map(|l| l.text.as_str()),
             Some("request")
         );
-        drop_at(&mut editor, &ctx, to, 1);
+        drop_with_shift(&mut editor, &ctx, to, 1, true);
         assert!(editor.graph.drag_image.is_none());
         let diagram = &editor.preview.as_ref().unwrap().diagram;
         let relation = &diagram.relations[0];
@@ -287,6 +319,79 @@ fn either_endpoint_can_move_and_original_arrow_is_removed_during_drag() {
         editor.document.undo();
         assert_eq!(editor.document.source(), source);
     }
+}
+
+#[test]
+fn shift_at_press_and_release_independently_controls_each_end() {
+    for start_auto in [false, true] {
+        for end_auto in [false, true] {
+            let (mut editor, ctx) = ready("semantics {\n A\n B\n}\n");
+            let preview = editor.preview.as_ref().unwrap();
+            let canvas = editor.creation.canvas_rect.unwrap();
+            assert_eq!(
+                geometry::handles(preview, canvas, &preview.nodes[0], true).len(),
+                4
+            );
+            assert!(geometry::source_at(preview, canvas, body(&editor, "A")).is_none());
+            let from = grip(&editor, "A", Some("right"), true);
+            let to = grip(&editor, "B", Some("left"), false);
+            // The motion frame has Shift released: the press choice must stay latched.
+            begin_with_shift(&mut editor, &ctx, from, to, start_auto);
+            let Kind::New { from, .. } = &editor.graph.gesture.as_ref().unwrap().kind else {
+                panic!("New arrow expected")
+            };
+            assert_eq!(from.side.is_none(), start_auto);
+            drop_with_shift(&mut editor, &ctx, to, 1, end_auto);
+            let rules = &editor.preview.as_ref().unwrap().diagram.relation_end_layout;
+            assert_eq!(
+                rules
+                    .iter()
+                    .find(|r| r.end == EndPosition::Source)
+                    .and_then(|r| r.side),
+                (!start_auto).then_some(PortSide::Right)
+            );
+            assert_eq!(
+                rules
+                    .iter()
+                    .find(|r| r.end == EndPosition::Target)
+                    .and_then(|r| r.side),
+                (!end_auto).then_some(PortSide::Left)
+            );
+        }
+    }
+}
+
+#[test]
+fn body_drop_is_fixed_by_default_and_shift_preserves_named_ports() {
+    let (editor, _) = ready("semantics {\n A\n B {\n @P port Input\n }\n}\n");
+    let preview = editor.preview.as_ref().unwrap();
+    let canvas = editor.creation.canvas_rect.unwrap();
+    let body = body(&editor, "B");
+    assert!(
+        geometry::target_at(preview, canvas, body, false)
+            .unwrap()
+            .side
+            .is_some()
+    );
+    assert!(
+        geometry::target_at(preview, canvas, body, true)
+            .unwrap()
+            .side
+            .is_none()
+    );
+    let port = preview
+        .nodes
+        .iter()
+        .flat_map(|n| &n.ports)
+        .find(|p| p.id == "P")
+        .unwrap();
+    let point = geometry::screen(preview, canvas, port.x, port.y);
+    assert_eq!(
+        geometry::target_at(preview, canvas, point, true)
+            .unwrap()
+            .id,
+        "P"
+    );
 }
 
 #[test]

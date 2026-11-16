@@ -17,6 +17,8 @@ pub struct PickRoute {
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Preview {
     pub svg: String,
+    #[serde(default)]
+    pub texts: Vec<laml::authoring::TextRegion>,
     pub notation: crate::notation::Notation,
     pub regions: Vec<laml::authoring::Region>,
     pub diagram: laml::syntax::Diagram,

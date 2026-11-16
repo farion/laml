@@ -398,7 +398,7 @@ pub fn render_for_editor(
         shape(&mut svg, n, b, super::style::icon(sheet, n), caption_above);
         svg.push_str("</g>\n");
     }
-    labels::render(&mut svg, doc, &geom, &routes)?;
+    labels::render_for_editor(&mut svg, doc, &geom, &routes, &mut regions)?;
     svg.push_str("</svg>\n");
     let svg = if mode == TextMode::Paths {
         crate::export_metadata::preserve_svg_notice(&svg, crate::export::outlines(&svg)?)?

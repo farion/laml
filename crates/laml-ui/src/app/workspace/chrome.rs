@@ -21,7 +21,7 @@ impl Workspace {
             )
             .show(ui, |ui| {
                 let rect = ui.max_rect();
-                ui.painter().text(
+                let title_rect = ui.painter().text(
                     rect.center(),
                     egui::Align2::CENTER_CENTER,
                     crate::i18n::tr("LAML Editor"),
@@ -68,6 +68,7 @@ impl Workspace {
                         if download.clicked() {
                             self.download.show(ui.ctx());
                         }
+                        download_mcp_hint(ui, download.rect.height(), title_rect);
                     });
                 });
             });
@@ -181,6 +182,47 @@ impl Workspace {
             self.request_close(index, ui.ctx());
         }
     }
+}
+
+/// Fixed layout space keeps the text and download button still while the arrow nudges.
+fn download_mcp_hint(ui: &mut egui::Ui, height: f32, title: egui::Rect) {
+    let caption = crate::i18n::tr("Now with MCP");
+    let caption_width = ui
+        .painter()
+        .layout_no_wrap(
+            caption.into(),
+            egui::TextStyle::Body.resolve(ui.style()),
+            ui.visuals().text_color(),
+        )
+        .size()
+        .x;
+    let hint_width = caption_width + 32.0 + ui.spacing().item_spacing.x;
+    if ui.available_rect_before_wrap().right() - hint_width < title.right() + 12.0 {
+        return;
+    }
+    const PERIOD: f64 = 8.0;
+    const MOTION: f64 = 1.4;
+    let phase = ui.input(|input| input.time).rem_euclid(PERIOD);
+    let offset = if phase < MOTION {
+        ui.ctx()
+            .request_repaint_after(std::time::Duration::from_millis(30));
+        let progress = (phase / MOTION) as f32;
+        4.0 * (progress * std::f32::consts::TAU * 2.0).sin()
+            * (progress * std::f32::consts::PI).sin().powi(2)
+    } else {
+        ui.ctx()
+            .request_repaint_after(std::time::Duration::from_secs_f64(PERIOD - phase));
+        0.0
+    };
+    // The titlebar uses right-to-left layout: arrow first, then its caption.
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(32.0, height), egui::Sense::hover());
+    let center = rect.center() + egui::vec2(offset, 0.0);
+    ui.painter().arrow(
+        center - egui::vec2(9.0, 0.0),
+        egui::vec2(18.0, 0.0),
+        egui::Stroke::new(1.6, appearance::color(ui.ctx(), appearance::ACCENT)),
+    );
+    ui.label(caption);
 }
 
 /// A short, softly fading comet follows the actual rounded button border.

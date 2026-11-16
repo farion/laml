@@ -8,6 +8,7 @@ pub(super) struct State {
     pub addresses: bool,
     pub motion: connection_preview::Cache,
     pub gesture: Option<connection_gesture::Gesture>,
+    pub connection_press_shift: bool,
     pub drag_image: Option<(String, Vec<u8>)>,
     pub node_dialog: Option<graph_dialogs::NodeDialog>,
     pub port_dialog: Option<graph_dialogs::PortDialog>,
@@ -27,6 +28,7 @@ impl Default for State {
             addresses: false,
             motion: Default::default(),
             gesture: None,
+            connection_press_shift: false,
             drag_image: None,
             node_dialog: None,
             port_dialog: None,
@@ -43,6 +45,7 @@ impl State {
     pub fn cancel_gesture(&mut self) {
         self.motion = Default::default();
         self.gesture = None;
+        self.connection_press_shift = false;
         self.drag_image = None;
     }
     pub fn dialog_open(&self) -> bool {

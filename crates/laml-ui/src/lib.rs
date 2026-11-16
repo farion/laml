@@ -11,6 +11,7 @@ pub mod file_state;
 pub mod files;
 pub mod graph_edit;
 pub mod i18n;
+pub mod inline_text;
 pub mod membership_edit;
 pub mod node_edit;
 pub mod notation;

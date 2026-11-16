@@ -196,7 +196,7 @@ fn build_impl(
             let svg = laml::theme::tint_svg_defaults(&svg, theme, &protected);
             let svg = laml::text::svg_fonts(&svg)?;
             let svg = laml::theme::canvas(&svg, theme, transparent)?;
-            let svg = laml::export::outlines(&svg)?;
+            let (svg, texts) = laml::export::outlines_for_editor(&svg, bounds)?;
             // Outlining normalizes the SVG and drops custom root attributes.
             // Retain the transparent-canvas contract for PNG/PDF consumers too.
             let svg = if transparent {
@@ -224,6 +224,7 @@ fn build_impl(
             let port_properties = crate::properties::port_values(&diagram, &boxes, &styles);
             Ok(Preview {
                 svg,
+                texts,
                 notation,
                 regions: vec![],
                 diagram,

@@ -62,7 +62,7 @@ impl Editor {
         if let Some(factor) = self.view.zoom_request.take() {
             self.view.zoom_at(viewport, size, viewport.center(), factor);
         }
-        let overlay_owned = self.alignment_overlay(ui, viewport);
+        let overlay_owned = self.inline_text.is_some() || self.alignment_overlay(ui, viewport);
         let panning = if overlay_owned {
             true
         } else {
@@ -122,6 +122,9 @@ impl Editor {
             }
         }
         appearance::image_bounds(ui.painter(), rect);
+        if self.inline_text_canvas(ui, viewport, rect, &response) {
+            return;
+        }
         let notation_owned = self.notation_reorder_overlay(ui, viewport, panning);
         if self.specialized() {
             self.notation_canvas(ui, rect, &response, panning || notation_owned);

@@ -45,6 +45,7 @@ mod host_dialogs;
 mod icon_picker;
 #[cfg(test)]
 mod icon_picker_tests;
+mod inline_text;
 mod inspector;
 #[cfg(test)]
 mod inspector_layout_tests;
@@ -138,6 +139,7 @@ pub struct Editor {
     membership: Option<membership::Proposal>,
     remote: remote_ui::Remote,
     relation_drag: Option<(usize, laml::syntax::EndPosition, u64)>,
+    inline_text: Option<inline_text::Draft>,
 }
 
 impl Editor {
@@ -218,6 +220,7 @@ impl Editor {
             notation_ui: Default::default(),
             alignment: None,
             relation_drag: None,
+            inline_text: None,
             deletion: None,
             membership: None,
         }

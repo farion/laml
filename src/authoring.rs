@@ -1,5 +1,15 @@
 //! Source-linked geometry emitted by the renderers for authoring tools.
 //! Regions describe the current compilation, never persistent layout state.
+
+/// Measured text in compiler SVG user coordinates, used for precise editor picking.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct TextRegion {
+    pub text: String,
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+}
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Region {
     pub id: String,

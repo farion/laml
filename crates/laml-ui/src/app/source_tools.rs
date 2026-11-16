@@ -46,6 +46,7 @@ impl Default for SourceUi {
 impl Editor {
     pub(super) fn history_shortcuts(&mut self, ctx: &egui::Context) {
         if dialogs::blocked(ctx)
+            || self.inline_text.is_some()
             || self.graph.dialog_open()
             || self.deletion.is_some()
             || self.command_error.is_some()
@@ -73,6 +74,7 @@ impl Editor {
         }
     }
     pub(super) fn source_mutated(&mut self) {
+        self.inline_text = None;
         self.graph.cancel_gesture();
         self.remote.cancel();
         self.retry_after = None;
