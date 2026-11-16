@@ -115,6 +115,12 @@ fn entry_points_link_to_all_diagram_guides() {
             "missing wordmark file {filename}"
         );
     }
+    let browser_link =
+        "[Try the rust-made LAMLeditor in your browser.](https://laml.frieder-reinhold.com)";
+    let introduction = introduction
+        .trim_start()
+        .strip_prefix(browser_link)
+        .expect("browser editor link must appear directly below the wordmark");
     assert!(
         introduction
             .trim_start()

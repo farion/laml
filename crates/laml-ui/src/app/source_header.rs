@@ -79,6 +79,7 @@ impl Editor {
                 }
             });
         }
+        self.export_controls(ui);
         ui.separator();
         ui.add_enabled_ui(self.document.undo_label().is_some(), |ui| {
             if workspace::icon(ui, ARROW_COUNTER_CLOCKWISE, "Undo (Ctrl/Cmd+Z)").clicked()

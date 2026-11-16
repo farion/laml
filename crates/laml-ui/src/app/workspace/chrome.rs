@@ -68,11 +68,6 @@ impl Workspace {
                         if download.clicked() {
                             self.download.show(ui.ctx());
                         }
-                        ui.add_enabled_ui(!locked, |ui| {
-                            if let Some(editor) = self.tabs.get_mut(self.active) {
-                                editor.export_controls(ui);
-                            }
-                        });
                     });
                 });
             });

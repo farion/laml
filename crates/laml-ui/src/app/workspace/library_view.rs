@@ -96,10 +96,16 @@ impl Library {
         let mut action = None;
         ui.horizontal(|ui| {
             ui.label(glyph(MAGNIFYING_GLASS));
+            // Reserve the real icon-button widths, including their padding, so
+            // this row cannot widen the body beyond the dialog header.
+            let tool_width = (18.0 + 2.0 * ui.spacing().button_padding.x)
+                .max(ui.spacing().interact_size.x)
+                .max(30.0);
+            let reserved = 2.0 * (tool_width + ui.spacing().item_spacing.x);
             ui.add(
                 egui::TextEdit::singleline(&mut self.query)
                     .hint_text(crate::i18n::tr("Search files…"))
-                    .desired_width((ui.available_width() - 85.0).max(100.0)),
+                    .desired_width((ui.available_width() - reserved).max(100.0)),
             );
             if tool(ui, !self.query.is_empty(), X, "Clear search") {
                 self.query.clear();
