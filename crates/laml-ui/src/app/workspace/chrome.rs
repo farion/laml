@@ -16,7 +16,7 @@ impl Workspace {
             .exact_size(44.0)
             .show_separator_line(false)
             .frame(
-                appearance::panel_frame(appearance::HEADER)
+                appearance::panel_frame(appearance::color(ui.ctx(), appearance::HEADER))
                     .inner_margin(egui::Margin::symmetric(12, 6)),
             )
             .show(ui, |ui| {
@@ -26,7 +26,7 @@ impl Workspace {
                     egui::Align2::CENTER_CENTER,
                     crate::i18n::tr("LAML Editor"),
                     egui::FontId::proportional(16.0),
-                    appearance::TEXT,
+                    appearance::color(ui.ctx(), appearance::TEXT),
                 );
                 ui.horizontal_centered(|ui| {
                     ui.add_enabled_ui(!locked, |ui| {
@@ -82,7 +82,10 @@ impl Workspace {
         let reveal = std::mem::take(&mut self.reveal_active);
         egui::Panel::top("document-tabs")
             .exact_size(38.0)
-            .frame(appearance::panel_frame(appearance::HEADER))
+            .frame(appearance::panel_frame(appearance::color(
+                ui.ctx(),
+                appearance::HEADER,
+            )))
             .show(ui, |ui| {
                 let rect = ui.max_rect();
                 ui.add_enabled_ui(!locked, |ui| {
@@ -96,11 +99,14 @@ impl Workspace {
                                     ui.push_id(editor.id, |ui| {
                                         let active = index == self.active;
                                         let response = egui::Frame::new()
-                                            .fill(if active {
-                                                appearance::PANEL
-                                            } else {
-                                                appearance::HEADER
-                                            })
+                                            .fill(appearance::color(
+                                                ui.ctx(),
+                                                if active {
+                                                    appearance::PANEL
+                                                } else {
+                                                    appearance::HEADER
+                                                },
+                                            ))
                                             .inner_margin(egui::Margin::symmetric(8, 2))
                                             .show(ui, |ui| {
                                                 ui.horizontal(|ui| {
@@ -150,7 +156,10 @@ impl Workspace {
                                             ui.painter().hline(
                                                 response.response.rect.x_range(),
                                                 response.response.rect.bottom() - 1.0,
-                                                egui::Stroke::new(2.0, appearance::ACCENT),
+                                                egui::Stroke::new(
+                                                    2.0,
+                                                    appearance::color(ui.ctx(), appearance::ACCENT),
+                                                ),
                                             );
                                         }
                                     });
@@ -161,7 +170,7 @@ impl Workspace {
                 ui.painter().hline(
                     rect.x_range(),
                     rect.bottom(),
-                    egui::Stroke::new(1.0, appearance::BORDER),
+                    egui::Stroke::new(1.0, appearance::color(ui.ctx(), appearance::BORDER)),
                 );
             });
         if let Some(index) = selected {

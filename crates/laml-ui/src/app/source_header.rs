@@ -10,7 +10,7 @@ mod tests;
 impl Editor {
     pub(super) fn source_heading(&mut self, ui: &mut egui::Ui) {
         let heading = egui::Frame::new()
-            .fill(appearance::HEADER)
+            .fill(appearance::color(ui.ctx(), appearance::HEADER))
             .inner_margin(egui::Margin::symmetric(14, 6))
             .show(ui, |ui| {
                 ui.set_min_height(appearance::HEADER_HEIGHT - 12.0);
@@ -23,7 +23,7 @@ impl Editor {
         ui.painter().hline(
             heading.response.rect.x_range(),
             heading.response.rect.bottom(),
-            egui::Stroke::new(1.0, appearance::BORDER),
+            egui::Stroke::new(1.0, appearance::color(ui.ctx(), appearance::BORDER)),
         );
     }
 
@@ -62,17 +62,24 @@ impl Editor {
                     save_as.rect.right_bottom() - egui::vec2(7.0, 7.0),
                     egui::vec2(14.0, 14.0),
                 );
-                ui.painter().rect_filled(mark, 2.0, appearance::HEADER);
+                ui.painter().rect_filled(
+                    mark,
+                    2.0,
+                    appearance::color(ui.ctx(), appearance::HEADER),
+                );
                 ui.painter().text(
                     mark.center(),
                     egui::Align2::CENTER_CENTER,
                     PENCIL_SIMPLE,
                     egui::FontId::new(14.0, egui::FontFamily::Name("phosphor".into())),
-                    if can_save {
-                        appearance::TEXT
-                    } else {
-                        appearance::MUTED
-                    },
+                    appearance::color(
+                        ui.ctx(),
+                        if can_save {
+                            appearance::TEXT
+                        } else {
+                            appearance::MUTED
+                        },
+                    ),
                 );
                 if save_as.clicked() {
                     self.save_as_dialog(ui.ctx());

@@ -100,9 +100,12 @@ async fn guard(
             "X-Content-Type-Options",
             axum::http::HeaderValue::from_static("nosniff"),
         );
+        // Firefox sends Origin: null for same-origin-mode POSTs under
+        // no-referrer. Keep local origins intact for the strict guard while
+        // still withholding referrers from every cross-origin destination.
         headers.insert(
             "Referrer-Policy",
-            axum::http::HeaderValue::from_static("no-referrer"),
+            axum::http::HeaderValue::from_static("same-origin"),
         );
         headers.insert("Content-Security-Policy",axum::http::HeaderValue::from_static("default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"));
     }
