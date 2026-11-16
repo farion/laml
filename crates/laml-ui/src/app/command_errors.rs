@@ -16,7 +16,7 @@ pub(super) fn explain(error: &str) -> Explanation {
     let subject = message
         .split_once('\'')
         .and_then(|(_, rest)| rest.split_once('\''))
-        .map_or("this element", |(id, _)| id);
+        .map_or(crate::i18n::tr("this element"), |(id, _)| id);
     let (reason, suggestion) = if message.contains("visible relation targets hidden") {
         (
             format!("{subject} cannot be hidden because a visible arrow is still connected to it."),
@@ -85,10 +85,16 @@ pub(super) fn explain(error: &str) -> Explanation {
 
 pub(super) fn details(ui: &mut egui::Ui, error: &str) {
     let explanation = explain(error);
-    ui.add(egui::Label::new(egui::RichText::new(explanation.reason).strong()).wrap());
-    ui.add(egui::Label::new(explanation.suggestion).wrap());
+    ui.add(
+        egui::Label::new(egui::RichText::new(crate::i18n::message(&(explanation.reason))).strong())
+            .wrap(),
+    );
+    ui.add(egui::Label::new(crate::i18n::message(explanation.suggestion)).wrap());
     ui.separator();
-    ui.colored_label(appearance::color(ui.ctx(), appearance::MUTED), "LAML-Error");
+    ui.colored_label(
+        appearance::color(ui.ctx(), appearance::MUTED),
+        crate::i18n::tr("LAML-Error"),
+    );
     ui.add(
         egui::Label::new(
             egui::RichText::new(error)
@@ -117,7 +123,7 @@ impl Editor {
             480.0,
             |ui| {
                 details(ui, &error);
-                close = ui.button("Close").clicked();
+                close = ui.button(crate::i18n::tr("Close")).clicked();
             },
         );
         if dismissed || close {

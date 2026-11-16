@@ -5,10 +5,10 @@ fn action(
     title: &str,
     proposal: &Result<Vec<laml_ui::document::Edit>, String>,
 ) -> bool {
-    let response = ui.add_enabled(proposal.is_ok(), egui::Button::new(title));
+    let response = ui.add_enabled(proposal.is_ok(), egui::Button::new(crate::i18n::tr(title)));
     let clicked = response.clicked();
     if let Err(reason) = proposal {
-        response.on_disabled_hover_text(reason);
+        response.on_disabled_hover_text(crate::i18n::message(reason));
     }
     clicked
 }
@@ -39,7 +39,7 @@ impl Editor {
     ) {
         let line = record.line;
         ui.horizontal_wrapped(|ui| {
-            if ui.button("Delete…").clicked() {
+            if ui.button(crate::i18n::tr("Delete…")).clicked() {
                 self.notation_delete(line, id, false);
             }
             if record.opens {
@@ -55,10 +55,10 @@ impl Editor {
                 }
             }
         });
-        if ui.button("Add construct…").clicked() {
+        if ui.button(crate::i18n::tr("Add construct…")).clicked() {
             self.open_construct_dialog();
         }
-        ui.label("Destination");
+        ui.label(crate::i18n::tr("Destination"));
         destination(
             ui,
             self.document.source(),

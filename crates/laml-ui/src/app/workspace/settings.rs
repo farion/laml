@@ -4,8 +4,8 @@ use super::*;
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub(super) enum Category {
     #[default]
+    Language,
     Theming,
-    About,
 }
 
 pub(super) fn content(
@@ -27,13 +27,15 @@ pub(super) fn content(
                 egui::Layout::top_down(egui::Align::Min),
                 |ui| {
                     ui.set_min_height(height);
-                    for (value, label) in
-                        [(Category::Theming, "Theming"), (Category::About, "About")]
-                    {
+                    for (value, label) in [
+                        (Category::Language, "Language"),
+                        (Category::Theming, "Theming"),
+                    ] {
                         if ui
                             .add_sized(
                                 [sidebar, 32.0],
-                                egui::Button::selectable(*category == value, "").left_text(label),
+                                egui::Button::selectable(*category == value, "")
+                                    .left_text(crate::i18n::tr(label)),
                             )
                             .clicked()
                         {
@@ -47,10 +49,31 @@ pub(super) fn content(
                 ui.set_min_height(height);
                 ui.set_width(ui.available_width());
                 match category {
-                    Category::Theming => {
-                        ui.heading("Theming");
+                    Category::Language => {
+                        ui.heading(crate::i18n::tr("Language"));
                         ui.add_space(16.0);
-                        ui.label("Editor theme");
+                        ui.label(crate::i18n::tr("Language"));
+                        egui::ComboBox::from_id_salt("editor-language")
+                            .width(140.0)
+                            .selected_text(preferences.language.label())
+                            .show_ui(ui, |ui| {
+                                for language in [
+                                    crate::i18n::Language::Auto,
+                                    crate::i18n::Language::English,
+                                    crate::i18n::Language::German,
+                                ] {
+                                    ui.selectable_value(
+                                        &mut preferences.language,
+                                        language,
+                                        language.label(),
+                                    );
+                                }
+                            });
+                    }
+                    Category::Theming => {
+                        ui.heading(crate::i18n::tr("Theming"));
+                        ui.add_space(16.0);
+                        ui.label(crate::i18n::tr("Editor theme"));
                         egui::ComboBox::from_id_salt("editor-theme")
                             .width(140.0)
                             .selected_text(preferences.editor_theme.label())
@@ -70,18 +93,8 @@ pub(super) fn content(
                         ui.add_space(16.0);
                         ui.checkbox(
                             &mut preferences.fit_preview,
-                            "Ignore LAML theme and fit to editor theme",
+                            crate::i18n::tr("Ignore LAML theme and fit to editor theme"),
                         );
-                    }
-                    Category::About => {
-                        ui.heading(format!("LAML Editor {}", env!("CARGO_PKG_VERSION")));
-                        ui.add_space(16.0);
-                        ui.hyperlink("https://github.com/farion/laml");
-                        ui.add_space(16.0);
-                        ui.label("LAML License MIT");
-                        ui.label("Editor License GPL-3.0-or-later");
-                        ui.add_space(16.0);
-                        ui.label("Maintainer: Frieder Reinhold<reinhold@trigon-media.com>");
                     }
                 }
             });

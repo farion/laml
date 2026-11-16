@@ -28,7 +28,7 @@ pub(super) fn show(
             ui.spacing_mut().text_edit_width = ui.available_width();
             ui.spacing_mut().combo_width = ui.available_width();
             ui.horizontal(|ui| {
-                ui.heading(title);
+                ui.heading(crate::i18n::tr(title));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if workspace::icon(ui, egui_phosphor::regular::X, "Close dialog").clicked() {
                         ui.close();

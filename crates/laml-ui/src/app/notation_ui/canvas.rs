@@ -109,13 +109,16 @@ impl Editor {
         response.context_menu(|ui| {
             ui.spacing_mut().button_padding = egui::vec2(16.0, 6.0);
             if ui
-                .add_enabled(enabled, egui::Button::new("Add construct…"))
+                .add_enabled(
+                    enabled,
+                    egui::Button::new(crate::i18n::tr("Add construct…")),
+                )
                 .clicked()
             {
                 self.open_construct_dialog();
                 ui.close();
             }
-            if ui.button("Elements…").clicked() {
+            if ui.button(crate::i18n::tr("Elements…")).clicked() {
                 self.notation_ui.navigator = true;
                 ui.close();
             }
@@ -123,7 +126,7 @@ impl Editor {
                 && ui
                     .add_enabled(
                         enabled && revision == self.document.revision(),
-                        egui::Button::new("Delete…"),
+                        egui::Button::new(crate::i18n::tr("Delete…")),
                     )
                     .clicked()
             {

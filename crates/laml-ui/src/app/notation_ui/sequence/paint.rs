@@ -199,7 +199,7 @@ pub(super) fn drops(
             ui.painter().text(
                 point(rect, preview.bounds, hot.x, hot.y) + egui::vec2(12.0, -18.0),
                 egui::Align2::LEFT_BOTTOM,
-                "Start activation",
+                crate::i18n::tr("Start activation"),
                 egui::FontId::proportional(12.0),
                 hot_color,
             );

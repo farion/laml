@@ -128,12 +128,14 @@ impl Editor {
                                 ],
                                 button,
                             )
-                            .on_hover_text(
+                            .on_hover_text(crate::i18n::tr(
                                 "Choose a node icon from the searchable Phosphor catalogue",
-                            )
+                            ))
                             .clicked();
                         reset = appearance::property_action(ui, true)
-                            .on_hover_text("Reset local icon override (inherited styles remain)")
+                            .on_hover_text(crate::i18n::tr(
+                                "Reset local icon override (inherited styles remain)",
+                            ))
                             .clicked();
                     })
                 });
@@ -141,7 +143,7 @@ impl Editor {
         });
         if let Some(reason) = reason {
             inspector_ui::content(ui, |ui| {
-                ui.small(reason);
+                ui.small(crate::i18n::message(reason));
             });
         }
         if open {
@@ -204,14 +206,16 @@ impl Editor {
         let mut cancel = false;
         let stale = picker.revision != self.document.revision() || picker.ids != self.selection.ids;
         let dismissed = dialogs::show(ctx, ("choose-icon", self.id), "Choose icon", 720.0, |ui| {
-            ui.label(format!(
-                "Phosphor · {} icons · {} selected node(s)",
-                laml::bundled_icon_names().count(),
-                picker.ids.len()
+            ui.label(crate::i18n::format(
+                "Phosphor · {0} icons · {1} selected node(s)",
+                &[
+                    ("0", format!("{}", laml::bundled_icon_names().count())),
+                    ("1", format!("{}", picker.ids.len())),
+                ],
             ));
             let search = ui.add(
                 egui::TextEdit::singleline(&mut picker.query)
-                    .hint_text("Search icons… cloud, database, user")
+                    .hint_text(crate::i18n::tr("Search icons… cloud, database, user"))
                     .desired_width(ui.available_width()),
             );
             self.source_ui.extra_drafts.push(search.id);
@@ -227,10 +231,12 @@ impl Editor {
             let names = picker.filtered();
             ui.colored_label(
                 appearance::color(ui.ctx(), appearance::MUTED),
-                format!("{} matching icons", names.len()),
+                crate::i18n::format("{0} matching icons", &[("0", format!("{}", names.len()))]),
             );
             if names.is_empty() {
-                ui.label("No matching icons. Try another name or choose All.");
+                ui.label(crate::i18n::tr(
+                    "No matching icons. Try another name or choose All.",
+                ));
                 ui.add_space(80.0);
             }
             let columns = ((ui.available_width() + 8.0) / 96.0).floor().max(1.0) as usize;
@@ -262,7 +268,7 @@ impl Editor {
             if stale {
                 ui.colored_label(
                     egui::Color32::YELLOW,
-                    "Document changed. Close and reopen the icon chooser.",
+                    crate::i18n::tr("Document changed. Close and reopen the icon chooser."),
                 );
             }
             if let Some(error) = &picker.error {
@@ -276,16 +282,16 @@ impl Editor {
                 } else {
                     ui.colored_label(
                         appearance::color(ui.ctx(), appearance::MUTED),
-                        "Select an icon to preview it here.",
+                        crate::i18n::tr("Select an icon to preview it here."),
                     );
                 }
             });
             ui.horizontal(|ui| {
-                cancel = ui.button("Cancel").clicked();
+                cancel = ui.button(crate::i18n::tr("Cancel")).clicked();
                 submit = ui
                     .add_enabled(
                         !stale && picker.selected.is_some() && self.can_edit_visually(),
-                        egui::Button::new("Use icon"),
+                        egui::Button::new(crate::i18n::tr("Use icon")),
                     )
                     .clicked();
             });

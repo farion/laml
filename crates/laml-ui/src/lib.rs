@@ -10,6 +10,7 @@ pub mod file_state;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod files;
 pub mod graph_edit;
+pub mod i18n;
 pub mod membership_edit;
 pub mod node_edit;
 pub mod notation;

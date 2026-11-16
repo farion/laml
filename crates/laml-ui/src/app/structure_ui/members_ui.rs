@@ -16,7 +16,7 @@ impl Editor {
                 ui.scope(|ui| {
                     inspector_ui::category(ui, &format!("Member · {text}"));
                     let Some(address) = structure::member_address(&node.id, part) else {
-                        if ui.button("Assign global member ID").clicked() {
+                        if ui.button(crate::i18n::tr("Assign global member ID")).clicked() {
                             self.submit_structure(
                                 "Address member",
                                 Some(node.id.clone()),
@@ -33,7 +33,7 @@ impl Editor {
                         ui.small(&address);
                     });
                     if matches!(part, laml::syntax::NodePart::Member { id: None, .. })
-                        && ui.button("Make ID independent of name").clicked()
+                        && ui.button(crate::i18n::tr("Make ID independent of name")).clicked()
                     {
                         self.submit_structure(
                             "Address member",
@@ -58,9 +58,9 @@ impl Editor {
                                     let width = (ui.available_width() - 30.0).max(32.0);
                                     let commit=if name=="symbol-rendering" {
                                         let before=draft.clone();
-                                        egui::ComboBox::from_id_salt((&address,name)).width(width).selected_text(if draft=="icons"{"Icons"}else{"Text (+ - # ~)"}).show_ui(ui,|ui| {
-                                            ui.selectable_value(draft,"text".into(),"Text (+ - # ~)");
-                                            ui.selectable_value(draft,"icons".into(),"Icons").on_hover_text("Visibility marks use globe, lock, shield and package. Phosphor is selected automatically.");
+                                        egui::ComboBox::from_id_salt((&address,name)).width(width).selected_text(if draft=="icons"{crate::i18n::tr("Icons")}else{crate::i18n::tr("Text (+ - # ~)")}).show_ui(ui,|ui| {
+                                            ui.selectable_value(draft,"text".into(),crate::i18n::tr("Text (+ - # ~)"));
+                                            ui.selectable_value(draft,"icons".into(),crate::i18n::tr("Icons")).on_hover_text(crate::i18n::tr("Visibility marks use globe, lock, shield and package. Phosphor is selected automatically."));
                                         });
                                         *draft!=before
                                     }else{
@@ -114,10 +114,10 @@ impl Editor {
                         ui.spacing_mut().item_spacing.x = 6.0;
                         egui::ComboBox::from_id_salt(kind)
                             .width((ui.available_width() - 30.0).max(32.0))
-                            .selected_text(chosen)
+                            .selected_text(crate::i18n::tr(chosen))
                             .show_ui(ui, |ui| {
                                 for value in ["block", "none"] {
-                                    ui.selectable_value(&mut chosen, value, value);
+                                    ui.selectable_value(&mut chosen, value, crate::i18n::tr(value));
                                 }
                             });
                         reset = appearance::property_action(ui, true).clicked();

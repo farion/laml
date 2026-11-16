@@ -98,7 +98,10 @@ impl Workspace {
             .as_ref()
             .map_or(0.0, |text| (text.size().x + 8.0).max(16.0));
         let width = (badge_width + 24.0).max(40.0);
-        let label = format!("Restore unsaved work ({count})");
+        let label = crate::i18n::format(
+            "Restore unsaved work ({count})",
+            &[("count", count.to_string())],
+        );
         let response = ui.add_sized(
             [width, 32.0],
             egui::Button::new(
@@ -126,7 +129,7 @@ impl Workspace {
                 egui::Color32::WHITE,
             );
         }
-        if response.on_hover_text(label).clicked() {
+        if response.on_hover_text(crate::i18n::tr(&(label))).clicked() {
             self.recovery.open = true;
         }
     }
@@ -234,28 +237,38 @@ impl Workspace {
             520.0,
             |ui| {
                 if self.recovery.discovery.records.is_empty() {
-                    ui.label("No unsaved work to restore.");
+                    ui.label(crate::i18n::tr("No unsaved work to restore."));
                 } else {
-                    ui.label("Choose the drafts you want to continue working on.");
+                    ui.label(crate::i18n::tr(
+                        "Choose the drafts you want to continue working on.",
+                    ));
                     ui.add_space(8.0);
                     ui.horizontal(|ui| {
                         ui.label(
-                            egui::RichText::new(format!(
-                                "{} of {} selected",
-                                self.recovery.selected.len(),
-                                self.recovery.discovery.records.len()
+                            egui::RichText::new(crate::i18n::format(
+                                "{0} of {1} selected",
+                                &[
+                                    ("0", format!("{}", self.recovery.selected.len())),
+                                    ("1", format!("{}", self.recovery.discovery.records.len())),
+                                ],
                             ))
                             .strong(),
                         );
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             if ui
-                                .add_enabled(!busy, egui::Button::new("Select none"))
+                                .add_enabled(
+                                    !busy,
+                                    egui::Button::new(crate::i18n::tr("Select none")),
+                                )
                                 .clicked()
                             {
                                 self.recovery.selected.clear();
                             }
                             if ui
-                                .add_enabled(!busy, egui::Button::new("Select all"))
+                                .add_enabled(
+                                    !busy,
+                                    egui::Button::new(crate::i18n::tr("Select all")),
+                                )
                                 .clicked()
                             {
                                 self.recovery.selected = self
@@ -284,7 +297,10 @@ impl Workspace {
                                         .and_then(|p| p.file_name())
                                         .map(|n| n.to_string_lossy().into_owned())
                                         .unwrap_or_else(|| {
-                                            format!("Untitled diagram {}", index + 1)
+                                            crate::i18n::format(
+                                                "Untitled diagram {count}",
+                                                &[("count", (index + 1).to_string())],
+                                            )
                                         });
                                     let fill = if selected {
                                         ui.visuals().selection.bg_fill.gamma_multiply(0.22)
@@ -333,14 +349,14 @@ impl Workspace {
                                                     {
                                                         ui.horizontal_wrapped(|ui| {
                                                             ui.label(
-                                                                egui::RichText::new(&detail.kind)
+                                                                egui::RichText::new(detail.kind())
                                                                     .size(13.0)
                                                                     .strong(),
                                                             );
                                                             ui.label(
                                                                 egui::RichText::new(format!(
                                                                     "· {}",
-                                                                    detail.count
+                                                                    detail.count()
                                                                 ))
                                                                 .size(12.0)
                                                                 .weak(),
@@ -349,7 +365,7 @@ impl Workspace {
                                                         ui.add(
                                                             egui::Label::new(
                                                                 egui::RichText::new(
-                                                                    &detail.contents,
+                                                                    detail.contents(),
                                                                 )
                                                                 .size(12.0),
                                                             )
@@ -393,7 +409,7 @@ impl Workspace {
                 if busy {
                     ui.horizontal(|ui| {
                         ui.spinner();
-                        ui.label("Discarding selected changes…");
+                        ui.label(crate::i18n::tr("Discarding selected changes…"));
                     });
                 }
                 ui.separator();
@@ -403,7 +419,7 @@ impl Workspace {
                         discard = ui
                             .add_enabled(
                                 !busy && !self.recovery.selected.is_empty(),
-                                egui::Button::new("Discard selected…"),
+                                egui::Button::new(crate::i18n::tr("Discard selected…")),
                             )
                             .clicked();
                     }
@@ -412,9 +428,9 @@ impl Workspace {
                             restore = ui
                                 .add_enabled(
                                     !busy && !self.recovery.selected.is_empty(),
-                                    egui::Button::new(format!(
-                                        "Restore ({})",
-                                        self.recovery.selected.len()
+                                    egui::Button::new(crate::i18n::format(
+                                        "Restore ({0})",
+                                        &[("0", format!("{}", self.recovery.selected.len()))],
                                     ))
                                     .fill(ui.visuals().selection.bg_fill),
                                 )
@@ -422,9 +438,9 @@ impl Workspace {
                         }
                         later = ui
                             .button(if self.recovery.discovery.records.is_empty() {
-                                "Close"
+                                crate::i18n::tr("Close")
                             } else {
-                                "Not now"
+                                crate::i18n::tr("Not now")
                             })
                             .clicked();
                     });
@@ -450,15 +466,17 @@ impl Workspace {
             "Discard unsaved changes?",
             440.0,
             |ui| {
-                ui.label("Discard these unsaved changes? Saved files remain unchanged.");
-                ui.label(format!(
-                    "Selected diagrams: {}",
-                    self.recovery.selected.len()
+                ui.label(crate::i18n::tr(
+                    "Discard these unsaved changes? Saved files remain unchanged.",
+                ));
+                ui.label(crate::i18n::format(
+                    "Selected diagrams: {0}",
+                    &[("0", format!("{}", self.recovery.selected.len()))],
                 ));
                 ui.add_space(12.0);
                 ui.horizontal(|ui| {
-                    discard = ui.button("Discard changes").clicked();
-                    cancel = ui.button("Cancel").clicked();
+                    discard = ui.button(crate::i18n::tr("Discard changes")).clicked();
+                    cancel = ui.button(crate::i18n::tr("Cancel")).clicked();
                 });
             },
         );

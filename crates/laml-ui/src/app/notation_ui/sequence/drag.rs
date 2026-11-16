@@ -371,9 +371,9 @@ impl Editor {
                     pointer + egui::vec2(14.0, 18.0),
                     egui::Align2::LEFT_TOP,
                     if unchanged {
-                        "Already at this position"
+                        crate::i18n::tr("Already at this position")
                     } else {
-                        "Invalid event position"
+                        crate::i18n::tr("Invalid event position")
                     },
                     egui::FontId::proportional(12.0),
                     color,

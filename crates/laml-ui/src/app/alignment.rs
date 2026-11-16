@@ -24,7 +24,7 @@ impl Editor {
         }
         ui.add_enabled_ui(enabled, |ui| {
             ui.horizontal_wrapped(|ui| {
-                ui.label("Align:");
+                ui.label(crate::i18n::tr("Align:"));
                 for (label, align) in [
                     ("Left", FreeAlignment::Left),
                     ("Right", FreeAlignment::Right),
@@ -34,12 +34,15 @@ impl Editor {
                     ("Center Y", FreeAlignment::CenterY),
                     ("Center · overlap", FreeAlignment::Center),
                 ] {
-                    if ui.button(label).clicked() {
+                    if ui.button(crate::i18n::tr(label)).clicked() {
                         self.propose_alignment(align);
                     }
                 }
                 if let Some(reference) = self.selection.ids.last() {
-                    ui.label(format!("Reference: {reference}"));
+                    ui.label(crate::i18n::format(
+                        "Reference: {reference}",
+                        &[("reference", reference.to_string())],
+                    ));
                 }
             });
         });
@@ -73,31 +76,42 @@ impl Editor {
             self.alignment = None;
             return;
         }
-        ui.heading("Alignment proposal");
+        ui.heading(crate::i18n::tr("Alignment proposal"));
         if proposal.align == FreeAlignment::Center {
             ui.colored_label(
                 egui::Color32::YELLOW,
-                "Shared center intentionally overlaps these nodes.",
+                crate::i18n::tr("Shared center intentionally overlaps these nodes."),
             );
         }
         for rule in &proposal.plan.removed {
-            ui.label(format!("Remove: {rule}"));
+            ui.label(crate::i18n::format(
+                "Remove: {rule}",
+                &[("rule", rule.to_string())],
+            ));
         }
         for rule in &proposal.plan.preserved {
-            ui.label(format!("Preserve: {rule}"));
+            ui.label(crate::i18n::format(
+                "Preserve: {rule}",
+                &[("rule", rule.to_string())],
+            ));
         }
         for rule in &proposal.plan.added {
-            ui.label(format!("Add: {rule}"));
+            ui.label(crate::i18n::format(
+                "Add: {rule}",
+                &[("rule", rule.to_string())],
+            ));
         }
         if proposal.plan.edits.is_empty() {
-            ui.label("These alignment rules are already present.");
+            ui.label(crate::i18n::tr(
+                "These alignment rules are already present.",
+            ));
         }
         ui.add_enabled_ui(self.can_edit_visually(), |ui| {
-            if ui.button("Apply alignment").clicked() {
+            if ui.button(crate::i18n::tr("Apply alignment")).clicked() {
                 self.apply_alignment();
             }
         });
-        if ui.button("Cancel alignment").clicked() {
+        if ui.button(crate::i18n::tr("Cancel alignment")).clicked() {
             self.alignment = None;
         }
         ui.separator();

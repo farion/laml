@@ -3,7 +3,7 @@ use super::*;
 impl Editor {
     pub(in crate::app) fn file_windows(&mut self, ctx: &egui::Context) {
         if self.file_ui.busy() && !(cfg!(target_arch = "wasm32") && self.file_ui.picker.is_some()) {
-            egui::Window::new("File operation")
+            egui::Window::new(crate::i18n::tr("File operation"))
                 .frame(dialogs::frame(ctx))
                 .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
                 .collapsible(false)
@@ -12,14 +12,14 @@ impl Editor {
                     ui.horizontal(|ui| {
                         ui.spinner();
                         ui.label(if self.file_ui.writing() {
-                            "Saving submitted revision…"
+                            crate::i18n::tr("Saving submitted revision…")
                         } else {
-                            "Waiting for file operation…"
+                            crate::i18n::tr("Waiting for file operation…")
                         });
                     });
                     if !self.file_ui.writing()
                         && self.file_ui.picker.is_none()
-                        && ui.button("Cancel").clicked()
+                        && ui.button(crate::i18n::tr("Cancel")).clicked()
                     {
                         self.cancel_file_read();
                         self.file_ui.after_save = None;
@@ -29,24 +29,26 @@ impl Editor {
                 });
         }
         if self.file_ui.conflict || self.file_ui.error.is_some() {
-            egui::Window::new("File status")
+            egui::Window::new(crate::i18n::tr("File status"))
                 .frame(dialogs::frame(ctx))
                 .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
                 .collapsible(false)
                 .show(ctx, |ui| {
                     if self.file_ui.conflict {
-                        ui.label("File changed externally. Local text has not been overwritten.");
+                        ui.label(crate::i18n::tr(
+                            "File changed externally. Local text has not been overwritten.",
+                        ));
                     }
                     if let Some(error) = &self.file_ui.error {
-                        ui.colored_label(egui::Color32::LIGHT_RED, error);
+                        ui.colored_label(egui::Color32::LIGHT_RED, crate::i18n::message(error));
                     }
-                    if ui.button("Reload from disk…").clicked() {
+                    if ui.button(crate::i18n::tr("Reload from disk…")).clicked() {
                         self.request_action(Action::Reload, ctx);
                     }
-                    if ui.button("Save a copy…").clicked() {
+                    if ui.button(crate::i18n::tr("Save a copy…")).clicked() {
                         self.show_file_dialog(Dialog::SaveAs);
                     }
-                    if !self.file_ui.conflict && ui.button("Dismiss").clicked() {
+                    if !self.file_ui.conflict && ui.button(crate::i18n::tr("Dismiss")).clicked() {
                         self.file_ui.error = None;
                     }
                 });
@@ -54,17 +56,17 @@ impl Editor {
         if let Some(action) = self.file_ui.pending.clone() {
             let dismissed =
                 dialogs::show(ctx, ("unsaved", self.id), "Unsaved changes", 420.0, |ui| {
-                    ui.label("Save your changes before continuing?");
-                    if ui.button("Keep editing").clicked() {
+                    ui.label(crate::i18n::tr("Save your changes before continuing?"));
+                    if ui.button(crate::i18n::tr("Keep editing")).clicked() {
                         self.file_ui.pending = None;
                         self.close_cancelled = true;
                     }
-                    if ui.button("Save and continue").clicked() {
+                    if ui.button(crate::i18n::tr("Save and continue")).clicked() {
                         self.file_ui.pending = None;
                         self.file_ui.after_save = Some(action.clone());
                         self.save_file(ctx);
                     }
-                    if ui.button("Discard and continue").clicked() {
+                    if ui.button(crate::i18n::tr("Discard and continue")).clicked() {
                         self.file_ui.pending = None;
                         self.file_ui.after_save = None;
                         self.perform(action.clone(), ctx);
@@ -81,14 +83,14 @@ impl Editor {
                 Dialog::SaveAs => "Save LAML as",
             };
             let dismissed = dialogs::show(ctx, ("file-path", self.id), title, 480.0, |ui| {
-                ui.label("File path");
+                ui.label(crate::i18n::tr("File path"));
                 self.source_ui
                     .extra_drafts
                     .push(ui.text_edit_singleline(&mut self.file_ui.path).id);
                 if let Dialog::SaveAs = dialog {
-                    ui.small("Relative style/font imports are resolved from the destination folder; imported files are not copied.");
+                    ui.small(crate::i18n::tr("Relative style/font imports are resolved from the destination folder; imported files are not copied."));
                 }
-                if ui.button("Confirm").clicked() {
+                if ui.button(crate::i18n::tr("Confirm")).clicked() {
                     let path = PathBuf::from(self.file_ui.path.trim());
                     match dialog {
                         Dialog::Open => {
@@ -98,7 +100,7 @@ impl Editor {
                         Dialog::SaveAs => self.confirm_save_as(path, ctx),
                     }
                 }
-                if ui.button("Cancel").clicked() {
+                if ui.button(crate::i18n::tr("Cancel")).clicked() {
                     self.file_ui.dialog = None;
                     self.file_ui.after_save = None;
                     self.file_ui.overwrite = None;
@@ -119,7 +121,7 @@ impl Editor {
                 420.0,
                 |ui| {
                     ui.label(path.display().to_string());
-                    if ui.button("Replace this file").clicked() {
+                    if ui.button(crate::i18n::tr("Replace this file")).clicked() {
                         self.file_ui.overwrite = None;
                         if revision == self.document.revision() {
                             self.save_as(path.clone(), Some(&existing), ctx);
@@ -129,7 +131,7 @@ impl Editor {
                             );
                         }
                     }
-                    if ui.button("Cancel").clicked() {
+                    if ui.button(crate::i18n::tr("Cancel")).clicked() {
                         self.file_ui.overwrite = None;
                         self.file_ui.after_save = None;
                         self.close_cancelled = true;

@@ -2,6 +2,7 @@
 use super::*;
 
 pub(super) fn action_button(ui: &mut egui::Ui, glyph: &str, label: &str) -> egui::Response {
+    let label = crate::i18n::tr(label);
     let color = ui.visuals().text_color();
     let mut text = egui::text::LayoutJob::default();
     text.append(
@@ -30,7 +31,7 @@ impl Workspace {
         egui::CentralPanel::default()
             .frame(appearance::panel_frame(appearance::color(
                 ui.ctx(),
-                appearance::BACKGROUND,
+                appearance::HEADER,
             )))
             .show(ui, |ui| {
                 let bounds = ui.available_rect_before_wrap();
@@ -38,7 +39,7 @@ impl Workspace {
                 ui.vertical_centered(|ui| {
                     branding::wordmark(ui, 340.0);
                     ui.add_space(24.0);
-                    ui.heading("No file open");
+                    ui.heading(crate::i18n::tr("No file open"));
                     ui.add_space(20.0);
                     if action_button(ui, egui_phosphor::regular::FILE_PLUS, "Create new file")
                         .clicked()
@@ -66,7 +67,7 @@ impl Workspace {
                         .max_rect(footer)
                         .layout(egui::Layout::top_down(egui::Align::Center)),
                 );
-                footer_ui.weak("Proudly made with Rust");
+                footer_ui.weak(crate::i18n::tr("Proudly made with Rust"));
                 footer_ui.hyperlink_to(
                     "https://github.com/farion/laml",
                     "https://github.com/farion/laml",

@@ -3,7 +3,7 @@ use laml_ui::{port_edit, properties};
 impl Editor {
     pub(super) fn port_inspector(&mut self, ui: &mut egui::Ui) {
         if !self.selection.ids.is_empty() || !self.selection.relations.is_empty() {
-            ui.label("Mixed element types selected. Properties require only nodes, only ports or only relations.");
+            ui.label(crate::i18n::tr("Mixed element types selected. Properties require only nodes, only ports or only relations."));
             return;
         }
         let ids = self.selection.ports.clone();
@@ -61,7 +61,17 @@ impl Editor {
                     .iter()
                     .flat_map(|b| &b.ports)
                     .find(|p| &p.id == id)
-                    .map(|p| format!("{id}: {:?}", p.side))
+                    .map(|p| {
+                        format!(
+                            "{id}: {}",
+                            crate::i18n::tr(match p.side {
+                                laml::syntax::PortSide::Left => "Left",
+                                laml::syntax::PortSide::Right => "Right",
+                                laml::syntax::PortSide::Top => "Top",
+                                laml::syntax::PortSide::Bottom => "Bottom",
+                            })
+                        )
+                    })
             })
             .collect::<Vec<_>>()
             .join(", ");
@@ -125,11 +135,11 @@ impl Editor {
                     .selected_text(if chosen == "Mixed" {
                         inspector_ui::mixed_text()
                     } else {
-                        egui::RichText::new(chosen)
+                        egui::RichText::new(crate::i18n::tr(chosen))
                     })
                     .show_ui(ui, |ui| {
                         for value in ["auto", "left", "right", "top", "bottom"] {
-                            ui.selectable_value(&mut chosen, value, value);
+                            ui.selectable_value(&mut chosen, value, crate::i18n::tr(value));
                         }
                     });
             });
@@ -137,7 +147,7 @@ impl Editor {
                 self.change_port_sides((chosen != "auto").then_some(chosen));
             }
             inspector_ui::row(ui, "Rendered", |ui| {
-                ui.small(&rendered_sides);
+                ui.small(crate::i18n::tr(&rendered_sides));
             });
         });
     }

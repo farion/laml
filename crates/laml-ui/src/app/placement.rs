@@ -99,39 +99,53 @@ impl Editor {
         if self.placement.drag.is_none() {
             return;
         }
-        ui.heading("Relative placement");
+        ui.heading(crate::i18n::tr("Relative placement"));
         match &self.placement.plan {
             None => {
-                ui.label("Hover over a side of another node.");
+                ui.label(crate::i18n::tr("Hover over a side of another node."));
             }
             Some(Err(error)) => {
-                ui.colored_label(egui::Color32::LIGHT_RED, error);
+                ui.colored_label(egui::Color32::LIGHT_RED, crate::i18n::message(error));
             }
             Some(Ok(plan)) => {
-                ui.label(format!("Add: {}", plan.added));
+                ui.label(crate::i18n::format(
+                    "Add: {0}",
+                    &[("0", plan.added.to_string())],
+                ));
                 for removed in &plan.removed {
-                    ui.label(format!("Remove: {removed}"));
+                    ui.label(crate::i18n::format(
+                        "Remove: {removed}",
+                        &[("removed", removed.to_string())],
+                    ));
                 }
                 for preserved in &plan.preserved {
-                    ui.label(format!("Preserve: {preserved}"));
+                    ui.label(crate::i18n::format(
+                        "Preserve: {preserved}",
+                        &[("preserved", preserved.to_string())],
+                    ));
                 }
                 if plan.removed.is_empty() {
-                    ui.label("No existing rule removed.");
+                    ui.label(crate::i18n::tr("No existing rule removed."));
                 }
                 match &self.placement.compiled {
                     None => {
-                        ui.label("Checking layout and routing… Hold here until green.");
+                        ui.label(crate::i18n::tr(
+                            "Checking layout and routing… Hold here until green.",
+                        ));
                     }
                     Some(Err(error)) => {
                         ui.colored_label(
                             egui::Color32::LIGHT_RED,
-                            format!("Drop blocked: {error}"),
+                            crate::i18n::format(
+                                "Drop blocked: {error}",
+                                &[("error", error.to_string())],
+                            ),
                         );
                     }
                     Some(Ok(_)) => {
                         ui.colored_label(
                             egui::Color32::LIGHT_GREEN,
-                            "Release to apply. One undo step.",
+                            crate::i18n::tr("Release to apply. One undo step."),
                         );
                     }
                 }
@@ -164,7 +178,7 @@ impl Editor {
             }
         } else if self.placement.key.is_some() {
             self.command_error = Some(match (&self.placement.plan, &self.placement.compiled) {
-                (Some(Err(error)), _) | (_, Some(Err(error))) => format!("Drop blocked: {error}"),
+                (Some(Err(error)), _) | (_, Some(Err(error))) => crate::i18n::format("Drop blocked: {error}", &[("error", error.to_string())]),
                 _ => "Drop cancelled: placement was not validated. Hold over a zone until it turns green.".into(),
             });
         }

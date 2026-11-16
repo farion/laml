@@ -15,7 +15,15 @@ impl Editor {
                     if ui
                         .selectable_label(
                             self.selection.ids.contains(&node.id),
-                            format!("{}{}", node.id, if hidden { " (hidden)" } else { "" }),
+                            format!(
+                                "{}{}",
+                                node.id,
+                                if hidden {
+                                    crate::i18n::tr(" (hidden)")
+                                } else {
+                                    ""
+                                }
+                            ),
                         )
                         .clicked()
                     {
@@ -64,10 +72,18 @@ impl Editor {
                     if ui
                         .selectable_label(
                             self.selection.relations.contains(&edge.line),
-                            format!(
-                                "→ {} · line {}",
-                                edge.name.as_deref().unwrap_or("unnamed"),
-                                edge.line
+                            crate::i18n::format(
+                                "→ {0} · line {1}",
+                                &[
+                                    (
+                                        "0",
+                                        edge.name
+                                            .as_deref()
+                                            .unwrap_or(crate::i18n::tr("unnamed"))
+                                            .to_string(),
+                                    ),
+                                    ("1", format!("{}", edge.line)),
+                                ],
                             ),
                         )
                         .clicked()

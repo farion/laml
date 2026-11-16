@@ -27,7 +27,7 @@ fn tool(ui: &mut egui::Ui, enabled: bool, icon: &str, label: &str) -> bool {
         enabled,
         egui::Button::new(glyph(icon)).min_size(egui::vec2(30.0, 30.0)),
     )
-    .on_hover_text(label)
+    .on_hover_text(crate::i18n::tr(&(label)))
     .clicked()
 }
 fn menu_item(ui: &mut egui::Ui, enabled: bool, icon: &str, label: &str) -> bool {
@@ -43,7 +43,7 @@ fn menu_item(ui: &mut egui::Ui, enabled: bool, icon: &str, label: &str) -> bool 
         },
     );
     text.append(
-        label,
+        crate::i18n::tr(label),
         0.0,
         egui::TextFormat {
             font_id: egui::FontId::proportional(14.0),
@@ -98,7 +98,7 @@ impl Library {
             ui.label(glyph(MAGNIFYING_GLASS));
             ui.add(
                 egui::TextEdit::singleline(&mut self.query)
-                    .hint_text("Search files…")
+                    .hint_text(crate::i18n::tr("Search files…"))
                     .desired_width((ui.available_width() - 85.0).max(100.0)),
             );
             if tool(ui, !self.query.is_empty(), X, "Clear search") {
@@ -131,6 +131,7 @@ impl Library {
                     egui::Layout::top_down(egui::Align::Min),
                     |ui| {
                         ui.set_width(180.0);
+                        ui.spacing_mut().item_spacing.y = 2.0;
                         for (trash, icon, title) in
                             [(false, FOLDER, "Documents"), (true, TRASH, "Trash")]
                         {
@@ -139,37 +140,47 @@ impl Library {
                                 .iter()
                                 .filter(|r| r.trashed == trash)
                                 .count();
-                            let mut text = egui::text::LayoutJob::default();
-                            let color = ui.visuals().text_color();
-                            text.append(
-                                &format!("{icon}  "),
-                                0.0,
-                                egui::TextFormat {
-                                    font_id: egui::FontId::new(
-                                        18.0,
-                                        egui::FontFamily::Name("phosphor".into()),
-                                    ),
-                                    color,
-                                    ..Default::default()
-                                },
+                            let (rect, response) = ui
+                                .allocate_exact_size(egui::vec2(180.0, 36.0), egui::Sense::click());
+                            let selected = self.trash == trash;
+                            if selected || response.hovered() {
+                                ui.painter().rect_filled(
+                                    rect,
+                                    0.0,
+                                    if selected {
+                                        ui.visuals().selection.bg_fill
+                                    } else {
+                                        ui.visuals().widgets.hovered.bg_fill
+                                    },
+                                );
+                            }
+                            let color = if selected {
+                                ui.visuals().selection.stroke.color
+                            } else {
+                                ui.visuals().text_color()
+                            };
+                            ui.painter().text(
+                                egui::pos2(rect.left() + 12.0, rect.center().y),
+                                egui::Align2::LEFT_CENTER,
+                                icon,
+                                egui::FontId::new(18.0, egui::FontFamily::Name("phosphor".into())),
+                                color,
                             );
-                            text.append(
-                                &format!("{title}  {count}"),
-                                0.0,
-                                egui::TextFormat {
-                                    font_id: egui::FontId::proportional(15.0),
-                                    color,
-                                    ..Default::default()
-                                },
+                            ui.painter().text(
+                                egui::pos2(rect.left() + 42.0, rect.center().y),
+                                egui::Align2::LEFT_CENTER,
+                                crate::i18n::tr(&(title)),
+                                egui::FontId::proportional(15.0),
+                                color,
                             );
-                            if ui
-                                .add(
-                                    egui::Button::new(text)
-                                        .wrap_mode(egui::TextWrapMode::Extend)
-                                        .selected(self.trash == trash),
-                                )
-                                .clicked()
-                            {
+                            ui.painter().text(
+                                egui::pos2(rect.right() - 12.0, rect.center().y),
+                                egui::Align2::RIGHT_CENTER,
+                                count.to_string(),
+                                egui::FontId::proportional(15.0),
+                                color,
+                            );
+                            if response.clicked() {
                                 self.trash = trash;
                                 self.selected = None;
                             }
@@ -185,9 +196,9 @@ impl Library {
                 ui.vertical(|ui| {
                     ui.set_min_width(ui.available_width());
                     ui.horizontal(|ui| {
-                        ui.weak("Name");
+                        ui.weak(crate::i18n::tr("Name"));
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            ui.weak("Diagram type");
+                            ui.weak(crate::i18n::tr("Diagram type"));
                         });
                     });
                     ui.separator();
@@ -210,11 +221,11 @@ impl Library {
                                                 FOLDER_OPEN
                                             }));
                                             ui.weak(if !query.is_empty() {
-                                                "No matching files."
+                                                crate::i18n::tr("No matching files.")
                                             } else if self.trash {
-                                                "Trash is empty."
+                                                crate::i18n::tr("Trash is empty.")
                                             } else {
-                                                "No documents yet."
+                                                crate::i18n::tr("No documents yet.")
                                             });
                                         });
                                     }
@@ -269,7 +280,7 @@ impl Library {
                                             ui.painter().with_clip_rect(rect).text(
                                                 egui::pos2(rect.right() - 10.0, rect.center().y),
                                                 egui::Align2::RIGHT_CENTER,
-                                                notation.title(),
+                                                crate::i18n::tr(&(notation.title())),
                                                 egui::FontId::proportional(12.0),
                                                 ui.visuals().weak_text_color(),
                                             );
@@ -296,7 +307,7 @@ impl Library {
             ui.weak(format!(
                 "{} {}",
                 rows.len(),
-                if rows.len() == 1 { "file" } else { "files" }
+                crate::i18n::tr(if rows.len() == 1 { "file" } else { "files" })
             ));
             let (divider, _) = ui.allocate_exact_size(egui::vec2(1.0, 20.0), egui::Sense::hover());
             ui.painter().line_segment(
@@ -350,7 +361,7 @@ impl Library {
                 }
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui.button("Close").clicked() {
+                if ui.button(crate::i18n::tr("Close")).clicked() {
                     self.open = false;
                 }
                 ui.menu_button(glyph(DOTS_THREE), |ui| {

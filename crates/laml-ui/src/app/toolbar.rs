@@ -21,7 +21,7 @@ impl Item<'_> {
         ui.fonts_mut(|fonts| {
             fonts
                 .layout_no_wrap(
-                    self.label.into(),
+                    crate::i18n::tr(self.label).into(),
                     egui::FontId::proportional(15.0),
                     text_color,
                 )
@@ -135,7 +135,7 @@ fn show_aligned(
                 ui.push_id(index, |ui| draw(ui, index, true));
             }
         });
-        response.on_hover_text("More actions");
+        response.on_hover_text(crate::i18n::tr("More actions"));
     }
 }
 
@@ -169,7 +169,7 @@ pub(super) fn selected_button(
             );
         }
         job.append(
-            item.label,
+            crate::i18n::tr(item.label),
             0.0,
             egui::TextFormat {
                 font_id: egui::FontId::proportional(15.0),
@@ -181,7 +181,7 @@ pub(super) fn selected_button(
     } else if let Some(icon) = item.icon {
         egui::RichText::new(icon).font(icon_font(height)).into()
     } else {
-        item.label.into()
+        crate::i18n::tr(item.label).into()
     };
     let mut button = egui::Button::new(text).min_size(egui::vec2(
         if in_menu {
@@ -195,5 +195,5 @@ pub(super) fn selected_button(
         button = button.selected(selected);
     }
     ui.add_enabled(item.enabled, button)
-        .on_hover_text(item.label)
+        .on_hover_text(crate::i18n::tr(item.label))
 }

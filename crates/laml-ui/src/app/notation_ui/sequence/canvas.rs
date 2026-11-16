@@ -247,13 +247,14 @@ impl Editor {
                     self.sequence_candidate(&anchor, action, "", "", "")
                         .map(|_| ())
                 };
-                let response = ui.add_enabled(valid.is_ok(), egui::Button::new(title));
+                let response =
+                    ui.add_enabled(valid.is_ok(), egui::Button::new(crate::i18n::tr(title)));
                 if response.clicked() {
                     selected = Some(action);
                     ui.close();
                 }
                 if let Err(error) = valid {
-                    response.on_disabled_hover_text(error);
+                    response.on_disabled_hover_text(crate::i18n::message(&(error)));
                 }
             };
             if anchor.kind == Kind::Head {

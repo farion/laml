@@ -14,17 +14,20 @@ impl Workspace {
         let (title, message, button) = match kind.as_str() {
             "clear" => (
                 "Delete everything?",
-                format!(
-                    "Permanently delete all {} documents from this browser, including the trash?",
-                    snapshot.records.len()
+                crate::i18n::format(
+                    "Permanently delete all {0} documents from this browser, including the trash?",
+                    &[("0", format!("{}", snapshot.records.len()))],
                 ),
                 "Delete everything",
             ),
             "empty" => (
                 "Empty trash?",
-                format!(
-                    "Permanently delete all {} documents in the trash?",
-                    snapshot.records.iter().filter(|r| r.trashed).count()
+                crate::i18n::format(
+                    "Permanently delete all {0} documents in the trash?",
+                    &[(
+                        "0",
+                        format!("{}", snapshot.records.iter().filter(|r| r.trashed).count()),
+                    )],
                 ),
                 "Empty trash",
             ),
@@ -37,7 +40,10 @@ impl Workspace {
                     .unwrap_or("the selected document");
                 (
                     "Delete permanently?",
-                    format!("Permanently delete {name}?"),
+                    crate::i18n::format(
+                        "Permanently delete {name}?",
+                        &[("name", format!("{}", name))],
+                    ),
                     "Delete permanently",
                 )
             }
@@ -56,9 +62,9 @@ impl Workspace {
                 );
                 ui.vertical(|ui| {
                     ui.set_max_width(ui.available_width());
-                    ui.add(egui::Label::new(&message).wrap());
+                    ui.add(egui::Label::new(crate::i18n::message(&(&message))).wrap());
                     ui.add_space(8.0);
-                    ui.strong("This cannot be undone.");
+                    ui.strong(crate::i18n::tr("This cannot be undone."));
                 });
             });
             ui.add_space(16.0);
@@ -68,12 +74,13 @@ impl Workspace {
                         .add_enabled(
                             safe,
                             egui::Button::new(
-                                egui::RichText::new(button).color(egui::Color32::WHITE),
+                                egui::RichText::new(crate::i18n::tr(&(button)))
+                                    .color(egui::Color32::WHITE),
                             )
                             .fill(egui::Color32::from_rgb(180, 45, 55)),
                         )
                         .clicked();
-                    cancelled = ui.button("Cancel").clicked();
+                    cancelled = ui.button(crate::i18n::tr("Cancel")).clicked();
                 });
             });
         });

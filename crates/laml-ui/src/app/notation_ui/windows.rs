@@ -17,7 +17,7 @@ impl Editor {
                         .show(ui, |ui| {
                             let records = edit::records(self.document.source());
                             for section in ["semantics", "layout", "styling"] {
-                                ui.strong(section);
+                                ui.strong(crate::i18n::tr(section));
                                 for r in records.iter().filter(|r| r.section == section) {
                                     let depth = r.parent.map_or(0.0, |_| 16.0);
                                     ui.horizontal(|ui| {
@@ -64,10 +64,14 @@ impl Editor {
                     let old = creator.recipe;
                     egui::ComboBox::from_id_salt("construct-kind")
                         .width(340.0)
-                        .selected_text(recipes[creator.recipe].title)
+                        .selected_text(crate::i18n::tr(recipes[creator.recipe].title))
                         .show_ui(ui, |ui| {
                             for (i, recipe) in recipes.iter().enumerate() {
-                                ui.selectable_value(&mut creator.recipe, i, recipe.title);
+                                ui.selectable_value(
+                                    &mut creator.recipe,
+                                    i,
+                                    crate::i18n::tr(recipe.title),
+                                );
                             }
                         });
                     if old != creator.recipe {
@@ -89,7 +93,7 @@ impl Editor {
                         .max_height(380.0)
                         .show(ui, |ui| {
                             for key in edit::catalog::parameters(recipe) {
-                                ui.label(key.replace('_', " "));
+                                ui.label(crate::i18n::tr(&key.replace('_', " ")));
                                 let field = self.construct_value(
                                     ui,
                                     &key,
@@ -103,12 +107,14 @@ impl Editor {
                                 let first = laml::bpmn::parse(self.document.source())
                                     .is_ok_and(|doc| doc.pools.is_empty() && !doc.nodes.is_empty());
                                 ui.label(if first {
-                                    "The existing process will be placed in this pool."
+                                    crate::i18n::tr(
+                                        "The existing process will be placed in this pool.",
+                                    )
                                 } else {
-                                    "Adds a pool at the diagram root."
+                                    crate::i18n::tr("Adds a pool at the diagram root.")
                                 });
                             } else {
-                                ui.label("Insert into");
+                                ui.label(crate::i18n::tr("Insert into"));
                                 destination(
                                     ui,
                                     self.document.source(),
@@ -132,7 +138,7 @@ impl Editor {
                     .and_then(|edits| edit::apply(self.document.source(), &edits))
                     .and_then(|source| laml_ui::notation::inspect(&source).map(|_| ()));
                     if let Err(error) = &preflight {
-                        ui.label(error);
+                        ui.label(crate::i18n::message(error));
                     }
                     ui.horizontal(|ui| {
                         submit = ui
@@ -140,13 +146,13 @@ impl Editor {
                                 preflight.is_ok()
                                     && self.can_edit_visually()
                                     && creator.revision == self.document.revision(),
-                                egui::Button::new("Add"),
+                                egui::Button::new(crate::i18n::tr("Add")),
                             )
                             .clicked();
-                        cancel = ui.button("Cancel").clicked();
+                        cancel = ui.button(crate::i18n::tr("Cancel")).clicked();
                     });
                     if creator.revision != self.document.revision() {
-                        ui.label("Document changed. Reopen this dialog.");
+                        ui.label(crate::i18n::tr("Document changed. Reopen this dialog."));
                     }
                 },
             );
@@ -180,7 +186,7 @@ impl Editor {
                 "Confirm deletion",
                 480.0,
                 |ui| {
-                    ui.label("This change affects:");
+                    ui.label(crate::i18n::tr("This change affects:"));
                     egui::ScrollArea::vertical()
                         .max_height(300.0)
                         .show(ui, |ui| {
@@ -192,13 +198,15 @@ impl Editor {
                         confirm = ui
                             .add_enabled(
                                 self.can_edit_visually() && revision == self.document.revision(),
-                                egui::Button::new("Delete"),
+                                egui::Button::new(crate::i18n::tr("Delete")),
                             )
                             .clicked();
-                        cancel = ui.button("Cancel").clicked();
+                        cancel = ui.button(crate::i18n::tr("Cancel")).clicked();
                     });
                     if revision != self.document.revision() {
-                        ui.label("Document changed. Reopen the deletion preview.");
+                        ui.label(crate::i18n::tr(
+                            "Document changed. Reopen the deletion preview.",
+                        ));
                     }
                 },
             );

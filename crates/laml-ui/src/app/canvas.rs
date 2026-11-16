@@ -29,7 +29,7 @@ impl Editor {
             );
             loading.add_space(8.0);
             loading.label(
-                egui::RichText::new("Updating preview…")
+                egui::RichText::new(crate::i18n::tr("Updating preview…"))
                     .color(appearance::color(ui.ctx(), appearance::TEXT)),
             );
         }
@@ -113,7 +113,7 @@ impl Editor {
                     egui::Align2::CENTER_CENTER,
                     match other {
                         Err(e) => e.to_string(),
-                        _ => "Rendering preview…".into(),
+                        _ => crate::i18n::tr("Rendering preview…").into(),
                     },
                     egui::FontId::proportional(14.0),
                     ui.visuals().text_color(),

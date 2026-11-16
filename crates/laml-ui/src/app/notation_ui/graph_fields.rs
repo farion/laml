@@ -56,8 +56,14 @@ impl Editor {
                 | laml::syntax::NodeKind::CompositeRole
         ) {
             if let Some(classifier) = &node.part_type {
-                ui.label(format!("Port declared by {classifier}"));
-                if ui.button("Edit declaring classifier").clicked() {
+                ui.label(crate::i18n::format(
+                    "Port declared by {classifier}",
+                    &[("classifier", classifier.to_string())],
+                ));
+                if ui
+                    .button(crate::i18n::tr("Edit declaring classifier"))
+                    .clicked()
+                {
                     self.selection.click(Some(classifier), false);
                     self.source_jump = self
                         .preview

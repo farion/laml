@@ -29,24 +29,24 @@ impl Editor {
         let enabled = self.can_edit_visually();
         ui.add_enabled_ui(enabled, |ui| {
             ui.horizontal_wrapped(|ui| {
-                ui.label("New node:");
+                ui.label(crate::i18n::tr("New node:"));
                 ui.add_enabled(
                     self.creation.palette.kind != laml_ui::element_edit::ElementKind::Junction,
                     egui::TextEdit::singleline(&mut self.creation.label)
-                        .hint_text("Label (optional)")
+                        .hint_text(crate::i18n::tr("Label (optional)"))
                         .desired_width(160.0),
                 );
                 self.palette_controls(ui);
                 ui.separator();
                 if ui
-                    .selectable_label(!self.creation.connect, "Select / arrange")
+                    .selectable_label(!self.creation.connect, crate::i18n::tr("Select / arrange"))
                     .clicked()
                 {
                     self.creation.connect = false;
                     self.creation.drag = None;
                 }
                 if ui
-                    .selectable_label(self.creation.connect, "Connect")
+                    .selectable_label(self.creation.connect, crate::i18n::tr("Connect"))
                     .clicked()
                 {
                     self.creation.connect = true;
@@ -69,11 +69,11 @@ impl Editor {
             ui.horizontal_wrapped(|ui| self.port_creation_controls(ui));
         });
         if self.creation.connect {
-            ui.small(
+            ui.small(crate::i18n::tr(
                 "Drag from one node to another. Connection sides remain automatic; Escape cancels.",
-            );
+            ));
         } else {
-            ui.small("Drag a node onto a side of another node. Wait for a green zone before releasing; Escape cancels.");
+            ui.small(crate::i18n::tr("Drag a node onto a side of another node. Wait for a green zone before releasing; Escape cancels."));
         }
     }
     #[cfg(test)]

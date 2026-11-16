@@ -26,7 +26,7 @@ const SWATCHES: [&[u8]; 20] = [
 ];
 
 fn description(operator: &str) -> &str {
-    match laml_ui::relation_edit::relation_type(operator) {
+    crate::i18n::tr(match laml_ui::relation_edit::relation_type(operator) {
         "->" => "Arrow",
         "<->" => "Bidirectional",
         "--" => "Solid line",
@@ -40,7 +40,7 @@ fn description(operator: &str) -> &str {
         "*-->" => "Filled diamond + arrow",
         "o-->" => "Hollow diamond + arrow",
         _ => operator,
-    }
+    })
 }
 
 fn swatch(ui: &egui::Ui, operator: &str, rect: egui::Rect) {
@@ -98,7 +98,7 @@ pub(super) fn combo(
     let text = if operator == "Mixed" {
         inspector_ui::mixed_text()
     } else {
-        egui::RichText::new(description(operator))
+        egui::RichText::new(crate::i18n::tr(description(operator)))
     };
     let mut name = ui.new_child(
         egui::UiBuilder::new()
@@ -179,7 +179,7 @@ pub(super) fn combo(
             ),
         );
     }
-    response.on_hover_text(description(operator));
+    response.on_hover_text(crate::i18n::tr(description(operator)));
 }
 
 impl Editor {
@@ -217,12 +217,15 @@ impl Editor {
         let labels = if same_ends {
             [format!("{low} → {high}"), format!("{high} → {low}")]
         } else {
-            ["Forward (A → Z)".into(), "Reverse (Z → A)".into()]
+            [
+                crate::i18n::tr("Forward (A → Z)").into(),
+                crate::i18n::tr("Reverse (Z → A)").into(),
+            ]
         };
         ui.add_enabled_ui(active, |ui| {
             inspector_ui::row(ui, "Direction", |ui| {
                 let text = if !active {
-                    egui::RichText::new("Not directional")
+                    egui::RichText::new(crate::i18n::tr("Not directional"))
                 } else {
                     match chosen {
                         Some(true) => egui::RichText::new(&labels[0]),
@@ -258,13 +261,13 @@ impl Editor {
             ui.add_enabled_ui(self.can_edit_visually(), |ui| {
                 egui::ComboBox::from_id_salt("typed-default-relation")
                     .width(width)
-                    .selected_text(title)
+                    .selected_text(crate::i18n::tr(title))
                     .show_ui(ui, |ui| {
                         for relation in choices {
                             ui.selectable_value(
                                 &mut self.graph.operator,
                                 relation.key.into(),
-                                relation.title,
+                                crate::i18n::tr(relation.title),
                             );
                         }
                     });
@@ -289,18 +292,24 @@ impl Editor {
             if choices.is_empty() {
                 return;
             }
-            ui.toggle_value(&mut self.notation_ui.connect, "Connect");
+            ui.toggle_value(&mut self.notation_ui.connect, crate::i18n::tr("Connect"));
             egui::ComboBox::from_id_salt("notation-relation-type")
                 .width((width - 90.0).max(48.0))
                 .selected_text(
                     choices
                         .iter()
                         .find(|(op, _)| *op == self.graph.operator)
-                        .map_or("Relationship", |(_, name)| *name),
+                        .map_or(crate::i18n::tr("Relationship"), |(_, name)| {
+                            crate::i18n::tr(name)
+                        }),
                 )
                 .show_ui(ui, |ui| {
                     for (op, title) in choices {
-                        ui.selectable_value(&mut self.graph.operator, (*op).into(), *title);
+                        ui.selectable_value(
+                            &mut self.graph.operator,
+                            (*op).into(),
+                            crate::i18n::tr(title),
+                        );
                     }
                 });
             return;

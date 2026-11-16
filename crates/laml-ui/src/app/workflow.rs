@@ -162,7 +162,7 @@ impl Editor {
         if self.workflow.export_open {
             let dismissed =
                 dialogs::show(ctx, ("export-options", self.id), "Export", 360.0, |ui| {
-                    ui.label("Format");
+                    ui.label(crate::i18n::tr("Format"));
                     for (format, label) in [
                         (Format::Svg, "SVG · Vector image"),
                         (Format::Png, "PNG · Raster image"),
@@ -184,7 +184,7 @@ impl Editor {
                             && !self.workflow.busy()
                             && !self.file_ui.busy();
                         if ui
-                            .add_enabled(enabled, egui::Button::new("Export…"))
+                            .add_enabled(enabled, egui::Button::new(crate::i18n::tr("Export…")))
                             .clicked()
                         {
                             let format = self.workflow.export_format;
@@ -206,7 +206,7 @@ impl Editor {
                             }
                             self.workflow.export_open = false;
                         }
-                        if ui.button("Cancel").clicked() {
+                        if ui.button(crate::i18n::tr("Cancel")).clicked() {
                             self.workflow.export_open = false;
                         }
                     });
@@ -231,11 +231,13 @@ impl Editor {
                 440.0,
                 |ui| {
                     ui.label(path);
-                    ui.small("The checked output snapshot will be revalidated before writing.");
-                    if ui.button("Replace this output").clicked() {
+                    ui.small(crate::i18n::tr(
+                        "The checked output snapshot will be revalidated before writing.",
+                    ));
+                    if ui.button(crate::i18n::tr("Replace this output")).clicked() {
                         self.confirm_export();
                     }
-                    if ui.button("Cancel").clicked() {
+                    if ui.button(crate::i18n::tr("Cancel")).clicked() {
                         self.workflow.cancel_export();
                     }
                 },

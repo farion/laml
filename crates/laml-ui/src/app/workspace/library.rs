@@ -186,12 +186,12 @@ impl Workspace {
         let mut command = None;
         let dismissed = dialogs::show(ctx, "browser-library", "Browser library", 760.0, |ui| {
             ui.add_enabled_ui(!blocked, |ui| {
-                if !snapshot.error.is_empty() { ui.colored_label(ui.visuals().error_fg_color, &snapshot.error); }
-                if !snapshot.notice.is_empty() { ui.label(&snapshot.notice); }
+                if !snapshot.error.is_empty() { ui.colored_label(ui.visuals().error_fg_color, crate::i18n::message(&(&snapshot.error))); }
+                if !snapshot.notice.is_empty() { ui.label(crate::i18n::message(&(&snapshot.notice))); }
                 command = self.library.manager(ui, &snapshot, safe);
                 ui.add_space(8.0);
                 ui.add(egui::Label::new(egui::RichText::new(
-                    "Stored only in this browser. Clearing browser data deletes these files. Download backups."
+                    crate::i18n::tr("Stored only in this browser. Clearing browser data deletes these files. Download backups.")
                 ).small().weak()).wrap());
             });
         });
@@ -236,7 +236,7 @@ impl Workspace {
         let mut accepted = false;
         let mut cancelled = false;
         let dismissed = dialogs::show(ctx, "browser-library-rename", "Rename file", 380.0, |ui| {
-            ui.label("File name");
+            ui.label(crate::i18n::tr("File name"));
             let response = ui.text_edit_singleline(&mut name);
             let valid = !name.trim().is_empty()
                 && !name.contains(['/', '\\'])
@@ -245,19 +245,19 @@ impl Workspace {
             if !valid {
                 ui.colored_label(
                     ui.visuals().error_fg_color,
-                    "Enter a file name, not a path.",
+                    crate::i18n::tr("Enter a file name, not a path."),
                 );
             }
             ui.add_space(16.0);
             ui.horizontal(|ui| {
                 accepted = ui
-                    .add_enabled(safe && valid, egui::Button::new("Rename"))
+                    .add_enabled(safe && valid, egui::Button::new(crate::i18n::tr("Rename")))
                     .clicked()
                     || (safe
                         && valid
                         && response.lost_focus()
                         && ui.input(|i| i.key_pressed(egui::Key::Enter)));
-                cancelled = ui.button("Cancel").clicked();
+                cancelled = ui.button(crate::i18n::tr("Cancel")).clicked();
             });
         });
         if accepted {

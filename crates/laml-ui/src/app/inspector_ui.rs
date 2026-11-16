@@ -23,7 +23,7 @@ pub(super) fn row<R>(ui: &mut egui::Ui, key: &str, draw: impl FnOnce(&mut egui::
     content(ui, |ui| {
         ui.horizontal_top(|ui| {
             ui.spacing_mut().item_spacing.x = 10.0;
-            caption(ui, key, KEY_WIDTH).on_hover_text(key);
+            caption(ui, key, KEY_WIDTH).on_hover_text(crate::i18n::tr(key));
             let width = ui.available_width();
             ui.allocate_ui_with_layout(
                 egui::vec2(width, appearance::FIELD_HEIGHT),
@@ -61,7 +61,7 @@ pub(super) fn category(ui: &mut egui::Ui, title: &str) {
     ui.painter().text(
         rect.left_center() + egui::vec2(f32::from(INSET), 0.0),
         egui::Align2::LEFT_CENTER,
-        title,
+        crate::i18n::tr(title),
         egui::FontId::proportional(13.0),
         appearance::color(ui.ctx(), appearance::MUTED),
     );
@@ -77,7 +77,7 @@ pub(super) fn caption(ui: &mut egui::Ui, text: &str, width: f32) -> egui::Respon
             .max_rect(rect)
             .layout(egui::Layout::left_to_right(egui::Align::Center)),
     );
-    label.add(egui::Label::new(text).truncate());
+    label.add(egui::Label::new(crate::i18n::tr(text)).truncate());
     response
 }
 
@@ -95,7 +95,9 @@ pub(super) fn field(
 }
 
 pub(super) fn mixed_text() -> egui::RichText {
-    egui::RichText::new("Mixed").weak().italics()
+    egui::RichText::new(crate::i18n::tr("Mixed"))
+        .weak()
+        .italics()
 }
 
 pub(super) fn value_text(value: &str) -> egui::RichText {
@@ -103,6 +105,15 @@ pub(super) fn value_text(value: &str) -> egui::RichText {
         mixed_text()
     } else {
         egui::RichText::new(value)
+    }
+}
+
+/// A notation/style choice is UI text; endpoint names use `value_text` instead.
+pub(super) fn choice_text(value: &str) -> egui::RichText {
+    if value == "Mixed" {
+        mixed_text()
+    } else {
+        egui::RichText::new(crate::i18n::tr(value))
     }
 }
 
@@ -159,9 +170,9 @@ pub(super) fn mixed_field(
             .desired_width(ui.available_width()),
     );
     let response = response.on_hover_text(if multiline {
-        "Enter: confirm · Shift+Enter: new line"
+        crate::i18n::tr("Enter: confirm · Shift+Enter: new line")
     } else {
-        "Enter: confirm"
+        crate::i18n::tr("Enter: confirm")
     });
     let enter = response.has_focus()
         && ui.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Enter));

@@ -16,7 +16,7 @@ impl Editor {
         let mut cancel = false;
         let dismissed = dialogs::show(ctx, ("sequence-insert", self.id), title, 400.0, |ui| {
             if matches!(form.action, Action::Participant | Action::Note) {
-                ui.label("ID");
+                ui.label(crate::i18n::tr("ID"));
                 self.source_ui
                     .extra_drafts
                     .push(ui.text_edit_singleline(&mut form.id).id);
@@ -29,7 +29,10 @@ impl Editor {
                 if ui
                     .add_enabled(
                         form.anchor.activation_line.is_none(),
-                        egui::Checkbox::new(&mut activation, "Start target activation"),
+                        egui::Checkbox::new(
+                            &mut activation,
+                            crate::i18n::tr("Start target activation"),
+                        ),
                     )
                     .changed()
                 {
@@ -41,12 +44,14 @@ impl Editor {
                 }
             }
             if form.anchor.activation_line.is_some() {
-                ui.label("Uses the existing activation and keeps its end.");
+                ui.label(crate::i18n::tr(
+                    "Uses the existing activation and keeps its end.",
+                ));
             }
             ui.label(if form.action == Action::Note {
-                "Text"
+                crate::i18n::tr("Text")
             } else {
-                "Label"
+                crate::i18n::tr("Label")
             });
             self.source_ui
                 .extra_drafts
@@ -59,7 +64,7 @@ impl Editor {
             let edits =
                 self.sequence_candidate(&form.anchor, form.action, &form.target, &form.id, label);
             if let Err(error) = &edits {
-                ui.label(error);
+                ui.label(crate::i18n::message(error));
             }
             if let Some(error) = &form.error {
                 command_errors::details(ui, error);
@@ -71,13 +76,15 @@ impl Editor {
                         edits.is_ok()
                             && self.can_edit_visually()
                             && self.document.revision() == form.revision,
-                        egui::Button::new("Add"),
+                        egui::Button::new(crate::i18n::tr("Add")),
                     )
                     .clicked();
-                cancel = ui.button("Cancel").clicked();
+                cancel = ui.button(crate::i18n::tr("Cancel")).clicked();
             });
             if form.revision != self.document.revision() {
-                ui.label("Document changed. Reopen this action at the desired insertion point.");
+                ui.label(crate::i18n::tr(
+                    "Document changed. Reopen this action at the desired insertion point.",
+                ));
             }
         });
         if submit {

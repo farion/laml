@@ -2,11 +2,15 @@
 use super::*;
 use egui_phosphor::regular::{FOLDER_OPEN, GEAR_SIX, PLUS, QUESTION, X};
 
+mod about;
 mod branding;
 mod chrome;
+mod download;
 mod empty;
 mod help;
 mod io;
+#[cfg(test)]
+mod language_tests;
 #[cfg(target_arch = "wasm32")]
 mod library;
 mod new_diagram;
@@ -36,7 +40,9 @@ pub struct Workspace {
     settings_open: bool,
     welcome_open: bool,
     help_open: bool,
-    help_document: Option<help::LegalDocument>,
+    about_open: bool,
+    download: download::State,
+    about_document: Option<about::LegalDocument>,
     recovery: recovery::State,
     new_diagram: Option<new_diagram::Picker>,
     settings_category: settings::Category,
@@ -63,7 +69,9 @@ impl Workspace {
             preferences,
             welcome_open: !preferences.welcome_seen,
             help_open: false,
-            help_document: None,
+            about_open: false,
+            download: Default::default(),
+            about_document: None,
             editor_theme: egui::Theme::Dark,
             active: 0,
             next_untitled,
@@ -182,7 +190,13 @@ impl Workspace {
     }
 
     fn shortcuts(&mut self, ctx: &egui::Context) {
-        if self.welcome_open || self.help_open || self.settings_open || dialogs::blocked(ctx) {
+        if self.welcome_open
+            || self.help_open
+            || self.about_open
+            || self.download.open
+            || self.settings_open
+            || dialogs::blocked(ctx)
+        {
             return;
         }
         if self.opening.is_some()
@@ -228,6 +242,7 @@ impl Workspace {
     }
 
     fn windows(&mut self, ctx: &egui::Context) {
+        self.download_window(ctx);
         self.new_diagram_window(ctx);
         if let Some(picker) = &mut self.file_picker
             && let std::task::Poll::Ready(path) = picker.poll(ctx)
@@ -243,9 +258,13 @@ impl Workspace {
                 settings::content(ui, &mut self.settings_category, &mut self.preferences);
                 if before != self.preferences {
                     if let Err(error) = self.preferences.save() {
-                        self.error = Some(format!("Could not save editor settings: {error}"));
+                        self.error = Some(crate::i18n::format(
+                            "Could not save editor settings: {error}",
+                            &[("error", error.to_string())],
+                        ));
                     }
                     self.sync_editor_theme(ctx);
+                    ctx.request_repaint();
                 }
             });
             if dismissed {
@@ -255,8 +274,8 @@ impl Workspace {
         if let Some(error) = self.error.clone() {
             let dismissed =
                 dialogs::show(ctx, "open-file-error", "Could not open file", 420.0, |ui| {
-                    ui.label(error);
-                    if ui.button("Dismiss").clicked() {
+                    ui.label(crate::i18n::message(&(error)));
+                    if ui.button(crate::i18n::tr("Dismiss")).clicked() {
                         self.error = None;
                     }
                 });
@@ -278,7 +297,7 @@ impl Workspace {
                 tab.path
                     .file_name()
                     .and_then(|p| p.to_str())
-                    .unwrap_or("Untitled"),
+                    .unwrap_or(crate::i18n::tr("Untitled")),
                 tab.rendered == Some(tab.document.revision()) && tab.view.image_ready,
                 if laml_ui::services::browser_mode() {
                     !crate::browser_storage::safe_to_close()
@@ -291,7 +310,13 @@ impl Workspace {
         }
         #[cfg(target_arch = "wasm32")]
         if self.tabs.is_empty() {
-            crate::web::set_document("No file open", false, false, 0, self.recovery_count());
+            crate::web::set_document(
+                crate::i18n::tr("No file open"),
+                false,
+                false,
+                0,
+                self.recovery_count(),
+            );
         }
         let ctx = ui.ctx().clone();
         if ctx.input(|i| i.viewport().close_requested()) && !self.allow_close {
@@ -338,6 +363,8 @@ impl Workspace {
         self.library_tick();
         if self.welcome_open && !self.closing_all {
             self.welcome_window(&ctx);
+        } else if self.about_open && !self.closing_all {
+            self.about_window(&ctx);
         } else if self.help_open && !self.closing_all {
             self.help_window(&ctx);
         } else {
@@ -360,7 +387,7 @@ pub(super) fn icon(ui: &mut egui::Ui, glyph: &str, tooltip: &str) -> egui::Respo
         )))
         .frame_when_inactive(false),
     )
-    .on_hover_text(tooltip)
+    .on_hover_text(crate::i18n::tr(tooltip))
 }
 
 impl eframe::App for Workspace {

@@ -140,8 +140,10 @@ impl Editor {
             460.0,
             |ui| {
                 ui.label(format!("{} → {}", choice.from, choice.to));
-                ui.label("The default cannot connect these endpoints with the current properties.");
-                ui.label("Label");
+                ui.label(crate::i18n::tr(
+                    "The default cannot connect these endpoints with the current properties.",
+                ));
+                ui.label(crate::i18n::tr("Label"));
                 self.source_ui
                     .extra_drafts
                     .push(ui.text_edit_singleline(&mut choice.label).id);
@@ -154,18 +156,23 @@ impl Editor {
                     }
                     let response = ui.add_enabled(
                         valid.is_ok(),
-                        egui::Button::selectable(choice.operator == operator, relation.title),
+                        egui::Button::selectable(
+                            choice.operator == operator,
+                            crate::i18n::tr(relation.title),
+                        ),
                     );
                     if let Err(error) = valid {
-                        response.clone().on_disabled_hover_text(error);
+                        response
+                            .clone()
+                            .on_disabled_hover_text(crate::i18n::message(&(error)));
                     }
                     if response.clicked() {
                         choice.operator = operator.into();
                         selected_valid = true;
                     }
                 }
-                egui::CollapsingHeader::new("Details").show(ui, |ui| {
-                    ui.label(&choice.reason);
+                egui::CollapsingHeader::new(crate::i18n::tr("Details")).show(ui, |ui| {
+                    ui.label(crate::i18n::message(&choice.reason));
                 });
                 ui.horizontal(|ui| {
                     submit = ui
@@ -173,10 +180,10 @@ impl Editor {
                             selected_valid
                                 && choice.revision == self.document.revision()
                                 && self.can_edit_visually(),
-                            egui::Button::new("Connect"),
+                            egui::Button::new(crate::i18n::tr("Connect")),
                         )
                         .clicked();
-                    cancel = ui.button("Cancel").clicked();
+                    cancel = ui.button(crate::i18n::tr("Cancel")).clicked();
                 });
             },
         );

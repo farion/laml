@@ -164,7 +164,7 @@ pub(super) fn pane_heading(ui: &mut egui::Ui, title: &str) {
     ui.painter().text(
         rect.left_center() + egui::vec2(16.0, 0.0),
         egui::Align2::LEFT_CENTER,
-        title,
+        crate::i18n::tr(title),
         egui::FontId::proportional(16.0),
         color(ui.ctx(), TEXT),
     );
@@ -249,18 +249,18 @@ pub(super) fn alignment_button(
         response.rect.center_bottom() - egui::vec2(0.0, 3.0),
         egui::Align2::CENTER_BOTTOM,
         match (horizontal, width >= 115.0) {
-            (true, true) => "Align Horizontal",
-            (false, true) => "Align Vertical",
-            (true, false) => "Horizontal",
-            (false, false) => "Vertical",
+            (true, true) => crate::i18n::tr("Align Horizontal"),
+            (false, true) => crate::i18n::tr("Align Vertical"),
+            (true, false) => crate::i18n::tr("Horizontal"),
+            (false, false) => crate::i18n::tr("Vertical"),
         },
         egui::FontId::proportional(14.0),
         color,
     );
     response.on_hover_text(if horizontal {
-        "Align centers on a horizontal line (center-y)"
+        crate::i18n::tr("Align centers on a horizontal line (center-y)")
     } else {
-        "Align centers on a vertical line (center-x)"
+        crate::i18n::tr("Align centers on a vertical line (center-x)")
     })
 }
 
@@ -284,9 +284,9 @@ pub(super) fn property_action(ui: &mut egui::Ui, reset: bool) -> egui::Response 
     })
     .inner
     .on_hover_text(if reset {
-        "Reset local override"
+        crate::i18n::tr("Reset local override")
     } else {
-        "Apply locally"
+        crate::i18n::tr("Apply locally")
     })
 }
 

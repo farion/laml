@@ -27,31 +27,31 @@ impl Editor {
             inspector_ui::row(ui,"Type",|ui| {
                 if KINDS.contains(&node.kind) {
                     let mut kind=node.kind;
-                    egui::ComboBox::from_id_salt("node-kind-property").width(ui.available_width()).selected_text(declaration_fields::title(kind)).show_ui(ui,|ui| {
+                    egui::ComboBox::from_id_salt("node-kind-property").width(ui.available_width()).selected_text(crate::i18n::tr(&(declaration_fields::title(kind)))).show_ui(ui,|ui| {
                         for option in KINDS {
                             if self.preview.as_ref().is_some_and(|p| !laml::parser::allows_node_kind(option, p.diagram.settings.diagram_type)) { continue; }
                             let valid=declaration_fields::change(self.document.source(),&node.id,Change::Kind(option)).is_ok();
-                            if ui.add_enabled(valid,egui::Button::selectable(kind==option,declaration_fields::title(option))).clicked(){kind=option;}
+                            if ui.add_enabled(valid,egui::Button::selectable(kind==option,crate::i18n::tr(&(declaration_fields::title(option))))).clicked(){kind=option;}
                         }
                     });
                     if kind!=node.kind {self.change_declaration(&node.id,Change::Kind(kind));}
-                }else {ui.label(declaration_fields::title(node.kind));}
+                }else {ui.label(crate::i18n::tr(&(declaration_fields::title(node.kind))));}
             });
             if !matches!(node.kind,NodeKind::Object|NodeKind::Note|NodeKind::Junction)
                 && declaration_fields::change(self.document.source(), &node.id, Change::Visibility(Some('+'))).is_ok() {
                 inspector_ui::row(ui,"Visibility",|ui| {
                     let mut visibility=node.visibility;
                     let title=visibility_title(visibility);
-                    egui::ComboBox::from_id_salt("access-visibility").width(ui.available_width()).selected_text(title).show_ui(ui,|ui| {
-                        for value in [None,Some('+'),Some('-'),Some('#'),Some('~')] {ui.selectable_value(&mut visibility,value,visibility_title(value));}
-                    }).response.on_hover_text("Access visibility, not whether this node is drawn. Use Style → Display to hide an element.");
+                    egui::ComboBox::from_id_salt("access-visibility").width(ui.available_width()).selected_text(crate::i18n::tr(title)).show_ui(ui,|ui| {
+                        for value in [None,Some('+'),Some('-'),Some('#'),Some('~')] {ui.selectable_value(&mut visibility,value,crate::i18n::tr(visibility_title(value)));}
+                    }).response.on_hover_text(crate::i18n::tr("Access visibility, not whether this node is drawn. Use Style → Display to hide an element."));
                     if visibility!=node.visibility {self.change_declaration(&node.id,Change::Visibility(visibility));}
                 });
             }
             if KINDS.contains(&node.kind) && (node.kind!=NodeKind::Generic || node.abstract_node) {
                 inspector_ui::row(ui,"Abstract",|ui| {
                     let mut value=node.abstract_node;
-                    if ui.checkbox(&mut value,"Enabled").changed(){self.change_declaration(&node.id,Change::Abstract(value));}
+                    if ui.checkbox(&mut value,crate::i18n::tr("Enabled")).changed(){self.change_declaration(&node.id,Change::Abstract(value));}
                 });
             }
             if node.kind==NodeKind::Class {

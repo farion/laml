@@ -264,13 +264,19 @@ impl Editor {
                             let old = value.clone();
                             egui::ComboBox::from_id_salt(&key)
                                 .width(ui.available_width())
-                                .selected_text(notation_choice_title(&field.name, &value))
+                                .selected_text(crate::i18n::tr(notation_choice_title(
+                                    &field.name,
+                                    &value,
+                                )))
                                 .show_ui(ui, |ui| {
                                     for choice in choices {
                                         ui.selectable_value(
                                             &mut value,
                                             choice.clone(),
-                                            notation_choice_title(&field.name, choice),
+                                            crate::i18n::tr(notation_choice_title(
+                                                &field.name,
+                                                choice,
+                                            )),
                                         );
                                     }
                                 });
@@ -308,10 +314,10 @@ impl Editor {
                     self.notation().family(),
                     self.notation().title()
                 ));
-                if ui.button("Add construct…").clicked() {
+                if ui.button(crate::i18n::tr("Add construct…")).clicked() {
                     self.open_construct_dialog();
                 }
-                if ui.button("Elements…").clicked() {
+                if ui.button(crate::i18n::tr("Elements…")).clicked() {
                     self.notation_ui.navigator = true;
                 }
             });
@@ -422,11 +428,11 @@ fn destination(
         .selected_text(
             parent
                 .and_then(|line| records.iter().find(|r| r.line == line))
-                .map_or("Root", |r| r.heading.as_str()),
+                .map_or(crate::i18n::tr("Root"), |r| r.heading.as_str()),
         )
         .width(ui.available_width())
         .show_ui(ui, |ui| {
-            ui.selectable_value(parent, None, "Root");
+            ui.selectable_value(parent, None, crate::i18n::tr("Root"));
             for r in records.iter().filter(|r| {
                 r.section == section && (r.opens || body_capable(r)) && Some(r.line) != exclude
             }) {
@@ -437,16 +443,20 @@ fn destination(
         .selected_text(
             before
                 .and_then(|line| records.iter().find(|r| r.line == line))
-                .map_or("At end", |r| r.heading.as_str()),
+                .map_or(crate::i18n::tr("At end"), |r| r.heading.as_str()),
         )
         .width(ui.available_width())
         .show_ui(ui, |ui| {
-            ui.selectable_value(before, None, "At end");
+            ui.selectable_value(before, None, crate::i18n::tr("At end"));
             for r in records
                 .iter()
                 .filter(|r| r.section == section && r.parent == *parent && Some(r.line) != exclude)
             {
-                ui.selectable_value(before, Some(r.line), format!("Before {}", r.heading));
+                ui.selectable_value(
+                    before,
+                    Some(r.line),
+                    crate::i18n::format("Before {0}", &[("0", r.heading.to_string())]),
+                );
             }
         });
 }

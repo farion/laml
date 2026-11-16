@@ -70,7 +70,7 @@ impl Editor {
                         choose = Some(later);
                     }
                     if let Err(error) = edits {
-                        response.on_disabled_hover_text(error);
+                        response.on_disabled_hover_text(crate::i18n::message(error));
                     }
                 }
             });

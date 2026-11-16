@@ -104,7 +104,9 @@ impl Editor {
             "Delete selection?",
             440.0,
             |ui| {
-                ui.label("These elements and dependent connections will be removed:");
+                ui.label(crate::i18n::tr(
+                    "These elements and dependent connections will be removed:",
+                ));
                 egui::ScrollArea::vertical()
                     .id_salt("deletion-preview")
                     .max_height(240.0)
@@ -115,9 +117,12 @@ impl Editor {
                     });
                 ui.horizontal(|ui| {
                     confirm = ui
-                        .add_enabled(self.can_edit_visually(), egui::Button::new("Delete"))
+                        .add_enabled(
+                            self.can_edit_visually(),
+                            egui::Button::new(crate::i18n::tr("Delete")),
+                        )
                         .clicked();
-                    cancel = ui.button("Cancel").clicked();
+                    cancel = ui.button(crate::i18n::tr("Cancel")).clicked();
                 });
             },
         );

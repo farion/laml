@@ -45,7 +45,7 @@ impl Editor {
             let mut chosen = old;
             inspector_ui::row(ui, "Type", |ui| {
                 egui::ComboBox::from_id_salt("bpmn-flow-kind")
-                    .selected_text(flow_title(old))
+                    .selected_text(crate::i18n::tr(flow_title(old)))
                     .show_ui(ui, |ui| {
                         for op in ["-->", "~~>", "..>", ".."] {
                             let candidate = edit::bpmn::flow_property(
@@ -56,10 +56,15 @@ impl Editor {
                             );
                             let response = ui.add_enabled(
                                 candidate.is_ok(),
-                                egui::Button::selectable(chosen == op, flow_title(op)),
+                                egui::Button::selectable(
+                                    chosen == op,
+                                    crate::i18n::tr(flow_title(op)),
+                                ),
                             );
                             if let Err(error) = candidate {
-                                response.clone().on_disabled_hover_text(error);
+                                response
+                                    .clone()
+                                    .on_disabled_hover_text(crate::i18n::message(&(error)));
                             }
                             if response.clicked() {
                                 chosen = op;
@@ -90,7 +95,7 @@ impl Editor {
                         edit::bpmn::TYPES
                             .iter()
                             .find(|(key, _)| *key == original)
-                            .map_or(original, |(_, title)| *title),
+                            .map_or(original, |(_, title)| crate::i18n::tr(title)),
                     )
                     .show_ui(ui, |ui| {
                         for &(key, title) in edit::bpmn::TYPES {
@@ -98,10 +103,12 @@ impl Editor {
                                 edit::bpmn::change_type(self.document.source(), id, key);
                             let response = ui.add_enabled(
                                 candidate.is_ok(),
-                                egui::Button::selectable(key == selected, title),
+                                egui::Button::selectable(key == selected, crate::i18n::tr(title)),
                             );
                             if let Err(error) = candidate {
-                                response.clone().on_disabled_hover_text(error);
+                                response
+                                    .clone()
+                                    .on_disabled_hover_text(crate::i18n::message(&(error)));
                             }
                             if response.clicked() {
                                 selected = key;

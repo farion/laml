@@ -6,6 +6,7 @@ fn paragraph(ui: &mut egui::Ui, parts: &[(&str, Option<&str>, bool)]) {
     ui.horizontal_wrapped(|ui| {
         ui.spacing_mut().item_spacing = egui::vec2(0.0, 0.0);
         for &(text, url, bold) in parts {
+            let text = crate::i18n::tr(text);
             let family = if bold {
                 egui::FontFamily::Name("bold".into())
             } else {
@@ -88,7 +89,7 @@ impl Workspace {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     understood = ui
                         .add(
-                            egui::Button::new("Continue to LAML Editor")
+                            egui::Button::new(crate::i18n::tr("Continue to LAML Editor"))
                                 .fill(ui.visuals().selection.bg_fill),
                         )
                         .clicked();
@@ -99,8 +100,9 @@ impl Workspace {
             self.welcome_open = false;
             self.preferences.welcome_seen = true;
             if let Err(error) = self.preferences.save() {
-                self.error = Some(format!(
-                    "Could not save the welcome preference: {error}. The introduction may appear again next time."
+                self.error = Some(crate::i18n::format(
+                    "Could not save the welcome preference: {error}. The introduction may appear again next time.",
+                    &[("error", error.to_string())],
                 ));
             }
         }

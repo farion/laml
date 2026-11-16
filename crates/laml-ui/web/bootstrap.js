@@ -2,10 +2,32 @@
 const status = document.getElementById('status');
 const retry = document.getElementById('retry');
 const spinner = document.getElementById('loading-spinner');
+// Match the shared Rust language policy before WASM has started.
+function bootLanguage() {
+  let preference = 'Auto';
+  try { preference = JSON.parse(localStorage.getItem('laml.editor.settings') || '{}').language || 'Auto'; } catch (_) {}
+  if (preference === 'German') return 'de';
+  if (preference === 'English') return 'en';
+  for (const tag of navigator.languages?.length ? navigator.languages : [navigator.language || 'en']) {
+    const base = tag.split(/[-_.@]/)[0].toLowerCase();
+    if (base === 'de' || base === 'en') return base;
+  }
+  return 'en';
+}
+const language = bootLanguage();
+document.documentElement.lang = language;
+const bootText = language === 'de' ? {
+  loading: 'Laden ...', reload: 'Neu laden',
+  failed: 'Editor konnte nicht gestartet werden. Prüfe die Serververbindung und Grafikunterstützung und lade die Seite neu.'
+} : {
+  loading: 'Loading ...', reload: 'Reload',
+  failed: 'Editor could not start. Check host availability and graphics support, then reload.'
+};
+retry.textContent = bootText.reload;
 async function start() {
   retry.hidden = true;
   spinner.hidden = false;
-  status.textContent = 'Loading editor…';
+  status.textContent = bootText.loading;
   try {
     const response = await fetch('/api/options');
     if (!response.ok) throw new Error('Host unavailable');
@@ -21,7 +43,7 @@ async function start() {
   } catch (_) {
     document.getElementById('editor').hidden = true;
     document.getElementById('loading').hidden = false;
-    status.textContent = 'Editor could not start. Check host availability and graphics support, then reload.';
+    status.textContent = bootText.failed;
     spinner.hidden = true;
     retry.hidden = false;
   }

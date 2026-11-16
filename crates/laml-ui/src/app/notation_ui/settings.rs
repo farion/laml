@@ -130,11 +130,11 @@ impl Editor {
                         choices
                             .iter()
                             .find(|(v, _)| *v == value)
-                            .map_or(value.as_str(), |(_, title)| *title),
+                            .map_or(value.as_str(), |(_, title)| crate::i18n::tr(title)),
                     )
                     .show_ui(ui, |ui| {
                         for (v, title) in choices {
-                            ui.selectable_value(&mut value, (*v).into(), *title);
+                            ui.selectable_value(&mut value, (*v).into(), crate::i18n::tr(title));
                         }
                     });
                 reset = appearance::property_action(ui, true).clicked();

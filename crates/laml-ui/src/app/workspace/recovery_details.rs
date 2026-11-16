@@ -1,19 +1,15 @@
-//! Cheap, cached recovery descriptions: parse source, never lay out or render it.
+//! Cache parsed recovery metadata, not its language-dependent presentation.
+use crate::i18n::tr;
 use laml_ui::notation::{self, Notation};
 
 pub(super) struct Details {
-    pub kind: String,
-    pub count: String,
-    pub contents: String,
+    ty: Notation,
+    count: Option<usize>,
+    names: Vec<String>,
 }
 impl Details {
     pub fn new(source: &str) -> Self {
         let ty = Notation::of(source);
-        let kind = match ty {
-            Notation::Gne => "Generic node-edge diagram".into(),
-            Notation::Bpmn => "BPMN - Process diagram".into(),
-            _ => format!("{} - {} diagram", ty.family(), ty.title()),
-        };
         let names: Option<Vec<String>> = match ty {
             Notation::Bpmn => laml::bpmn::parse(source)
                 .ok()
@@ -38,39 +34,10 @@ impl Details {
                 })
             }
         };
-        let Some(names) = names else {
-            return Self {
-                kind,
-                count: "Incomplete source".into(),
-                contents: "Can be restored and corrected in the editor.".into(),
-            };
-        };
-        let unit = match ty {
-            Notation::Sequence => {
-                if names.len() == 1 {
-                    "participant"
-                } else {
-                    "participants"
-                }
-            }
-            Notation::Timing => {
-                if names.len() == 1 {
-                    "lifeline"
-                } else {
-                    "lifelines"
-                }
-            }
-            _ => {
-                if names.len() == 1 {
-                    "element"
-                } else {
-                    "elements"
-                }
-            }
-        };
-        let count = format!("{} {unit}", names.len());
-        let mut contents = names
-            .iter()
+        let count = names.as_ref().map(Vec::len);
+        let names = names
+            .unwrap_or_default()
+            .into_iter()
             .take(4)
             .map(|s| {
                 let clean = s.split_whitespace().collect::<Vec<_>>().join(" ");
@@ -80,18 +47,69 @@ impl Details {
                     clean
                 }
             })
-            .collect::<Vec<_>>()
-            .join(" · ");
-        if names.len() > 4 {
-            contents.push_str(&format!(" · +{} more", names.len() - 4));
+            .collect();
+        Self { ty, count, names }
+    }
+    pub fn kind(&self) -> String {
+        match self.ty {
+            Notation::Gne => tr("Generic node-edge diagram").into(),
+            Notation::Bpmn => tr("BPMN - Process diagram").into(),
+            _ => crate::i18n::format(
+                "{family} - {title} diagram",
+                &[
+                    ("family", self.ty.family().into()),
+                    ("title", tr(self.ty.title()).into()),
+                ],
+            ),
         }
-        if contents.is_empty() {
-            contents = "No elements yet".into();
+    }
+    pub fn count(&self) -> String {
+        let Some(count) = self.count else {
+            return tr("Incomplete source").into();
+        };
+        let unit = match (self.ty, count) {
+            (Notation::Sequence, 1) => "participant",
+            (Notation::Sequence, _) => "participants",
+            (Notation::Timing, 1) => "lifeline",
+            (Notation::Timing, _) => "lifelines",
+            (_, 1) => "element",
+            _ => "elements",
+        };
+        format!("{count} {}", tr(unit))
+    }
+    pub fn contents(&self) -> String {
+        if self.count.is_none() {
+            return tr("Can be restored and corrected in the editor.").into();
         }
-        Self {
-            kind,
-            count,
-            contents,
+        if self.names.is_empty() {
+            return tr("No elements yet").into();
         }
+        let mut contents = self.names.join(" · ");
+        if let Some(count) = self.count.filter(|count| *count > 4) {
+            contents.push_str(&crate::i18n::format(
+                " · +{count} more",
+                &[("count", (count - 4).to_string())],
+            ));
+        }
+        contents
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn cached_descriptions_follow_language_without_translating_document_labels() {
+        let _language = crate::i18n::scoped_language(crate::i18n::Language::English);
+        let details = Details::new("semantics {\n A(label=\"Source\")\n}\n");
+        assert_eq!(details.count(), "1 element");
+        assert_eq!(details.contents(), "Source");
+        {
+            let _german = crate::i18n::scoped_language(crate::i18n::Language::German);
+            assert_eq!(details.kind(), "Generisches Knoten-Kanten-Diagramm");
+            assert_eq!(details.count(), "1 Element");
+            assert_eq!(details.contents(), "Source");
+        }
+        assert_eq!(details.count(), "1 element");
     }
 }

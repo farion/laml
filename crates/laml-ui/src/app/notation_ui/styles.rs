@@ -9,7 +9,9 @@ impl Editor {
     ) {
         let Some(id) = id.filter(|id| !id.starts_with("line:") && !id.starts_with("flow:")) else {
             inspector_ui::content(ui, |ui| {
-                ui.label("Select a named element to edit its local style.");
+                ui.label(crate::i18n::tr(
+                    "Select a named element to edit its local style.",
+                ));
             });
             return;
         };
@@ -69,7 +71,9 @@ impl Editor {
             ),
             _ => {
                 inspector_ui::content(ui, |ui| {
-                    ui.label("This construct has no independent local style selector.");
+                    ui.label(crate::i18n::tr(
+                        "This construct has no independent local style selector.",
+                    ));
                 });
                 return;
             }
@@ -133,7 +137,7 @@ impl Editor {
                 ui.horizontal(|ui| {
                     let field = ui.add(
                         egui::TextEdit::singleline(&mut draft)
-                            .hint_text("Automatic / inherited")
+                            .hint_text(crate::i18n::tr("Automatic / inherited"))
                             .desired_width((ui.available_width() - 30.0).max(30.0)),
                     );
                     self.source_ui.extra_drafts.push(field.id);
@@ -215,7 +219,7 @@ impl Editor {
             return;
         }
         inspector_ui::content(ui, |ui| {
-            egui::CollapsingHeader::new("Optional attributes").show(ui, |ui| {
+            egui::CollapsingHeader::new(crate::i18n::tr("Optional attributes")).show(ui, |ui| {
                 for name in missing {
                     let key = format!("notation-optional-{line}-{name}");
                     let mut value = self.property_drafts.get(&key).cloned().unwrap_or_default();

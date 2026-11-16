@@ -122,7 +122,7 @@ impl Editor {
                                 .selected_text(if mixed && draft.is_empty() {
                                     inspector_ui::mixed_text()
                                 } else {
-                                    egui::RichText::new(choice_title(name, draft))
+                                    egui::RichText::new(crate::i18n::tr(choice_title(name, draft)))
                                 })
                                 .show_ui(ui, |ui| {
                                     for choice in choices {
@@ -138,10 +138,12 @@ impl Editor {
                                                 valid,
                                                 egui::Button::selectable(
                                                     draft.as_str() == *choice,
-                                                    choice_title(name, choice),
+                                                    crate::i18n::tr(choice_title(name, choice)),
                                                 ),
                                             )
-                                            .on_hover_text(choice_help(name, choice))
+                                            .on_hover_text(crate::i18n::tr(choice_help(
+                                                name, choice,
+                                            )))
                                             .clicked()
                                         {
                                             *draft = (*choice).into();
@@ -198,7 +200,7 @@ impl Editor {
             }
             if let Some(reason) = reason {
                 inspector_ui::content(ui, |ui| {
-                    ui.small(reason);
+                    ui.small(crate::i18n::message(reason));
                 });
             }
         });
@@ -239,7 +241,7 @@ fn choice_title<'a>(name: &str, value: &'a str) -> &'a str {
     if name == "symbol-rendering" {
         access_title(value)
     } else {
-        value
+        crate::i18n::tr(value)
     }
 }
 fn choice_help<'a>(name: &str, value: &'a str) -> &'a str {

@@ -25,8 +25,11 @@ impl Editor {
         let mut choices = Vec::new();
         if let Some(preview) = &self.preview {
             if key == "selector" {
-                choices.push(("node".into(), "All nodes".into()));
-                choices.push(("relation".into(), "All relationships".into()));
+                choices.push(("node".into(), crate::i18n::tr("All nodes").into()));
+                choices.push((
+                    "relation".into(),
+                    crate::i18n::tr("All relationships").into(),
+                ));
                 let ids: Vec<_> = if preview.notation.graph() {
                     preview.diagram.nodes.iter().map(|n| n.id.clone()).collect()
                 } else {

@@ -113,7 +113,7 @@ impl Editor {
         let label_width = ui.fonts_mut(|fonts| {
             fonts
                 .layout_no_wrap(
-                    "Default Relation Type".into(),
+                    crate::i18n::tr("Default Relation Type").into(),
                     egui::FontId::proportional(15.0),
                     text_color,
                 )
@@ -165,7 +165,7 @@ impl Editor {
         if has_relations {
             self.arrow_type_control(&mut arrow, picker_width);
             if show_relation_label {
-                arrow.label("Default Relation Type");
+                arrow.label(crate::i18n::tr("Default Relation Type"));
             }
         }
         let info_rect = egui::Rect::from_min_max(
@@ -181,7 +181,7 @@ impl Editor {
         info.set_clip_rect(info_rect);
         info.colored_label(
             appearance::color(ui.ctx(), appearance::MUTED),
-            "LAML · UTF-8",
+            crate::i18n::tr("LAML · UTF-8"),
         );
         #[cfg(target_arch = "wasm32")]
         if laml_ui::services::browser_mode() {
@@ -191,11 +191,16 @@ impl Editor {
             } else {
                 appearance::color(ui.ctx(), appearance::TEXT)
             };
-            info.add(egui::Label::new(egui::RichText::new(&status).color(color)).truncate())
-                .on_hover_text(&status);
+            info.add(
+                egui::Label::new(
+                    egui::RichText::new(crate::i18n::message(&(&status))).color(color),
+                )
+                .truncate(),
+            )
+            .on_hover_text(crate::i18n::message(&(&status)));
         }
         if !laml_ui::services::browser_mode() && self.document.is_dirty() {
-            info.label("Unsaved changes");
+            info.label(crate::i18n::tr("Unsaved changes"));
         }
     }
 
@@ -205,7 +210,7 @@ impl Editor {
         ui.painter()
             .rect_filled(bar, 0, appearance::color(ui.ctx(), appearance::HEADER));
         for (index, (tab, title)) in [
-            (inspector_ui::Tab::General, "Allgemein"),
+            (inspector_ui::Tab::General, "General"),
             (inspector_ui::Tab::Style, "Style"),
         ]
         .into_iter()
@@ -234,7 +239,7 @@ impl Editor {
             ui.painter().text(
                 rect.left_center() + egui::vec2(16.0, 0.0),
                 egui::Align2::LEFT_CENTER,
-                title,
+                crate::i18n::tr(title),
                 egui::FontId::proportional(15.0),
                 if active {
                     appearance::color(ui.ctx(), appearance::TEXT)
@@ -296,7 +301,7 @@ impl Editor {
             }
             ui.menu_button("···", |ui| {
                 ui.set_max_width(400.0);
-                ui.label("Layout & editing");
+                ui.label(crate::i18n::tr("Layout & editing"));
                 self.alignment_toolbar(ui);
                 ui.separator();
                 self.creation_toolbar(ui);

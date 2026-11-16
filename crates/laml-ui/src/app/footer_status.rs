@@ -17,9 +17,9 @@ pub(super) fn show(ui: &mut egui::Ui, editor: &Editor) {
     let current = editor.rendered == Some(editor.document.revision());
     let recovery_error = editor.recovery.error.as_ref().map(|error| {
         if editor.recovery.restoring.is_some() {
-            format!("Recovery backup pending: {error}. Your work is open and the original draft is retained. Retrying automatically.")
+            crate::i18n::format("Recovery backup pending: {error}. Your work is open and the original draft is retained. Retrying automatically.", &[("error", error.to_string())])
         } else {
-            format!("Recovery backup failed: {error}. Save your work explicitly.")
+            crate::i18n::format("Recovery backup failed: {error}. Save your work explicitly.", &[("error", error.to_string())])
         }
     });
     #[cfg(target_arch = "wasm32")]
@@ -62,6 +62,8 @@ pub(super) fn show(ui: &mut egui::Ui, editor: &Editor) {
     } else {
         appearance::color(ui.ctx(), appearance::TEXT)
     };
-    ui.add(egui::Label::new(egui::RichText::new(text).color(color)).truncate())
-        .on_hover_text(text);
+    ui.add(
+        egui::Label::new(egui::RichText::new(crate::i18n::message(text)).color(color)).truncate(),
+    )
+    .on_hover_text(crate::i18n::message(text));
 }

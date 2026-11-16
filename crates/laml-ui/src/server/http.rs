@@ -19,6 +19,7 @@ pub fn router(state: Arc<HttpState>) -> Router {
         .route("/", get(index))
         .route("/bootstrap.js", get(bootstrap))
         .route("/style.css", get(css))
+        .route("/laml-logo.svg", get(logo_svg))
         .route("/favicon.svg", get(favicon_svg))
         .route("/favicon.png", get(favicon_png))
         .route("/favicon.ico", get(favicon_ico))
@@ -176,6 +177,12 @@ async fn css() -> impl IntoResponse {
     (
         [(header::CONTENT_TYPE, "text/css; charset=utf-8")],
         include_str!("../../web/style.css"),
+    )
+}
+async fn logo_svg() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "image/svg+xml")],
+        include_bytes!("../../../../docs/images/laml-logo-dark.svg").as_slice(),
     )
 }
 async fn favicon_svg() -> impl IntoResponse {

@@ -37,7 +37,9 @@ impl Editor {
             .filter(|(r, _)| *r == self.document.revision())
             .and_then(|(_, d)| d.range(&text, &self.path));
         if let Some(range) = &diagnostic
-            && ui.small_button("Go to reported line").clicked()
+            && ui
+                .small_button(crate::i18n::tr("Go to reported line"))
+                .clicked()
         {
             self.source_ui.jump = Some(range.clone());
         }

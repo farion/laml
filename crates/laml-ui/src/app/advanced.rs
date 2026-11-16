@@ -48,11 +48,13 @@ impl Editor {
             .then_some(self.advanced.selected)
             .filter(|_| count > 0);
         let mut open = !cancel;
-        egui::Window::new("Source completion")
+        egui::Window::new(crate::i18n::tr("Source completion"))
             .open(&mut open)
             .show(ui.ctx(), |ui| {
                 if count == 0 {
-                    ui.label("No matching completions in this source context.");
+                    ui.label(crate::i18n::tr(
+                        "No matching completions in this source context.",
+                    ));
                 }
                 egui::ScrollArea::vertical()
                     .max_height(260.0)

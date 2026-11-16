@@ -34,17 +34,26 @@ impl Picker {
             },
             520.0,
             |ui| {
-                ui.label("Path relative to the configured server workspace:");
+                ui.label(crate::i18n::tr(
+                    "Path relative to the configured server workspace:",
+                ));
                 ui.add(egui::TextEdit::singleline(&mut self.path).desired_width(f32::INFINITY));
-                ui.small(format!("File type: .{}", self.extension));
+                ui.small(crate::i18n::format(
+                    "File type: .{0}",
+                    &[("0", format!("{}", self.extension))],
+                ));
                 ui.horizontal(|ui| {
-                    if ui.button("Cancel").clicked() {
+                    if ui.button(crate::i18n::tr("Cancel")).clicked() {
                         cancel = true;
                     }
                     if ui
                         .add_enabled(
                             !self.path.trim().is_empty(),
-                            egui::Button::new(if self.opening { "Open" } else { "Choose path" }),
+                            egui::Button::new(if self.opening {
+                                crate::i18n::tr("Open")
+                            } else {
+                                crate::i18n::tr("Choose path")
+                            }),
                         )
                         .clicked()
                     {

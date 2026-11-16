@@ -184,13 +184,14 @@ impl Editor {
                 let valid = self
                     .bpmn_initial_type(&action)
                     .ok_or("No supported element fits this context".to_owned());
-                let response = ui.add_enabled(valid.is_ok(), egui::Button::new(title));
+                let response =
+                    ui.add_enabled(valid.is_ok(), egui::Button::new(crate::i18n::tr(title)));
                 if response.clicked() {
                     chosen = Some(action);
                     ui.close();
                 }
                 if let Err(error) = valid {
-                    response.on_disabled_hover_text(error);
+                    response.on_disabled_hover_text(crate::i18n::message(&(error)));
                 }
             };
             if let Some(index) = anchor.id.strip_prefix("flow:").and_then(|s| s.parse().ok()) {
@@ -228,7 +229,7 @@ impl Editor {
                         | laml::bpmn::Kind::Subprocess
                         | laml::bpmn::Kind::Collapsed
                 ) {
-                    ui.menu_button("Attach boundary event", |ui| {
+                    ui.menu_button(crate::i18n::tr("Attach boundary event"), |ui| {
                         for (marker, title) in [
                             ("timer", "Timer…"),
                             ("timer+", "Non-interrupting timer…"),
@@ -236,14 +237,17 @@ impl Editor {
                             ("message+", "Non-interrupting message…"),
                             ("error", "Error…"),
                         ] {
-                            if ui.button(title).clicked() {
+                            if ui.button(crate::i18n::tr(title)).clicked() {
                                 chosen = Some(Action::Boundary(anchor.id.clone(), marker.into()));
                                 ui.close();
                             }
                         }
                     });
                 }
-                if ui.button("Connect to existing element →").clicked() {
+                if ui
+                    .button(crate::i18n::tr("Connect to existing element →"))
+                    .clicked()
+                {
                     connect = true;
                     ui.close();
                 }
@@ -315,9 +319,9 @@ impl Editor {
             let lane = matches!(form.action, Action::Lane(_));
             if !lane {
                 ui.label(if matches!(form.action, Action::Boundary(_, _)) {
-                    "Outgoing target type"
+                    crate::i18n::tr("Outgoing target type")
                 } else {
-                    "Type"
+                    crate::i18n::tr("Type")
                 });
                 let mut types = edit::bpmn::TYPES.to_vec();
                 types.push(("subprocess", "Expanded subprocess"));
@@ -328,7 +332,7 @@ impl Editor {
                         types
                             .iter()
                             .find(|(key, _)| *key == form.ty)
-                            .map_or(form.ty.as_str(), |(_, title)| *title),
+                            .map_or(form.ty.as_str(), |(_, title)| crate::i18n::tr(title)),
                     )
                     .show_ui(ui, |ui| {
                         for (ty, title) in types {
@@ -342,27 +346,34 @@ impl Editor {
                             )
                             .is_ok()
                             {
-                                ui.selectable_value(&mut form.ty, ty.into(), title);
+                                ui.selectable_value(
+                                    &mut form.ty,
+                                    ty.into(),
+                                    crate::i18n::tr(title),
+                                );
                             }
                         }
                     });
             }
-            ui.label("ID");
+            ui.label(crate::i18n::tr("ID"));
             self.source_ui
                 .extra_drafts
                 .push(ui.text_edit_singleline(&mut form.id).id);
-            ui.label("Label");
+            ui.label(crate::i18n::tr("Label"));
             self.source_ui
                 .extra_drafts
                 .push(ui.text_edit_singleline(&mut form.label).id);
             if matches!(form.action, Action::Successor(_)) {
-                ui.label("Flow label");
+                ui.label(crate::i18n::tr("Flow label"));
                 self.source_ui
                     .extra_drafts
                     .push(ui.text_edit_singleline(&mut form.flow_label).id);
             }
             if matches!(form.action, Action::Boundary(_, _)) {
-                ui.label(format!("Creates outgoing target: {}Target", form.id));
+                ui.label(crate::i18n::format(
+                    "Creates outgoing target: {0}Target",
+                    &[("0", form.id.to_string())],
+                ));
             }
             let candidate = edit::bpmn_inline::create(
                 self.document.source(),
@@ -373,10 +384,10 @@ impl Editor {
                 &form.flow_label,
             );
             if let Err(error) = &candidate {
-                ui.label(error);
+                ui.label(crate::i18n::message(error));
             }
             if form.revision != self.document.revision() {
-                ui.label("Document changed. Reopen this action.");
+                ui.label(crate::i18n::tr("Document changed. Reopen this action."));
             }
             ui.add_space(12.0);
             ui.horizontal(|ui| {
@@ -385,10 +396,10 @@ impl Editor {
                         candidate.is_ok()
                             && form.revision == self.document.revision()
                             && self.can_edit_visually(),
-                        egui::Button::new("Add"),
+                        egui::Button::new(crate::i18n::tr("Add")),
                     )
                     .clicked();
-                cancel = ui.button("Cancel").clicked();
+                cancel = ui.button(crate::i18n::tr("Cancel")).clicked();
             });
         });
         if submit {

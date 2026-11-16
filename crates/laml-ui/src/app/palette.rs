@@ -21,20 +21,28 @@ impl Editor {
             .map(|n| n.id.clone())
             .collect();
         egui::ComboBox::from_id_salt("new-element-kind")
-            .selected_text(self.creation.palette.kind.title())
+            .selected_text(crate::i18n::tr(self.creation.palette.kind.title()))
             .show_ui(ui, |ui| {
                 for kind in ElementKind::available(self.document.source()) {
-                    ui.selectable_value(&mut self.creation.palette.kind, kind, kind.title());
+                    ui.selectable_value(
+                        &mut self.creation.palette.kind,
+                        kind,
+                        crate::i18n::tr(kind.title()),
+                    );
                 }
             });
         egui::ComboBox::from_id_salt("new-element-container")
             .selected_text(if self.creation.palette.parent.is_empty() {
-                "Root"
+                crate::i18n::tr("Root")
             } else {
                 &self.creation.palette.parent
             })
             .show_ui(ui, |ui| {
-                ui.selectable_value(&mut self.creation.palette.parent, String::new(), "Root");
+                ui.selectable_value(
+                    &mut self.creation.palette.parent,
+                    String::new(),
+                    crate::i18n::tr("Root"),
+                );
                 for parent in packages {
                     ui.selectable_value(&mut self.creation.palette.parent, parent.clone(), &parent);
                 }
@@ -47,13 +55,17 @@ impl Editor {
             "Below selection",
         ];
         egui::ComboBox::from_id_salt("new-element-placement")
-            .selected_text(modes[self.creation.palette.relative])
+            .selected_text(crate::i18n::tr(modes[self.creation.palette.relative]))
             .show_ui(ui, |ui| {
                 for (i, title) in modes.iter().enumerate() {
-                    ui.selectable_value(&mut self.creation.palette.relative, i, *title);
+                    ui.selectable_value(
+                        &mut self.creation.palette.relative,
+                        i,
+                        crate::i18n::tr(title),
+                    );
                 }
             });
-        if ui.button("Add element").clicked() {
+        if ui.button(crate::i18n::tr("Add element")).clicked() {
             self.create_element();
         }
     }
@@ -80,10 +92,12 @@ impl Editor {
         ui.add_enabled_ui(applicable, |ui| {
             ui.add(
                 egui::TextEdit::singleline(&mut self.creation.palette.port_name)
-                    .hint_text("Port name (identifier)")
+                    .hint_text(crate::i18n::tr("Port name (identifier)"))
                     .desired_width(160.0),
             );
-            if ui.button("Add port to selected node").clicked()
+            if ui
+                .button(crate::i18n::tr("Add port to selected node"))
+                .clicked()
                 && let Some(owner) = owner
             {
                 let name = self.creation.palette.port_name.clone();
@@ -91,7 +105,9 @@ impl Editor {
             }
         })
         .response
-        .on_disabled_hover_text("Select one generic node or class to add a boundary port.");
+        .on_disabled_hover_text(crate::i18n::tr(
+            "Select one generic node or class to add a boundary port.",
+        ));
     }
     pub(super) fn create_element(&mut self) {
         if !self.can_edit_visually() {

@@ -22,7 +22,7 @@ impl Picker {
     pub fn open() -> Self {
         Self(Box::pin(async {
             rfd::AsyncFileDialog::new()
-                .add_filter("LAML diagrams", &["laml"])
+                .add_filter(crate::i18n::tr("LAML diagrams"), &["laml"])
                 .pick_file()
                 .await
                 .map(|file| file.path().to_path_buf())

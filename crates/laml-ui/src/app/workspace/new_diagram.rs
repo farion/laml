@@ -67,18 +67,18 @@ impl Workspace {
         let mut create = false;
         let mut cancel = false;
         let dismissed = dialogs::show(ctx, "new-diagram", "New file", 420.0, |ui| {
-            ui.label("File name");
+            ui.label(crate::i18n::tr("File name"));
             ui.text_edit_singleline(&mut picker.name);
             let name = filename(&picker.name);
             if let Err(error) = name {
-                ui.colored_label(ui.visuals().error_fg_color, error);
+                ui.colored_label(ui.visuals().error_fg_color, crate::i18n::message(error));
             }
             ui.add_space(12.0);
-            ui.label("Family");
+            ui.label(crate::i18n::tr("Family"));
             ui.horizontal(|ui| {
                 for family in ["Generic", "UML", "BPMN", "C4"] {
                     if ui
-                        .selectable_value(&mut picker.family, family, family)
+                        .selectable_value(&mut picker.family, family, crate::i18n::tr(family))
                         .changed()
                     {
                         picker.notation = Notation::ALL
@@ -89,26 +89,33 @@ impl Workspace {
                 }
             });
             ui.add_space(12.0);
-            ui.label("Diagram type");
+            ui.label(crate::i18n::tr("Diagram type"));
             egui::ComboBox::from_id_salt("new-diagram-type")
                 .width(300.0)
-                .selected_text(picker.notation.title())
+                .selected_text(crate::i18n::tr(picker.notation.title()))
                 .show_ui(ui, |ui| {
                     for notation in Notation::ALL
                         .into_iter()
                         .filter(|n| n.family() == picker.family)
                     {
-                        ui.selectable_value(&mut picker.notation, notation, notation.title());
+                        ui.selectable_value(
+                            &mut picker.notation,
+                            notation,
+                            crate::i18n::tr(notation.title()),
+                        );
                     }
                 });
             ui.add_space(12.0);
-            ui.checkbox(&mut picker.include_example, "Include example diagram");
+            ui.checkbox(
+                &mut picker.include_example,
+                crate::i18n::tr("Include example diagram"),
+            );
             ui.add_space(16.0);
             ui.horizontal(|ui| {
                 create = ui
-                    .add_enabled(name.is_ok(), egui::Button::new("Create"))
+                    .add_enabled(name.is_ok(), egui::Button::new(crate::i18n::tr("Create")))
                     .clicked();
-                cancel = ui.button("Cancel").clicked();
+                cancel = ui.button(crate::i18n::tr("Cancel")).clicked();
             });
         });
         if create {

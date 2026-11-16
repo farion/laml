@@ -16,7 +16,7 @@ impl Editor {
                 ui.set_min_height(appearance::HEADER_HEIGHT - 12.0);
                 ui.set_min_width(ui.available_width());
                 ui.horizontal(|ui| {
-                    ui.label("Source");
+                    ui.label(crate::i18n::tr("Source"));
                     self.source_header_actions(ui);
                 });
             });

@@ -216,7 +216,7 @@ impl Editor {
             let dismissed = dialogs::show(ctx, ("add-node", self.id), "Add node", 360.0, |ui| {
                 let previous = dialog.kind;
                 egui::ComboBox::from_id_salt("node-kind")
-                    .selected_text(dialog.kind.title())
+                    .selected_text(crate::i18n::tr(dialog.kind.title()))
                     .show_ui(ui, |ui| {
                         for kind in ElementKind::available(self.document.source()) {
                             let valid = element_edit::add(
@@ -228,10 +228,15 @@ impl Editor {
                             );
                             let response = ui.add_enabled(
                                 valid.is_ok(),
-                                egui::Button::selectable(dialog.kind == kind, kind.title()),
+                                egui::Button::selectable(
+                                    dialog.kind == kind,
+                                    crate::i18n::tr(kind.title()),
+                                ),
                             );
                             if let Err(error) = valid {
-                                response.clone().on_disabled_hover_text(error);
+                                response
+                                    .clone()
+                                    .on_disabled_hover_text(crate::i18n::message(&(error)));
                             }
                             if response.clicked() {
                                 dialog.kind = kind;
@@ -253,11 +258,11 @@ impl Editor {
                         dialog.label = dialog.id.clone();
                     }
                 }
-                ui.label("Container");
+                ui.label(crate::i18n::tr("Container"));
                 egui::ComboBox::from_id_salt("new-node-container")
-                    .selected_text(dialog.parent.as_deref().unwrap_or("Root"))
+                    .selected_text(dialog.parent.as_deref().unwrap_or(crate::i18n::tr("Root")))
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut dialog.parent, None, "Root");
+                        ui.selectable_value(&mut dialog.parent, None, crate::i18n::tr("Root"));
                         if let Some(preview) = &self.preview {
                             for node in &preview.diagram.nodes {
                                 if matches!(
@@ -281,7 +286,7 @@ impl Editor {
                             }
                         }
                     });
-                ui.label("ID");
+                ui.label(crate::i18n::tr("ID"));
                 let input = ui.text_edit_singleline(&mut dialog.id);
                 self.source_ui.extra_drafts.push(input.id);
                 if input.changed() {
@@ -290,7 +295,7 @@ impl Editor {
                         dialog.label = dialog.id.clone();
                     }
                 }
-                ui.label("Label");
+                ui.label(crate::i18n::tr("Label"));
                 let input = ui.add_enabled(
                     dialog.kind != ElementKind::Junction,
                     egui::TextEdit::singleline(&mut dialog.label),
@@ -300,16 +305,19 @@ impl Editor {
                     dialog.auto_label = false;
                 }
                 if dialog.kind == ElementKind::Junction {
-                    ui.small("Junctions are drawn without a label.");
+                    ui.small(crate::i18n::tr("Junctions are drawn without a label."));
                 }
                 if let Some(error) = &dialog.error {
                     command_errors::details(ui, error);
                 }
                 ui.horizontal(|ui| {
                     submit = ui
-                        .add_enabled(self.can_edit_visually(), egui::Button::new("Add node"))
+                        .add_enabled(
+                            self.can_edit_visually(),
+                            egui::Button::new(crate::i18n::tr("Add node")),
+                        )
                         .clicked();
-                    cancel = ui.button("Cancel").clicked();
+                    cancel = ui.button(crate::i18n::tr("Cancel")).clicked();
                 });
             });
             if submit {
@@ -327,20 +335,27 @@ impl Editor {
             let mut submit = false;
             let mut cancel = false;
             let dismissed = dialogs::show(ctx, ("add-port", self.id), "Add port", 360.0, |ui| {
-                ui.label(format!("Owner: {}", dialog.owner));
-                ui.label("ID");
+                ui.label(crate::i18n::format(
+                    "Owner: {0}",
+                    &[("0", dialog.owner.to_string())],
+                ));
+                ui.label(crate::i18n::tr("ID"));
                 self.source_ui
                     .extra_drafts
                     .push(ui.text_edit_singleline(&mut dialog.id).id);
-                ui.label("Name");
+                ui.label(crate::i18n::tr("Name"));
                 self.source_ui
                     .extra_drafts
                     .push(ui.text_edit_singleline(&mut dialog.name).id);
                 egui::ComboBox::from_id_salt("port-side")
-                    .selected_text(&dialog.side)
+                    .selected_text(crate::i18n::tr(&dialog.side))
                     .show_ui(ui, |ui| {
                         for side in ["left", "right", "top", "bottom"] {
-                            ui.selectable_value(&mut dialog.side, side.into(), side);
+                            ui.selectable_value(
+                                &mut dialog.side,
+                                side.into(),
+                                crate::i18n::tr(side),
+                            );
                         }
                     });
                 if let Some(error) = &dialog.error {
@@ -348,9 +363,12 @@ impl Editor {
                 }
                 ui.horizontal(|ui| {
                     submit = ui
-                        .add_enabled(self.can_edit_visually(), egui::Button::new("Add port"))
+                        .add_enabled(
+                            self.can_edit_visually(),
+                            egui::Button::new(crate::i18n::tr("Add port")),
+                        )
                         .clicked();
-                    cancel = ui.button("Cancel").clicked();
+                    cancel = ui.button(crate::i18n::tr("Cancel")).clicked();
                 });
             });
             if submit {
@@ -372,9 +390,9 @@ impl Editor {
                 "Delete nodes?",
                 360.0,
                 |ui| {
-                    ui.label(
+                    ui.label(crate::i18n::tr(
                         "The following nodes and their dependent connections will be removed:",
-                    );
+                    ));
                     egui::ScrollArea::vertical()
                         .max_height(240.0)
                         .show(ui, |ui| {
@@ -387,15 +405,15 @@ impl Editor {
                             .add_enabled(
                                 dialog.revision == self.document.revision()
                                     && self.can_edit_visually(),
-                                egui::Button::new("Delete nodes"),
+                                egui::Button::new(crate::i18n::tr("Delete nodes")),
                             )
                             .clicked();
-                        cancel = ui.button("Cancel").clicked();
+                        cancel = ui.button(crate::i18n::tr("Cancel")).clicked();
                     });
                     if dialog.revision != self.document.revision() {
                         ui.colored_label(
                             egui::Color32::YELLOW,
-                            "Document changed; reopen the deletion preview.",
+                            crate::i18n::tr("Document changed; reopen the deletion preview."),
                         );
                     }
                 },

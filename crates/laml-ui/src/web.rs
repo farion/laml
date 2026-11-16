@@ -57,7 +57,7 @@ pub async fn start_editor(
         |event: web_sys::BeforeUnloadEvent| {
             if !browser_mode() && DIRTY.load(Ordering::Relaxed) {
                 event.prevent_default();
-                event.set_return_value("Unsaved changes");
+                event.set_return_value(crate::i18n::tr("Unsaved changes"));
             }
         },
     );

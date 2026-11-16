@@ -1,6 +1,6 @@
 [package]
 name = "laml-ui"
-version = "1.17.2"
+version = "1.17.3"
 edition = "2024"
 publish = false
 description = "Source-first LAML diagram editor"

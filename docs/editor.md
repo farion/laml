@@ -73,9 +73,21 @@ The graph-editing controls below apply where the selected notation supports them
 The editor uses a three-pane workspace: source on the left, interactive preview
 in the center and selection properties on the right. Pane dividers are resizable.
 
-The **Help** icon at the far right of the titlebar opens a compact explanation of
+The **Help** (?) icon in the titlebar opens a compact explanation of
 source editing, visual editing, layout and export, with a link to the GitHub
-Getting Started documentation.
+Getting Started documentation. The **About** (i) icon immediately to its right opens
+a separate dialog with the editor version, licenses and maintainer, plus buttons
+for **Imprint** and **Data Privacy Statement**.
+
+**Settings → Language** appears before Theming and offers **Auto** (default),
+**English** and **German**. Auto uses the browser's preferred languages or the
+native system locale, choosing the first supported language and falling back to
+English. The choice is saved locally and changes the interface immediately,
+without restarting or rebuilding the diagram. Dialogs, tooltips, the browser
+library and startup messages follow this choice. LAML syntax, source, filenames,
+identifiers, diagram labels and exports are not translated. Established notation
+terms remain in English where a translation would be ambiguous. Compiler diagnostic
+details remain available verbatim below the localized explanation.
 
 **Editor theme** controls the application itself. **Settings → Theming** offers
 **Auto** (default), **Dark** and **Light**. Auto follows the browser or system

@@ -81,7 +81,7 @@ impl Editor {
                                             }
                                             _ => !matches!(name, "Slot" | "Literal"),
                                         },
-                                        egui::Button::new(name),
+                                        egui::Button::new(crate::i18n::tr(name)),
                                     )
                                     .clicked()
                                 {
@@ -129,14 +129,17 @@ impl Editor {
                     }
                 });
         }
-        if ui.button("Connect these addresses").clicked() {
+        if ui
+            .button(crate::i18n::tr("Connect these addresses"))
+            .clicked()
+        {
             let a = self.structure.from.clone();
             let b = self.structure.to.clone();
             self.create_relation(&a, &b);
         }
         egui::ComboBox::from_id_salt("attachment-note")
             .selected_text(if self.structure.note.is_empty() {
-                "Note"
+                crate::i18n::tr("Note")
             } else {
                 &self.structure.note
             })
@@ -150,11 +153,10 @@ impl Editor {
                 }
             });
         egui::ComboBox::from_id_salt("attachment-relation")
-            .selected_text(
-                self.structure
-                    .relation
-                    .map_or_else(|| "Relation".into(), |l| format!("Line {l}")),
-            )
+            .selected_text(self.structure.relation.map_or_else(
+                || "Relation".into(),
+                |l| crate::i18n::format("Line {l}", &[("l", format!("{}", l))]),
+            ))
             .show_ui(ui, |ui| {
                 for r in &diagram.relations {
                     ui.selectable_value(
@@ -164,7 +166,7 @@ impl Editor {
                     );
                 }
             });
-        if ui.button("Attach note").clicked()
+        if ui.button(crate::i18n::tr("Attach note")).clicked()
             && let Some(line) = self.structure.relation
         {
             let result = structure::attach(self.document.source(), &self.structure.note, line);
@@ -172,7 +174,10 @@ impl Editor {
         }
         for a in &diagram.attachments {
             if ui
-                .button(format!("Remove {} — relation[{}]…", a.source, a.target))
+                .button(crate::i18n::format(
+                    "Remove {0} — relation[{1}]…",
+                    &[("0", a.source.to_string()), ("1", a.target.to_string())],
+                ))
                 .clicked()
             {
                 self.propose_structure(
@@ -244,27 +249,27 @@ impl Editor {
             "Source change preview",
             520.0,
             |ui| {
-                ui.label(&p.label);
-                ui.small("Referenced endpoints are preserved. Compiler layout/routing is checked before applying.");
+                ui.label(crate::i18n::tr(&p.label));
+                ui.small(crate::i18n::tr("Referenced endpoints are preserved. Compiler layout/routing is checked before applying."));
                 egui::ScrollArea::vertical()
                     .max_height(260.0)
                     .show(ui, |ui| {
                         for edit in &p.edits {
-                            ui.label("Before");
+                            ui.label(crate::i18n::tr("Before"));
                             ui.code(
                                 self.document.source()[edit.range.clone()]
                                     .chars()
                                     .take(4000)
                                     .collect::<String>(),
                             );
-                            ui.label("After (up to 4000 characters)");
+                            ui.label(crate::i18n::tr("After (up to 4000 characters)"));
                             ui.code(edit.replacement.chars().take(4000).collect::<String>());
                         }
                     });
-                if ui.button("Confirm change").clicked() {
+                if ui.button(crate::i18n::tr("Confirm change")).clicked() {
                     confirm = true;
                 }
-                if ui.button("Cancel").clicked() {
+                if ui.button(crate::i18n::tr("Cancel")).clicked() {
                     cancel = true;
                 }
             },

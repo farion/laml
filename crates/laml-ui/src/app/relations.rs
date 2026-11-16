@@ -5,7 +5,9 @@ use laml_ui::relation_edit;
 impl Editor {
     pub(super) fn relation_inspector(&mut self, ui: &mut egui::Ui) {
         if !self.selection.ids.is_empty() || !self.selection.ports.is_empty() {
-            ui.label("Select only connections to edit their properties.");
+            ui.label(crate::i18n::tr(
+                "Select only connections to edit their properties.",
+            ));
             return;
         }
         let Some(preview) = &self.preview else {
@@ -18,7 +20,7 @@ impl Editor {
             .cloned()
             .collect();
         let Some(first) = relations.first() else {
-            ui.label("Note attachment");
+            ui.label(crate::i18n::tr("Note attachment"));
             return;
         };
         let enabled = self.can_edit_visually();
@@ -265,12 +267,14 @@ impl Editor {
                     egui::ComboBox::from_id_salt("semantic-relation-type")
                         .width(ui.available_width())
                         .selected_text(if mixed {
-                            "Mixed"
+                            crate::i18n::tr("Mixed")
                         } else {
                             choices
                                 .iter()
                                 .find(|c| c.key == selected)
-                                .map_or("Relationship", |c| c.title)
+                                .map_or(crate::i18n::tr("Relationship"), |c| {
+                                    crate::i18n::tr(c.title)
+                                })
                         })
                         .show_ui(ui, |ui| {
                             for choice in choices {
@@ -287,7 +291,7 @@ impl Editor {
                                         valid,
                                         egui::Button::selectable(
                                             !mixed && chosen == choice.key,
-                                            choice.title,
+                                            crate::i18n::tr(choice.title),
                                         ),
                                     )
                                     .clicked()
@@ -310,10 +314,10 @@ impl Editor {
                 inspector_ui::row(ui, "Label place", |ui| {
                     egui::ComboBox::from_id_salt("relation-label-mode")
                         .width(ui.available_width())
-                        .selected_text(inspector_ui::value_text(chosen))
+                        .selected_text(inspector_ui::choice_text(chosen))
                         .show_ui(ui, |ui| {
                             for value in ["default", "near", "along", "inline"] {
-                                ui.selectable_value(&mut chosen, value, value);
+                                ui.selectable_value(&mut chosen, value, crate::i18n::tr(value));
                             }
                         });
                 });
@@ -331,10 +335,10 @@ impl Editor {
                 inspector_ui::row(ui, title, |ui| {
                     egui::ComboBox::from_id_salt(title)
                         .width(ui.available_width())
-                        .selected_text(inspector_ui::value_text(side))
+                        .selected_text(inspector_ui::choice_text(side))
                         .show_ui(ui, |ui| {
                             for value in ["auto", "left", "right", "top", "bottom"] {
-                                ui.selectable_value(&mut side, value, value);
+                                ui.selectable_value(&mut side, value, crate::i18n::tr(value));
                             }
                         });
                 });

@@ -189,7 +189,7 @@ fn tabs_have_a_dark_full_width_strip_and_a_distinct_active_panel() {
             .abs()
                 < 1.0
         );
-        for label in ["Allgemein", "Style"] {
+        for label in ["General", "Style"] {
             let text = out
                 .shapes
                 .iter()
@@ -198,7 +198,7 @@ fn tabs_have_a_dark_full_width_strip_and_a_distinct_active_panel() {
                     _ => None,
                 })
                 .unwrap();
-            let selected = (label == "Allgemein") == (tab == inspector_ui::Tab::General);
+            let selected = (label == "General") == (tab == inspector_ui::Tab::General);
             assert_eq!(
                 text.galley.job.sections[0].format.color,
                 if selected {

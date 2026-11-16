@@ -16,10 +16,10 @@ impl Editor {
             self.membership = None;
             if !self.selection.ids.is_empty() {
                 inspector_ui::row(ui, "Container", |ui| {
-                    ui.add_enabled(false, egui::Button::new("Select one node"))
-                        .on_disabled_hover_text(
+                    ui.add_enabled(false, egui::Button::new(crate::i18n::tr("Select one node")))
+                        .on_disabled_hover_text(crate::i18n::tr(
                             "Membership changes require exactly one selected node.",
-                        );
+                        ));
                 });
             }
             return;
@@ -55,9 +55,13 @@ impl Editor {
             inspector_ui::row(ui, "Container", |ui| {
                 egui::ComboBox::from_id_salt("membership-target")
                     .width(ui.available_width())
-                    .selected_text(if target.is_empty() { "Root" } else { &target })
+                    .selected_text(if target.is_empty() {
+                        crate::i18n::tr("Root")
+                    } else {
+                        &target
+                    })
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut target, String::new(), "Root");
+                        ui.selectable_value(&mut target, String::new(), crate::i18n::tr("Root"));
                         for parent in packages {
                             let result = membership_edit::plan(
                                 self.document.source(),
@@ -69,7 +73,9 @@ impl Editor {
                                 egui::Button::selectable(target == parent, &parent),
                             );
                             if let Err(error) = result {
-                                response.clone().on_disabled_hover_text(error);
+                                response
+                                    .clone()
+                                    .on_disabled_hover_text(crate::i18n::message(&(error)));
                             }
                             if response.clicked() {
                                 target = parent;

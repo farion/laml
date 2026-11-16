@@ -227,9 +227,9 @@ impl Editor {
                     )
                     .show(|ui| {
                         ui.label(if handle.dock.side.is_none() {
-                            "Drag a connection · automatic side"
+                            crate::i18n::tr("Drag a connection · automatic side")
                         } else {
-                            "Drag a connection · fixed side"
+                            crate::i18n::tr("Drag a connection · fixed side")
                         });
                     });
                 }

@@ -20,7 +20,7 @@ fn action(ui: &mut egui::Ui, enabled: bool, icon: &str, label: &str) -> egui::Re
         },
     );
     text.append(
-        label,
+        crate::i18n::tr(label),
         0.0,
         egui::TextFormat {
             font_id: egui::FontId::proportional(15.0),

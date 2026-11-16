@@ -11,23 +11,25 @@ pub(super) enum EditorTheme {
 }
 impl EditorTheme {
     pub fn label(self) -> &'static str {
-        match self {
+        crate::i18n::tr(match self {
             Self::Auto => "Auto",
             Self::Dark => "Dark",
             Self::Light => "Light",
-        }
+        })
     }
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(default)]
 pub(super) struct Preferences {
+    pub language: crate::i18n::Language,
     pub editor_theme: EditorTheme,
     pub fit_preview: bool,
     pub welcome_seen: bool,
 }
 impl Preferences {
     pub fn apply(self, ctx: &egui::Context) {
+        self.language.apply();
         ctx.set_theme(match self.editor_theme {
             EditorTheme::Auto => egui::ThemePreference::System,
             EditorTheme::Dark => egui::ThemePreference::Dark,

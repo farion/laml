@@ -265,14 +265,14 @@ impl Editor {
         if entries == 0 && self.document.is_dirty() {
             ui.colored_label(
                 egui::Color32::YELLOW,
-                "This edit exceeded the undo budget; no undo entry was retained.",
+                crate::i18n::tr("This edit exceeded the undo budget; no undo entry was retained."),
             );
         }
         if !self.source_ui.find_open {
             return;
         }
         ui.horizontal_wrapped(|ui| {
-            ui.label("Find");
+            ui.label(crate::i18n::tr("Find"));
             let input =
                 ui.add(egui::TextEdit::singleline(&mut self.source_ui.find).desired_width(110.0));
             self.source_ui.auxiliary_ids[0] = Some(input.id);
@@ -280,23 +280,26 @@ impl Editor {
                 input.request_focus();
                 self.source_ui.focus_find = false;
             }
-            ui.checkbox(&mut self.source_ui.case_sensitive, "Case sensitive");
-            if ui.button("Previous").clicked() {
+            ui.checkbox(
+                &mut self.source_ui.case_sensitive,
+                crate::i18n::tr("Case sensitive"),
+            );
+            if ui.button(crate::i18n::tr("Previous")).clicked() {
                 self.find_next(true);
             }
-            if ui.button("Next").clicked() {
+            if ui.button(crate::i18n::tr("Next")).clicked() {
                 self.find_next(false);
             }
         });
         ui.horizontal_wrapped(|ui| {
-            ui.label("Replace");
+            ui.label(crate::i18n::tr("Replace"));
             let input = ui
                 .add(egui::TextEdit::singleline(&mut self.source_ui.replace).desired_width(110.0));
             self.source_ui.auxiliary_ids[1] = Some(input.id);
-            if ui.button("Replace match").clicked() {
+            if ui.button(crate::i18n::tr("Replace match")).clicked() {
                 self.replace_matches(false);
             }
-            if ui.button("Replace all").clicked() {
+            if ui.button(crate::i18n::tr("Replace all")).clicked() {
                 self.replace_matches(true);
             }
         });
@@ -306,6 +309,6 @@ impl Editor {
             self.source_ui.case_sensitive,
         )
         .len();
-        ui.small(format!("{count} literal matches · F3 / Shift+F3 · Unicode lowercase matching when case is ignored"));
+        ui.small(crate::i18n::format("{count} literal matches · F3 / Shift+F3 · Unicode lowercase matching when case is ignored", &[("count", format!("{}", count))]));
     }
 }

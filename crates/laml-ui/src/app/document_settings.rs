@@ -106,10 +106,14 @@ impl Editor {
                         .map_or(chosen.as_str(), |(_, title)| *title);
                     egui::ComboBox::from_id_salt("value")
                         .width(width)
-                        .selected_text(title)
+                        .selected_text(crate::i18n::tr(title))
                         .show_ui(ui, |ui| {
                             for (value, title) in choices {
-                                ui.selectable_value(&mut chosen, (*value).into(), *title);
+                                ui.selectable_value(
+                                    &mut chosen,
+                                    (*value).into(),
+                                    crate::i18n::tr(title),
+                                );
                             }
                         });
                     reset = appearance::property_action(ui, true).clicked();

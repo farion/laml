@@ -145,7 +145,7 @@ pub(super) fn paint(
             ui.painter().text(
                 frame.viewport.left_top(),
                 egui::Align2::LEFT_TOP,
-                error,
+                crate::i18n::message(&(error)),
                 egui::FontId::proportional(14.0),
                 egui::Color32::LIGHT_RED,
             );
