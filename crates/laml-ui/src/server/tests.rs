@@ -123,6 +123,54 @@ fn staged_compilation_translates_origins_and_keeps_unrelated_backslashes() {
     assert_eq!(error.path, Some(PathBuf::from("source.laml")));
     assert_eq!(error.line, Some(2));
 }
+#[cfg(unix)]
+#[test]
+fn staged_translation_removes_longer_canonical_prefix_before_nested_alias() {
+    use std::os::unix::fs::symlink;
+    // Reproduce /var -> /private/var without changing the system temp directory.
+    let outer = tempfile::tempdir().unwrap();
+    let root = outer.path().canonicalize().unwrap();
+    let alias = root.join("var");
+    let canonical = root
+        .join("private")
+        .join(root.strip_prefix("/").unwrap())
+        .join("var");
+    std::fs::create_dir_all(&canonical).unwrap();
+    symlink(&canonical, &alias).unwrap();
+    let temp = tempfile::tempdir_in(&alias).unwrap();
+    let path = temp.path().join("source.laml");
+    let stage = stage::Stage {
+        temp,
+        path,
+        dependencies: vec![],
+    };
+    let alias_style = stage.temp.path().join("theme.lamlstyle");
+    let canonical_style = stage
+        .temp
+        .path()
+        .canonicalize()
+        .unwrap()
+        .join("theme.lamlstyle");
+    assert!(
+        canonical_style
+            .to_string_lossy()
+            .contains(alias_style.to_str().unwrap())
+    );
+    for origin in [alias_style, canonical_style] {
+        let translated: PathBuf = stage.translate(origin.clone()).unwrap();
+        assert_eq!(translated, Path::new("theme.lamlstyle"));
+        let message = format!("Error at {}: keep\\slashes", origin.display());
+        assert_eq!(
+            stage.text(message.clone()),
+            "Error at theme.lamlstyle: keep\\slashes"
+        );
+        assert_eq!(
+            stage.translate(message).unwrap(),
+            "Error at theme.lamlstyle: keep\\slashes"
+        );
+    }
+}
+
 #[test]
 fn export_uses_the_exact_frozen_dependency_snapshot() {
     let (root, backend) = backend();

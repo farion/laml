@@ -69,59 +69,74 @@ fn parallel_arrows_are_selected_by_real_pointer_and_edit_independently() {
 }
 
 #[test]
-fn endpoint_handle_drag_reconnects_without_creating_placement_or_fixed_sides() {
-    let (mut editor, ctx) = ready(SOURCE);
-    editor.selection.click_relation(5, false);
-    canvas_frame(&mut editor, &ctx, vec![]);
-    let route = editor
-        .preview
-        .as_ref()
-        .unwrap()
-        .routes
-        .iter()
-        .find(|r| r.source_line == 5)
-        .unwrap();
-    let start = point(&editor, *route.points.last().unwrap());
-    let c = editor
-        .preview
-        .as_ref()
-        .unwrap()
-        .nodes
-        .iter()
-        .find(|n| n.id == "C")
-        .unwrap();
-    let target = point(
-        &editor,
-        Point {
-            x: c.x + c.width / 2.0,
-            y: c.y + c.height / 2.0,
-        },
-    );
-    canvas_frame(
-        &mut editor,
-        &ctx,
-        vec![egui::Event::PointerMoved(start), button(start, true)],
-    );
-    canvas_frame(&mut editor, &ctx, vec![egui::Event::PointerMoved(target)]);
-    assert_eq!(editor.relation_drag, Some((5, EndPosition::Target, 0)));
-    canvas_frame(&mut editor, &ctx, vec![button(target, false)]);
-    wait(&mut editor, &ctx, |e| e.document.revision() == 1);
-    assert_eq!(
-        editor.document.source(),
-        SOURCE.replace("@first A -> B", "@first A -> C")
-    );
-    assert!(editor.preview.as_ref().unwrap().diagram.layout.is_empty());
-    assert!(
-        editor
+fn endpoint_handle_drag_reconnects_with_independent_shift_release_side_choice() {
+    for automatic in [false, true] {
+        let (mut editor, ctx) = ready(SOURCE);
+        editor.selection.click_relation(5, false);
+        canvas_frame(&mut editor, &ctx, vec![]);
+        let route = editor
             .preview
             .as_ref()
             .unwrap()
-            .diagram
-            .relation_end_layout
-            .is_empty()
-    );
-    editor.document.undo();
-    assert_eq!(editor.document.source(), SOURCE);
+            .routes
+            .iter()
+            .find(|r| r.source_line == 5)
+            .unwrap();
+        let start = point(&editor, *route.points.last().unwrap());
+        let c = editor
+            .preview
+            .as_ref()
+            .unwrap()
+            .nodes
+            .iter()
+            .find(|n| n.id == "C")
+            .unwrap();
+        let target = point(
+            &editor,
+            Point {
+                x: c.x + c.width / 2.0,
+                y: c.y + c.height / 2.0,
+            },
+        );
+        canvas_frame(
+            &mut editor,
+            &ctx,
+            vec![egui::Event::PointerMoved(start), button(start, true)],
+        );
+        canvas_frame(&mut editor, &ctx, vec![egui::Event::PointerMoved(target)]);
+        assert_eq!(editor.relation_drag, Some((5, EndPosition::Target, 0)));
+        canvas_frame(
+            &mut editor,
+            &ctx,
+            vec![egui::Event::PointerButton {
+                pos: target,
+                button: egui::PointerButton::Primary,
+                pressed: false,
+                modifiers: egui::Modifiers {
+                    shift: automatic,
+                    ..Default::default()
+                },
+            }],
+        );
+        wait(&mut editor, &ctx, |e| e.document.revision() == 1);
+        let expected = SOURCE.replace("@first A -> B", "@first A -> C");
+        if automatic {
+            assert_eq!(editor.document.source(), expected);
+        } else {
+            assert!(editor.document.source().starts_with(&expected));
+        }
+        let diagram = &editor.preview.as_ref().unwrap().diagram;
+        assert!(diagram.layout.is_empty());
+        assert_eq!(diagram.relation_end_layout.len(), usize::from(!automatic));
+        if !automatic {
+            let rule = &diagram.relation_end_layout[0];
+            assert_eq!(rule.name, "first");
+            assert_eq!(rule.end, EndPosition::Target);
+            assert!(rule.side.is_some());
+        }
+        editor.document.undo();
+        assert_eq!(editor.document.source(), SOURCE);
+    }
 }
 
 #[test]

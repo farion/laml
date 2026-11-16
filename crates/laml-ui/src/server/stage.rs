@@ -119,10 +119,15 @@ impl Stage {
         if let Ok(canonical) = self.temp.path().canonicalize() {
             roots.push(canonical);
         }
-        roots
+        let mut prefixes: Vec<_> = roots
             .into_iter()
             .map(|p| format!("{}{}", p.display(), std::path::MAIN_SEPARATOR))
-            .collect()
+            .collect();
+        // On macOS, /var/... can be a suffix of canonical /private/var/....
+        // Remove the longer canonical root first, or an absolute /private/... remains.
+        prefixes.sort_by_key(|prefix| std::cmp::Reverse(prefix.len()));
+        prefixes.dedup();
+        prefixes
     }
     pub fn text(&self, mut text: String) -> String {
         for prefix in self.prefixes() {
