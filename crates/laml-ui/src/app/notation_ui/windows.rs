@@ -49,7 +49,11 @@ impl Editor {
             }
         }
         if let Some(mut creator) = self.notation_ui.create.take() {
-            let recipes = edit::catalog::recipes(self.notation());
+            let recipes = if self.notation() == Notation::Sequence {
+                sequence::recipes()
+            } else {
+                edit::catalog::recipes(self.notation())
+            };
             if creator.recipe >= recipes.len() {
                 return;
             }
@@ -77,10 +81,10 @@ impl Editor {
                     if old != creator.recipe {
                         if recipes[old].section != recipes[creator.recipe].section {
                             creator.parent = None;
+                            creator.before = None;
                         }
                         creator.values = self.construct_defaults(recipes[creator.recipe]);
                         creator.error = None;
-                        creator.before = None;
                     }
                     let recipe = recipes[creator.recipe];
                     let pool = self.notation() == Notation::Bpmn && recipe.title == "Pool";

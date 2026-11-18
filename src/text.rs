@@ -1,7 +1,7 @@
 //! Font-backed measurement and grapheme-safe label truncation.
 
 use harfrust::{FontRef, ShapeOptions, ShaperData, UnicodeBuffer};
-use std::{cell::RefCell, path::Path};
+use std::{cell::RefCell, collections::HashMap, path::Path};
 use unicode_segmentation::UnicodeSegmentation;
 
 pub const FONT: &[u8] = include_bytes!("../assets/Inter-Regular.otf");
@@ -9,10 +9,13 @@ pub const ITALIC_FONT: &[u8] = include_bytes!("../assets/Inter-Italic.otf");
 pub const GEIST: &[u8] = include_bytes!("../assets/Geist-Regular.otf");
 pub const GEIST_ITALIC: &[u8] = include_bytes!("../assets/Geist-Italic.otf");
 
+type Measurements = HashMap<(bool, u64, String), Result<f64, String>>;
+
 struct Faces {
     regular: Vec<u8>,
     italic: Option<Vec<u8>>,
     family: String,
+    measured: RefCell<Measurements>,
 }
 thread_local! {
     static ACTIVE: RefCell<Option<Faces>> = const { RefCell::new(None) };
@@ -85,18 +88,21 @@ pub fn with_fonts<T>(
             regular,
             italic,
             family: name,
+            measured: RefCell::new(HashMap::new()),
         }
     } else if modern {
         Faces {
             regular: GEIST.to_vec(),
             italic: Some(GEIST_ITALIC.to_vec()),
             family: "Geist".into(),
+            measured: RefCell::new(HashMap::new()),
         }
     } else {
         Faces {
             regular: FONT.to_vec(),
             italic: Some(ITALIC_FONT.to_vec()),
             family: "Inter".into(),
+            measured: RefCell::new(HashMap::new()),
         }
     };
     ACTIVE.with(|state| {
@@ -135,11 +141,29 @@ pub fn with_face<T>(italic: bool, f: impl FnOnce(&[u8], &str) -> T) -> Result<T,
 }
 
 pub fn measure(text: &str, font_size: f64) -> Result<f64, String> {
-    with_face(false, |face, _| measure_face(text, font_size, face))?
+    measure_cached(false, text, font_size)
 }
 
 pub fn measure_italic(text: &str, font_size: f64) -> Result<f64, String> {
-    with_face(true, |face, _| measure_face(text, font_size, face))?
+    measure_cached(true, text, font_size)
+}
+
+/// Memoization belongs to exactly one selected font context, never a document or
+/// global history. Batch preflight can reuse unchanged labels across candidates.
+fn measure_cached(italic: bool, text: &str, size: f64) -> Result<f64, String> {
+    ACTIVE.with(|state| {
+        let active = state.borrow();
+        let Some(faces) = active.as_ref() else {
+            return with_face(italic, |face, _| measure_face(text, size, face))?;
+        };
+        let key = (italic, size.to_bits(), text.to_owned());
+        if let Some(value) = faces.measured.borrow().get(&key) {
+            return value.clone();
+        }
+        let value = with_face(italic, |face, _| measure_face(text, size, face))?;
+        faces.measured.borrow_mut().insert(key, value.clone());
+        value
+    })
 }
 
 fn measure_face(text: &str, font_size: f64, face: &[u8]) -> Result<f64, String> {
@@ -233,5 +257,38 @@ mod tests {
     fn truncate_does_not_split_combining_sequence() {
         let width = measure("…", 14.0).unwrap() + 1.0;
         assert_eq!(ellipsize("e\u{301}f", width, 14.0, true).unwrap(), "…");
+    }
+}
+
+#[cfg(test)]
+mod cache_tests {
+    use super::*;
+    #[test]
+    fn measurements_are_exact_and_do_not_leak_between_font_contexts() {
+        for modern in [true, false, true] {
+            with_fonts(Path::new("measure.laml"), modern, None, None, || {
+                ACTIVE.with(|s| assert!(s.borrow().as_ref().unwrap().measured.borrow().is_empty()));
+                let regular = if modern { GEIST } else { FONT };
+                let italic = if modern { GEIST_ITALIC } else { ITALIC_FONT };
+                for _ in 0..3 {
+                    assert_eq!(
+                        measure("Backend API", 14.0),
+                        measure_face("Backend API", 14.0, regular)
+                    );
+                    assert_eq!(
+                        measure("Backend API", 18.0),
+                        measure_face("Backend API", 18.0, regular)
+                    );
+                    assert_eq!(
+                        measure_italic("Backend API", 14.0),
+                        measure_face("Backend API", 14.0, italic)
+                    );
+                    assert!(measure("\u{10ffff}", 14.0).is_err());
+                }
+                ACTIVE
+                    .with(|s| assert_eq!(s.borrow().as_ref().unwrap().measured.borrow().len(), 4));
+            })
+            .unwrap();
+        }
     }
 }

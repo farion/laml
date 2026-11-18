@@ -53,6 +53,58 @@ pub fn align(source: &str, owner: &str, target: &str) -> Result<Vec<Edit>, Strin
     Ok(edits)
 }
 
+/// Move away from an equal-height group without carrying its old alignment.
+pub fn move_to(
+    source: &str,
+    owner: &str,
+    line: usize,
+    before: usize,
+) -> Result<(Vec<Edit>, usize), String> {
+    let doc = laml::sequence::parse(source).map_err(|e| e.message)?;
+    standalone_line(&doc, owner)?;
+    let mut edits = Vec::new();
+    if let Some(group) = groups(&doc)
+        .into_iter()
+        .find(|g| g.iter().any(|id| id == owner))
+    {
+        for rule in doc
+            .destruction_layout
+            .iter()
+            .filter(|r| group.contains(&r.first))
+        {
+            let r = record(source, rule.line)?;
+            let body = code(&source[r.range.clone()]);
+            edits.push(Edit {
+                range: r.range.start + body.len() - body.trim_start().len()
+                    ..r.range.start + body.trim_end().len(),
+                replacement: String::new(),
+            });
+        }
+        let peers = group
+            .iter()
+            .filter(|id| id.as_str() != owner)
+            .collect::<Vec<_>>();
+        let rules = peers
+            .windows(2)
+            .map(|p| format!("{}! ? {}! : align=center-y", p[0], p[1]))
+            .collect::<Vec<_>>();
+        if !rules.is_empty() {
+            edits.extend(insert(source, "layout", None, None, &rules.join("\n"))?);
+        }
+    }
+    let map = |line| {
+        if line == 0 {
+            0
+        } else {
+            crate::relation_edit::remap_line(source, line, &edits)
+        }
+    };
+    let intermediate = apply(source, &edits)?;
+    let (movement, line) = super::sequence_drag::move_event(&intermediate, map(line), map(before))?;
+    let candidate = apply(&intermediate, &movement)?;
+    Ok((crate::graph_edit::difference(source, &candidate), line))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

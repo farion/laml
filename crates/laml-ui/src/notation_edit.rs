@@ -17,12 +17,28 @@ mod relations;
 pub mod sequence;
 pub mod sequence_activation;
 pub mod sequence_align;
+pub mod sequence_controls;
+pub mod sequence_create;
 mod sequence_dependencies;
 pub mod sequence_destruction;
+pub mod sequence_docking;
 pub mod sequence_drag;
+pub mod sequence_fragments;
+mod sequence_horizontal;
 pub mod sequence_insert;
+pub mod sequence_lifetime;
+pub mod sequence_lookup;
+pub mod sequence_options;
 pub mod sequence_participants;
+pub mod sequence_recipes;
 pub mod sequence_reconnect;
+mod sequence_resize;
+pub mod sequence_scope;
+pub mod sequence_scoped;
+mod sequence_snap;
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) mod sequence_target_geometry;
+pub mod sequence_targets;
 pub mod timing;
 mod transactions;
 pub use identity::rename;
@@ -250,3 +266,9 @@ pub fn insert(
 pub fn references_scope_for_creation(source: &str, record: &Record) -> String {
     references::scope(source, record, crate::notation::Notation::of(source))
 }
+
+#[cfg(test)]
+mod sequence_interaction_tests;
+
+#[cfg(test)]
+mod sequence_docking_tests;

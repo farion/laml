@@ -44,6 +44,7 @@ impl Editor {
             let y = preview.bounds.1 + f64::from(pointer.y - image.top()) / scale;
             if let Some(text) = laml_ui::inline_text::hit(preview, self.document.source(), x, y) {
                 self.graph.cancel_gesture();
+                self.cancel_sequence_interaction();
                 self.placement.cancel();
                 self.creation.drag = None;
                 self.notation_ui.drag = None;

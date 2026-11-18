@@ -160,7 +160,7 @@ pub(super) fn actor_side_detours(a: &BoxNode, b: &BoxNode, boxes: &[BoxNode]) ->
         return Vec::new(); // A genuinely vertical connection may use the head.
     }
     let rightward = uc.x > ac.x;
-    let mut options: Vec<_> = super::detours::corridors(a, b, boxes, false)
+    let mut options: Vec<_> = super::detours::corridors(a, b, boxes, false, 24.0)
         .into_iter()
         .filter(|points| {
             if points.len() < 4 {
@@ -335,7 +335,7 @@ mod candidate_tests {
             let source = format!("semantics {{\nA\nB\n}}\nlayout {{\n{rule}\n}}\n");
             let diagram = parse(&source).unwrap();
             let boxes = place(&diagram, &StyleSheet::default()).unwrap();
-            let options = candidates(&diagram, 0, 0, 1, &boxes, &[], 12.0, false);
+            let options = candidates(&diagram, 0, 0, 1, &boxes, &[], 12.0, false, 24.0);
             let valid: Vec<_> = options
                 .iter()
                 .filter(|points| route_is_clear(points, &boxes, &[]))

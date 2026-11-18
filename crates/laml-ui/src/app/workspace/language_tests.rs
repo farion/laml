@@ -53,7 +53,13 @@ fn settings_show_language_before_theming_and_localized_choices() {
             },
             |ui| {
                 ui.set_width(600.0);
-                settings::content(ui, &mut category, &mut prefs);
+                settings::content(
+                    ui,
+                    &mut category,
+                    &mut prefs,
+                    #[cfg(not(target_arch = "wasm32"))]
+                    &mut desktop::State::default(),
+                );
             },
         );
         output.textures_delta.clear();

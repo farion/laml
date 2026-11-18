@@ -148,6 +148,10 @@ impl Editor {
             Err(error) => self.export_error(error),
         }
     }
+    pub(super) fn open_export_dialog(&mut self) {
+        self.workflow.export_open = true;
+    }
+    #[cfg(test)]
     pub(super) fn export_controls(&mut self, ui: &mut egui::Ui) {
         ui.add_enabled_ui(
             self.can_edit_visually() && !self.workflow.busy() && !self.file_ui.busy(),

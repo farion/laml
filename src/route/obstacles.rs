@@ -25,7 +25,7 @@ impl Obstacles {
         };
         for (i, n) in boxes.iter().enumerate() {
             let endpoint = i == from || i == to;
-            let owned = n.is_container && !endpoint && (inside(from, n) || inside(to, n));
+            let owned = n.is_container && (inside(from, n) || inside(to, n));
             if (endpoint || n.is_container)
                 && matches!(n.shape, NodeShape::Rectangle | NodeShape::Note)
             {

@@ -10,10 +10,11 @@ pub fn render_for_editor(
     let mut effective = sheet.clone();
     effective.theme = diagram.theme;
     let sheet = &effective;
-    let (centers, widths, base_canvas_width) = lanes(diagram, sheet)?;
-    let canvas_width =
-        geometry::canvas_width(diagram, sheet, &centers, &widths, base_canvas_width)?;
+    let (mut centers, mut widths, base_canvas_width) = lanes(diagram, sheet)?;
     let nested = decompositions::prepare(diagram, sheet)?;
+    decompositions::fit_widths(diagram, &nested, &mut centers, &mut widths);
+    let mut canvas_width =
+        geometry::canvas_width(diagram, sheet, &centers, &widths, base_canvas_width)?;
     let header_height = diagram
         .participants
         .iter()
@@ -145,6 +146,7 @@ pub fn render_for_editor(
                     guard: frame.guard,
                     top: frame.top,
                     bottom: y - 24.0,
+                    self_right: 0.0,
                     separators: frame.separators,
                     messages: frame.messages,
                 });
@@ -183,6 +185,7 @@ pub fn render_for_editor(
                 participant,
                 id,
                 label,
+                at_send,
                 ..
             } => {
                 if !event_positions.iter().any(|(at, _)| *at == line) {
@@ -206,6 +209,11 @@ pub fn render_for_editor(
                     } else {
                         header_height
                     }
+                } else if *at_send {
+                    positioned
+                        .iter()
+                        .find(|(m, _)| m.line == line)
+                        .map_or(y, |(_, y)| *y)
                 } else {
                     y
                 };
@@ -231,12 +239,24 @@ pub fn render_for_editor(
                     y += font * 1.25 * (label.split('\n').count().saturating_sub(1)) as f64;
                 }
             }
-            Event::Deactivate { participant, .. } => {
+            Event::Deactivate {
+                participant,
+                at_send,
+                ..
+            } => {
                 let index = open
                     .iter()
                     .rposition(|bar| bar.participant == *participant)
                     .ok_or_else(|| format!("unmatched execution for '{participant}'"))?;
-                bars.push(open.remove(index).finish(y, Some(line)));
+                let end_y = if *at_send {
+                    positioned
+                        .iter()
+                        .find(|(m, _)| m.line == line)
+                        .map_or(y, |(_, y)| *y)
+                } else {
+                    y
+                };
+                bars.push(open.remove(index).finish(end_y, Some(line)));
             }
         }
         if !event_positions.iter().any(|(at, _)| *at == line) {
@@ -253,33 +273,6 @@ pub fn render_for_editor(
         &open,
         y,
     )?;
-    for region in &diagram.coregions {
-        let (threshold, delta) = coregions::reorder_region(diagram, region, &mut message_anchors)?;
-        let mut timeline = retime::Shiftables {
-            anchors: &mut message_anchors,
-            frames: &mut drawn_frames,
-            bars: &mut bars,
-            open: &mut open,
-            positions: &mut event_positions,
-            deaths: &mut destructions,
-            branches: &mut branch_starts,
-            decompositions: &mut visible_decompositions,
-            notes: &mut visible_notes,
-            continuations: &mut visible_continuations,
-            references: &mut references,
-            final_y: &mut y,
-        };
-        timeline.expand(region, threshold, delta);
-    }
-    activation_layout::apply(
-        diagram,
-        &mut positioned,
-        &mut message_anchors,
-        &mut bars,
-        &mut open,
-        &mut event_positions,
-        &mut destructions,
-    )?;
     {
         let mut timeline = retime::Shiftables {
             anchors: &mut message_anchors,
@@ -295,18 +288,15 @@ pub fn render_for_editor(
             references: &mut references,
             final_y: &mut y,
         };
-        reflow::message_text(
+        super::layout_pass::apply(
             diagram,
-            &positioned,
-            &centers,
+            &mut positioned,
+            &mut centers,
             &widths,
             &mut timeline,
             sheet,
         )?;
     }
-    destruction_layout::apply(diagram, &mut destructions, &mut event_positions, &mut bars)?;
-    activation_layout::verify(diagram, &bars, &open)?;
-    coregions::validate_downward(&message_anchors)?;
     for frame in &drawn_frames {
         for &index in &frame.messages {
             let anchor = &message_anchors[index];
@@ -331,6 +321,26 @@ pub fn render_for_editor(
         &positioned,
         &mut message_anchors,
     )?;
+    routing::reserve(
+        diagram,
+        &positioned,
+        &message_anchors,
+        sheet,
+        &mut centers,
+        &widths,
+    )?;
+    bar_attachments::attach(
+        diagram,
+        sheet,
+        &centers,
+        &widths,
+        &bars,
+        &positioned,
+        &mut message_anchors,
+    )?;
+    let routes = routing::build(diagram, &positioned, &message_anchors, sheet)?;
+    routing::frame_extents(diagram, &positioned, &routes, &mut drawn_frames);
+    canvas_width = routing::canvas_width(canvas_width, &centers, &widths, &routes);
     let mut svg = String::new();
     writeln!(svg, "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{canvas_width:.2}\" height=\"{bottom:.2}\" viewBox=\"0 0 {canvas_width:.2} {bottom:.2}\">").unwrap();
     if mode == TextMode::Embedded {
@@ -370,6 +380,7 @@ pub fn render_for_editor(
         &timeline,
         &positioned,
         &message_anchors,
+        &routes,
         &drawn_frames,
         frame_left,
         right,
@@ -397,15 +408,8 @@ pub fn render_for_editor(
     bars.sort_by_key(|bar| bar.opened.depth);
     executions::draw(&mut svg, diagram, sheet, &centers, &bars, &mut regions)?;
     let mut drawn_gates = Vec::new();
-    for ((m, _), anchor) in positioned.iter().zip(&message_anchors) {
-        messages::draw(
-            &mut svg,
-            sheet,
-            m,
-            anchor,
-            &mut drawn_gates,
-            diagram.allow_diagonal,
-        )?;
+    for (((m, _), anchor), route) in positioned.iter().zip(&message_anchors).zip(&routes) {
+        messages::draw(&mut svg, sheet, m, anchor, &mut drawn_gates, route)?;
     }
     coregions::draw(&mut svg, diagram, &centers, &message_anchors, sheet)?;
     let annotation_regions = annotations::draw(
@@ -432,6 +436,7 @@ pub fn render_for_editor(
         diagram,
         &centers,
         &bars,
+        &mut regions,
     )?;
     for (id, at) in &destructions {
         let x = x_of(diagram, &centers, id)?;
@@ -439,13 +444,22 @@ pub fn render_for_editor(
             x - 7.0, at - 7.0, x + 7.0, at + 7.0,
             x - 7.0, at + 7.0, x + 7.0, at - 7.0, escape(id)).unwrap();
     }
+    authoring::references(
+        &mut regions,
+        diagram,
+        &references,
+        frame_left,
+        base_right,
+        sheet,
+    )?;
     for (label, y) in references {
         let font = styles::fragment(sheet, "ref", None).font_size;
         let width = (base_right - frame_left).max(label_width_at(label, font)? + 52.0);
         frames::reference(&mut svg, label, frame_left, y, width, sheet)?;
     }
     continuations::draw(&mut svg, diagram, sheet, &centers, &visible_continuations)?;
-    let mut note_obstacles = text_collision::messages(&positioned, &message_anchors, sheet)?;
+    let mut note_obstacles =
+        text_collision::messages(&positioned, &message_anchors, sheet, diagram.allow_diagonal)?;
     note_obstacles.extend_from_slice(&reserved_frame_text);
     authoring::annotations(&mut regions, &visible_annotations, &annotation_regions);
     note_obstacles.extend(annotation_regions);

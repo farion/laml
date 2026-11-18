@@ -3,6 +3,7 @@ use super::*;
 use edit::bpmn_inline::Action;
 use laml::authoring::Region;
 mod connections;
+mod empty;
 
 #[derive(Default)]
 pub(super) struct State {
@@ -29,7 +30,10 @@ fn point(rect: egui::Rect, bounds: (f64, f64, f64, f64), x: f64, y: f64) -> egui
             ((y - bounds.1) * scale) as f32,
         )
 }
-fn plus_at(r: &Region) -> (f64, f64) {
+fn plus_at(r: &Region, doc: &laml::bpmn::Document) -> (f64, f64) {
+    if let Some(at) = empty::position(r, doc) {
+        return at;
+    }
     if !r.path.is_empty() {
         let length: f64 = r
             .path
@@ -77,6 +81,9 @@ fn near(r: &Region, p: egui::Pos2, rect: egui::Rect, bounds: (f64, f64, f64, f64
     })
 }
 impl Editor {
+    pub(in crate::app) fn bpmn_insertion_menu_open(&self) -> bool {
+        self.notation_ui.bpmn.menu_open
+    }
     pub(in crate::app) fn bpmn_canvas(&mut self, ui: &mut egui::Ui, rect: egui::Rect) -> bool {
         let revision = self.document.revision();
         if self.notation_ui.bpmn.revision != Some(revision)
@@ -97,19 +104,28 @@ impl Editor {
         if self.bpmn_connections(ui, rect) {
             return true;
         }
+        let Ok(doc) = laml::bpmn::parse(self.document.source()) else {
+            return false;
+        };
         let Some(preview) = &self.preview else {
             return false;
         };
         let bounds = preview.bounds;
         let regions = &preview.regions;
         let pointer = ui
-            .input(|i| i.pointer.hover_pos())
+            .input(|i| {
+                if self.responsive.touch {
+                    None
+                } else {
+                    i.pointer.hover_pos()
+                }
+            })
             .filter(|p| ui.clip_rect().contains(*p));
         if !self.notation_ui.bpmn.menu_open {
             let retained = self.notation_ui.bpmn.anchor.as_ref().is_some_and(|r| {
-                let (x, y) = plus_at(r);
+                let (x, y) = plus_at(r, &doc);
                 let at = point(rect, bounds, x, y)
-                    + if r.kind == "node" {
+                    + if r.kind == "node" && empty::position(r, &doc).is_none() {
                         egui::vec2(15.0, 0.0)
                     } else {
                         egui::Vec2::ZERO
@@ -150,9 +166,21 @@ impl Editor {
         let Some(anchor) = self.notation_ui.bpmn.anchor.clone() else {
             return false;
         };
-        let (x, y) = plus_at(&anchor);
+        if empty::position(&anchor, &doc).is_some()
+            && !self.notation_ui.bpmn.menu_open
+            && !pointer.is_some_and(|p| near(&anchor, p, rect, bounds))
+            && !(self.responsive.touch
+                && self
+                    .notation_ui
+                    .selected
+                    .as_ref()
+                    .is_some_and(|s| s.1.as_deref() == Some(&anchor.id)))
+        {
+            return false;
+        }
+        let (x, y) = plus_at(&anchor, &doc);
         let center = point(rect, bounds, x, y)
-            + if anchor.kind == "node" {
+            + if anchor.kind == "node" && empty::position(&anchor, &doc).is_none() {
                 egui::vec2(15.0, 0.0)
             } else {
                 egui::Vec2::ZERO
@@ -173,9 +201,6 @@ impl Editor {
             || self.notation_ui.bpmn.menu_open;
         let popup = egui::Popup::menu(&response);
         self.notation_ui.bpmn.menu_open = popup.is_open();
-        let Ok(doc) = laml::bpmn::parse(self.document.source()) else {
-            return owned;
-        };
         let mut chosen = None;
         let mut connect = false;
         popup.show(|ui| {
@@ -213,7 +238,9 @@ impl Editor {
                 } else {
                     "Add successor…"
                 };
-                action(title, Action::Successor(anchor.id.clone()));
+                if empty::position(&anchor, &doc).is_none() {
+                    action(title, Action::Successor(anchor.id.clone()));
+                }
                 if node.kind == laml::bpmn::Kind::Subprocess {
                     action("Add element inside…", Action::Content(anchor.line));
                 }

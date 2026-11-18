@@ -1,0 +1,49 @@
+settings {
+    theme: modern-dark
+    background: transparent
+}
+semantics {
+    API
+    Group1.Browser -> API : request
+    @Relation1 API -> API
+    Node1(label="Rectangle")
+    @Relation2 API -> Node1
+    Node2(label="Diamond")
+    @Relation3 Node1 -> Node2
+    @Relation4 Node1 -> Node2
+    package Group1(label="Package") {
+        @Node3 class Node3(label="Node3")
+        Browser
+        junction Node4
+    }
+    @Relation5 Group1.Browser -> Group1
+    @Relation6 Node3 -> Group1.Node4
+    @Relation7 Node2 -> Node3
+}
+
+layout {
+    relation[Relation1].source : side=top
+    Node2 < Node1
+    API above Node1
+    Node2 below Group1.Browser
+    Node2 ? Group1.Browser : align=left
+    relation[Relation4].source : side=right
+    relation[Relation4].target : side=bottom
+    Group1.Browser above Node3
+    Group1.Node4 > Node3
+    Node3 ? Group1.Node4 : align=bottom
+    relation[Relation6].source : side=right
+    relation[Relation6].target : side=left
+    relation[Relation7].source : side=top
+    relation[Relation7].target : side=bottom
+}
+
+styling {
+    node[Node1] {
+        shape: rectangle
+        icon: "alien"
+    }
+    node[Node2] {
+        shape: diamond
+    }
+}

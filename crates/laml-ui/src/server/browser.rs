@@ -80,6 +80,12 @@ fn execute(mut request: protocol::Request) -> protocol::Response {
         | Operation::RenderExport {
             source, address, ..
         }
+        | Operation::SequenceTargets {
+            source, address, ..
+        }
+        | Operation::SequenceOptions {
+            source, address, ..
+        }
         | Operation::GestureRender {
             source, address, ..
         } => {

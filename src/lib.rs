@@ -18,6 +18,7 @@ pub mod interaction_overview;
 pub mod layout;
 mod lex;
 pub mod parser;
+pub mod resource_notices;
 pub mod route;
 pub mod sequence;
 pub mod styles;

@@ -25,20 +25,32 @@ pub fn reconnect(
             }
         })
         .ok_or("Choose a message in the current interaction")?;
-    let already_started = activation_line == Some(line) && old.events.iter().any(|e| matches!(e, Event::Activate { participant, line: at, .. } if *at == line && participant == owner));
-    let activation_line = if already_started {
-        None
-    } else {
-        activation_line
-    };
-    let before = if already_started {
-        None
-    } else {
-        activation_line.or(before)
-    };
+    // A self-call's send and receive occurrences share a source line, but not
+    // a height. Docking the other endpoint transfers the existing start.
+    if activation_line == Some(line)
+        && let Some(start) = old.events.iter().find_map(|e| match e {
+            Event::Activate {
+                participant,
+                line: at,
+                ..
+            } if *at == line && participant == owner => Some(*at),
+            _ => None,
+        })
+    {
+        return super::sequence_align::snap_to_occurrence(
+            source,
+            owner,
+            start,
+            start,
+            false,
+            line,
+            !moving_source,
+        );
+    }
+    let before = activation_line.or(before);
     let activation_edit = if let Some(at) = activation_line {
-        if moving_source || !matches!(message.kind, MessageKind::Sync | MessageKind::Async) {
-            return Err("Only an incoming call can take over the start of this activation".into());
+        if !matches!(message.kind, MessageKind::Sync | MessageKind::Async) {
+            return Err("Only a call can take over the start of this activation".into());
         }
         Some(super::sequence_activation::consume_start(
             source, at, owner,
@@ -54,7 +66,7 @@ pub fn reconnect(
         if activation_line.is_some() {
             let marker = fields
                 .iter()
-                .find(|f| f.name == "Target activation / lifetime")
+                .find(|f| f.name == format!("{field_name} activation / lifetime"))
                 .map_or("", |f| f.value.as_str());
             if marker.is_empty() {
                 replacement.push('+');

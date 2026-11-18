@@ -8,9 +8,10 @@ instead edits files on that host.
 Source editing, the rendered preview and the properties panel share one undo/redo
 history. A visual transaction is applied only after the compiler successfully
 builds its candidate source, including layout and routing. The preview and CLI
-share the same placement/routing pipeline: difficult GNE connections can use
-longer paths and compact crossing underpasses, then larger automatic spacing
-if necessary. Authored layout constraints and endpoint sides stay mandatory;
+share the same placement/routing pipeline: Generic node-edge (GNE) connections
+first use canonical paths and shared obstacle corridors, preferring crossing-free
+routes. Difficult connections can use larger automatic spacing, longer paths
+and compact crossing underpasses if necessary. Authored layout constraints and endpoint sides stay mandatory;
 these automatic geometry changes do not rewrite the source. The rubber-band
 line during a drag is transient; dropping runs the full compiler.
 
@@ -63,21 +64,35 @@ Tools and properties adapt to that notation; changing a valid source `type:`
 declaration switches them without converting the document.
 
 Use **Add construct…** and **Elements…** for notation-specific structures,
-including sequence fragments/annotations, BPMN memberships and timing records.
+including BPMN memberships and timing records. Sequence diagrams use local plus
+menus for direct insertion; right-click menus contain actions for the clicked object.
 See [diagram-specific editing and construct inventory](editor-notations.md) for
 creation forms, semantic dragging, structural actions and presentation controls.
 The graph-editing controls below apply where the selected notation supports them.
 
 ## Workspace and controls
 
-The editor uses a three-pane workspace: source on the left, interactive preview
+On wide windows the editor shows source on the left, the interactive diagram
 in the center and selection properties on the right. Pane dividers are resizable.
+The rightmost button in the **Diagram** header toggles Properties. When space is
+limited, Properties opens as a right-hand overlay with an **X** to close it;
+selection and accepted edits remain intact. On very narrow windows, the header
+becomes a **Source / Diagram** selector. The initial compact view is Diagram;
+subsequent switches retain the chosen view, source cursor and diagram navigation.
+The diagram header is always titled **Diagram**, with its notation alongside
+when space permits.
 
 The **Help** (?) icon in the titlebar opens a compact explanation of
 source editing, visual editing, layout and export, with a link to the GitHub
 Getting Started documentation. The **About** (i) icon immediately to its right opens
 a separate dialog with the editor version, licenses and maintainer, plus buttons
 for **Imprint** and **Data Privacy Statement**.
+
+Desktop builds also provide **Settings → Updates** for explicit, checksum-verified
+editor updates and **Settings → CLI** for installing the matching CLI in the user
+account. These categories are absent from browser builds. See
+[desktop installation](editor-installation.md#updates-and-cli-installation-desktop-only)
+for paths, replacement confirmation and restart behavior.
 
 **Settings → Language** appears before Theming and offers **Auto** (default),
 **English** and **German**. Auto uses the browser's preferred languages or the
@@ -116,15 +131,24 @@ the pointer leaves the image or preview.
   Modal dialogs dim the background and block its pointer and keyboard actions;
   normal file-status windows are centered without blocking editing.
 - The tab bar lists open files, marks unsaved changes with a dot and provides an
-  **X** to close each tab. It scrolls horizontally when needed. **New** creates a
+  **X** to close each tab. When the tabs overflow, arrow buttons scroll by tab
+  boundaries; touch swiping and trackpad scrolling also work, without a visible
+  scrollbar. Opening or activating a tab brings it into view. **New** creates a
   separate named document after confirmation in the New file dialog; **Open** adds a tab or activates the file's existing
   tab without replacing any buffer. Each tab keeps its own source, undo/redo,
   text cursor, selection, view, preview, compiler worker and recovery snapshot.
-- The source pane has one **Source** header: icon buttons for **Save**, **Undo** and
-  **Redo**, then **Save as…**, **Export…**, a separator, and icon buttons for
-  **Find / replace…** and **Format source**. Header titles stay left-aligned and
-  action groups align right, including responsive overflow. The filename appears
-  in its tab.
+- The source pane has one **Source** header with **Show/Hide line numbers**,
+  **Find / replace…** and **Format source** actions. Document saving/downloading,
+  export and undo/redo belong to the global titlebar. Header titles stay
+  left-aligned and action groups align right. The filename appears in its tab.
+- The binary-download button and MCP hint disappear before titlebar action
+  groups collapse; phones do not show binary downloads. Each titlebar group is
+  either fully visible or inside its menu: **☰** on the left, **…** on the right.
+  Menu actions show both icon and text. Narrow footers keep status visible and
+  offer zoom, default relation type and additional information through **…**.
+- On touchscreens, tap a diagram element to select it and reveal its existing
+  controls. Tap free canvas to hide them. Source and diagram edits keep the same
+  shared undo history.
 - Responsive action bars move trailing actions into **…** when space runs out.
   Overflow entries retain their order, enabled state and behavior; icon actions
   include both their icon and text label. This applies to the source and diagram
@@ -185,7 +209,105 @@ labels, arrow captions and sequence message labels. **Enter** or clicking outsid
 the field confirms; **Esc** discards the draft. **Shift+Enter** inserts a newline
 where the notation supports it (for example node labels and sequence messages).
 Confirmation patches the `.laml` source as one compiler-checked undo step; element
-IDs and connection endpoints stay unchanged.
+IDs and connection endpoints stay unchanged. Unlabelled sequence messages can
+also be captioned by double-clicking their arrow; empty captions have no visible pill.
+
+For sequence fragments such as `opt`, `alt` and `loop`, double-click the condition
+or the block header to edit the condition without its rendered brackets. Operand
+conditions (`else`/`and`) are editable independently. Empty headers can receive a
+condition this way; editing a loop guard preserves its minimum/maximum bounds.
+Fragment conditions are single-line text. Nested fragments and inline
+decompositions retain their exact source references.
+
+### Sequence interactions
+
+Hover a participant head to reveal **+** on its left and right. Each immediately
+inserts a participant with an unused ID on that side. Rename it inline or in
+Properties afterward. Drag the head horizontally to reorder participants. An
+empty sequence offers **Add participant…**.
+
+On a lifeline, a small sensitive area starts a message drag; the separate **+** to
+its right opens a menu anchored directly to that icon. The compact menu offers
+notes, activations, optional/alternative/loop fragments and interaction references,
+filtered to actions that can actually be inserted here. **More…** expands the
+same menu with the remaining valid constructs and submenus for fragments,
+annotations and layout. Reopening the menu starts compact again. Each construct
+has a distinct semantic icon, reused consistently in insertion and object-action
+menus: for example, circular arrows for loops and a lock for critical fragments.
+
+The menu opens immediately using local semantic context checks, cached for the
+current document and insertion position. Building the menu does not request a
+preview, run layout/routing or wait for the backend. Uncommon constructs are
+checked only when **More…** is expanded. Subsequent graphical reference selection
+uses asynchronous compiler validation to accept only choices that can complete
+that construct. A prominent accent-backed banner identifies the required next
+selection and Escape cancellation. All valid reference targets stay highlighted
+throughout that selection step; hovering a target adds a stronger highlight.
+Message endpoints use visible circular markers, while element references highlight
+their rendered shapes. New elements use editable defaults
+and insert at the selected event boundary without an input dialog. Click the
+highlighted objects or message endpoints in the canvas in the prompted order. Escape cancels without changing
+the source; anonymous messages receive names only when the complete edit is
+applied. Each insertion is one undo step. The sequence header retains
+**Elements…**; insertion lives in the local plus menus. Object right-click menus
+retain their own applicable actions, such as changing a message type, wrapping
+that event in a fragment, adding an operand or deleting the clicked object.
+
+Escape or clicking outside closes the menu without changing the document. The plus stays on the
+free side of existing message arrows and endpoint grips; when both sides are
+occupied, it shifts to a nearby clear position. The menu follows the actual plus
+position without changing its insertion location. Insertion positions are
+between events and at the end. The footer selects the default message type. If that type
+cannot apply to the chosen docks, choose an applicable alternative.
+
+Hovering an activation reveals all of its message-start points and plus buttons
+as one group. Message-start points have larger hit areas and sit on the horizontal
+centerline of the activation, apart from the plus buttons and resize edges.
+
+The message ghost follows the pointer without waiting for target compilation.
+Target preflight runs asynchronously in the existing backend; valid targets appear
+when that result arrives. Releasing before it arrives retains the drop position
+and applies only a validated result. Escape or a document revision change cancels
+the pending gesture without applying an obsolete result.
+
+Activation top/bottom edges glow on hover and resize vertically in either
+direction. Separate small message-start areas sit inside those boundaries, away
+from the resize strips. Once a resize starts, horizontal guides show legal event
+heights and intervening positions. Nested activations have their own edges and
+must remain within their enclosing activation. Moving a message-bound edge away
+keeps the message in place and detaches that boundary.
+
+Hover a message to reveal endpoint grips. Drag a grip to reconnect that endpoint;
+drag the body to move the whole message in event order. Legal docks appear during
+the gesture. Circular targets mark insertion gaps; square targets and a highlighted
+edge mark available activation boundaries. Each activation dock has one centered
+marker and a drop area spanning the activation width, including its complete
+upper/lower edge. The marker does not select a left/right attachment side. Starting a message does not
+transfer the sender activation's start/end to that message. Docking at an available
+activation boundary writes an explicit height binding for that occurrence. Self-messages
+retain separate send/receive targets. Named/labelled activation declarations and
+existing message bindings remain intact; additional messages can dock at the same
+boundary without taking it over. During dragging, the moving arrow endpoint snaps
+to the highlighted target in the current image. The final layout is applied only
+after dropping; it does not displace the drag preview from its visible target.
+
+If a non-self message has different send and receive heights, dragging either
+endpoint also offers a target on its lifeline at the opposite endpoint's height.
+Dropping there straightens the message without moving the stationary endpoint or
+releasing its activation binding. The moved endpoint shares the same source-backed
+activation reference where applicable; self-messages retain their distinct heights.
+
+At an undestroyed lifeline's end, hover reveals a ghost **X**; click it to insert a
+standalone destruction. Drag an actual X to a legal gap or another destruction's
+height. Right-click an object for deletion and applicable actions. Message context
+menus offer validated type changes, including creation/deletion where applicable.
+Deleting an activation keeps its messages; deletion previews explain affected
+content. Fragment context actions insert an operand immediately or wrap the
+right-clicked event in the chosen fragment type, without a setup dialog.
+
+Icon controls appear on hover; drop targets remain visible throughout a drag.
+**Escape** cancels, and dropping outside legal targets makes no source change.
+Every committed gesture is one source-backed undo step.
 
 - Click a node, boundary port or arrow. Shift-click adds/removes individual elements.
   Clicking an arrow label also selects that arrow.
@@ -249,36 +371,47 @@ existing layout, ports and relations.
 
 ## Ports and arrows
 
-Hover a node to show four edge-arrow grips. Drag from an edge grip to fix the
-source side, or hold **Shift when pressing the grip** for an automatic source
-side. This choice is captured at the start and remains unchanged while dragging. The
-Diagram header's type selector applies only to new connections and is captured at
-drag start. Grips, their hit areas, port targets and endpoint handles scale with
-canvas zoom and object dimensions, not the UI font size. Self-connections and
+Hover a graph node to reveal four connection dots directly on its edges and an
+additional automatic-side dot inside its upper-left corner. Drag an edge dot to fix
+the source side; the automatic dot leaves it to the compiler. **Shift when
+pressing** also makes the source side automatic. The source-side choice and the
+selected default relation type are captured when the gesture starts. Controls
+retain usable screen-space hit areas when zoomed out. Self-connections and
 parallel relationships are supported.
 
-During dragging, node-side and port drop targets appear. Drop on an edge target
-for that fixed side, or on the node body to fix its nearest side. Hold **Shift when
-releasing** for an automatic target side, independently of the Shift state at the
-start. The preview follows this target-side choice. Drop on a port to connect to
-that port rather than its owner; Shift preserves explicit port endpoints. Ports
-can also be drag origins. Hover text on each grip explains both Shift gestures. These
-gestures add endpoint-side rules only when a side was explicitly chosen, never
-node-placement coordinates. Escape or dropping into empty space cancels.
+During dragging, node-side and port targets appear. Drop on an edge dot to fix
+that target side, or inside the node for automatic target-side selection.
+**Shift when releasing** also chooses an automatic target side, independently of
+the Shift state at the start. Named ports remain precise semantic endpoints,
+including with Shift. Escape or an empty drop cancels without changing source.
+
+Four separate **+** controls sit outside the hovered node, one per direction.
+They open a compact, context-valid element menu; **More…** expands it in place.
+The expanded menu uses the available screen height and scrolls only when its
+contents do not fit on screen.
+Choose an element to create it immediately with editable defaults, in the same
+container and on the chosen side. A valid selected default relation connects the
+existing node to the new one; an inapplicable default is omitted, not substituted.
+Notes use a supported annotation association. Members and ports are inserted in
+their owner rather than becoming sibling nodes. Interaction-overview menus offer
+explicit insertion into an unambiguous incident flow. Creation, relationship and
+placement form one undo step. Menu construction uses local source checks, not a
+backend render.
 
 The relation inspector edits labels, supported GNE operators and label placement
 (`near`, `along`, `inline`, or the diagram default). Label placement requires an
 actual label. These controls, local styles and endpoint sides support relation-only
 multi-selection.
 
-For one selected arrow, drag either blue endpoint handle to reconnect that semantic
-end. The old arrow is removed from the preview image during the gesture; the moving
+Hover an arrow end to reveal its reconnect grip; prior selection is not required.
+The grip lies a short distance along the stroke, leaving the node's edge dot
+available for creating another connection. Drag it to reconnect that semantic end. The old arrow is removed from the preview image during the gesture; the moving
 arrow and its markers/labels follow the pointer. Transient orthogonal routes use
 the compiler's actual SVG painter, including theme corner treatment, line widths,
 colors, dashes, markers, label typography and backgrounds. The checked drop still
 computes the final obstacle-aware route. The same side/port targets apply.
 Holding Shift when dropping resets only the moved end's side to automatic;
-otherwise the chosen target side is fixed. The opposite end and the relationship's
+an edge-dot drop fixes the chosen side, while a node-body drop stays automatic. The opposite end and the relationship's
 type, label and style are retained. Escape or an empty
 drop restores the original arrow without changing source.
 Source/target side controls set `left`, `right`, `top` or `bottom`; `auto` removes
@@ -328,6 +461,15 @@ panel also offers previewed attachment removal.
 
 ## Containers and deletion
 
+Hover over an empty container to reveal the **+** in its interior. It stays
+visible while its insertion menu is open and otherwise disappears when the
+pointer leaves the container. Click it to insert content directly into that
+container; the menu offers applicable elements, and
+the complete insertion is one undo step. In graph diagrams this does not add a
+relation to the enclosing frame. Empty containers have a roomy default body in
+both the editor and exported images. Explicit styled sizes retain precedence.
+Empty BPMN pools, lanes and expanded subprocesses also reveal an interior **+** on hover.
+
 Right-click a node, port, arrow or arrow label to open its context menu. It offers
 **Delete this node…**, **Delete this port…** or **Delete this arrow…**, respectively,
 as well as **Delete selection…** for the current node/port/arrow selection.
@@ -357,12 +499,38 @@ contextual styles that cannot be preserved cause rejection rather than silent lo
 
 ## Source editor
 
-The source pane has a synchronized line-number gutter. Compiler diagnostics mark
+Syntax highlighting follows the source context across all diagram notations.
+Sections and declaration keywords are violet; IDs and references blue, with explicit
+`@ids` in bold. Settings, layout attributes and LSS properties are turquoise;
+predefined values warm yellow and numbers orange. Quoted strings and unquoted
+labels share green. UML attribute, operation and parameter names are rose, with
+types in blue-turquoise and defaults retaining their string/number/value colors.
+LSS selectors distinguish element kinds, IDs, style classes and filter attributes.
+Operators stay prominent, punctuation and comments quieter. Light and dark editor
+appearance use matching semantic roles with separately tuned colors, independent
+of the diagram theme. Highlighting updates during incomplete input without compiling.
+The source pane uses bundled DejaVu Sans Mono regular/bold with matching character
+widths; its license is in `assets/DEJAVU-LICENSE.txt`.
+
+The source pane has a synchronized line-number gutter. Line numbers stay fixed
+when scrolling code horizontally and follow the text when scrolling vertically.
+Use the line-number button in the Source header to hide or show them; hiding
+reclaims their width without changing source or undo history. In narrow panes,
+the same action is available in the header overflow menu. Compiler diagnostics mark
 and underline the reported source line; **Go to reported line** selects and scrolls
 to it. Imported-file errors retain their own path and line rather than highlighting
 an unrelated line in the diagram. Diagnostics are tied to the source revision and
 are cleared immediately when that buffer changes. The compiler currently reports
 whole lines, so the editor does not guess narrower token spans.
+
+Right-click the source pane for **Copy**, **Paste**, **Cut** and **Delete**.
+Right-clicking preserves an existing text selection; without a selection, only
+Paste is enabled. Cut, paste and delete each use one shared undo step. In the
+browser, menu paste uses the system clipboard when the browser permits access
+(HTTPS or localhost). If access is blocked, the editor keeps the selection and
+prompts for `Ctrl/Cmd+V`; keyboard paste also works on HTTP hosts. Menu copy and
+cut support HTTP hosts as well. A delayed clipboard reply cannot overwrite a
+newer source revision; failed copying never removes text during a cut.
 
 Use **Find / replace…**, `Ctrl/Cmd+F` or `Ctrl/Cmd+H` to open literal search.
 `F3` finds the next match; `Shift+F3` finds the previous one, wrapping at EOF/start.
@@ -391,11 +559,33 @@ the source pane shows retained usage and warns when an edit could not retain an
 undo entry. Live and saved buffers are separate from that history budget. Undo in
 the search fields edits their drafts instead of undoing the diagram.
 
-`Ctrl+Space` or **Complete…** suggests tokens for the active source context, including
-settings, semantic declarations, layout addresses and style properties. Use arrows
-and Enter to accept, or Escape to dismiss. Completion is revision-bound and one
-shared undo action. Matching delimiter highlighting ignores strings, comments and
-free-form note text.
+Completion appears directly below the current token while typing a matching prefix
+or after an attribute/value separator. Compact single-line rows use the source font,
+with muted descriptions on the right and a full-width selection background. Arrow
+keys change the visible selection without moving the source caret. `Ctrl+Space` opens the list explicitly, including on
+an empty line. Suggestions cover all diagram notations, settings, layout and LSS:
+contextual properties, predefined values, relationships with their meanings,
+source references, sections and construct templates. Existing scalar properties
+are omitted. Short explanations accompany the entries. Suggestions use the current
+buffer locally, including unfinished source, without compiling or contacting the host.
+Comments and free-form labels stay quiet; quoted icon names and C4 appearances
+retain their catalog suggestions.
+
+`Tab` accepts the first suggestion immediately. No entry is initially selected:
+`Enter` remains an indented newline until `↑` or `↓` explicitly selects an entry.
+Click an entry to accept it, or use `Escape` to dismiss the list. Templates select
+the first editable placeholder; `Tab` / `Shift+Tab` navigate their fields,
+with placeholder navigation taking precedence over incidental suggestions.
+After the last field, `Tab` moves to the end of the inserted template; `Escape`
+ends placeholder navigation. Inserting a completion is one revision-bound shared
+undo action and preserves unrelated source, indentation and LF/CRLF.
+
+Typing `{`, `[`, `(` or a double quote inserts its matching closer in code, or
+wraps selected text. Typing an existing closer advances over it; Backspace between
+an empty pair removes both characters. Enter between brackets splits and indents
+the pair. Comments, strings and free-form labels are protected from delimiter
+insertion. Matching delimiter highlighting ignores strings, comments and free-form
+note text.
 
 **Format source**, or `Ctrl/Cmd+Shift+F` with the source focused, explicitly normalizes
 structural indentation. It preserves note bodies, comments, Unicode and LF/CRLF,
@@ -412,12 +602,34 @@ and middle-drag or Space+drag to pan. Zoom anchors at the pointer (viewport cent
 for buttons). View changes do not write layout coordinates into source.
 
 
-Drag a node's body away from its connection grips onto relative placement zones.
-The proposal shows changed and preserved constraints. Header alignment uses the
-last selected node as its reference, replaces conflicting rules only on the edited
-axis and preserves constraints on the other axis. Invalid layout leaves source
-unchanged and reports the failure in the graphical area. These gestures write
-layout intent, not hidden canvas coordinates.
+Drag a graph node's body to move it. An outline of the node follows the pointer;
+filled, outlined drop areas mark the four relative-placement sides of eligible
+reference nodes. For containers, these relative-placement targets sit outside
+the frame. The container's body below its heading is the **Move into container**
+target: drop there to change membership in one undo step. A body drop replaces
+the moved node's direct outside-placement rules against its new enclosing frame
+(or ancestors), such as `Node3 below Group1` when moving Node3 into Group1.
+Other layout rules, comments and semantic relationships remain intact. This works
+with empty and populated containers. Drag a contained node onto empty canvas
+outside all container frames to move it to the root level; **Move out of container**
+confirms that drop target. Drop onto a different container's body to move it there
+directly. Both changes are single undo steps, retain relations and use automatic
+layout rather than storing the pointer's coordinates. Headers, nodes, arrows and
+labels are not empty-canvas targets. Package/container headers are excluded from both
+highlighting and hit-testing, including nested headers. Incompatible targets are
+not offered; a target rejected by the asynchronous build is removed for that drag.
+Ordinary node centers are not placement targets. Containers move with their contents.
+
+Release on a valid area to submit the source-backed change. Fast releases wait
+for the matching asynchronous layout/routing check; holding until green is not
+necessary. Escape cancels, and a source revision change invalidates pending work.
+Dropping outside all valid areas leaves source unchanged and shows a dismissible,
+non-modal error toast for five seconds. Its Phosphor close icon dismisses it
+immediately; the shrinking ring around that icon shows the remaining time.
+Rejected layout proposals also use the toast. Relative movement replaces only directly conflicting rules on the edited
+axis, preserving other-axis and unrelated rules. Header alignment uses the last
+selected node as its reference. These gestures write layout intent, not hidden
+canvas coordinates.
 
 Save explicitly through the file controls. File operations run asynchronously.
 You can keep typing during a save: its acknowledgement marks only the submitted

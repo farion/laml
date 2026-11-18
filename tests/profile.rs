@@ -130,12 +130,15 @@ fn profile_scope_and_metaclass_identity_are_explicit() {
         ),
         "profile diagram requires",
     );
-    failure(
-        &source().replace(
-            "    metaclass Class",
-            "    profile Empty {\n    }\n    metaclass Class",
-        ),
-        "each profile",
+    let with_empty = graph(&source().replace(
+        "    metaclass Class",
+        "    profile Empty {\n    }\n    metaclass Class",
+    ));
+    assert!(
+        with_empty
+            .nodes
+            .iter()
+            .any(|n| n.id == "Empty" && n.container)
     );
     failure(
         &source().replace("metaclass Class", "metaclass Forgotten"),

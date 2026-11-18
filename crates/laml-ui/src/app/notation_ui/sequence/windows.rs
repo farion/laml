@@ -1,109 +1,81 @@
+//! Dialogs do not introduce a second connection mode.
 use super::*;
 impl Editor {
-    pub(in crate::app) fn sequence_window(&mut self, ctx: &egui::Context) {
-        let Some(mut form) = self.notation_ui.sequence.dialog.take() else {
+    pub(in crate::app) fn sequence_insertion_menu_open(&self) -> bool {
+        self.notation_ui.sequence.insert.is_some()
+    }
+    /// Same menu styling/placement as other diagram plus controls, not a dialog.
+    pub(super) fn sequence_insert_menu(&mut self, ui: &mut egui::Ui, scene: &Scene) {
+        let Some(point) = self.notation_ui.sequence.insert.take() else {
             return;
         };
-        let title = match form.action {
-            Action::Participant => "Add participant",
-            Action::Note => "Add note",
-            Action::SyncActivate => "Add call with activation",
-            Action::Async => "Add asynchronous message",
-            Action::Reply => "Add reply",
-            _ => "Add synchronous call",
-        };
-        let mut submit = false;
-        let mut cancel = false;
-        let dismissed = dialogs::show(ctx, ("sequence-insert", self.id), title, 400.0, |ui| {
-            if matches!(form.action, Action::Participant | Action::Note) {
-                ui.label(crate::i18n::tr("ID"));
-                self.source_ui
-                    .extra_drafts
-                    .push(ui.text_edit_singleline(&mut form.id).id);
-            } else {
-                ui.label(format!("{} → {}", form.anchor.owner, form.target));
-            }
-            if matches!(form.action, Action::Sync | Action::SyncActivate) {
-                let mut activation =
-                    form.action == Action::SyncActivate || form.anchor.activation_line.is_some();
-                if ui
-                    .add_enabled(
-                        form.anchor.activation_line.is_none(),
-                        egui::Checkbox::new(
-                            &mut activation,
-                            crate::i18n::tr("Start target activation"),
-                        ),
-                    )
-                    .changed()
-                {
-                    form.action = if activation {
-                        Action::SyncActivate
-                    } else {
-                        Action::Sync
-                    };
-                }
-            }
-            if form.anchor.activation_line.is_some() {
-                ui.label(crate::i18n::tr(
-                    "Uses the existing activation and keeps its end.",
-                ));
-            }
-            ui.label(if form.action == Action::Note {
-                crate::i18n::tr("Text")
-            } else {
-                crate::i18n::tr("Label")
+        let anchor = scene
+            .areas
+            .iter()
+            .find_map(|area| match &area.hit {
+                Hit::Insert(p) if p.dock == point.dock => Some(area.rect),
+                _ => None,
+            })
+            .unwrap_or_else(|| {
+                egui::Rect::from_center_size(
+                    point.at + egui::vec2(22.0, 0.0),
+                    egui::Vec2::splat(20.0),
+                )
             });
-            self.source_ui
-                .extra_drafts
-                .push(ui.text_edit_multiline(&mut form.label).id);
-            let label = if form.action == Action::Participant && form.label.trim().is_empty() {
-                form.id.as_str()
-            } else {
-                form.label.as_str()
-            };
-            let edits =
-                self.sequence_candidate(&form.anchor, form.action, &form.target, &form.id, label);
-            if let Err(error) = &edits {
-                ui.label(crate::i18n::message(error));
-            }
-            if let Some(error) = &form.error {
-                command_errors::details(ui, error);
-            }
-            ui.add_space(12.0);
-            ui.horizontal(|ui| {
-                submit = ui
-                    .add_enabled(
-                        edits.is_ok()
-                            && self.can_edit_visually()
-                            && self.document.revision() == form.revision,
-                        egui::Button::new(crate::i18n::tr("Add")),
-                    )
-                    .clicked();
-                cancel = ui.button(crate::i18n::tr("Cancel")).clicked();
-            });
-            if form.revision != self.document.revision() {
-                ui.label(crate::i18n::tr(
-                    "Document changed. Reopen this action at the desired insertion point.",
-                ));
-            }
+        painting::icon(ui, anchor.center(), egui_phosphor::regular::PLUS, true);
+        let mut open = true;
+        egui::Popup::new(
+            ui.make_persistent_id(("sequence-add", self.id)),
+            ui.ctx().clone(),
+            anchor,
+            ui.layer_id(),
+        )
+        .kind(egui::PopupKind::Menu)
+        .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
+        .layout(egui::Layout::top_down_justified(egui::Align::Min))
+        .style(egui::containers::menu::menu_style)
+        .gap(0.0)
+        .open_bool(&mut open)
+        .show(|ui| {
+            ui.spacing_mut().button_padding = egui::vec2(16.0, 6.0);
+            self.sequence_add_menu(ui, &point);
         });
-        if submit {
-            let label = if form.action == Action::Participant && form.label.trim().is_empty() {
-                form.id.as_str()
-            } else {
-                form.label.as_str()
-            };
-            match self.sequence_candidate(&form.anchor, form.action, &form.target, &form.id, label)
-            {
-                Ok(edits) => {
-                    self.notation_submit(title, edits, None);
-                    return;
-                }
-                Err(error) => form.error = Some(error),
-            }
+        if !open {
+            self.notation_ui.sequence.expanded = false;
         }
-        if !cancel && !dismissed {
-            self.notation_ui.sequence.dialog = Some(form);
+        if open && self.notation_ui.sequence.picker.is_none() && self.pending_command.is_none() {
+            self.notation_ui.sequence.insert = Some(point);
+        }
+    }
+    pub(in crate::app) fn sequence_window(&mut self, ctx: &egui::Context) {
+        if let Some(options) = self.notation_ui.sequence.alternatives.take() {
+            let mut selected = None;
+            let dismissed = dialogs::show(
+                ctx,
+                ("sequence-message-type", self.id),
+                "Choose relationship",
+                380.0,
+                |ui| {
+                    ui.label(crate::i18n::tr(
+                        "The default cannot connect these endpoints with the current properties.",
+                    ));
+                    for (index, (key, _)) in options.iter().enumerate() {
+                        let title = laml_ui::notation::Notation::Sequence
+                            .relation_types()
+                            .into_iter()
+                            .find(|r| r.key == key)
+                            .map_or(key.as_str(), |r| r.title);
+                        if actions::menu_button(ui, title) {
+                            selected = Some(index);
+                        }
+                    }
+                },
+            );
+            if let Some(i) = selected {
+                self.sequence_apply(options[i].1.clone());
+            } else if !dismissed {
+                self.notation_ui.sequence.alternatives = Some(options);
+            }
         }
     }
 }

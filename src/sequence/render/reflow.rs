@@ -20,7 +20,12 @@ pub(super) fn message_text(
         .saturating_mul(4)
         .max(1);
     for _ in 0..limit {
-        let bounds = text_collision::labeled_messages(positioned, timeline.anchors, sheet)?;
+        let bounds = text_collision::labeled_messages(
+            positioned,
+            timeline.anchors,
+            sheet,
+            diagram.allow_diagonal,
+        )?;
         let messages = (0..bounds.len()).find_map(|later| {
             (0..later)
                 .find(|earlier| bounds[*earlier].1.overlaps(bounds[later].1))

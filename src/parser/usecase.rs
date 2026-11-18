@@ -120,9 +120,6 @@ pub(super) fn validate(diagram: &Diagram) -> Result<(), ParseError> {
             "use-case diagram needs exactly one system boundary",
         ));
     }
-    if !diagram.nodes.iter().any(|n| n.kind == NodeKind::UseCase) {
-        return Err(error(1, "system boundary needs at least one use case"));
-    }
     for rule in &diagram.relation_end_layout {
         if matches!(rule.side, Some(PortSide::Top | PortSide::Bottom)) {
             let relation = diagram

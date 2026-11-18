@@ -3,14 +3,15 @@ param(
     [Parameter(Mandatory=$true)][int]$ParentPid,
     [Parameter(Mandatory=$true)][string]$Staged,
     [Parameter(Mandatory=$true)][string]$Destination,
-    [Parameter(Mandatory=$true)][string]$Helper
+    [Parameter(Mandatory=$true)][string]$Helper,
+    [int]$WaitForExit = 0
 )
 $ErrorActionPreference = 'Stop'
 $backup = "$Destination.previous-$ParentPid"
 try {
     $deadline = (Get-Date).AddSeconds(30)
     while (Get-Process -Id $ParentPid -ErrorAction SilentlyContinue) {
-        if ((Get-Date) -gt $deadline) { throw 'Timed out waiting for LAML to exit' }
+        if (-not $WaitForExit -and (Get-Date) -gt $deadline) { throw 'Timed out waiting for LAML to exit' }
         Start-Sleep -Milliseconds 200
     }
     if (Test-Path -LiteralPath $Destination) { Move-Item -LiteralPath $Destination -Destination $backup }

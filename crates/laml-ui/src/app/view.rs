@@ -134,6 +134,33 @@ impl Editor {
             ui.label("—%");
         }
     }
+    pub(super) fn view_menu(&mut self, ui: &mut egui::Ui) {
+        for (index, (label, icon)) in [
+            ("Fit", egui_phosphor::regular::CORNERS_OUT),
+            ("100%", egui_phosphor::regular::FRAME_CORNERS),
+            ("Zoom out", egui_phosphor::regular::MINUS),
+            ("Zoom in", egui_phosphor::regular::PLUS),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let item = toolbar::Item {
+                label,
+                icon: Some(icon),
+                enabled: true,
+                separator_before: false,
+            };
+            if toolbar::button(ui, &item, true).clicked() {
+                match index {
+                    0 => self.view.fit(),
+                    1 => self.view.actual_size(),
+                    2 => self.view.request_zoom(0.8),
+                    _ => self.view.request_zoom(1.25),
+                }
+                ui.close();
+            }
+        }
+    }
     pub(super) fn viewport_input(
         &mut self,
         ui: &mut egui::Ui,
@@ -143,6 +170,15 @@ impl Editor {
     ) -> bool {
         if dialogs::blocked(ui.ctx()) {
             return true;
+        }
+        // Popup windows may extend into adjacent panes. Keep drawing their owner
+        // even when the pointer has left the canvas; this is not navigation.
+        if egui::Popup::is_any_open(ui.ctx())
+            || self.sequence_insertion_menu_open()
+            || self.bpmn_insertion_menu_open()
+            || self.graph.insertion.is_some()
+        {
+            return false;
         }
         let hand = ui.input(|i| i.key_down(egui::Key::Space));
         let pan = response.dragged_by(egui::PointerButton::Middle)
@@ -168,12 +204,14 @@ impl Editor {
         let outside = ui
             .input(|i| i.pointer.interact_pos())
             .is_some_and(|p| !viewport.contains(p));
-        if hand || pan || outside {
+        let graph_drag = self.notation().graph()
+            && (self.placement.drag.is_some() || self.graph.gesture.is_some());
+        if hand || pan || (outside && !graph_drag) {
             self.creation.drag = None;
             self.relation_drag = None;
             self.placement.cancel();
         }
-        hand || pan || outside
+        hand || pan || (outside && !graph_drag)
     }
 }
 #[cfg(test)]

@@ -1,7 +1,11 @@
 //! Release discovery and explicit self-updates. Normal builds never wait for the network.
 
 mod cache;
+mod desktop;
 mod download;
+pub use desktop::{
+    Application, UpdateInfo, apply_update, check_update, cli_install_path, install_cli,
+};
 
 use serde_json::Value;
 use std::time::Duration;
@@ -134,29 +138,18 @@ pub fn refresh_cache() {
 
 /// An explicit `laml update` invocation. Never called by the background check.
 pub fn update() -> Result<String, String> {
-    let target = target().ok_or("no release binary for this OS/architecture")?;
-    let release = latest()?.ok_or("no published LAML release is available")?;
-    if release.version <= version(VERSION).expect("valid package version") {
+    let info = check_update(Application::Cli)?;
+    if !info.available {
         return Ok(format!("LAML v{VERSION} is already up to date"));
     }
-    let archive_name = format!(
-        "laml-{}-{target}.{}",
-        release.tag,
-        if cfg!(windows) { "zip" } else { "tar.gz" }
-    );
-    let archive = release.asset(&archive_name)?;
-    let checksums = release.asset("SHA256SUMS")?;
-    let bytes = fetch(&archive.url, 64_000_000, Duration::from_secs(120))?;
-    let sums = fetch(&checksums.url, 65_536, Duration::from_secs(10))?;
-    download::verify(&bytes, &sums, &archive_name, archive.digest.as_deref())?;
-    download::install(&bytes, &release.tag, target)?;
+    apply_update(Application::Cli, &info.tag)?;
     if cfg!(windows) {
         Ok(format!(
             "LAML {} is staged; restart laml after this process exits",
-            release.tag
+            info.tag
         ))
     } else {
-        Ok(format!("LAML {} installed", release.tag))
+        Ok(format!("LAML {} installed", info.tag))
     }
 }
 

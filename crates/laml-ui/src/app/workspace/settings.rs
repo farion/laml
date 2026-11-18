@@ -6,12 +6,17 @@ pub(super) enum Category {
     #[default]
     Language,
     Theming,
+    #[cfg(not(target_arch = "wasm32"))]
+    Updates,
+    #[cfg(not(target_arch = "wasm32"))]
+    Cli,
 }
 
 pub(super) fn content(
     ui: &mut egui::Ui,
     category: &mut Category,
     preferences: &mut editor_theme::Preferences,
+    #[cfg(not(target_arch = "wasm32"))] desktop: &mut desktop::State,
 ) {
     let width = ui.available_width();
     // Include the shared title row and 16-point frame padding in the 4:3 size.
@@ -30,6 +35,10 @@ pub(super) fn content(
                     for (value, label) in [
                         (Category::Language, "Language"),
                         (Category::Theming, "Theming"),
+                        #[cfg(not(target_arch = "wasm32"))]
+                        (Category::Updates, "Updates"),
+                        #[cfg(not(target_arch = "wasm32"))]
+                        (Category::Cli, "CLI"),
                     ] {
                         if ui
                             .add_sized(
@@ -49,6 +58,10 @@ pub(super) fn content(
                 ui.set_min_height(height);
                 ui.set_width(ui.available_width());
                 match category {
+                    #[cfg(not(target_arch = "wasm32"))]
+                    Category::Updates => desktop.updates(ui),
+                    #[cfg(not(target_arch = "wasm32"))]
+                    Category::Cli => desktop.cli(ui),
                     Category::Language => {
                         ui.heading(crate::i18n::tr("Language"));
                         ui.add_space(16.0);

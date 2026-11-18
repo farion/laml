@@ -44,7 +44,7 @@ impl Editor {
                     let title=visibility_title(visibility);
                     egui::ComboBox::from_id_salt("access-visibility").width(ui.available_width()).selected_text(crate::i18n::tr(title)).show_ui(ui,|ui| {
                         for value in [None,Some('+'),Some('-'),Some('#'),Some('~')] {ui.selectable_value(&mut visibility,value,crate::i18n::tr(visibility_title(value)));}
-                    }).response.on_hover_text(crate::i18n::tr("Access visibility, not whether this node is drawn. Use Style → Display to hide an element."));
+                    }).response.on_hover_ui(|ui| hover_help::show(ui,crate::i18n::tr("Access visibility, not whether this node is drawn. Use Style → Display to hide an element.")));
                     if visibility!=node.visibility {self.change_declaration(&node.id,Change::Visibility(visibility));}
                 });
             }

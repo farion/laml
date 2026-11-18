@@ -23,6 +23,9 @@ pub struct Region {
     pub width: f64,
     pub height: f64,
     pub path: Vec<(f64, f64)>,
+    /// Actual visible stroke fragments, including bridges and underpass gaps.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pick_paths: Vec<Vec<(f64, f64)>>,
 }
 impl Region {
     pub fn rect(
@@ -44,6 +47,7 @@ impl Region {
             width,
             height,
             path: vec![],
+            pick_paths: vec![],
         }
     }
     pub fn stroke(id: impl Into<String>, kind: &str, line: usize, path: Vec<(f64, f64)>) -> Self {
@@ -69,6 +73,7 @@ impl Region {
             width: r - x,
             height: b - y,
             path,
+            pick_paths: vec![],
         }
     }
 }

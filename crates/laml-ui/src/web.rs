@@ -71,6 +71,9 @@ pub async fn start_editor(
             canvas,
             eframe::WebOptions::default(),
             Box::new(move |cc| {
+                crate::web_clipboard::install(&cc.egui_ctx).map_err(|error| {
+                    std::io::Error::other(format!("Clipboard setup: {error:?}"))
+                })?;
                 egui_extras::install_image_loaders(&cc.egui_ctx);
                 crate::app::Editor::install_appearance(&cc.egui_ctx);
                 let editor = crate::app::Editor::with_services(

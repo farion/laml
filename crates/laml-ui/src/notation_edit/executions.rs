@@ -30,6 +30,7 @@ fn owner(
                         participant: p,
                         id: Some(name),
                         line,
+                        ..
                     } if p == participant && name == id => Some(line.saturating_add_signed(offset)),
                     _ => None,
                 })
@@ -94,6 +95,20 @@ fn rename(
         let matches = |local: &str| {
             local == participant || (!scope.is_empty() && format!("{scope}.{local}") == participant)
         };
+        if r.section == "layout" {
+            for span in super::references::spans(text, "layout", false) {
+                let value = &text[span.clone()];
+                if value
+                    .strip_suffix(&format!(".{old}"))
+                    .is_some_and(|owner| matches(owner))
+                {
+                    edits.push(Edit {
+                        range: r.range.start + span.end - old.len()..r.range.start + span.end,
+                        replacement: new.into(),
+                    });
+                }
+            }
+        }
         if r.section == "layout"
             || r.heading.starts_with("at[")
             || r.heading.starts_with("between[")
@@ -135,4 +150,51 @@ fn rename(
     let candidate = apply(source, &edits)?;
     laml::sequence::parse(&candidate).map_err(|e| e.message)?;
     Ok(edits)
+}
+
+/// A marker-bearing named message also supplies the execution's local name.
+pub(super) fn message_aliases(source: &str, id: &str, line: usize) -> Vec<String> {
+    fn collect(
+        doc: &SequenceDiagram,
+        id: &str,
+        line: usize,
+        offset: isize,
+        prefix: &str,
+        out: &mut Vec<String>,
+    ) {
+        for event in &doc.events {
+            if let Event::Message(m) = event
+                && m.line.saturating_add_signed(offset) == line
+                && m.name
+                    .as_ref()
+                    .is_some_and(|name| format!("{prefix}{name}") == id)
+            {
+                for e in laml::sequence::activation_layout::executions(doc)
+                    .into_iter()
+                    .filter(|e| e.start == m.line && e.name == m.name)
+                {
+                    out.push(format!(
+                        "{prefix}{}.{}",
+                        e.owner,
+                        m.name.as_deref().unwrap()
+                    ));
+                }
+            }
+        }
+        for d in &doc.decompositions {
+            collect(
+                &d.diagram,
+                id,
+                line,
+                offset + d.line as isize - 5,
+                &format!("{prefix}{}.", d.parent),
+                out,
+            );
+        }
+    }
+    let mut out = Vec::new();
+    if let Ok(doc) = laml::sequence::parse(source) {
+        collect(&doc, id, line, 0, "", &mut out);
+    }
+    out
 }

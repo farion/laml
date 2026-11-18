@@ -128,14 +128,24 @@ impl Editor {
                                 ],
                                 button,
                             )
-                            .on_hover_text(crate::i18n::tr(
-                                "Choose a node icon from the searchable Phosphor catalogue",
-                            ))
+                            .on_hover_ui(|ui| {
+                                hover_help::show(
+                                    ui,
+                                    crate::i18n::tr(
+                                        "Choose a node icon from the searchable Phosphor catalogue",
+                                    ),
+                                )
+                            })
                             .clicked();
                         reset = appearance::property_action(ui, true)
-                            .on_hover_text(crate::i18n::tr(
-                                "Reset local icon override (inherited styles remain)",
-                            ))
+                            .on_hover_ui(|ui| {
+                                hover_help::show(
+                                    ui,
+                                    crate::i18n::tr(
+                                        "Reset local icon override (inherited styles remain)",
+                                    ),
+                                )
+                            })
                             .clicked();
                     })
                 });

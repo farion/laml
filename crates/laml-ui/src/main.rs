@@ -30,6 +30,10 @@ fn main() -> eframe::Result {
         return Ok(());
     }
 
+    if args.first().is_some_and(|arg| arg == "--licenses") {
+        println!("{}", laml_ui::app::bundled_license_notices());
+        return Ok(());
+    }
     if args.first().is_some_and(|arg| arg == "--version") {
         println!("laml-ui {}", env!("CARGO_PKG_VERSION"));
         return Ok(());

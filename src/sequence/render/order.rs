@@ -40,6 +40,7 @@ pub(super) fn endpoint(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn draw(
     svg: &mut String,
     rules: &[&OrderingRule],
@@ -48,12 +49,19 @@ pub(super) fn draw(
     diagram: &SequenceDiagram,
     centers: &[f64],
     bars: &[DrawnExecution],
+    regions: &mut Vec<crate::authoring::Region>,
 ) -> Result<(), String> {
     let paint = styles::ordering(sheet);
     for (index, rule) in rules.iter().enumerate() {
         let (from_x, from_y) = endpoint(&rule.first, anchors, diagram, centers, bars)?;
         let (to_x, to_y) = endpoint(&rule.second, anchors, diagram, centers, bars)?;
         let lane = from_x.max(to_x) + 25.0 + index as f64 * 9.0;
+        regions.push(crate::authoring::Region::stroke(
+            format!("line:{}", rule.line),
+            "ordering",
+            rule.line,
+            vec![(from_x, from_y), (lane, from_y), (lane, to_y), (to_x, to_y)],
+        ));
         writeln!(svg, "<path d=\"M{from_x:.2},{from_y:.2} H{lane:.2} V{to_y:.2} H{to_x:.2}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\" stroke-dasharray=\"2 3\" data-general-ordering=\"true\" />",
             paint.color, paint.width).unwrap();
         arrows::draw(

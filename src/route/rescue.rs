@@ -23,6 +23,7 @@ fn docks(
     source: bool,
     previous: &[Route],
     check: &Obstacles,
+    terminal_gap: f64,
 ) -> Vec<Dock> {
     let rel = &d.relations[index];
     let id = if source { &rel.from } else { &rel.to };
@@ -76,7 +77,8 @@ fn docks(
             )
         };
         for port in ports {
-            for distance in [32.0, 64.0, 128.0, width + 64.0] {
+            for distance in [terminal_gap, 32.0, 64.0, 128.0, width + terminal_gap + 32.0] {
+                let distance = distance * super::container_ends::polarity(b, &boxes[other]);
                 let mut stub = port;
                 match side {
                     PortSide::Left => stub.x -= distance,
@@ -144,6 +146,7 @@ pub(super) fn candidates(
     index: usize,
     boxes: &[BoxNode],
     previous: &[Route],
+    terminal_gap: f64,
 ) -> Vec<Vec<Point>> {
     if !matches!(
         d.settings.diagram_type,
@@ -162,8 +165,28 @@ pub(super) fn candidates(
         return Vec::new();
     }
     let check = Obstacles::new(boxes, from, to);
-    let starts = docks(d, index, boxes, from, to, true, previous, &check);
-    let ends = docks(d, index, boxes, to, from, false, previous, &check);
+    let starts = docks(
+        d,
+        index,
+        boxes,
+        from,
+        to,
+        true,
+        previous,
+        &check,
+        terminal_gap,
+    );
+    let ends = docks(
+        d,
+        index,
+        boxes,
+        to,
+        from,
+        false,
+        previous,
+        &check,
+        terminal_gap,
+    );
     if starts.is_empty() || ends.is_empty() {
         return Vec::new();
     }
@@ -305,7 +328,7 @@ mod tests {
             b.width = w;
             b.height = h;
         }
-        let paths = candidates(&d, 0, &boxes, &[]);
+        let paths = candidates(&d, 0, &boxes, &[], 32.0);
         assert!(
             !paths.is_empty(),
             "a cage with a lower opening is not an impossible connection"

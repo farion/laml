@@ -6,6 +6,7 @@ mod authoring;
 mod bar_attachments;
 mod continuations;
 mod coregions;
+mod crossings;
 mod decompositions;
 mod destruction_layout;
 mod executions;
@@ -13,13 +14,17 @@ mod frames;
 mod gates;
 mod geometry;
 mod lane_gaps;
+mod layout_pass;
 mod lifetimes;
 pub mod message_geometry;
 mod messages;
 mod notes;
+mod occurrence_checks;
+mod occurrence_layout;
 mod order;
 mod reflow;
 mod retime;
+mod routing;
 mod styles;
 mod text_collision;
 use super::{Event, Message, MessageKind, SequenceDiagram};
@@ -51,6 +56,7 @@ struct DrawnFrame {
     guard: String,
     top: f64,
     bottom: f64,
+    self_right: f64,
     separators: Vec<Separator>,
     messages: Vec<usize>,
 }

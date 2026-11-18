@@ -30,7 +30,9 @@ impl Editor {
             let selected = self.notation_ui.selected.as_ref().is_some_and(|s| {
                 s.1.as_deref() == Some(r.id.as_str()) && s.2 == self.document.revision()
             });
-            if !selected && !pointer.is_some_and(|p| near(r, p, rect, bounds)) {
+            if !selected
+                && (self.responsive.touch || !pointer.is_some_and(|p| near(r, p, rect, bounds)))
+            {
                 continue;
             }
             for (from, at) in [(true, r.path[0]), (false, *r.path.last().unwrap())] {

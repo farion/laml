@@ -131,6 +131,7 @@ pub(super) fn candidates(
     target_side: Option<PortSide>,
     previous: &[Route],
     obstacles: Option<&[BoxNode]>,
+    terminal_gap: f64,
 ) -> Vec<Vec<Point>> {
     let mut result = Vec::new();
     let ca = super::geometry::center(a);
@@ -171,8 +172,8 @@ pub(super) fn candidates(
     );
     let tracks = obstacles.map(|boxes| {
         (
-            super::detours::tracks(boxes, true, (ca.x + cb.x) / 2.0, true),
-            super::detours::tracks(boxes, false, (ca.y + cb.y) / 2.0, true),
+            super::detours::tracks(boxes, true, (ca.x + cb.x) / 2.0, true, terminal_gap),
+            super::detours::tracks(boxes, false, (ca.y + cb.y) / 2.0, true, terminal_gap),
         )
     });
     let outer_x = previous
@@ -322,7 +323,7 @@ pub(super) fn candidates(
                 }
             }
             for node in [a, b] {
-                for track in [node.x - 24.0, node.x + node.width + 24.0] {
+                for track in [node.x - terminal_gap, node.x + node.width + terminal_gap] {
                     result.push(vec![
                         start,
                         Point {
@@ -333,7 +334,7 @@ pub(super) fn candidates(
                         end,
                     ]);
                 }
-                for track in [node.y - 24.0, node.y + node.height + 24.0] {
+                for track in [node.y - terminal_gap, node.y + node.height + terminal_gap] {
                     result.push(vec![
                         start,
                         Point {
@@ -359,8 +360,8 @@ fn valid_departure(
     allow_slant: bool,
     visible_top: Option<(f64, f64)>,
 ) -> bool {
-    if node.shape != NodeShape::Rectangle
-        || !matches!(
+    if node.shape != NodeShape::Diamond
+        && !matches!(
             node.kind,
             crate::syntax::NodeKind::Generic
                 | crate::syntax::NodeKind::Package
@@ -381,6 +382,49 @@ fn valid_departure(
             axial >= 20.0 - epsilon && lateral.abs() < epsilon
         }
     };
+    if let Some(boundary) = node
+        .ports
+        .iter()
+        .find(|p| (p.x - port.x).abs() < epsilon && (p.y - port.y).abs() < epsilon)
+    {
+        // Named ports may sit between a shaped node's extremes. Their authored
+        // side remains the direction contract, rather than forcing a vertex.
+        return match boundary.side {
+            PortSide::Left => normal(-dx, dy),
+            PortSide::Right => normal(dx, dy),
+            PortSide::Top => normal(-dy, dx),
+            PortSide::Bottom => normal(dy, dx),
+        };
+    }
+    if matches!(node.shape, NodeShape::Diamond | NodeShape::Ellipse) {
+        // A vertex/extreme is a directional dock, not a point that may be
+        // approached tangentially just because the segment stays outside.
+        for side in [
+            PortSide::Left,
+            PortSide::Right,
+            PortSide::Top,
+            PortSide::Bottom,
+        ] {
+            let dock = forced_port(node, side);
+            if (dock.x - port.x).abs() < epsilon && (dock.y - port.y).abs() < epsilon {
+                return match side {
+                    PortSide::Left => normal(-dx, dy),
+                    PortSide::Right => normal(dx, dy),
+                    PortSide::Top => normal(-dy, dx),
+                    PortSide::Bottom => normal(dy, dx),
+                };
+            }
+        }
+        if node.shape == NodeShape::Diamond && !allow_slant {
+            return false;
+        }
+        // Preserve deliberately diagonal/non-cardinal contour attachments, but
+        // reject tangent or inward departures there as well.
+        let c = super::geometry::center(node);
+        let (rx, ry) = (node.width / 2.0, node.height / 2.0);
+        let outward = ((port.x - c.x) / (rx * rx), (port.y - c.y) / (ry * ry));
+        return dx.hypot(dy) >= 20.0 - epsilon && dx * outward.0 + dy * outward.1 > epsilon;
+    }
     let left = (port.x - node.x).abs() < epsilon && normal(-dx, dy);
     let right = (port.x - node.x - node.width).abs() < epsilon
         && visible_top.is_none_or(|(_, tab_height)| port.y >= node.y + tab_height - epsilon)
@@ -411,11 +455,22 @@ impl<'a> Contours<'a> {
     }
     pub(super) fn normal(&self, points: &[Point], slant: bool) -> bool {
         points.len() >= 2
-            && valid_departure(self.a, points[0], points[1], slant, self.tabs[0])
+            && valid_departure(
+                self.a,
+                points[0],
+                super::container_ends::departure(self.a, self.b, points[0], points[1]),
+                slant,
+                self.tabs[0],
+            )
             && valid_departure(
                 self.b,
                 *points.last().unwrap(),
-                points[points.len() - 2],
+                super::container_ends::departure(
+                    self.b,
+                    self.a,
+                    *points.last().unwrap(),
+                    points[points.len() - 2],
+                ),
                 slant,
                 self.tabs[1],
             )

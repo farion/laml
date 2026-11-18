@@ -2,7 +2,7 @@
 use super::*;
 use laml::sequence::{Event, SequenceDiagram};
 
-fn bindings(doc: &SequenceDiagram) -> Vec<(String, usize, usize)> {
+pub(super) fn bindings(doc: &SequenceDiagram) -> Vec<(String, usize, usize)> {
     let mut open: Vec<(String, usize)> = Vec::new();
     let mut frames = Vec::new();
     let mut pairs = Vec::new();
@@ -77,7 +77,7 @@ fn check(
     }
     Ok(())
 }
-fn insertion_parent(source: &str, before: usize) -> Result<Option<usize>, String> {
+pub(super) fn insertion_parent(source: &str, before: usize) -> Result<Option<usize>, String> {
     if before == 0 {
         return Ok(None);
     }

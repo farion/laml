@@ -1,5 +1,5 @@
 //! Compare complete, feasible route sets, including alternative allocation orders.
-use super::{Route, RouteError, ranking, router::route_in_order, routing_order};
+use super::{Route, RouteError, pass_cache::PassCache, ranking, routing_order};
 use crate::{geometry::BoxNode, styles::StyleSheet, syntax::Diagram};
 
 pub(super) fn route(
@@ -7,6 +7,7 @@ pub(super) fn route(
     boxes: &[BoxNode],
     sheet: &StyleSheet,
     stable: Result<Vec<Route>, RouteError>,
+    cache: &mut PassCache,
 ) -> Result<Vec<Route>, RouteError> {
     let (mut best, mut failure) = match stable {
         Ok(routes) => (Some(routes), None),
@@ -19,7 +20,7 @@ pub(super) fn route(
         orders.extend(routing_order::alternatives(diagram, boxes));
     }
     for order in orders {
-        match route_in_order(diagram, boxes, sheet, Some(usize::MAX), &order) {
+        match cache.run(diagram, boxes, sheet, Some(usize::MAX), &order, false) {
             Ok(routes) => {
                 if best.as_ref().is_none_or(|old| {
                     ranking::no_worse_clearance(&routes, old, boxes)
@@ -44,7 +45,7 @@ pub(super) fn route(
     if best.is_none() {
         let order: Vec<_> = (0..diagram.relations.len()).collect();
         for cutoff in 0..diagram.relations.len().min(12) {
-            if let Ok(routes) = route_in_order(diagram, boxes, sheet, Some(cutoff), &order) {
+            if let Ok(routes) = cache.run(diagram, boxes, sheet, Some(cutoff), &order, false) {
                 best = Some(routes);
                 break;
             }

@@ -3,9 +3,11 @@ use egui::text::{CCursor, CCursorRange, LayoutJob};
 
 impl Editor {
     pub(super) fn source_editor(&mut self, ui: &mut egui::Ui) {
-        self.source_toolbar(ui);
+        self.source_context_tick(ui.ctx());
         self.advanced_source(ui);
+        self.source_toolbar(ui);
         let mut text = self.document.source().to_owned();
+        let before_edit = text.clone();
         let explicit_jump = self.source_ui.jump.take();
         let focus = explicit_jump.is_some();
         let jump = explicit_jump
@@ -72,147 +74,185 @@ impl Editor {
                 .iter()
                 .any(|e| matches!(e, egui::Event::Paste(_) | egui::Event::Cut))
         });
-        egui::ScrollArea::both().id_salt("source").show(ui, |ui| {
-            ui.horizontal_top(|ui| {
-                let digits = (text.lines().count().max(1).ilog10() + 1) as f32;
-                let (gutter, _) = ui.allocate_exact_size(
-                    egui::vec2(digits * 9.0 + 16.0, 0.0),
-                    egui::Sense::hover(),
-                );
-                let mut layouter = |ui: &egui::Ui, buffer: &dyn egui::TextBuffer, _width: f32| {
-                    ui.fonts_mut(|fonts| {
-                        let mut job = highlight(buffer.as_str(), ui.visuals().text_color());
-                        if diagnosed_source.as_deref() == Some(buffer.as_str())
-                            && let Some(range) = &diagnostic
-                        {
-                            mark(&mut job, range, true);
-                        }
-                        if diagnosed_source.as_deref() == Some(buffer.as_str())
-                            && let Some((a, b)) = &pair
-                        {
-                            mark(&mut job, a, false);
-                            mark(&mut job, b, false);
-                        }
-                        fonts.layout_job(job)
-                    })
-                };
-                let mut output = egui::TextEdit::multiline(&mut text)
-                    .id_salt("source-text")
-                    .code_editor()
-                    .frame(egui::Frame::NONE)
-                    .desired_width(f32::INFINITY)
-                    .layouter(&mut layouter)
-                    .show(ui);
-                self.source_ui.id = Some(output.response.id);
-                #[cfg(test)]
-                {
-                    self.source_ui.rect = Some(output.response.rect);
-                }
-                if output.response.changed() {
-                    let result = if pasted {
-                        self.document.replace_text(text.clone())
-                    } else {
-                        self.document.replace_typed(
-                            text.clone(),
-                            Duration::try_from_secs_f64(ui.input(|i| i.time)).unwrap_or_default(),
-                        )
-                    };
-                    match result {
-                        Ok(true) => self.source_mutated(),
-                        Err(error) => self.error = Some(format!("Edit failed: {error:?}")),
-                        _ => {}
-                    }
-                }
-                if !output.response.changed()
-                    && let Some(range) = &jump
-                {
-                    let range = char_range(&text, range);
-                    output.state.cursor.set_char_range(Some(range));
-                    if focus && !output.response.has_focus() {
-                        output.response.request_focus();
-                    }
-                    ui.scroll_to_rect(
-                        output
-                            .galley
-                            .pos_from_cursor(range.primary)
-                            .translate(output.galley_pos.to_vec2()),
-                        Some(egui::Align::Center),
-                    );
-                }
-                let cursor = output.state.cursor.char_range();
-                if let Some(cursor) = cursor {
-                    let sorted = cursor.as_sorted_char_range();
-                    let selection = byte_offset(&text, sorted.start.into())
-                        ..byte_offset(&text, sorted.end.into());
-                    if !output.response.changed() && selection != self.source_ui.selection {
-                        self.document.break_typing_group();
-                    }
-                    self.source_ui.selection = selection;
-                    self.source_ui.selection_revision = self.document.revision();
-                    if jump.is_none()
-                        && output.response.has_focus()
-                        && self.rendered == Some(self.document.revision())
-                    {
-                        let line = laml_ui::source::SourceIndex::new(&text)
-                            .line_at(byte_offset(&text, cursor.primary.index.into()))
-                            .unwrap_or(1);
-                        self.select_source_line(line);
-                    }
-                }
-                if !output.response.has_focus() {
-                    self.document.break_typing_group();
-                    self.source_ui.composing = false;
-                }
-                if ui.memory(|m| m.has_focus(output.response.id)) {
-                    ui.memory_mut(|m| {
-                        m.set_focus_lock_filter(
-                            output.response.id,
-                            egui::EventFilter {
-                                tab: true,
-                                horizontal_arrows: true,
-                                vertical_arrows: true,
-                                escape: false,
-                            },
-                        )
-                    });
-                }
-                // Only Document owns source undo. Do not retain egui's duplicate
-                // full-buffer undo snapshots alongside the bounded delta history.
-                output.state.clear_undoer();
-                output.state.store(ui.ctx(), output.response.id);
-                let index = laml_ui::source::SourceIndex::new(&text);
-                let mut offsets = vec![0];
-                offsets.extend(
-                    text.chars()
-                        .enumerate()
-                        .filter_map(|(i, c)| (c == '\n').then_some(i + 1)),
-                );
-                for (line, offset) in offsets.into_iter().enumerate() {
-                    let position = output.galley.pos_from_cursor(CCursor::new(offset));
-                    let point = egui::pos2(gutter.right(), output.galley_pos.y + position.top());
-                    if point.y + position.height() < ui.clip_rect().top()
-                        || point.y > ui.clip_rect().bottom()
-                    {
-                        continue;
-                    }
-                    let marked = !output.response.changed()
-                        && diagnostic.as_ref().is_some_and(|d| {
-                            index.line(line + 1).is_some_and(|r| r.start == d.start)
+        ui.horizontal_top(|ui| {
+            ui.spacing_mut().item_spacing.x = 0.0;
+            let gutter = source_gutter::Gutter::reserve(ui, &text, self.source_ui.line_numbers);
+            egui::ScrollArea::both()
+                .id_salt("source")
+                .auto_shrink([false, false])
+                .show_viewport(ui, |ui, viewport| {
+                    let mut layouter =
+                        |ui: &egui::Ui, buffer: &dyn egui::TextBuffer, _width: f32| {
+                            ui.fonts_mut(|fonts| {
+                                let mut job = source_highlight::highlight(
+                                    buffer.as_str(),
+                                    ui.visuals().dark_mode,
+                                    ui.visuals().text_color(),
+                                );
+                                if diagnosed_source.as_deref() == Some(buffer.as_str())
+                                    && let Some(range) = &diagnostic
+                                {
+                                    mark(&mut job, range, true);
+                                }
+                                if diagnosed_source.as_deref() == Some(buffer.as_str())
+                                    && let Some((a, b)) = &pair
+                                {
+                                    mark(&mut job, a, false);
+                                    mark(&mut job, b, false);
+                                }
+                                fonts.layout_job(job)
+                            })
+                        };
+                    let preserve_selection = !self.source_ui.selection.is_empty()
+                        && self.source_ui.selection_revision == self.document.revision()
+                        && ui.input(|i| {
+                            i.pointer.button_pressed(egui::PointerButton::Secondary)
+                                || i.pointer.button_released(egui::PointerButton::Secondary)
                         });
-                    ui.painter().text(
-                        point,
-                        egui::Align2::RIGHT_TOP,
-                        (line + 1).to_string(),
-                        egui::FontId::monospace(14.0),
-                        if marked {
-                            egui::Color32::LIGHT_RED
+                    let mut output = egui::TextEdit::multiline(&mut text)
+                        .id_salt("source-text")
+                        .code_editor()
+                        .frame(egui::Frame::NONE)
+                        .desired_width(f32::INFINITY)
+                        .min_size(egui::vec2(0.0, viewport.height()))
+                        .layouter(&mut layouter)
+                        .show(ui);
+                    if preserve_selection && output.response.contains_pointer() {
+                        output
+                            .state
+                            .cursor
+                            .set_char_range(Some(char_range(&text, &self.source_ui.selection)));
+                    }
+                    self.source_ui.id = Some(output.response.id);
+                    #[cfg(test)]
+                    {
+                        self.source_ui.rect = Some(output.response.rect);
+                    }
+                    if output.response.changed() {
+                        let session = self.advanced.snippet.take();
+                        let result = if pasted {
+                            self.document.replace_text(text.clone())
                         } else {
-                            ui.visuals().weak_text_color()
-                        },
-                    );
-                }
-            });
+                            self.document.replace_typed(
+                                text.clone(),
+                                Duration::try_from_secs_f64(ui.input(|i| i.time))
+                                    .unwrap_or_default(),
+                            )
+                        };
+                        match result {
+                            Ok(true) => self.source_mutated(),
+                            Err(error) => self.error = Some(format!("Edit failed: {error:?}")),
+                            _ => {}
+                        }
+                        self.update_source_snippet(session, &before_edit);
+                    }
+                    if !output.response.changed()
+                        && let Some(range) = &jump
+                    {
+                        let range = char_range(&text, range);
+                        output.state.cursor.set_char_range(Some(range));
+                        if focus && !output.response.has_focus() {
+                            output.response.request_focus();
+                        }
+                        ui.scroll_to_rect(
+                            output
+                                .galley
+                                .pos_from_cursor(range.primary)
+                                .translate(output.galley_pos.to_vec2()),
+                            Some(egui::Align::Center),
+                        );
+                    }
+                    let cursor = output.state.cursor.char_range();
+                    if let Some(cursor) = cursor {
+                        let sorted = cursor.as_sorted_char_range();
+                        let selection = byte_offset(&text, sorted.start.into())
+                            ..byte_offset(&text, sorted.end.into());
+                        let selection_changed = selection != self.source_ui.selection;
+                        if !output.response.changed() && selection_changed {
+                            self.document.break_typing_group();
+                        }
+                        self.source_ui.selection = selection;
+                        self.source_ui.selection_revision = self.document.revision();
+                        let refresh_completion = std::mem::take(&mut self.advanced.refresh);
+                        if (output.response.changed() || refresh_completion)
+                            && output.response.has_focus()
+                            && !pasted
+                        {
+                            self.refresh_completion(false);
+                        } else if navigation
+                            && selection_changed
+                            && self.advanced.completion.is_some()
+                        {
+                            self.advanced.completion = None;
+                        }
+                        if self.advanced.snippet.as_ref().is_some_and(|s| {
+                            let field = s.selection();
+                            self.source_ui.selection.start < field.start
+                                || self.source_ui.selection.end > field.end
+                        }) {
+                            self.advanced.snippet = None;
+                        }
+                        if jump.is_none()
+                            && output.response.has_focus()
+                            && self.rendered == Some(self.document.revision())
+                        {
+                            let line = laml_ui::source::SourceIndex::new(&text)
+                                .line_at(byte_offset(&text, cursor.primary.index.into()))
+                                .unwrap_or(1);
+                            self.select_source_line(line);
+                        }
+                    }
+                    if let Some(cursor) = cursor {
+                        let anchor_cursor = self
+                            .advanced
+                            .completion
+                            .as_ref()
+                            .filter(|(r, _)| *r == self.document.revision())
+                            .map_or(cursor.primary, |(_, c)| {
+                                CCursor::new(text[..c.range.start].chars().count())
+                            });
+                        self.advanced.anchor = Some(
+                            output
+                                .galley
+                                .pos_from_cursor(anchor_cursor)
+                                .translate(output.galley_pos.to_vec2()),
+                        );
+                    }
+                    if !output.response.has_focus() {
+                        self.document.break_typing_group();
+                        self.source_ui.composing = false;
+                    }
+                    if ui.memory(|m| m.has_focus(output.response.id)) {
+                        ui.memory_mut(|m| {
+                            m.set_focus_lock_filter(
+                                output.response.id,
+                                egui::EventFilter {
+                                    tab: true,
+                                    horizontal_arrows: true,
+                                    vertical_arrows: true,
+                                    escape: self.advanced.completion.is_some()
+                                        || self.advanced.snippet.is_some(),
+                                },
+                            )
+                        });
+                    }
+                    // Only Document owns source undo. Do not retain egui's duplicate
+                    // full-buffer undo snapshots alongside the bounded delta history.
+                    output.state.clear_undoer();
+                    output.state.store(ui.ctx(), output.response.id);
+                    self.source_context_menu(ui, &output.response);
+                    if let Some(gutter) = &gutter {
+                        gutter.paint(
+                            ui,
+                            &text,
+                            &output.galley,
+                            output.galley_pos,
+                            diagnostic.as_ref().filter(|_| !output.response.changed()),
+                        );
+                    }
+                });
         });
+        self.source_completion_popup(ui);
     }
     fn select_source_line(&mut self, line: usize) {
         if self.specialized() {
@@ -317,104 +357,4 @@ fn mark(job: &mut LayoutJob, range: &std::ops::Range<usize>, diagnostic: bool) {
                 .collect::<Vec<_>>()
         })
         .collect();
-}
-
-fn highlight(text: &str, normal: egui::Color32) -> LayoutJob {
-    let mut job = LayoutJob::default();
-    let mut i = 0;
-    while i < text.len() {
-        let start = i;
-        let ch = text[i..].chars().next().unwrap();
-        let color = if text[i..].starts_with("//")
-            && (i == 0
-                || text[..i]
-                    .chars()
-                    .next_back()
-                    .is_some_and(char::is_whitespace))
-        {
-            i += text[i..].find('\n').unwrap_or(text.len() - i);
-            egui::Color32::from_rgb(130, 150, 130)
-        } else if ch == '"' {
-            i += 1;
-            let mut escaped = false;
-            while i < text.len() {
-                let c = text[i..].chars().next().unwrap();
-                i += c.len_utf8();
-                if escaped {
-                    escaped = false;
-                } else if c == '\\' {
-                    escaped = true;
-                } else if c == '"' {
-                    break;
-                }
-            }
-            egui::Color32::from_rgb(210, 180, 110)
-        } else if ch.is_alphabetic() || ch == '_' {
-            i += ch.len_utf8();
-            while i < text.len() {
-                let c = text[i..].chars().next().unwrap();
-                if !(c.is_alphanumeric() || c == '_' || c == '-') {
-                    break;
-                }
-                i += c.len_utf8();
-            }
-            match &text[start..i] {
-                "semantics" | "settings" | "layout" | "styling" | "import" | "above" | "below"
-                | "node" => egui::Color32::from_rgb(115, 190, 230),
-                _ => normal,
-            }
-        } else {
-            i += ch.len_utf8();
-            if "{}()[]:;<>-=?".contains(ch) {
-                egui::Color32::from_rgb(180, 150, 220)
-            } else {
-                normal
-            }
-        };
-        let color = if normal.r() < 128 {
-            match color {
-                _ if color == egui::Color32::from_rgb(130, 150, 130) => {
-                    egui::Color32::from_rgb(70, 110, 70)
-                }
-                _ if color == egui::Color32::from_rgb(210, 180, 110) => {
-                    egui::Color32::from_rgb(140, 90, 20)
-                }
-                _ if color == egui::Color32::from_rgb(115, 190, 230) => {
-                    egui::Color32::from_rgb(25, 95, 155)
-                }
-                _ if color == egui::Color32::from_rgb(180, 150, 220) => {
-                    egui::Color32::from_rgb(120, 65, 165)
-                }
-                _ => color,
-            }
-        } else {
-            color
-        };
-        job.append(
-            &text[start..i],
-            0.0,
-            egui::TextFormat {
-                font_id: egui::FontId::monospace(14.0),
-                color,
-                ..Default::default()
-            },
-        );
-    }
-    job
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn highlighting_preserves_unicode_comments_and_incomplete_strings() {
-        for source in [
-            "A(label=\"Grün // ok\") // comment\r\n",
-            "semantics {\n A(label=\"unfinished",
-            "// comment",
-            "",
-        ] {
-            assert_eq!(highlight(source, egui::Color32::WHITE).text, source);
-        }
-    }
 }

@@ -80,7 +80,7 @@ fn offers_a_corridor_beyond_an_existing_long_route() {
         .fold(f64::NEG_INFINITY, f64::max)
         + 64.0;
     let options = candidates(
-        &boxes[0], &boxes[2], None, None, None, None, &previous, None,
+        &boxes[0], &boxes[2], None, None, None, None, &previous, None, 24.0,
     );
     assert!(options.iter().any(|path| {
         axis_aligned(path) && path.iter().any(|point| (point.x - outer_x).abs() < 1e-6)

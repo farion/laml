@@ -48,6 +48,7 @@ pub(super) fn install(ctx: &egui::Context) {
         egui::FontFamily::Name("phosphor".into()),
         vec!["phosphor".into()],
     );
+    source_highlight::install_fonts(&mut fonts);
     ctx.set_fonts(fonts);
     let mut style = egui::Style {
         visuals: egui::Visuals::dark(),
@@ -257,10 +258,15 @@ pub(super) fn alignment_button(
         egui::FontId::proportional(14.0),
         color,
     );
-    response.on_hover_text(if horizontal {
-        crate::i18n::tr("Align centers on a horizontal line (center-y)")
-    } else {
-        crate::i18n::tr("Align centers on a vertical line (center-x)")
+    response.on_hover_ui(|ui| {
+        hover_help::show(
+            ui,
+            if horizontal {
+                crate::i18n::tr("Align centers on a horizontal line (center-y)")
+            } else {
+                crate::i18n::tr("Align centers on a vertical line (center-x)")
+            },
+        )
     })
 }
 

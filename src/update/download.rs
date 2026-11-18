@@ -3,7 +3,7 @@
 use sha2::{Digest, Sha256};
 use std::io::{Cursor, Read};
 
-const MAX_BINARY: u64 = 50_000_000;
+const MAX_BINARY: u64 = 512_000_000;
 
 fn sha256_hex(bytes: &[u8]) -> String {
     use std::fmt::Write;
@@ -53,7 +53,7 @@ pub(super) fn verify(
 }
 
 #[cfg(unix)]
-fn unpack(archive: &[u8], member: &str) -> Result<Vec<u8>, String> {
+pub(super) fn unpack(archive: &[u8], member: &str) -> Result<Vec<u8>, String> {
     let gzip = flate2::read::GzDecoder::new(Cursor::new(archive));
     let mut tar = tar::Archive::new(gzip);
     let mut found = None;
@@ -82,7 +82,7 @@ fn unpack(archive: &[u8], member: &str) -> Result<Vec<u8>, String> {
 }
 
 #[cfg(windows)]
-fn unpack(archive: &[u8], member: &str) -> Result<Vec<u8>, String> {
+pub(super) fn unpack(archive: &[u8], member: &str) -> Result<Vec<u8>, String> {
     let mut zip = zip::ZipArchive::new(Cursor::new(archive))
         .map_err(|e| format!("cannot read zip archive: {e}"))?;
     let mut found = None;
@@ -113,60 +113,71 @@ fn unpack(archive: &[u8], member: &str) -> Result<Vec<u8>, String> {
 }
 
 #[cfg(unix)]
-pub(super) fn install(archive: &[u8], tag: &str, target: &str) -> Result<(), String> {
-    let binary = unpack(archive, &format!("laml-{tag}-{target}/laml"))?;
-    let current = std::env::current_exe().map_err(|e| format!("cannot locate executable: {e}"))?;
-    replace_unix(&current, &binary)
-}
-
-#[cfg(unix)]
-fn replace_unix(current: &std::path::Path, binary: &[u8]) -> Result<(), String> {
+pub(super) fn replace_unix(current: &std::path::Path, binary: &[u8]) -> Result<(), String> {
     use std::fs::{self, OpenOptions};
     use std::io::Write;
     use std::os::unix::fs::PermissionsExt;
     let path = current.with_file_name(format!(".laml-update-{}", std::process::id()));
+    let mut owned = false;
     let result = (|| -> Result<(), String> {
         let mut file = OpenOptions::new()
             .write(true)
             .create_new(true)
             .open(&path)
             .map_err(|e| format!("cannot stage update next to {}: {e}", current.display()))?;
+        owned = true;
         file.write_all(binary).map_err(|e| e.to_string())?;
         let mode = fs::metadata(current)
-            .map_err(|e| e.to_string())?
-            .permissions()
-            .mode();
+            .map(|m| m.permissions().mode())
+            .unwrap_or(0o755);
         file.set_permissions(fs::Permissions::from_mode(mode | 0o111))
             .map_err(|e| e.to_string())?;
         file.sync_all().map_err(|e| e.to_string())?;
         fs::rename(&path, current).map_err(|e| format!("cannot replace {}: {e}", current.display()))
     })();
-    if result.is_err() {
+    if result.is_err() && owned {
         let _ = fs::remove_file(&path);
     }
     result
 }
 
 #[cfg(windows)]
-pub(super) fn install(archive: &[u8], tag: &str, target: &str) -> Result<(), String> {
+pub(super) fn replace_windows(
+    current: &std::path::Path,
+    binary: &[u8],
+    wait_for_exit: bool,
+) -> Result<(), String> {
     use std::fs::{self, OpenOptions};
     use std::io::Write;
     use std::process::{Command, Stdio};
-    let binary = unpack(archive, &format!("laml-{tag}-{target}/laml.exe"))?;
-    let current = std::env::current_exe().map_err(|e| format!("cannot locate executable: {e}"))?;
     let staged = current.with_file_name(format!(".laml-update-{}.exe", std::process::id()));
     let helper = current.with_file_name(format!(".laml-update-{}.ps1", std::process::id()));
+    let mut owned = false;
+    let mut helper_owned = false;
     let result = (|| -> Result<(), String> {
         let mut file = OpenOptions::new()
             .write(true)
             .create_new(true)
             .open(&staged)
             .map_err(|e| format!("cannot stage update next to {}: {e}", current.display()))?;
-        file.write_all(&binary).map_err(|e| e.to_string())?;
+        owned = true;
+        file.write_all(binary).map_err(|e| e.to_string())?;
         file.sync_all().map_err(|e| e.to_string())?;
-        fs::write(&helper, include_str!("../../scripts/replace-windows.ps1"))
+        let mut script = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&helper)
             .map_err(|e| e.to_string())?;
-        Command::new("powershell.exe")
+        helper_owned = true;
+        script
+            .write_all(include_bytes!("../../scripts/replace-windows.ps1"))
+            .map_err(|e| e.to_string())?;
+        script.sync_all().map_err(|e| e.to_string())?;
+        drop(script);
+        let mut command = Command::new("powershell.exe");
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
+        command
             .args([
                 "-NoProfile",
                 "-NonInteractive",
@@ -183,6 +194,8 @@ pub(super) fn install(archive: &[u8], tag: &str, target: &str) -> Result<(), Str
             .arg(&current)
             .arg("-Helper")
             .arg(&helper)
+            .arg("-WaitForExit")
+            .arg(if wait_for_exit { "1" } else { "0" })
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
@@ -191,15 +204,14 @@ pub(super) fn install(archive: &[u8], tag: &str, target: &str) -> Result<(), Str
         Ok(())
     })();
     if result.is_err() {
-        let _ = fs::remove_file(staged);
-        let _ = fs::remove_file(helper);
+        if owned {
+            let _ = fs::remove_file(staged);
+        }
+        if helper_owned {
+            let _ = fs::remove_file(helper);
+        }
     }
     result
-}
-
-#[cfg(not(any(unix, windows)))]
-pub(super) fn install(_: &[u8], _: &str, _: &str) -> Result<(), String> {
-    Err("self-updates are not supported on this platform".into())
 }
 
 #[cfg(test)]

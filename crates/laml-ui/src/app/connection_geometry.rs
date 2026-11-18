@@ -31,11 +31,11 @@ pub(super) fn node_rect(
     )
 }
 pub(super) fn radius(preview: &Preview, canvas: egui::Rect, node: &laml::geometry::BoxNode) -> f32 {
-    (node.width.min(node.height) as f32 * 0.24).clamp(8.0, 14.0) * canvas.width()
-        / (preview.bounds.2 - preview.bounds.0) as f32
+    let rect = node_rect(preview, canvas, node);
+    (rect.width().min(rect.height()) * 0.14).clamp(3.0, 6.0)
 }
 pub(super) fn endpoint_radius(preview: &Preview, canvas: egui::Rect) -> f32 {
-    8.0 * canvas.width() / (preview.bounds.2 - preview.bounds.0) as f32
+    (8.0 * canvas.width() / (preview.bounds.2 - preview.bounds.0) as f32).clamp(6.0, 10.0)
 }
 pub(super) fn handles(
     preview: &Preview,
@@ -45,17 +45,16 @@ pub(super) fn handles(
 ) -> Vec<Handle> {
     let rect = node_rect(preview, canvas, node);
     let radius = radius(preview, canvas, node);
-    let offset = radius * 1.4;
-    [
-        ("left", rect.left_center(), egui::vec2(-offset, 0.0)),
-        ("right", rect.right_center(), egui::vec2(offset, 0.0)),
-        ("top", rect.center_top(), egui::vec2(0.0, -offset)),
-        ("bottom", rect.center_bottom(), egui::vec2(0.0, offset)),
+    let mut result: Vec<_> = [
+        ("left", rect.left_center()),
+        ("right", rect.right_center()),
+        ("top", rect.center_top()),
+        ("bottom", rect.center_bottom()),
     ]
     .into_iter()
-    .map(|(side, point, offset)| Handle {
-        radius: if source { radius } else { radius * 0.72 },
-        point: point + if source { offset } else { egui::Vec2::ZERO },
+    .map(|(side, point)| Handle {
+        radius,
+        point,
         dock: Dock {
             id: node.id.clone(),
             owner: node.id.clone(),
@@ -63,7 +62,30 @@ pub(super) fn handles(
             point,
         },
     })
-    .collect()
+    .collect();
+    // The automatic origin is distinct from moving the node body.
+    if source {
+        let inset = (radius + 4.0).min(rect.width().min(rect.height()) / 2.0);
+        let inner = rect.shrink(inset);
+        let point = match node.shape {
+            laml::geometry::NodeShape::Ellipse => {
+                inner.center() - inner.size() * (std::f32::consts::FRAC_1_SQRT_2 / 2.0)
+            }
+            laml::geometry::NodeShape::Diamond => inner.center() - inner.size() * 0.25,
+            _ => inner.left_top(),
+        };
+        result.push(Handle {
+            radius,
+            point,
+            dock: Dock {
+                id: node.id.clone(),
+                owner: node.id.clone(),
+                side: None,
+                point,
+            },
+        });
+    }
+    result
 }
 
 pub(super) fn hit_node(
@@ -78,6 +100,37 @@ pub(super) fn hit_node(
         left + f64::from((point.x - canvas.left()) / scale),
         top + f64::from((point.y - canvas.top()) / scale),
     )
+}
+/// Keep a node's exterior controls reachable over its ancestors' backgrounds.
+/// A direct hit on any unrelated node still takes precedence.
+pub(super) fn hover_node<'a>(
+    preview: &'a Preview,
+    canvas: egui::Rect,
+    point: egui::Pos2,
+    previous: Option<&str>,
+) -> Option<&'a laml::geometry::BoxNode> {
+    let hit = hit_node(preview, canvas, point);
+    let previous = previous
+        .and_then(|id| preview.nodes.iter().find(|n| n.id == id))
+        .filter(|n| node_rect(preview, canvas, n).expand(40.0).contains(point));
+    if let Some(previous) = previous {
+        if hit.is_none() {
+            return Some(previous);
+        }
+        let mut current = Some(previous.id.as_str());
+        while let Some(id) = current {
+            if hit.is_some_and(|n| n.id == id) {
+                return Some(previous);
+            }
+            current = preview
+                .diagram
+                .nodes
+                .iter()
+                .find(|n| n.id == id)
+                .and_then(|n| n.parent.as_deref());
+        }
+    }
+    hit
 }
 fn port(preview: &Preview, canvas: egui::Rect, point: egui::Pos2) -> Option<Dock> {
     preview
@@ -101,11 +154,9 @@ fn port(preview: &Preview, canvas: egui::Rect, point: egui::Pos2) -> Option<Dock
 }
 pub(super) fn source_at(preview: &Preview, canvas: egui::Rect, point: egui::Pos2) -> Option<Dock> {
     port(preview, canvas, point).or_else(|| {
-        let owner = hit_node(preview, canvas, point).map(|node| &node.id);
         preview
             .nodes
             .iter()
-            .filter(|node| owner.is_none_or(|id| id == &node.id))
             .flat_map(|node| handles(preview, canvas, node, true))
             .filter(|handle| handle.point.distance(point) <= handle.radius)
             .min_by(|a, b| a.point.distance(point).total_cmp(&b.point.distance(point)))
@@ -137,11 +188,12 @@ pub(super) fn target_at(
         })
         .or_else(|| {
             let node = hit_node(preview, canvas, point)?;
-            let side = nearest_side(node_rect(preview, canvas, node), point);
-            handles(preview, canvas, node, false)
-                .into_iter()
-                .find(|handle| handle.dock.side == Some(side))
-                .map(|handle| handle.dock)
+            Some(Dock {
+                id: node.id.clone(),
+                owner: node.id.clone(),
+                side: None,
+                point,
+            })
         })
         .map(|dock| attachment(dock, automatic))
 }
@@ -210,4 +262,66 @@ pub(super) fn nearest_side(rect: egui::Rect, point: egui::Pos2) -> &'static str 
     .min_by(|a, b| a.1.total_cmp(&b.1))
     .unwrap()
     .0
+}
+
+/// Exact rendered endpoint grips are also available without prior selection.
+pub(super) fn endpoint_at(
+    preview: &Preview,
+    canvas: egui::Rect,
+    point: egui::Pos2,
+) -> Option<(usize, laml::syntax::EndPosition)> {
+    use laml::syntax::EndPosition;
+    preview
+        .routes
+        .iter()
+        .filter(|r| {
+            preview
+                .diagram
+                .relations
+                .iter()
+                .any(|d| d.line == r.source_line)
+        })
+        .flat_map(|route| {
+            [EndPosition::Source, EndPosition::Target]
+                .into_iter()
+                .filter_map(move |end| {
+                    let p = endpoint_grip(preview, canvas, route, end)?;
+                    let distance = p.distance(point);
+                    (distance <= endpoint_radius(preview, canvas)).then_some((
+                        distance,
+                        route.source_line,
+                        end,
+                    ))
+                })
+        })
+        .min_by(|a, b| a.0.total_cmp(&b.0))
+        .map(|(_, line, end)| (line, end))
+}
+
+/// Offset the arrow grip along its stroke so a used node dock still creates arrows.
+pub(super) fn endpoint_grip(
+    preview: &Preview,
+    canvas: egui::Rect,
+    route: &laml::route::Route,
+    end: laml::syntax::EndPosition,
+) -> Option<egui::Pos2> {
+    let endpoint = laml_ui::relation_selection::endpoint(route, end)?;
+    let at = screen(preview, canvas, endpoint.x, endpoint.y);
+    let other = if end == laml::syntax::EndPosition::Source {
+        route
+            .points
+            .iter()
+            .find(|p| p.x != endpoint.x || p.y != endpoint.y)
+    } else {
+        route
+            .points
+            .iter()
+            .rev()
+            .find(|p| p.x != endpoint.x || p.y != endpoint.y)
+    }?;
+    let delta = screen(preview, canvas, other.x, other.y) - at;
+    Some(
+        at + delta.normalized()
+            * (endpoint_radius(preview, canvas) + 10.0).min(delta.length() * 0.45),
+    )
 }

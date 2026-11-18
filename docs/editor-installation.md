@@ -5,6 +5,13 @@ The editor is a separate application named `laml-ui`. The compiler CLI remains
 both applications for all supported platforms. Editor archives start with
 `laml-ui-vVERSION`.
 
+Each desktop application runs from a single executable (`laml` or `laml-ui`,
+with `.exe` on Windows). Fonts, icons, logos and help texts are embedded; no
+adjacent asset directory or separately installed CLI is needed by the editor.
+The macOS app bundle wraps the same standalone executable. Operating-system
+windowing/graphics services remain required. License notices are also embedded:
+`laml --licenses`, `laml-ui --licenses`, and the editor's **About → Third-party licenses**.
+
 The same executable can host the shared editor in a browser with `laml-ui serve`.
 See [browser build, local archive and host startup](editor-host.md) for its matching
 WASM assets, Docker Compose deployment, browser-local documents and the optional
@@ -49,6 +56,26 @@ Extract the ZIP into a user-writable application folder and double-click
 ```
 
 The release build uses the GUI subsystem so a console window is not needed.
+
+## Updates and CLI installation (desktop only)
+
+**Settings → Updates → Check for updates** checks the official GitHub release.
+**Install update** downloads the selected editor version, verifies its SHA-256
+against the release manifest and replaces the executable. Close the editor and
+start it again to use the new version; Windows completes replacement after exit.
+The application directory must be writable. Downloads never happen automatically.
+
+**Settings → CLI → Install CLI** downloads the CLI matching the running editor
+version and installs only its executable, with the same checksum verification.
+The matching version must be published on GitHub. The target is
+`~/.local/bin/laml` on Linux/macOS or `%LOCALAPPDATA%\\LAML\\bin\\laml.exe` on Windows.
+An existing file requires explicit replacement confirmation. If the directory is
+not on `PATH`, Settings displays it for addition to your terminal environment;
+shell profiles and system settings are not changed automatically.
+
+The CLI retains its explicit `laml update` command. Browser Settings do not expose
+editor updates or local CLI installation. Hosting/WASM assets belong to the
+separate browser/server distribution, not the standalone desktop application.
 
 ## Files and recovery
 

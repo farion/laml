@@ -49,8 +49,12 @@ fn click(editor: &mut Editor, ctx: &egui::Context, point: egui::Pos2) {
 }
 fn setup() -> (Editor, egui::Context, egui::Pos2) {
     let source = "semantics {\n A(label=\"Alpha\")\n B\n A -> B: Flow\n}\n";
+    setup_text(source, "Alpha")
+}
+fn setup_text(source: &str, label: &str) -> (Editor, egui::Context, egui::Pos2) {
     let mut editor = Editor::new(source.into(), None);
     let ctx = egui::Context::default();
+    appearance::install(&ctx);
     egui_extras::install_image_loaders(&ctx);
     let preview = laml_ui::preview::build(source, &editor.path).unwrap();
     editor.publish_preview(&ctx, preview);
@@ -58,7 +62,7 @@ fn setup() -> (Editor, egui::Context, egui::Pos2) {
         frame(&mut editor, &ctx, vec![]);
     }
     let p = editor.preview.as_ref().unwrap();
-    let t = p.texts.iter().find(|t| t.text == "Alpha").unwrap();
+    let t = p.texts.iter().find(|t| t.text == label).unwrap();
     let image = editor.creation.canvas_rect.unwrap();
     let scale = image.width() / (p.bounds.2 - p.bounds.0) as f32;
     let point = image.min
@@ -203,4 +207,37 @@ fn inline_text_stale_draft_cannot_overwrite_newer_source() {
     assert!(editor.pending_command.is_none());
     assert!(editor.document.source().starts_with("// newer\n"));
     assert!(editor.document.source().contains("Alpha"));
+}
+#[test]
+fn sequence_fragment_header_and_condition_double_click_edit_only_the_condition() {
+    let source = "settings {\n type: sequence\n}\nsemantics {\n A\n B\n Block: opt \"ready\" { // keep\n A ->> B: Work\n }\n}\n";
+    for label in ["opt", "[ready]"] {
+        let (mut editor, ctx, point) = setup_text(source, label);
+        open(&mut editor, &ctx, point);
+        assert_eq!(editor.inline_text.as_ref().unwrap().value, "ready");
+        assert!(!editor.inline_text.as_ref().unwrap().text.multiline);
+        frame(&mut editor, &ctx, vec![egui::Event::Text("changed".into())]);
+        frame(
+            &mut editor,
+            &ctx,
+            vec![key(egui::Key::Enter, egui::Modifiers::SHIFT)],
+        );
+        assert_eq!(editor.inline_text.as_ref().unwrap().value, "changed");
+        frame(
+            &mut editor,
+            &ctx,
+            vec![key(egui::Key::Enter, egui::Modifiers::NONE)],
+        );
+        finish(&mut editor, &ctx);
+        assert!(
+            editor
+                .document
+                .source()
+                .contains("Block: opt \"changed\" { // keep")
+        );
+        assert!(editor.document.source().contains(" A ->> B: Work"));
+        assert!(editor.document.undo());
+        assert_eq!(editor.document.source(), source);
+        assert!(!editor.document.undo());
+    }
 }

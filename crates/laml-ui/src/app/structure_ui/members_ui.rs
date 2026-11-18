@@ -60,7 +60,7 @@ impl Editor {
                                         let before=draft.clone();
                                         egui::ComboBox::from_id_salt((&address,name)).width(width).selected_text(if draft=="icons"{crate::i18n::tr("Icons")}else{crate::i18n::tr("Text (+ - # ~)")}).show_ui(ui,|ui| {
                                             ui.selectable_value(draft,"text".into(),crate::i18n::tr("Text (+ - # ~)"));
-                                            ui.selectable_value(draft,"icons".into(),crate::i18n::tr("Icons")).on_hover_text(crate::i18n::tr("Visibility marks use globe, lock, shield and package. Phosphor is selected automatically."));
+                                            ui.selectable_value(draft,"icons".into(),crate::i18n::tr("Icons")).on_hover_ui(|ui| hover_help::show(ui,crate::i18n::tr("Visibility marks use globe, lock, shield and package. Phosphor is selected automatically.")));
                                         });
                                         *draft!=before
                                     }else{

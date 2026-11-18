@@ -3,6 +3,8 @@ use super::*;
 
 pub(super) struct State {
     pub operator: String,
+    pub insertion: Option<super::graph_insert::Menu>,
+    pub toast: Option<super::toast::Toast>,
     pub icon_picker: Option<icon_picker::Picker>,
     pub navigator: bool,
     pub addresses: bool,
@@ -23,6 +25,8 @@ impl Default for State {
     fn default() -> Self {
         Self {
             operator: "->".into(),
+            insertion: None,
+            toast: None,
             icon_picker: None,
             navigator: false,
             addresses: false,
@@ -49,7 +53,8 @@ impl State {
         self.drag_image = None;
     }
     pub fn dialog_open(&self) -> bool {
-        self.navigator
+        self.insertion.is_some()
+            || self.navigator
             || self.icon_picker.is_some()
             || self.addresses
             || self.node_dialog.is_some()

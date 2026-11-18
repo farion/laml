@@ -160,6 +160,9 @@ pub struct Settings {
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct NodeDecl {
+    /// An explicitly authored containment body, including an empty one.
+    #[serde(default)]
+    pub container: bool,
     pub id: String,
     /// An explicit @id remains globally addressable across package scopes.
     pub explicit: bool,

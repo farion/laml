@@ -199,6 +199,26 @@ fn wide_header_shows_all_actions_and_history_controls_work() {
 }
 
 #[test]
+fn line_numbers_toggle_from_header_and_overflow_without_editing_source() {
+    let (mut editor, ctx) = ready();
+    let original = editor.document.source().to_owned();
+    assert!(editor.source_ui.line_numbers);
+    click(&mut editor, &ctx, 1000.0, LIST_NUMBERS);
+    assert!(!editor.source_ui.line_numbers);
+    click(&mut editor, &ctx, 1000.0, LIST_NUMBERS);
+    assert!(editor.source_ui.line_numbers);
+    click(&mut editor, &ctx, 140.0, egui_phosphor::regular::DOTS_THREE);
+    click(&mut editor, &ctx, 140.0, "Hide line numbers");
+    assert!(!editor.source_ui.line_numbers);
+    click(&mut editor, &ctx, 140.0, egui_phosphor::regular::DOTS_THREE);
+    click(&mut editor, &ctx, 140.0, "Show line numbers");
+    assert!(editor.source_ui.line_numbers);
+    assert_eq!(editor.document.source(), original);
+    assert_eq!(editor.document.revision(), 0);
+    assert_eq!(editor.document.history_usage().0, 0);
+}
+
+#[test]
 fn save_icon_writes_only_the_current_document() {
     let (mut editor, ctx) = ready();
     let directory = tempfile::tempdir().unwrap();

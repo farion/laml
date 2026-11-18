@@ -1,153 +1,145 @@
-//! Contextual sequence authoring state; all persistent intent stays in LAML.
+//! Sequence interaction owner. The old independent gesture handlers are gone.
 use super::*;
-use edit::sequence_insert::{self as insert, Action};
+use edit::sequence_controls::{self as controls, Boundary, Dock};
+mod actions;
 mod canvas;
-mod connections;
-mod destruction;
-mod drag;
-mod paint;
-mod participants;
-mod targets;
+mod catalog;
+mod fragments;
+pub(super) use catalog::recipes;
+mod gestures;
+mod insertion;
+mod insertion_menu;
+mod insertion_options;
+mod menu_icons;
+mod message_paint;
+mod message_targets;
+mod painting;
+mod plus;
+mod proposals;
+mod reference_picker;
+mod scene;
 mod windows;
+use scene::{Hit, Point, Scene};
 
-#[derive(Clone, Debug)]
-pub(super) struct Anchor {
-    pub owner: String,
-    pub before: usize,
-    pub x: f64,
-    pub y: f64,
-    pub kind: Kind,
-    pub end_line: Option<usize>,
-    pub right: Option<String>,
-    pub activation_line: Option<usize>,
-}
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum Kind {
-    Head,
-    Line,
-    Execution,
-    End,
-}
 #[derive(Default)]
 pub(super) struct State {
-    anchor: Option<Anchor>,
-    menu_open: bool,
     revision: Option<u64>,
-    connect: Option<(Anchor, Action)>,
-    reconnect: Option<Reconnect>,
-    destruction_drag: Option<destruction::Drag>,
-    event_drag: Option<drag::Drag>,
-    participant_drag: Option<participants::Drag>,
-    dialog: Option<Form>,
-}
-impl State {
-    pub(super) fn interacting(&self) -> bool {
-        self.menu_open
-            || self.connect.is_some()
-            || self.reconnect.is_some()
-            || self.dialog.is_some()
-            || self.destruction_drag.is_some()
-            || self.event_drag.is_some()
-            || self.participant_drag.is_some()
-    }
+    press: Option<(Hit, egui::Pos2)>,
+    gesture: Option<gestures::Gesture>,
+    pending_targets: Option<message_targets::Pending>,
+    released: Option<egui::Pos2>,
+    context: Option<Hit>,
+    options: Option<insertion_options::Cache>,
+    menu: Option<insertion_menu::Cache>,
+    expanded: bool,
+    picker: Option<insertion::Picker>,
+    selection: Option<Hit>,
+    touch_anchor: Option<(f64, f64)>,
+    insert: Option<Point>,
+
+    alternatives: Option<Vec<(String, Proposal)>>,
 }
 #[derive(Clone)]
-struct Reconnect {
-    line: usize,
-    moving_source: bool,
+struct Proposal {
+    edits: Vec<laml_ui::document::Edit>,
+    line: Option<usize>,
+    label: &'static str,
+}
+#[derive(Clone)]
+struct MessagePreview {
     message: laml::sequence::Message,
     send: (f64, f64),
     receive: (f64, f64),
+    diagonal: bool,
+    loop_width: Option<f64>,
 }
-struct Form {
-    anchor: Anchor,
-    action: Action,
-    target: String,
-    id: String,
-    label: String,
-    revision: u64,
-    error: Option<String>,
+#[derive(Clone)]
+struct Destination {
+    at: egui::Pos2,
+    proposal: Proposal,
+    alternatives: Vec<(String, Proposal)>,
+    dock: Option<Dock>,
+    hit_rect: Option<egui::Rect>,
+    preview: Option<MessagePreview>,
 }
 impl Editor {
-    fn sequence_candidate(
-        &self,
-        anchor: &Anchor,
-        action: Action,
-        target: &str,
-        id: &str,
-        label: &str,
-    ) -> Result<Vec<laml_ui::document::Edit>, String> {
-        if action == Action::EndActivation
-            && let Some(preview) = &self.preview
-        {
-            let bars: Vec<_> = preview
-                .regions
-                .iter()
-                .filter(|r| {
-                    r.kind == "sequence-execution"
-                        && r.id == anchor.owner
-                        && anchor.y >= r.y
-                        && anchor.y <= r.y + r.height
-                })
-                .collect();
-            if let Some(bar) = bars
-                .iter()
-                .find(|r| (r.x + r.width - anchor.x).abs() < 0.01)
-                && bars
-                    .iter()
-                    .any(|other| other.x + other.width / 2.0 > bar.x + bar.width / 2.0 + 0.1)
-            {
-                return Err("End the inner activation before ending this bar".into());
-            }
-        }
-        insert::create(
-            self.document.source(),
-            anchor.before,
-            &anchor.owner,
-            action,
-            target,
-            id,
-            label,
-            anchor.right.as_deref(),
-            anchor.end_line,
-            anchor.activation_line,
-        )
+    pub(in crate::app) fn cancel_sequence_interaction(&mut self) {
+        self.notation_ui.sequence.press = None;
+        self.notation_ui.sequence.gesture = None;
+        self.notation_ui.sequence.pending_targets = None;
+        self.notation_ui.sequence.released = None;
     }
-    fn sequence_action(&mut self, anchor: Anchor, action: Action) {
-        use Action::*;
-        self.notation_ui.sequence.menu_open = false;
-        match action {
-            Sync | SyncActivate | Async | Reply => {
-                self.notation_ui.sequence.connect = Some((anchor, action));
-                self.notation_ui.drag = None;
-            }
-            Participant | Note => self.sequence_form(anchor, action, String::new()),
-            Activate | EndActivation | Destroy => {
-                match self.sequence_candidate(&anchor, action, "", "", "") {
-                    Ok(edits) => self.notation_submit("Edit sequence lifetime", edits, None),
-                    Err(e) => self.command_error = Some(e),
-                }
-            }
+    fn sequence_apply(&mut self, p: Proposal) {
+        if p.edits.is_empty() {
+            return;
         }
+        self.notation_ui.sequence.press = None;
+        self.notation_ui.sequence.gesture = None;
+        self.submit_command(Command {
+            edits: p.edits,
+            label: p.label.into(),
+            expectation: worker::Expectation::Notation {
+                line: p.line,
+                id: None,
+            },
+        });
     }
-    fn sequence_form(&mut self, anchor: Anchor, action: Action, target: String) {
-        let prefix = if action == Action::Note {
+    pub(super) fn sequence_add_participant(&mut self) {
+        self.sequence_add_default(None, None);
+    }
+    fn sequence_add_default(&mut self, neighbor: Option<(String, bool)>, point: Option<Point>) {
+        let prefix = if point.is_some() {
             "Note"
         } else {
             "Participant"
         };
-        let id = (1..)
-            .map(|i| format!("{prefix}{i}"))
-            .find(|id| !self.document.source().contains(id))
-            .unwrap();
-        self.notation_ui.sequence.dialog = Some(Form {
-            anchor,
-            action,
-            target,
-            label: String::new(),
-            id,
-            revision: self.document.revision(),
-            error: None,
-        });
+        let source = self.document.source();
+        let id = edit::sequence_create::fresh(source, prefix);
+        let result = if let Some(p) = point {
+            edit::sequence_scoped::insert(
+                source,
+                &p.dock,
+                edit::sequence_insert::Action::Note,
+                &id,
+                "Note",
+            )
+        } else {
+            controls::participant(
+                source,
+                &id,
+                &id,
+                neighbor.as_ref().map(|(id, left)| (id.as_str(), *left)),
+            )
+        };
+        self.notation_ui.sequence.insert = None;
+        match result {
+            Ok(edits) => self.sequence_apply(Proposal {
+                edits,
+                line: None,
+                label: "Add sequence element",
+            }),
+            Err(e) => self.command_error = Some(e),
+        }
     }
 }
+
+#[cfg(test)]
+mod insertion_tests;
+#[cfg(test)]
+mod palette_tests;
+#[cfg(test)]
+mod target_tests;
+#[cfg(test)]
+mod tests;
+#[cfg(test)]
+mod touch_tests;
+
+impl State {
+    pub(super) fn clear_selection(&mut self) {
+        self.selection = None;
+    }
+}
+
+#[cfg(test)]
+#[path = "sequence/horizontal_tests.rs"]
+mod horizontal_tests;

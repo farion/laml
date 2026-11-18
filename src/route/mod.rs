@@ -8,6 +8,8 @@ mod activity_preferred;
 mod attachments;
 mod bridges;
 mod clearance;
+mod container_ends;
+mod corridor;
 mod crossing_fallback;
 mod detours;
 mod edge_style;
@@ -24,6 +26,7 @@ mod orthogonal;
 mod outline_clearance;
 mod package_outline;
 mod parallel;
+mod pass_cache;
 mod preferred;
 mod qualifiers;
 mod ranking;
@@ -35,6 +38,7 @@ mod router;
 mod routing_order;
 mod self_loops;
 mod side_rules;
+mod terminal;
 use activity_preferred::{
     activity_action_to_join, activity_control_entry, activity_decision_above_action,
     activity_decision_to_action, activity_decision_to_fork, activity_fork_to_action,
@@ -50,6 +54,23 @@ pub use qualifiers::QualifierBox;
 pub use reflow::place_and_route;
 pub use replay::replay;
 pub use router::route;
+
+/// Reuse the shared above/left bridge mechanics for already-authored sequence paths.
+pub(crate) fn decorate_crossings(route: &mut Route, previous: &mut [Route]) -> bool {
+    let Some(plan) = bridges::plan(
+        &route.points,
+        &[],
+        previous,
+        route.from,
+        route.to,
+        route.width,
+    )
+    .filter(|plan| plan.avoids_label(&route.points, &route.label)) else {
+        return false;
+    };
+    route.bridges = plan.apply(previous);
+    true
+}
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq)]
 pub struct Point {
@@ -129,6 +150,7 @@ fn candidates(
     previous: &[Route],
     offset: f64,
     ranked: bool,
+    terminal_gap: f64,
 ) -> Vec<Vec<Point>> {
     let a = &boxes[from];
     let b = &boxes[to];
@@ -298,6 +320,7 @@ fn candidates(
             target_side,
             previous,
             ranked.then_some(boxes),
+            terminal_gap,
         ));
     }
     let orthogonal_end = results.len();
@@ -311,6 +334,7 @@ fn candidates(
                     diagram.settings.diagram_type,
                     crate::syntax::DiagramType::Generic | crate::syntax::DiagramType::Package
                 ),
+            terminal_gap,
         )
         .into_iter()
         .filter(|points| (source_side.is_none() && target_side.is_none()) || points.len() == 5),

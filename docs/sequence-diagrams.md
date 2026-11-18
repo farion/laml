@@ -40,10 +40,17 @@ A participant declaration draws its head and dashed lifeline. `API+` opens an ex
 | `A ->> B : signal` / `B <<- A : signal` | Open asynchronous arrow toward B. |
 | `A <-- B : result` / `<-- : result` | Dashed reply, explicit or unambiguously inferred. |
 | `A -> A : retry` | Self-message. |
+| `A+ -> B+ : call` | Start A's activation at send and B's activation at receive. |
+| `A- -> B- : done` | End the most recent activation at each endpoint. |
 | `? -> A` / `A -> ?` | Found/lost message with an unknown endpoint. |
 | `A -> B+ : create` | First incoming `+` can introduce B, with an execution bar. |
 | `create(kind=create): A -> B+ : create` | Explicit dashed/open creation message. |
 | `A -> B! : delete` / `B! <- A : delete` | Destruction X and end of B's lifeline. |
+
+Each message endpoint accepts its own `+` or `-`, independently of the other
+endpoint and the arrow direction. For example, `A- -> B+` ends A's activation
+and starts B's activation on the same message. On self-messages, source markers
+refer to the send leg and target markers to the receive leg.
 
 A standalone `B+` starts an execution bar; `B-` closes the most recent open bar. Nested bars can have participant-local IDs and visible labels, e.g. `work: API+ : "Validate"`; `node[API] activation[work]` styles that bar. Lifeline births and deaths can occur inside an alternative operand: the same ID can have separate segments in different operands. References to a participant after its destruction are errors. See [created](../examples/sequence-created.laml), [execution](../examples/sequence-executions.laml) and [alternative-births](../examples/sequence-alternative-births.laml).
 
@@ -83,6 +90,60 @@ entry `A.first- ? B.second- : align=center-y; reference=second` keeps B's end fi
 The editor adds stable names where needed and writes the rule in one undo step.
 Moving an open lower edge into alignment also creates its explicit close.
 
+An activation edge can also dock directly onto a message endpoint. For a self-call,
+its upper send leg and lower receive leg are separate targets: resizing can switch
+between them even after docking. An open lower edge can acquire an explicit close;
+the innermost activation must end before its enclosing activation can end.
+
+### Align a message occurrence with an activation edge
+
+A message's `.send` or `.receive` occurrence can share the height of an existing
+activation's `+` (start) or `-` (finish) edge:
+
+```text
+settings {
+    type: sequence
+}
+semantics {
+    Client
+    Service
+    work: Service+ : "Work"
+    request: Client -> Service
+    Service-
+}
+layout {
+    request.receive ? Service.work+ : align=center-y; reference=second
+}
+```
+
+`reference=second` keeps the second operand stationary. Without that attribute,
+the activation edge is the reference, including when written first. The rule
+changes geometry, not the activation's declaration, local ID, label or existing
+message binding. Source event order remains authored; sharing a height is not an
+execution simulation. An unconstrained message end can be placed automatically
+to keep sending before receiving. Explicitly constrained ends are not moved to
+resolve a conflict.
+
+Constrain `.send` and `.receive` independently to draw a message between different
+heights; use the same reference for both to require a horizontal ordinary message.
+Self-messages retain distinct sending and receiving heights. Lower-edge references
+require a closed activation. Unknown or ambiguous references, cross-operand rules,
+conflicting/cyclic constraints, upward messages and invalid nested/lifetime
+placements are diagnosed rather than silently overriding authored intent.
+
+Self-message loops are routed together: a contained call uses an inner corridor
+and an enclosing call stays outside it. Automatic lane spacing and canvas/frame
+bounds account for these corridors and their labels. Unavoidable message crossings
+use bridges or compact underpass gaps. Export and editor picking use the same
+compiler paths; drag previews reuse the compiler's self-loop extent.
+
+The editor uses these rules when docking message endpoints, including at named,
+labelled or already message-bound activation edges. It adds stable names only
+where an address is required and retains existing declarations and comments.
+Dragging to a gap releases that endpoint's height binding. Moving a whole message
+releases its layout-only endpoint bindings; semantic `+`/`-` markers remain part
+of the message. Resizing an activation releases only the edited edge's bindings.
+
 ## Align destruction markers
 
 Standalone destruction occurrences can share a horizontal row through an explicit
@@ -110,9 +171,12 @@ execution. Connected alignment rules form one group. Each reference must identif
 one standalone destruction; ambiguous reused lifetimes, message-bound destructions
 and rules crossing fragment or operand boundaries are rejected.
 
-In the editor, drag an X vertically toward another X's row. A horizontal guide
-shows the resulting alignment; release to write the rule. Escape or dropping away
-from a target cancels the gesture. Source, preview and exports use the same rule.
+In the editor, hover a lifeline end to reveal a ghost X and click to add a
+standalone destruction. Drag an actual X to a valid event gap or another X's row;
+horizontal guides show the available positions. Moving away from an existing
+alignment detaches only the moved member. Right-click the X to delete the
+destruction. Escape or dropping away from a valid target cancels the gesture.
+Source, preview and exports use the same authored rules.
 
 ## Fragments and interaction uses
 

@@ -5,18 +5,21 @@ use super::*;
 pub(super) enum LegalDocument {
     Imprint,
     Privacy,
+    Licenses,
 }
 impl LegalDocument {
     fn title(self) -> &'static str {
         match self {
             Self::Imprint => "Imprint",
             Self::Privacy => "Data Privacy Statement",
+            Self::Licenses => "Third-party licenses",
         }
     }
     fn text(self) -> &'static str {
         match self {
             Self::Imprint => include_str!("help/imprint.txt"),
             Self::Privacy => include_str!("help/privacy.txt"),
+            Self::Licenses => super::super::bundled_license_notices(),
         }
     }
 }
@@ -31,7 +34,10 @@ impl Workspace {
         let mut document = None;
         let dismissed = dialogs::show(ctx, "editor-about", "About LAML Editor", 540.0, |ui| {
             ui.spacing_mut().item_spacing.y = 6.0;
+            ui.vertical_centered(|ui| branding::wordmark(ui, 260.0));
+            ui.add_space(8.0);
             ui.heading(format!("LAML Editor {}", env!("CARGO_PKG_VERSION")));
+            ui.weak("Proudly made with Rust");
             ui.add_space(8.0);
             ui.hyperlink("https://github.com/farion/laml");
             ui.add_space(8.0);
@@ -41,20 +47,27 @@ impl Workspace {
             ui.label(crate::i18n::tr(
                 "Maintainer: Frieder Reinhold<reinhold@trigon-media.com>",
             ));
-            ui.add_space(8.0);
-            ui.separator();
-            ui.add_space(8.0);
-            ui.horizontal_wrapped(|ui| {
-                if ui.button(crate::i18n::tr("Imprint")).clicked() {
-                    document = Some(LegalDocument::Imprint);
-                }
-                if ui
-                    .button(crate::i18n::tr("Data Privacy Statement"))
-                    .clicked()
-                {
-                    document = Some(LegalDocument::Privacy);
-                }
-            });
+            if !cfg!(target_arch = "wasm32")
+                && ui.button(crate::i18n::tr("Third-party licenses")).clicked()
+            {
+                document = Some(LegalDocument::Licenses);
+            }
+            if cfg!(target_arch = "wasm32") {
+                ui.add_space(8.0);
+                ui.separator();
+                ui.add_space(8.0);
+                ui.horizontal_wrapped(|ui| {
+                    if ui.button(crate::i18n::tr("Imprint")).clicked() {
+                        document = Some(LegalDocument::Imprint);
+                    }
+                    if ui
+                        .button(crate::i18n::tr("Data Privacy Statement"))
+                        .clicked()
+                    {
+                        document = Some(LegalDocument::Privacy);
+                    }
+                });
+            }
             ui.add_space(8.0);
             ui.horizontal(|ui| {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {

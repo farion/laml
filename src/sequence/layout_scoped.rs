@@ -57,7 +57,9 @@ pub(super) fn add(
         let local = strip_scope(text, owner, line)?;
         return add(&mut diagram.decompositions[index].diagram, &local, line);
     }
-    if let Some(rule) = super::activation_layout::parse(text, line)? {
+    if let Some(rule) = super::occurrence_layout::parse(text, line)? {
+        diagram.occurrence_layout.push(rule);
+    } else if let Some(rule) = super::activation_layout::parse(text, line)? {
         diagram.activation_layout.push(rule);
     } else if let Some(rule) = super::destruction_layout::parse(text, line)? {
         diagram.destruction_layout.push(rule);
@@ -89,5 +91,6 @@ pub(super) fn validate(diagram: &mut SequenceDiagram) -> Result<(), ParseError> 
     coregions::validate(diagram)?;
     super::destruction_layout::validate(diagram)?;
     super::activation_layout::validate(diagram)?;
+    super::occurrence_layout::validate(diagram)?;
     Ok(())
 }

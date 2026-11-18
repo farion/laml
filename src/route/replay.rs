@@ -66,8 +66,16 @@ pub fn replay(
         seeds.insert(relation.line, points);
     }
     let order = (0..visible.relations.len()).collect::<Vec<_>>();
-    let routes =
-        router::route_in_order_mode(&visible, boxes, sheet, None, &order, false, Some(&seeds))?;
+    let routes = router::route_in_order_mode(
+        &visible,
+        boxes,
+        sheet,
+        None,
+        &order,
+        false,
+        Some(&seeds),
+        &mut super::pass_cache::PassCache::default(),
+    )?;
     // Check both traversal orders: a newly enlarged marker must not cover an
     // earlier line, label or node simply because that line was processed first.
     for (index, route) in routes.iter().enumerate() {

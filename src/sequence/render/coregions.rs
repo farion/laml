@@ -83,7 +83,7 @@ pub(super) fn draw(
     sheet: &StyleSheet,
 ) -> Result<(), String> {
     for (index, region) in diagram.coregions.iter().enumerate() {
-        let x = x_of(diagram, centers, &region.participant)?;
+        let (x, top, bottom) = bounds(diagram, centers, anchors, region)?;
         let classes = &diagram
             .participants
             .iter()
@@ -91,18 +91,46 @@ pub(super) fn draw(
             .ok_or("unknown coregion participant")?
             .classes;
         let paint = styles::coregion(sheet, &region.participant, classes);
-        let mut low = f64::INFINITY;
-        let mut high = f64::NEG_INFINITY;
-        for end in &region.ends {
-            let (_, at) = position(anchors, &end.message, end.end)?;
-            low = low.min(at);
-            high = high.max(at);
-        }
-        let top = low - 10.0;
-        let bottom = high + 10.0;
         writeln!(svg, "<path d=\"M{:.2},{:.2} V{top:.2} H{:.2} v8 M{:.2},{:.2} V{bottom:.2} H{:.2} v-8\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\" data-coregion=\"{}\" data-coregion-index=\"{index}\" />",
             x - 9.0, top + 8.0, x + 9.0, x - 9.0, bottom - 8.0, x + 9.0,
             escape(&paint.color), paint.width, escape(&region.participant)).unwrap();
+    }
+    Ok(())
+}
+
+fn bounds(
+    diagram: &SequenceDiagram,
+    centers: &[f64],
+    anchors: &[MessageAnchor],
+    region: &Coregion,
+) -> Result<(f64, f64, f64), String> {
+    let x = x_of(diagram, centers, &region.participant)?;
+    let (mut low, mut high) = (f64::INFINITY, f64::NEG_INFINITY);
+    for end in &region.ends {
+        let (_, at) = position(anchors, &end.message, end.end)?;
+        low = low.min(at);
+        high = high.max(at);
+    }
+    Ok((x, low - 10.0, high + 10.0))
+}
+
+/// Publish the two visible brackets separately, never their empty interior.
+pub(super) fn regions(
+    out: &mut Vec<crate::authoring::Region>,
+    diagram: &SequenceDiagram,
+    centers: &[f64],
+    anchors: &[MessageAnchor],
+) -> Result<(), String> {
+    for region in &diagram.coregions {
+        let (x, top, bottom) = bounds(diagram, centers, anchors, region)?;
+        for (y, end) in [(top, top + 8.0), (bottom, bottom - 8.0)] {
+            out.push(crate::authoring::Region::stroke(
+                format!("line:{}", region.line),
+                "coregion",
+                region.line,
+                vec![(x - 9.0, end), (x - 9.0, y), (x + 9.0, y), (x + 9.0, end)],
+            ));
+        }
     }
     Ok(())
 }

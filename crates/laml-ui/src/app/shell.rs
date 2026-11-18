@@ -1,13 +1,14 @@
 //! Three-pane editor chrome based on the supplied 1568 × 975 reference.
 use super::*;
+mod compact_footer;
+mod footer;
 
 impl Editor {
     pub(super) fn shell(&mut self, ui: &mut egui::Ui) {
-        let frame = appearance::panel_frame(appearance::color(ui.ctx(), appearance::PANEL));
+        self.responsive.layout(ui.available_width());
+        let content_top = ui.available_rect_before_wrap().top();
         let footer = egui::Panel::bottom("document-status")
             .exact_size(40.0)
-            // We paint the border ourselves; the panel's separator would consume
-            // one pixel of the 24-point button row and clip its lower edge.
             .show_separator_line(false)
             .frame(
                 appearance::panel_frame(appearance::color(ui.ctx(), appearance::HEADER))
@@ -17,8 +18,6 @@ impl Editor {
             .inner;
         let width = ui.available_width();
         if (width - self.shell_width).abs() > 1.0 {
-            // The native window manager can change the initial viewport after its
-            // first frame. Reapply the reference proportions at the actual size.
             for salt in ["source-pane", "properties-pane"] {
                 let id = ui.make_persistent_id(salt);
                 ui.ctx()
@@ -26,181 +25,128 @@ impl Editor {
             }
             self.shell_width = width;
         }
-        egui::Panel::left("source-pane")
-            .resizable(true)
-            .default_size((width * 0.25).round())
-            .min_size((width * 0.25).min(280.0))
-            .frame(appearance::panel_frame(appearance::color(
-                ui.ctx(),
-                appearance::BACKGROUND,
-            )))
-            .show(ui, |ui| {
-                self.source_heading(ui);
-                egui::Frame::new()
-                    .fill(appearance::color(ui.ctx(), appearance::BACKGROUND))
-                    .inner_margin(egui::Margin::symmetric(12, 6))
-                    .show(ui, |ui| self.source_editor(ui));
-            });
-        egui::Panel::right("properties-pane")
-            .resizable(true)
-            .default_size((width * 0.20).round())
-            .min_size((width * 0.20).min(270.0))
-            .frame(frame)
-            .show(ui, |ui| {
-                ui.spacing_mut().item_spacing.y = 0.0;
-                appearance::pane_heading(ui, "Properties");
-                self.inspector_tabs(ui);
-                self.inspector(ui);
-            });
+        let mut left = ui.max_rect().left();
+        let mut right = ui.max_rect().right();
+        if !self.responsive.single {
+            let panel = egui::Panel::left("source-pane")
+                .resizable(true)
+                .default_size((width * 0.25).round())
+                .min_size((width * 0.25).min(280.0))
+                .max_size(
+                    (width
+                        - if self.responsive.docked && !self.responsive.properties_hidden {
+                            600.0
+                        } else {
+                            360.0
+                        })
+                    .max(240.0),
+                )
+                .frame(appearance::panel_frame(appearance::color(
+                    ui.ctx(),
+                    appearance::BACKGROUND,
+                )))
+                .show(ui, |ui| self.source_pane(ui));
+            left = panel.response.rect.right();
+        }
+        if self.responsive.docked && !self.responsive.properties_hidden {
+            let panel = egui::Panel::right("properties-pane")
+                .resizable(true)
+                .default_size((width * 0.20).round())
+                .min_size((width * 0.20).min(270.0))
+                .max_size((ui.available_width() - 340.0).max(240.0))
+                .frame(appearance::panel_frame(appearance::color(
+                    ui.ctx(),
+                    appearance::PANEL,
+                )))
+                .show(ui, |ui| self.properties_pane(ui, false));
+            right = panel.response.rect.left();
+        }
         egui::CentralPanel::default()
             .frame(appearance::panel_frame(appearance::color(
                 ui.ctx(),
                 appearance::BACKGROUND,
             )))
             .show(ui, |ui| {
-                let header = self.graph_heading(ui);
-                let diagram_area = egui::Rect::from_min_max(
-                    egui::pos2(ui.max_rect().left(), header.bottom()),
-                    ui.max_rect().max,
-                );
-                egui::Frame::new()
-                    .inner_margin(egui::Margin {
-                        left: 12,
-                        right: 12,
-                        top: 12,
-                        bottom: 12,
-                    })
-                    .show(ui, |ui| {
-                        self.canvas(ui);
-                    });
-                self.preview_loading(ui, diagram_area);
+                if self.responsive.single && self.responsive.pane == responsive::Pane::Source {
+                    self.source_pane(ui);
+                } else {
+                    let header = self.graph_heading(ui);
+                    let area = egui::Rect::from_min_max(
+                        egui::pos2(ui.max_rect().left(), header.bottom()),
+                        ui.max_rect().max,
+                    );
+                    egui::Frame::new()
+                        .inner_margin(12)
+                        .show(ui, |ui| self.canvas(ui));
+                    self.preview_loading(ui, area);
+                }
             });
-        let source = egui::containers::panel::PanelState::load(
-            ui.ctx(),
-            ui.make_persistent_id("source-pane"),
-        )
-        .unwrap()
-        .outer_rect;
-        let properties = egui::containers::panel::PanelState::load(
-            ui.ctx(),
-            ui.make_persistent_id("properties-pane"),
-        )
-        .unwrap()
-        .outer_rect;
-        self.footer(ui, footer, source.right(), properties.left());
+        self.footer(ui, footer, left, right);
+        if !self.responsive.docked
+            && self.responsive.flyout
+            && (!self.responsive.single || self.responsive.pane == responsive::Pane::Diagram)
+        {
+            self.properties_flyout(ui, content_top, footer.top());
+        }
     }
 
-    fn footer(&mut self, ui: &mut egui::Ui, rect: egui::Rect, left: f32, right: f32) {
-        ui.painter().hline(
-            rect.x_range(),
-            rect.top(),
-            egui::Stroke::new(1.0, appearance::color(ui.ctx(), appearance::BORDER)),
-        );
-        let rect = rect.shrink2(egui::vec2(0.0, 8.0));
-        let source_rect = egui::Rect::from_min_max(
-            rect.min + egui::vec2(14.0, 0.0),
-            egui::pos2(left - 8.0, rect.bottom()),
-        );
-        let mut status = ui.new_child(
-            egui::UiBuilder::new()
-                .id_salt("footer-status")
-                .max_rect(source_rect)
-                .layout(egui::Layout::left_to_right(egui::Align::Center)),
-        );
-        status.set_clip_rect(source_rect);
-        footer_status::show(&mut status, self);
-        let text_color = appearance::color(ui.ctx(), appearance::TEXT);
-        let label_width = ui.fonts_mut(|fonts| {
-            fonts
-                .layout_no_wrap(
-                    crate::i18n::tr("Default Relation Type").into(),
-                    egui::FontId::proportional(15.0),
-                    text_color,
-                )
-                .size()
-                .x
-        });
-        let has_relations = self.notation() != laml_ui::notation::Notation::Timing;
-        let center_width = right - left;
-        let picker_width = 270.0_f32.min((center_width - 180.0).max(100.0));
-        let show_relation_label = center_width >= label_width + 270.0 + 192.0;
-        let relation_width = if has_relations {
-            picker_width
-                + if show_relation_label {
-                    label_width + 12.0
-                } else {
-                    0.0
-                }
+    fn source_pane(&mut self, ui: &mut egui::Ui) {
+        self.source_heading(ui);
+        egui::Frame::new()
+            .fill(appearance::color(ui.ctx(), appearance::BACKGROUND))
+            .inner_margin(egui::Margin::symmetric(12, 6))
+            .show(ui, |ui| self.source_editor(ui));
+    }
+
+    fn properties_pane(&mut self, ui: &mut egui::Ui, flyout: bool) {
+        ui.spacing_mut().item_spacing.y = 0.0;
+        if flyout {
+            egui::Frame::new()
+                .inner_margin(egui::Margin::symmetric(16, 6))
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(crate::i18n::tr("Properties"));
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if workspace::icon(ui, egui_phosphor::regular::X, "Close").clicked() {
+                                self.responsive.flyout = false;
+                            }
+                        });
+                    });
+                });
         } else {
-            0.0
-        };
-        let zoom_rect = egui::Rect::from_min_max(
-            egui::pos2(left + 12.0, rect.top()),
-            egui::pos2(
-                (right - relation_width - 20.0).max(left + 40.0),
-                rect.bottom(),
-            ),
-        );
-        let mut zoom = ui.new_child(
-            egui::UiBuilder::new()
-                .id_salt("footer-zoom")
-                .max_rect(zoom_rect)
-                .layout(egui::Layout::left_to_right(egui::Align::Center)),
-        );
-        zoom.set_clip_rect(zoom_rect);
-        self.view_controls(&mut zoom);
-        let arrow_rect = egui::Rect::from_min_max(
-            egui::pos2(right - relation_width - 12.0, rect.top()),
-            egui::pos2(right - 12.0, rect.bottom()),
-        );
-        let mut arrow = ui.new_child(
-            egui::UiBuilder::new()
-                .id_salt("footer-arrow-type")
-                .max_rect(arrow_rect)
-                .layout(egui::Layout::right_to_left(egui::Align::Center)),
-        );
-        arrow.set_clip_rect(arrow_rect);
-        arrow.spacing_mut().interact_size.y = 24.0;
-        arrow.spacing_mut().button_padding.y = 2.0;
-        if has_relations {
-            self.arrow_type_control(&mut arrow, picker_width);
-            if show_relation_label {
-                arrow.label(crate::i18n::tr("Default Relation Type"));
-            }
+            appearance::pane_heading(ui, "Properties");
         }
-        let info_rect = egui::Rect::from_min_max(
-            egui::pos2(right + 8.0, rect.top()),
-            rect.max - egui::vec2(14.0, 0.0),
+        self.inspector_tabs(ui);
+        self.inspector(ui);
+    }
+
+    fn properties_flyout(&mut self, ui: &mut egui::Ui, top: f32, bottom: f32) {
+        let screen = ui.ctx().content_rect();
+        let width = 340.0_f32.min(screen.width() - 16.0).max(1.0);
+        let rect = egui::Rect::from_min_max(
+            egui::pos2(screen.right() - width, top.min(bottom)),
+            egui::pos2(screen.right(), bottom),
         );
-        let mut info = ui.new_child(
-            egui::UiBuilder::new()
-                .id_salt("footer-info")
-                .max_rect(info_rect)
-                .layout(egui::Layout::right_to_left(egui::Align::Center)),
-        );
-        info.set_clip_rect(info_rect);
-        info.colored_label(
-            appearance::color(ui.ctx(), appearance::MUTED),
-            crate::i18n::tr("LAML · UTF-8"),
-        );
-        #[cfg(target_arch = "wasm32")]
-        if laml_ui::services::browser_mode() {
-            let status = crate::browser_storage::storage_status();
-            let color = if crate::browser_storage::storage_failed() {
-                egui::Color32::LIGHT_RED
-            } else {
-                appearance::color(ui.ctx(), appearance::TEXT)
-            };
-            info.add(
-                egui::Label::new(
-                    egui::RichText::new(crate::i18n::message(&(&status))).color(color),
-                )
-                .truncate(),
-            )
-            .on_hover_text(crate::i18n::message(&(&status)));
-        }
-        if !laml_ui::services::browser_mode() && self.document.is_dirty() {
-            info.label(crate::i18n::tr("Unsaved changes"));
+        egui::Area::new(ui.make_persistent_id("properties-flyout"))
+            .order(egui::Order::Foreground)
+            .fixed_pos(rect.min)
+            .movable(false)
+            .show(ui.ctx(), |ui| {
+                ui.set_width(width);
+                ui.set_height(rect.height());
+                ui.set_clip_rect(rect);
+                appearance::panel_frame(appearance::color(ui.ctx(), appearance::PANEL))
+                    .stroke(egui::Stroke::new(
+                        1.0,
+                        appearance::color(ui.ctx(), appearance::BORDER),
+                    ))
+                    .show(ui, |ui| {
+                        ui.set_min_size(rect.size() - egui::vec2(2.0, 2.0));
+                        self.properties_pane(ui, true);
+                    });
+            });
+        if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+            self.responsive.flyout = false;
         }
     }
 

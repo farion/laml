@@ -10,6 +10,7 @@ pub mod file_state;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod files;
 pub mod graph_edit;
+pub mod graph_insert;
 pub mod i18n;
 pub mod inline_text;
 pub mod membership_edit;
@@ -39,6 +40,7 @@ pub mod recovery;
 #[path = "recovery_web.rs"]
 pub mod recovery;
 pub mod recovery_record;
+pub mod source_assist;
 pub mod source_link;
 pub mod structure;
 pub mod syntax_tools;
@@ -52,6 +54,8 @@ pub(crate) mod browser_storage;
 pub mod services;
 #[cfg(target_arch = "wasm32")]
 mod web;
+#[cfg(target_arch = "wasm32")]
+mod web_clipboard;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod server;

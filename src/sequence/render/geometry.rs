@@ -183,6 +183,7 @@ pub(super) fn frame_bounds(
             .unwrap_or((default_left, default_right)),
         None => (default_left, default_right),
     };
+    right = right.max(frame.self_right);
     let font =
         styles::fragment(sheet, operator_name(&frame.operator), frame.id.as_deref()).font_size;
     right = right
@@ -335,6 +336,7 @@ pub(super) fn message_endpoints(
             guard: (*guard).clone(),
             top: 0.0,
             bottom: 0.0,
+            self_right: 0.0,
             separators: Vec::new(),
             messages: Vec::new(),
         };

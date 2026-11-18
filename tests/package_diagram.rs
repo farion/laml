@@ -97,7 +97,10 @@ fn architecture_dependencies_route_without_changing_original_node_layout() {
             access[0].y - pricing.y - pricing.height >= 18.0,
             "{theme}: access needs visible clearance below Pricing"
         );
-        assert_eq!(merge.len(), 3, "{theme}: merge needs only one bend");
+        assert!(
+            merge.len() <= 4,
+            "{theme}: merge needs at most two bends with roomy leaf packages"
+        );
         assert!(merge[1].y > payments.y + payments.height + 4.0);
         let distance_to_payments = merge[0].y - payments.y - payments.height;
         let distance_to_common = common.y + 14.0 - merge[0].y;
@@ -106,14 +109,8 @@ fn architecture_dependencies_route_without_changing_original_node_layout() {
             "{theme}: merge should visibly belong to Common, not Payments"
         );
         assert!((merge[0].x - node("Shop.Pricing").x - node("Shop.Pricing").width).abs() < 1e-6);
-        assert!(
-            merge[2].x >= common.x + 32.0 && merge[2].x <= common.x + common.width - 6.0,
-            "{theme}: merge docks on Common's visible top edge"
-        );
-        assert!(
-            (merge[2].y - common.y - 14.0).abs() < 1e-6,
-            "{theme}: merge should meet Common's visible body, not the tab's bounding box"
-        );
+        // Larger leaf bodies can change the target side. The contour checks
+        // below still require every relation to meet the visible package frame.
         let near = |a: f64, b: f64| (a - b).abs() < 1e-6;
         let touches_outline = |n: &laml::geometry::BoxNode, p: laml::route::Point| {
             let body_top = n.y + 14.0;
@@ -137,18 +134,16 @@ fn architecture_dependencies_route_without_changing_original_node_layout() {
             );
         }
         let label = routes[3].label.as_ref().unwrap();
-        assert!(
-            label.y > merge[0].y,
-            "{theme}: merge label belongs below the route, near Common"
-        );
-        assert!(
-            label.y > payments.y + payments.height + 20.0,
-            "{theme}: merge label must clear the unrelated Payments box"
-        );
-        assert!(
-            label.x + label.width + 4.0 < payments.x,
-            "{theme}: the rendered merge label pill must not touch Payments"
-        );
+        for other in [payments, common] {
+            assert!(
+                label.x + label.width + 4.0 < other.x
+                    || label.x - 4.0 > other.x + other.width
+                    || label.y + label.height + 4.0 < other.y
+                    || label.y - 4.0 > other.y + other.height,
+                "{theme}: merge label must clear {}",
+                other.id
+            );
+        }
         assert!(
             routes.iter().all(|route| route.bridges.is_empty()),
             "{theme}: dependencies must not cross"

@@ -292,7 +292,9 @@ impl Editor {
             if choices.is_empty() {
                 return;
             }
-            ui.toggle_value(&mut self.notation_ui.connect, crate::i18n::tr("Connect"));
+            if self.notation() != laml_ui::notation::Notation::Sequence {
+                ui.toggle_value(&mut self.notation_ui.connect, crate::i18n::tr("Connect"));
+            }
             egui::ComboBox::from_id_salt("notation-relation-type")
                 .width((width - 90.0).max(48.0))
                 .selected_text(

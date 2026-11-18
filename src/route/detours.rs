@@ -10,6 +10,7 @@ pub(super) fn tracks(
     horizontal: bool,
     middle: f64,
     gap_midpoints: bool,
+    terminal_gap: f64,
 ) -> Vec<f64> {
     let mut values = Vec::new();
     for node in boxes {
@@ -18,7 +19,12 @@ pub(super) fn tracks(
         } else {
             (node.y, node.y + node.height)
         };
-        values.extend([low - 24.0, high + 24.0]);
+        values.extend([
+            low - 24.0,
+            high + 24.0,
+            low - terminal_gap,
+            high + terminal_gap,
+        ]);
         if gap_midpoints {
             let gap = super::clearance::GAP + 2.0;
             values.extend([low - gap, high + gap]);
@@ -81,10 +87,23 @@ pub(super) fn corridors(
     b: &BoxNode,
     boxes: &[BoxNode],
     gap_midpoints: bool,
+    terminal_gap: f64,
 ) -> Vec<Vec<Point>> {
     let (ca, cb) = (center(a), center(b));
-    let xs = tracks(boxes, true, (ca.x + cb.x) / 2.0, gap_midpoints);
-    let ys = tracks(boxes, false, (ca.y + cb.y) / 2.0, gap_midpoints);
+    let xs = tracks(
+        boxes,
+        true,
+        (ca.x + cb.x) / 2.0,
+        gap_midpoints,
+        terminal_gap,
+    );
+    let ys = tracks(
+        boxes,
+        false,
+        (ca.y + cb.y) / 2.0,
+        gap_midpoints,
+        terminal_gap,
+    );
     let mut result = Vec::new();
     for &x in &xs {
         let (wa, wb) = (Point { x, y: ca.y }, Point { x, y: cb.y });
@@ -124,7 +143,7 @@ mod tests {
         let boxes =
             crate::geometry::place(&diagram, &crate::styles::StyleSheet::default()).unwrap();
         assert!(
-            corridors(&boxes[0], &boxes[2], &boxes, false)
+            corridors(&boxes[0], &boxes[2], &boxes, false, 24.0)
                 .iter()
                 .any(|path| {
                     path.len() == 5 && super::super::geometry::route_is_clear(path, &boxes, &[])

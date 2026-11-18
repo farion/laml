@@ -36,6 +36,7 @@ impl Editor {
     }
 
     pub(super) fn canvas(&mut self, ui: &mut egui::Ui) {
+        self.poll_placement(ui.ctx());
         let enabled = self.can_edit_visually();
         if !enabled || ui.input(|input| input.key_pressed(egui::Key::Escape)) {
             self.creation.drag = None;
@@ -275,23 +276,9 @@ impl Editor {
         if !panning && !relation_owned && !port_origin {
             self.placement_canvas(ui, rect, &response);
         }
-        if self.placement.drag.is_some() {
-            let status_rect = egui::Rect::from_min_size(
-                viewport.left_top() + egui::vec2(12.0, 12.0),
-                egui::vec2(260.0, 200.0),
-            );
-            let mut status = ui.new_child(
-                egui::UiBuilder::new()
-                    .id_salt("placement-status")
-                    .max_rect(status_rect),
-            );
-            egui::Frame::new()
-                .fill(appearance::color(ui.ctx(), appearance::PANEL))
-                .inner_margin(10)
-                .show(&mut status, |ui| self.placement_status(ui));
-        }
         self.alignment_guides(ui, rect);
         self.connection_overlay(ui, rect, panning);
+        self.graph_insert_overlay(ui, rect, panning);
         self.graph_context_menu(ui, rect, &response);
     }
 }

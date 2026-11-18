@@ -30,6 +30,7 @@ pub(super) fn regions(
     timeline: &lifetimes::Timeline<'_>,
     positioned: &[(&Message, f64)],
     anchors: &[anchors::MessageAnchor],
+    routes: &[crate::route::Route],
     frames: &[DrawnFrame],
     left: f64,
     right: f64,
@@ -100,11 +101,10 @@ pub(super) fn regions(
             }
         }
     }
-    for ((m, _), a) in positioned.iter().zip(anchors) {
+    for (((m, _), a), route) in positioned.iter().zip(anchors).zip(routes) {
         let (sx, sy) = a.send;
         let (tx, ty) = a.receive;
-        let path =
-            message_geometry::path(a.send, a.receive, m.from == m.to, diagram.allow_diagonal);
+        let path = route.points.iter().map(|p| (p.x, p.y)).collect::<Vec<_>>();
         out.push(Region::rect(
             &m.from,
             "sequence-send",
@@ -124,31 +124,32 @@ pub(super) fn regions(
             0.0,
         ));
         let id = m.name.clone().unwrap_or_else(|| format!("line:{}", m.line));
-        out.push(Region::stroke(&id, "message", m.line, path));
-        if let Some(label) = &m.label {
+        let mut region = Region::stroke(&id, "message", m.line, path.clone());
+        if !route.bridges.is_empty() || !route.gaps.is_empty() {
+            region.pick_paths =
+                crate::svg::route_pick_paths(route, &[], crate::theme::Theme::Plain)?
+                    .into_iter()
+                    .map(|p| p.into_iter().map(|p| (p.x, p.y)).collect())
+                    .collect();
+        }
+        out.push(region);
+        if let Some(label) = m.label.as_ref().filter(|label| !label.trim().is_empty()) {
             let paint = styles::message(sheet, m.name.as_deref(), &m.classes);
             let w = geometry::label_width_at(label, paint.font_size)?;
             let h = paint.font_size * 1.25 * label.lines().count().max(1) as f64;
-            let bent = !diagram.allow_diagonal && m.from != m.to && (sy - ty).abs() >= 0.01;
-            let x = if m.from == m.to {
-                sx + 52.0 + w / 2.0
-            } else if bent {
-                sx + (tx - sx).signum() * (w / 2.0 + 20.0).min((tx - sx).abs() / 2.0)
-            } else {
-                (sx + tx) / 2.0
-            };
-            let baseline = if bent { sy } else { (sy + ty) / 2.0 };
+            let (x, baseline) = super::routing::label(m, a, &path, paint.font_size)?;
             out.push(Region::rect(
                 id,
                 "message",
                 m.line,
                 x - w / 2.0 - 4.0,
-                baseline - h - 9.0,
+                baseline - paint.font_size,
                 w + 8.0,
                 h + 4.0,
             ));
         }
     }
+    coregions::regions(out, diagram, centers, anchors)?;
     for frame in frames {
         let (x, r) = geometry::frame_bounds(diagram, sheet, centers, widths, frame, left, right)?;
         out.push(Region::rect(
@@ -163,6 +164,7 @@ pub(super) fn regions(
             r - x,
             frame.bottom - frame.top,
         ));
+        fragment_text(out, diagram, sheet, frame, x, r)?;
     }
     // Insertion handles consume final timeline positions, including operand boundaries.
     // Their line means "insert before", not an editable object or a pixel coordinate.
@@ -192,23 +194,8 @@ pub(super) fn regions(
         right - left,
         0.0,
     ));
-    // Every remaining source event is reachable even when it has no graph-node identity.
-    for &(line, y) in timeline.positions {
-        if !out
-            .iter()
-            .any(|r| r.line == line && !r.kind.starts_with("sequence-"))
-        {
-            out.push(Region::rect(
-                format!("line:{line}"),
-                "event",
-                line,
-                left,
-                y - 12.0,
-                right - left,
-                24.0,
-            ));
-        }
-    }
+    // Timeline boundaries remain insertion docks, not selectable diagram objects.
+    // Visible elements publish their own final geometry instead of full-width rows.
     Ok(())
 }
 
@@ -271,7 +258,11 @@ pub(super) fn decompositions(
             region.id = format!("{}.{}", part.parent, region.id);
             region.x += left;
             region.y += top;
-            for p in &mut region.path {
+            for p in region
+                .path
+                .iter_mut()
+                .chain(region.pick_paths.iter_mut().flatten())
+            {
                 p.0 += left;
                 p.1 += top;
             }
@@ -297,4 +288,109 @@ pub(super) fn annotations(
             r.height,
         ));
     }
+}
+
+pub(super) fn references(
+    out: &mut Vec<Region>,
+    diagram: &SequenceDiagram,
+    references: &[(&str, f64)],
+    left: f64,
+    right: f64,
+    sheet: &StyleSheet,
+) -> Result<(), String> {
+    let lines = diagram.events.iter().filter_map(|e| match e {
+        Event::Reference { line, .. } => Some(*line),
+        _ => None,
+    });
+    let font = styles::fragment(sheet, "ref", None).font_size;
+    for ((label, y), line) in references.iter().zip(lines) {
+        let width = (right - left).max(geometry::label_width_at(label, font)? + 52.0);
+        out.push(Region::rect(
+            format!("line:{line}"),
+            "reference",
+            line,
+            left,
+            y - 22.0,
+            width,
+            frames::reference_height(sheet),
+        ));
+    }
+    Ok(())
+}
+
+/// Source-linked text affordances use the same metrics as frames::fragment.
+fn fragment_text(
+    out: &mut Vec<Region>,
+    diagram: &SequenceDiagram,
+    sheet: &StyleSheet,
+    frame: &DrawnFrame,
+    left: f64,
+    right: f64,
+) -> Result<(), String> {
+    let paint = styles::fragment(
+        sheet,
+        geometry::operator_name(&frame.operator),
+        frame.id.as_deref(),
+    );
+    let font = paint.font_size;
+    let tab = geometry::label_width_at(&frame.operator, font)? + 22.0;
+    let guard_width = geometry::label_width_at(&format!("[{}]", frame.guard), font)?.max(20.0);
+    out.push(Region::rect(
+        format!("line:{}", frame.line),
+        "sequence-guard-header",
+        frame.line,
+        left,
+        frame.top,
+        (tab + 8.0 + guard_width).min(right - left),
+        frames::descriptor_height(font),
+    ));
+    if !frame.guard.is_empty() {
+        out.push(Region::rect(
+            format!("line:{}", frame.line),
+            "sequence-guard",
+            frame.line,
+            left + tab + 8.0,
+            frame.top + 4.0,
+            guard_width,
+            font * 1.25,
+        ));
+    }
+    let mut stack = Vec::new();
+    let mut branches = Vec::new();
+    for event in &diagram.events {
+        match event {
+            Event::FrameStart { line, .. } => stack.push(*line),
+            Event::FrameEnd { .. } => {
+                stack.pop();
+            }
+            Event::FrameBranch { line, .. } if stack.last() == Some(&frame.line) => {
+                branches.push(*line)
+            }
+            _ => {}
+        }
+    }
+    for ((guard, y), line) in frame.separators.iter().zip(branches) {
+        let width = geometry::label_width_at(&format!("[{guard}]"), font)?.max(20.0);
+        out.push(Region::rect(
+            format!("line:{line}"),
+            "sequence-guard-header",
+            line,
+            left,
+            y + 2.0,
+            (width + 20.0).min(right - left),
+            font * 1.25 + 6.0,
+        ));
+        if !guard.is_empty() {
+            out.push(Region::rect(
+                format!("line:{line}"),
+                "sequence-guard",
+                line,
+                left + 10.0,
+                y + 5.0,
+                width,
+                font * 1.25,
+            ));
+        }
+    }
+    Ok(())
 }

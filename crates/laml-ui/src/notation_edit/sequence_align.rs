@@ -8,13 +8,25 @@ fn detach(source: &str, owner: &str, start: usize, lower: bool) -> Result<Vec<Ed
     let doc = laml::sequence::parse(source).map_err(|e| e.message)?;
     let is_owner =
         |name: &str| resolve(&doc, name).is_ok_and(|e| e.owner == owner && e.start == start);
-    let Some(group) = groups(&doc, lower)
+    let group = groups(&doc, lower)
         .into_iter()
-        .find(|g| g.iter().any(|name| is_owner(name)))
-    else {
-        return Ok(vec![]);
-    };
+        .find(|g| g.iter().any(|name| is_owner(name)));
     let mut edits = Vec::new();
+    for rule in &doc.occurrence_layout {
+        let touches=[&rule.first,&rule.second].iter().any(|e|matches!(e,laml::sequence::occurrence_layout::Endpoint::Activation {reference,lower:edge} if *edge==lower && is_owner(reference)));
+        if touches {
+            let r = record(source, rule.line)?;
+            let body = code(&source[r.range.clone()]);
+            edits.push(Edit {
+                range: r.range.start + body.len() - body.trim_start().len()
+                    ..r.range.start + body.trim_end().len(),
+                replacement: String::new(),
+            });
+        }
+    }
+    let Some(group) = group else {
+        return Ok(edits);
+    };
     for rule in &doc.activation_layout {
         if rule.lower != lower || !group.contains(&rule.first) {
             continue;
@@ -62,7 +74,7 @@ pub fn resize(
     let (movement, moved_line) = if open {
         super::sequence_drag::close_open(&intermediate, start, before)?
     } else {
-        super::sequence_drag::move_event(&intermediate, edge, before)?
+        super::sequence_resize::move_edge(&intermediate, owner, start, edge, lower, before)?
     };
     let selected = if lower {
         crate::relation_edit::remap_line(&intermediate, start, &movement)
@@ -71,6 +83,48 @@ pub fn resize(
     };
     let candidate = apply(&intermediate, &movement)?;
     laml::sequence::parse(&candidate).map_err(|e| e.message)?;
+    Ok((crate::graph_edit::difference(source, &candidate), selected))
+}
+
+/// Bind the edited edge to the exact message row, not an adjacent source gap.
+pub fn snap_to_message(
+    source: &str,
+    owner: &str,
+    start: usize,
+    edge: usize,
+    lower: bool,
+    message: usize,
+) -> Result<(Vec<Edit>, usize), String> {
+    let doc = laml::sequence::parse(source).map_err(|e| e.message)?;
+    let receive = doc.events.iter().any(|e| {
+        matches!(e,
+        laml::sequence::Event::Message(m) if m.line == message && m.to == owner)
+    });
+    snap_to_occurrence(source, owner, start, edge, lower, message, receive)
+}
+
+pub fn snap_to_occurrence(
+    source: &str,
+    owner: &str,
+    start: usize,
+    edge: usize,
+    lower: bool,
+    message: usize,
+    receive: bool,
+) -> Result<(Vec<Edit>, usize), String> {
+    let detached = detach(source, owner, start, lower)?;
+    let map = |line| crate::relation_edit::remap_line(source, line, &detached);
+    let intermediate = apply(source, &detached)?;
+    let (edits, selected) = super::sequence_snap::dock(
+        &intermediate,
+        owner,
+        map(start),
+        map(edge),
+        lower,
+        map(message),
+        receive,
+    )?;
+    let candidate = apply(&intermediate, &edits)?;
     Ok((crate::graph_edit::difference(source, &candidate), selected))
 }
 

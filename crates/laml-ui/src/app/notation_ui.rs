@@ -10,6 +10,7 @@ mod reorder;
 mod sequence;
 mod settings;
 mod structure;
+use structure::notation_choice_title;
 mod styles;
 mod suggestions;
 mod windows;
@@ -46,6 +47,7 @@ impl Editor {
         !self.notation().graph()
     }
     pub(super) fn notation_select(&mut self, line: usize, id: Option<String>) {
+        self.notation_ui.sequence.clear_selection();
         self.notation_ui.selected = Some((line, id, self.document.revision()));
         self.selection = Selection::default();
         self.property_drafts.clear();
@@ -73,6 +75,9 @@ impl Editor {
     pub(super) fn open_construct_dialog(&mut self) {
         if !self.can_edit_visually() {
             return;
+        }
+        if self.notation() == Notation::Sequence {
+            return self.sequence_add_participant();
         }
         let recipes = edit::catalog::recipes(self.notation());
         if recipes.is_empty() {
@@ -302,9 +307,11 @@ impl Editor {
                 if !handled {
                     self.notation_optional_fields(ui, line, id.as_deref());
                 }
-                ui.add_space(12.0);
-                inspector_ui::category(ui, "Structure");
-                self.notation_structure(ui, &record, id.as_deref());
+                if self.notation() != Notation::Sequence {
+                    ui.add_space(12.0);
+                    inspector_ui::category(ui, "Structure");
+                    self.notation_structure(ui, &record, id.as_deref());
+                }
             });
         } else {
             inspector_ui::category(ui, "Diagram");
@@ -314,7 +321,9 @@ impl Editor {
                     self.notation().family(),
                     self.notation().title()
                 ));
-                if ui.button(crate::i18n::tr("Add construct…")).clicked() {
+                if self.notation() != Notation::Sequence
+                    && ui.button(crate::i18n::tr("Add construct…")).clicked()
+                {
                     self.open_construct_dialog();
                 }
                 if ui.button(crate::i18n::tr("Elements…")).clicked() {
@@ -396,6 +405,9 @@ impl Editor {
         }
     }
     pub(super) fn notation_delete(&mut self, line: usize, id: Option<&str>, keep: bool) {
+        if self.notation() == Notation::Sequence && !keep && self.sequence_delete_selected(line) {
+            return;
+        }
         let result = if self.notation() == Notation::Bpmn
             && !keep
             && id.is_some_and(|id| {
@@ -482,20 +494,6 @@ fn body_capable(r: &edit::Record) -> bool {
         ]
         .iter()
         .any(|prefix| r.heading.starts_with(prefix))
-}
-
-fn notation_choice_title<'a>(field: &str, value: &'a str) -> &'a str {
-    if field.ends_with("activation / lifetime") {
-        match value {
-            "" => "Unchanged",
-            "+" => "Start activation / create if new",
-            "-" => "End activation",
-            "!" => "Destroy participant",
-            _ => value,
-        }
-    } else {
-        value
-    }
 }
 
 #[cfg(test)]

@@ -169,10 +169,15 @@ pub(super) fn mixed_field(
             .align(egui::Align2::LEFT_TOP)
             .desired_width(ui.available_width()),
     );
-    let response = response.on_hover_text(if multiline {
-        crate::i18n::tr("Enter: confirm · Shift+Enter: new line")
-    } else {
-        crate::i18n::tr("Enter: confirm")
+    let response = response.on_hover_ui(|ui| {
+        hover_help::show(
+            ui,
+            if multiline {
+                crate::i18n::tr("Enter: confirm · Shift+Enter: new line")
+            } else {
+                crate::i18n::tr("Enter: confirm")
+            },
+        )
     });
     let enter = response.has_focus()
         && ui.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Enter));

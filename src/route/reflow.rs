@@ -17,6 +17,21 @@ pub fn place_and_route(
         line: e.line,
         message: e.message,
     })?;
+    // Search logical corridors across automatic spacing before enumerating
+    // fine-grained endpoint/track products. Hard authored rules remain binding.
+    if super::corridor::supported(diagram) {
+        if let Some(routes) = super::corridor::route(diagram, &boxes, sheet) {
+            return Ok((boxes, routes));
+        }
+        for spacing in [32.0, 64.0, 128.0, 256.0, 512.0, 1024.0] {
+            let Ok(expanded) = geometry::place_with_spacing(diagram, sheet, spacing) else {
+                continue;
+            };
+            if let Some(routes) = super::corridor::route(diagram, &expanded, sheet) {
+                return Ok((expanded, routes));
+            }
+        }
+    }
     let mut failure = match route(diagram, &boxes, sheet) {
         Ok(routes) => return Ok((boxes, routes)),
         Err(error) => error,

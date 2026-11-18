@@ -35,6 +35,7 @@ mod graph;
 mod graph_context;
 mod graph_dialogs;
 mod graph_header;
+mod graph_insert;
 #[cfg(test)]
 mod graph_tests;
 #[cfg(not(target_arch = "wasm32"))]
@@ -42,6 +43,7 @@ mod host_dialogs;
 #[cfg(target_arch = "wasm32")]
 #[path = "app/host_dialogs_web.rs"]
 mod host_dialogs;
+mod hover_help;
 mod icon_picker;
 #[cfg(test)]
 mod icon_picker_tests;
@@ -73,15 +75,21 @@ mod relation_picker;
 #[cfg(test)]
 mod relation_tests;
 mod relations;
+mod responsive;
 mod shell;
+mod source_completion;
+mod source_context;
 mod source_editor;
+mod source_gutter;
 mod source_header;
+mod source_highlight;
 #[cfg(test)]
 mod source_tests;
 mod source_tools;
 mod structure_ui;
 #[cfg(test)]
 mod tests;
+mod toast;
 mod toolbar;
 mod view;
 mod worker;
@@ -129,6 +137,7 @@ pub struct Editor {
     inspector_next_tab: Option<inspector_ui::Tab>,
     property_drafts: std::collections::BTreeMap<String, String>,
     shell_width: f32,
+    responsive: responsive::State,
     command_error: Option<String>,
     pending_command: Option<u64>,
     creation: creation::Creation,
@@ -214,6 +223,7 @@ impl Editor {
             inspector_next_tab: None,
             property_drafts: Default::default(),
             shell_width: 0.0,
+            responsive: Default::default(),
             command_error: None,
             pending_command: None,
             creation: creation::Creation::default(),
@@ -409,6 +419,7 @@ impl Editor {
         self.history_shortcuts(&ctx);
         self.source_ui.extra_drafts.clear();
         self.file_events(&ctx);
+        self.responsive.input(&ctx);
         self.shell(ui);
         self.deletion_shortcuts(&ctx);
         self.deletion_window(&ctx);
@@ -419,6 +430,17 @@ impl Editor {
         self.notation_windows(&ctx);
         self.icon_picker_window(&ctx);
         self.command_error_window(&ctx);
+        self.toast_overlay(&ctx);
         self.capture_tick(&ctx);
     }
+}
+
+/// Notices are embedded so the native executable needs no adjacent license assets.
+pub fn bundled_license_notices() -> &'static str {
+    static TEXT: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    TEXT.get_or_init(|| format!("Bundled license notices\n{}\nDejaVu\n{}\nEditor GPL-3.0-or-later\n{}\nMatching source: https://github.com/farion/laml/tree/v{}",
+        laml::resource_notices::TEXT,
+        include_str!("../../../assets/DEJAVU-LICENSE.txt"),
+        include_str!("../LICENSE"),
+        env!("CARGO_PKG_VERSION")))
 }

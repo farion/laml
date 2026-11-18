@@ -5,6 +5,8 @@ use egui_phosphor::regular::{FOLDER_OPEN, GEAR_SIX, PLUS, QUESTION, X};
 mod about;
 mod branding;
 mod chrome;
+#[cfg(not(target_arch = "wasm32"))]
+mod desktop;
 mod download;
 mod empty;
 mod help;
@@ -16,8 +18,10 @@ mod library;
 mod new_diagram;
 mod recovery;
 mod settings;
+mod tabs;
 #[cfg(test)]
 mod tests;
+pub(super) mod titlebar;
 mod welcome;
 
 pub(super) enum Action {
@@ -46,6 +50,8 @@ pub struct Workspace {
     recovery: recovery::State,
     new_diagram: Option<new_diagram::Picker>,
     settings_category: settings::Category,
+    #[cfg(not(target_arch = "wasm32"))]
+    desktop: desktop::State,
     reveal_active: bool,
     closing_all: bool,
     waiting_close: Option<u64>,
@@ -79,6 +85,8 @@ impl Workspace {
             recovery: Default::default(),
             new_diagram: None,
             settings_category: settings::Category::default(),
+            #[cfg(not(target_arch = "wasm32"))]
+            desktop: desktop::State::default(),
             reveal_active: true,
             closing_all: false,
             waiting_close: None,
@@ -255,7 +263,13 @@ impl Workspace {
         if self.settings_open {
             let dismissed = dialogs::show(ctx, "global-settings", "Settings", 640.0, |ui| {
                 let before = self.preferences;
-                settings::content(ui, &mut self.settings_category, &mut self.preferences);
+                settings::content(
+                    ui,
+                    &mut self.settings_category,
+                    &mut self.preferences,
+                    #[cfg(not(target_arch = "wasm32"))]
+                    &mut self.desktop,
+                );
                 if before != self.preferences {
                     if let Err(error) = self.preferences.save() {
                         self.error = Some(crate::i18n::format(

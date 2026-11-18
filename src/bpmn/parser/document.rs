@@ -255,7 +255,7 @@ pub fn parse(source: &str) -> Result<Document, String> {
     if !scopes.is_empty() {
         return Err("unclosed BPMN block".into());
     }
-    if doc.nodes.is_empty() {
+    if doc.nodes.is_empty() && doc.pools.is_empty() {
         return Err("BPMN diagram has no elements".into());
     }
     if !doc.pools.is_empty() && doc.nodes.iter().any(|n| n.pool.is_none()) {

@@ -55,7 +55,9 @@ pub fn validate_request(request: &Request) -> Result<(), Failure> {
             validate_address(address)?;
             validate_address(source_address)?;
         }
-        Operation::GestureRender { address, .. }
+        Operation::SequenceOptions { address, .. }
+        | Operation::SequenceTargets { address, .. }
+        | Operation::GestureRender { address, .. }
         | Operation::Compile { address, .. }
         | Operation::RenderExport { address, .. }
         | Operation::OpenSource { address }

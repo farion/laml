@@ -14,6 +14,45 @@ impl Backend for LocalBackend {
     ) -> Result<Preview, Diagnostic> {
         preview::build_presented(source, path, presentation)
     }
+    fn sequence_targets(
+        &self,
+        source: &str,
+        path: &Path,
+        presentation: Presentation,
+        action: &crate::notation_edit::sequence_targets::Action,
+        targets: &[crate::notation_edit::sequence_targets::Target],
+    ) -> Vec<crate::notation_edit::sequence_targets::Choice> {
+        crate::notation_edit::sequence_target_geometry::build(
+            source,
+            path,
+            presentation,
+            action,
+            targets,
+        )
+    }
+    fn sequence_options(
+        &self,
+        source: &str,
+        path: &Path,
+        presentation: Presentation,
+        queries: &[crate::notation_edit::sequence_options::Query],
+        references: bool,
+    ) -> Vec<crate::notation_edit::sequence_options::Choice> {
+        crate::notation_edit::sequence_target_geometry::with_geometry(
+            source,
+            path,
+            presentation,
+            |geometry| {
+                crate::notation_edit::sequence_options::build_with(
+                    source,
+                    queries,
+                    references,
+                    |text| geometry(text).is_some(),
+                )
+            },
+        )
+        .unwrap_or_default()
+    }
     fn compile_relations(
         &self,
         source: &str,

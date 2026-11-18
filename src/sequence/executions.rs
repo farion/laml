@@ -126,6 +126,7 @@ pub(super) fn apply(
             participant: id,
             id: name,
             label: text,
+            at_send: false,
             line,
         });
     } else {
@@ -155,6 +156,7 @@ pub(super) fn apply(
         diagram.events.push(Event::Deactivate {
             participant: id,
             id: name.or(actual),
+            at_send: false,
             line,
         });
     }

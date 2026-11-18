@@ -82,6 +82,11 @@ pub fn rename(source: &str, id: &str, line: usize, new: &str) -> Result<Vec<Edit
         .filter(|s| s.rsplit('.').next() == Some(old_short))
         .count()
         == 1;
+    let aliases = if ty == crate::notation::Notation::Sequence {
+        super::executions::message_aliases(source, id, line)
+    } else {
+        Vec::new()
+    };
     let mut edits = Vec::new();
     for r in records(source) {
         let raw = code(&source[r.range.clone()]);
@@ -102,6 +107,11 @@ pub fn rename(source: &str, id: &str, line: usize, new: &str) -> Result<Vec<Edit
                 } else {
                     new_id.clone()
                 })
+            } else if aliases
+                .iter()
+                .any(|alias| alias == canonical || alias == value)
+            {
+                Some(format!("{}{new}", &value[..value.len() - old_short.len()]))
             } else if value.starts_with(&format!("{id}.")) || value.starts_with(&format!("{id}::"))
             {
                 Some(format!("{new_id}{}", &value[id.len()..]))

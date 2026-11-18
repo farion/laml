@@ -3,7 +3,7 @@ use super::*;
 use egui_phosphor::regular::{BOX_ARROW_UP, PLUG, PLUS, TRASH};
 use laml_ui::delete_edit::ContainerMode;
 
-fn action(ui: &mut egui::Ui, enabled: bool, icon: &str, label: &str) -> egui::Response {
+pub(super) fn action(ui: &mut egui::Ui, enabled: bool, icon: &str, label: &str) -> egui::Response {
     let color = if enabled {
         appearance::color(ui.ctx(), appearance::TEXT)
     } else {

@@ -139,6 +139,30 @@ fn show_aligned(
     }
 }
 
+pub(super) fn menu_text(ui: &egui::Ui, label: &str, glyph: &str) -> egui::text::LayoutJob {
+    let mut job = egui::text::LayoutJob::default();
+    let color = ui.visuals().text_color();
+    job.append(
+        &format!("{glyph}  "),
+        0.0,
+        egui::TextFormat {
+            font_id: icon_font(32.0),
+            color,
+            ..Default::default()
+        },
+    );
+    job.append(
+        crate::i18n::tr(label),
+        0.0,
+        egui::TextFormat {
+            font_id: egui::FontId::proportional(15.0),
+            color,
+            ..Default::default()
+        },
+    );
+    job
+}
+
 pub(super) fn button(ui: &mut egui::Ui, item: &Item<'_>, in_menu: bool) -> egui::Response {
     selected_button(ui, item, in_menu, None)
 }

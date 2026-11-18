@@ -141,9 +141,12 @@ impl Editor {
                                                     crate::i18n::tr(choice_title(name, choice)),
                                                 ),
                                             )
-                                            .on_hover_text(crate::i18n::tr(choice_help(
-                                                name, choice,
-                                            )))
+                                            .on_hover_ui(|ui| {
+                                                hover_help::show(
+                                                    ui,
+                                                    crate::i18n::tr(choice_help(name, choice)),
+                                                )
+                                            })
                                             .clicked()
                                         {
                                             *draft = (*choice).into();

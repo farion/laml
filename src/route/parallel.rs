@@ -2,7 +2,7 @@
 
 use super::edge_style::style;
 use super::{Point, Route, center, port, self_loops};
-use crate::geometry::BoxNode;
+use crate::geometry::{BoxNode, NodeShape};
 use crate::styles::StyleSheet;
 use crate::syntax::Diagram;
 
@@ -141,6 +141,15 @@ pub(super) fn has_competing_port(
             } else {
                 return false;
             };
+            let end = if rel.from == boxes[node].id {
+                crate::syntax::EndPosition::Source
+            } else {
+                crate::syntax::EndPosition::Target
+            };
+            if let Some(requested) = super::side_rules::requested(diagram, other_index, end) {
+                let dock = super::preferred::forced_port(&boxes[node], requested);
+                return face(&boxes[node], dock) == Some(side);
+            }
             boxes
                 .iter()
                 .find(|b| b.id == *other)
@@ -150,6 +159,11 @@ pub(super) fn has_competing_port(
 
 pub(super) fn shift_port(node: &BoxNode, point: Point, offset: f64) -> Option<Point> {
     if offset.abs() < 1e-9 {
+        return Some(point);
+    }
+    // A diamond's cardinal dock is its vertex. Moving it laterally would put
+    // the anchor outside the contour; other faces/corridors supply parallel lanes.
+    if node.shape == NodeShape::Diamond {
         return Some(point);
     }
     if node.kind == crate::syntax::NodeKind::UseCaseActor {
@@ -174,6 +188,16 @@ pub(super) fn shift_port(node: &BoxNode, point: Point, offset: f64) -> Option<Po
         if y < node.y + 6.0 || y > node.y + node.height - 6.0 {
             return None;
         }
+        if node.shape == NodeShape::Ellipse {
+            let c = center(node);
+            let ratio = (y - c.y) / (node.height / 2.0);
+            return Some(Point {
+                x: c.x
+                    + (point.x - c.x).signum() * node.width / 2.0
+                        * (1.0 - ratio * ratio).max(0.0).sqrt(),
+                y,
+            });
+        }
         Some(Point { x: point.x, y })
     } else {
         let horizontal_side =
@@ -184,6 +208,16 @@ pub(super) fn shift_port(node: &BoxNode, point: Point, offset: f64) -> Option<Po
         let x = point.x + offset;
         if x < node.x + 6.0 || x > node.x + node.width - 6.0 {
             return None;
+        }
+        if node.shape == NodeShape::Ellipse {
+            let c = center(node);
+            let ratio = (x - c.x) / (node.width / 2.0);
+            return Some(Point {
+                x,
+                y: c.y
+                    + (point.y - c.y).signum() * node.height / 2.0
+                        * (1.0 - ratio * ratio).max(0.0).sqrt(),
+            });
         }
         Some(Point { x, y: point.y })
     }

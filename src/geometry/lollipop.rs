@@ -127,6 +127,7 @@ pub(super) fn expand(
             id.push('_');
         }
         diagram.nodes.push(NodeDecl {
+            container: false,
             id: id.clone(),
             explicit: false,
             label: Some(label),

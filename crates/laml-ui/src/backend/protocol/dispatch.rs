@@ -50,6 +50,32 @@ impl Dispatcher {
             | Operation::RecoveryDiscard { .. } => {
                 Err(Failure::protocol("Recovery requires a host backend"))
             }
+            Operation::SequenceOptions {
+                source,
+                address,
+                presentation,
+                queries,
+                references,
+            } => Ok(Reply::SequenceOptions(backend.sequence_options(
+                &source,
+                Path::new(&address),
+                presentation,
+                &queries,
+                references,
+            ))),
+            Operation::SequenceTargets {
+                source,
+                address,
+                presentation,
+                action,
+                targets,
+            } => Ok(Reply::SequenceTargets(backend.sequence_targets(
+                &source,
+                Path::new(&address),
+                presentation,
+                &action,
+                &targets,
+            ))),
             Operation::GestureRender {
                 presentation,
                 source,

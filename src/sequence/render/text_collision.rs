@@ -90,26 +90,27 @@ pub(super) fn labeled_messages(
     positioned: &[(&Message, f64)],
     anchors: &[MessageAnchor],
     sheet: &StyleSheet,
+    diagonal: bool,
 ) -> Result<Vec<(usize, Rect)>, String> {
+    let paths = super::routing::paths(positioned, anchors, sheet, diagonal)?;
     positioned
         .iter()
         .zip(anchors)
         .enumerate()
         .filter_map(|(index, ((message, _), anchor))| {
-            message.label.as_ref().map(|label| {
-                let font =
-                    styles::message(sheet, message.name.as_deref(), &message.classes).font_size;
-                let width = label_width_at(label, font)?;
-                let x = if message.from == message.to {
-                    anchor.send.0 + 52.0
-                } else {
-                    (anchor.send.0 + anchor.receive.0 - width) / 2.0
-                };
-                let lines = label.split('\n').count() as f64;
-                let baseline =
-                    (anchor.send.1 + anchor.receive.1) / 2.0 - 9.0 - font * 1.25 * (lines - 1.0);
-                text(x, baseline, label, font).map(|rect| (index, rect))
-            })
+            message
+                .label
+                .as_ref()
+                .filter(|s| !s.trim().is_empty())
+                .map(|label| {
+                    let font =
+                        styles::message(sheet, message.name.as_deref(), &message.classes).font_size;
+                    let (x, baseline) =
+                        super::routing::label(message, anchor, &paths[index], font)?;
+                    let width = label_width_at(label, font)?;
+                    let x = x - width / 2.0;
+                    text(x, baseline, label, font).map(|rect| (index, rect))
+                })
         })
         .collect()
 }
@@ -118,8 +119,9 @@ pub(super) fn messages(
     positioned: &[(&Message, f64)],
     anchors: &[MessageAnchor],
     sheet: &StyleSheet,
+    diagonal: bool,
 ) -> Result<Vec<Rect>, String> {
-    Ok(labeled_messages(positioned, anchors, sheet)?
+    Ok(labeled_messages(positioned, anchors, sheet, diagonal)?
         .into_iter()
         .map(|(_, rect)| rect)
         .collect())

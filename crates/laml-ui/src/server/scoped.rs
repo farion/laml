@@ -84,6 +84,44 @@ impl Backend for Scoped {
         let result = crate::backend::LocalBackend.compile(source, &stage.path, presentation);
         stage.translate(result).map_err(Diagnostic::from)?
     }
+    fn sequence_options(
+        &self,
+        source: &str,
+        path: &Path,
+        presentation: Presentation,
+        queries: &[crate::notation_edit::sequence_options::Query],
+        references: bool,
+    ) -> Vec<crate::notation_edit::sequence_options::Choice> {
+        let Ok(stage) = self.stage(source, path, true) else {
+            return vec![];
+        };
+        crate::backend::LocalBackend.sequence_options(
+            source,
+            &stage.path,
+            presentation,
+            queries,
+            references,
+        )
+    }
+    fn sequence_targets(
+        &self,
+        source: &str,
+        path: &Path,
+        presentation: Presentation,
+        action: &crate::notation_edit::sequence_targets::Action,
+        targets: &[crate::notation_edit::sequence_targets::Target],
+    ) -> Vec<crate::notation_edit::sequence_targets::Choice> {
+        let Ok(stage) = self.stage(source, path, true) else {
+            return vec![];
+        };
+        crate::backend::LocalBackend.sequence_targets(
+            source,
+            &stage.path,
+            presentation,
+            action,
+            targets,
+        )
+    }
     fn compile_relations(
         &self,
         source: &str,

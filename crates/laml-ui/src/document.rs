@@ -3,7 +3,7 @@ use std::ops::Range;
 mod history;
 use history::Typing;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Edit {
     pub range: Range<usize>,
     pub replacement: String,

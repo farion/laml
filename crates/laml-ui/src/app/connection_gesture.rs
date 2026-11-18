@@ -63,22 +63,16 @@ impl Editor {
             && let Some(origin) = ui.input(|i| i.pointer.press_origin())
         {
             let preview = self.preview.as_ref().unwrap();
-            let selected = self.selection.relations.first().filter(|_| {
-                self.selection.relations.len() == 1
-                    && self.selection.ids.is_empty()
-                    && self.selection.ports.is_empty()
-            });
-            let endpoint = selected
-                .and_then(|line| preview.routes.iter().find(|r| r.source_line == *line))
-                .and_then(|route| {
-                    [EndPosition::Source, EndPosition::Target]
-                        .into_iter()
-                        .find_map(|end| {
-                            let point = laml_ui::relation_selection::endpoint(route, end)?;
-                            let point = geometry::screen(preview, canvas, point.x, point.y);
-                            (point.distance(origin) <= geometry::endpoint_radius(preview, canvas))
-                                .then_some((route, end))
-                        })
+            let endpoint = geometry::endpoint_at(preview, canvas, origin)
+                .filter(|(line, _)| {
+                    !self.responsive.touch || self.selection.relations.contains(line)
+                })
+                .and_then(|(line, end)| {
+                    preview
+                        .routes
+                        .iter()
+                        .find(|r| r.source_line == line)
+                        .map(|r| (r, end))
                 });
             let gesture = if let Some((route, end)) = endpoint {
                 let source =
@@ -124,7 +118,9 @@ impl Editor {
                         None
                     }
                 }
-            } else if let Some(from) = geometry::source_at(preview, canvas, origin) {
+            } else if let Some(from) = geometry::source_at(preview, canvas, origin).filter(|dock| {
+                !self.responsive.touch || self.selection.ids.last() == Some(&dock.owner)
+            }) {
                 let from = geometry::attachment(from, self.graph.connection_press_shift);
                 let operator = self.graph.operator.clone();
                 let draft_operator = self

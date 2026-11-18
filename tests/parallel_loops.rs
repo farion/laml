@@ -47,7 +47,7 @@ fn appending_a_parallel_relation_does_not_move_nodes() {
 }
 
 #[test]
-fn overfull_preferred_face_uses_other_faces_and_crossings_instead_of_failing() {
+fn overfull_preferred_face_prefers_clear_alternative_faces_before_crossings() {
     let mut source = "semantics {\nA\nB\n".to_string();
     source.push_str(&"A -> B\n".repeat(7));
     source.push_str("}\n");
@@ -67,8 +67,10 @@ fn overfull_preferred_face_uses_other_faces_and_crossings_instead_of_failing() {
         }
     }
     assert!(
-        routes.iter().any(|r| !r.gaps.is_empty()),
-        "the fallback may use crossings"
+        routes
+            .iter()
+            .all(|r| r.gaps.is_empty() && r.bridges.is_empty()),
+        "seven parallel arrows have a crossing-free solution using other faces"
     );
     laml::svg::render(&boxes, &routes).unwrap();
 }

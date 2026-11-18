@@ -1,6 +1,6 @@
 [package]
 name = "laml-ui"
-version = "1.17.6"
+version = "1.17.7"
 edition = "2024"
 publish = false
 description = "Source-first LAML diagram editor"
@@ -35,7 +35,7 @@ uuid = { version = "=1.29.0", default-features = false, features = ["js"] }
 wasm-bindgen = "=0.2.129"
 wasm-bindgen-futures = "=0.4.79"
 js-sys = "=0.3.106"
-web-sys = { version = "=0.3.106", features = ["Storage", "AbortController", "AbortSignal", "Headers", "ReadableStream", "ReadableStreamDefaultReader", "Request", "RequestInit", "RequestMode", "Response", "Window", "Document", "HtmlCanvasElement", "Element", "Event", "BeforeUnloadEvent", "EventTarget"] }
+web-sys = { version = "=0.3.106", features = ["ClipboardEvent", "DataTransfer", "Storage", "AbortController", "AbortSignal", "Headers", "ReadableStream", "ReadableStreamDefaultReader", "Request", "RequestInit", "RequestMode", "Response", "Window", "Document", "HtmlCanvasElement", "Element", "Event", "BeforeUnloadEvent", "EventTarget"] }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "=0.61.2", features = ["Win32_System_JobObjects", "Win32_System_Threading", "Win32_Security", "Win32_System_Console"] }

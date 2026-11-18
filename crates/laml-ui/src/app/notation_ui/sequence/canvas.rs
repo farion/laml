@@ -1,110 +1,13 @@
+//! Dedicated sequence canvas: never falls through into generic gestures.
 use super::*;
-use laml::authoring::Region;
-
-pub(super) fn point(rect: egui::Rect, bounds: (f64, f64, f64, f64), x: f64, y: f64) -> egui::Pos2 {
-    let scale = f64::from(rect.width()) / (bounds.2 - bounds.0);
-    rect.min
-        + egui::vec2(
-            ((x - bounds.0) * scale) as f32,
-            ((y - bounds.1) * scale) as f32,
-        )
-}
-fn anchor_at(regions: &[Region], x: f64, y: f64, tolerance: f64) -> Option<Anchor> {
-    let heads: Vec<_> = regions
-        .iter()
-        .filter(|r| r.kind == "participant" && !r.id.contains('.'))
-        .collect();
-    if let Some(head) = heads.iter().find(|r| {
-        x >= r.x - tolerance
-            && x <= r.x + r.width + tolerance * 2.0
-            && y >= r.y - tolerance
-            && y <= r.y + r.height
-    }) {
-        let right = heads
-            .iter()
-            .filter(|r| r.x > head.x)
-            .min_by(|a, b| a.x.total_cmp(&b.x))
-            .map(|r| r.id.clone());
-        return Some(Anchor {
-            owner: head.id.clone(),
-            before: 0,
-            x: head.x + head.width,
-            y: head.y + head.height / 2.0,
-            kind: Kind::Head,
-            end_line: None,
-            right,
-            activation_line: None,
-        });
-    }
-    let end = regions.iter().find(|r| {
-        r.kind == "lifeline-end"
-            && !r.id.contains('.')
-            && (x - r.x - 5.0).abs() < tolerance
-            && (y - r.y - 5.0).abs() < tolerance
-    });
-    if let Some(end) = end {
-        return Some(Anchor {
-            owner: end.id.clone(),
-            before: 0,
-            x: end.x + 5.0,
-            y: end.y + 5.0,
-            kind: Kind::End,
-            end_line: None,
-            right: None,
-            activation_line: None,
-        });
-    }
-    let line = regions
-        .iter()
-        .filter(|r| {
-            r.kind == "lifeline"
-                && !r.id.contains('.')
-                && (x - r.x).abs() < tolerance
-                && y >= r.y
-                && y <= r.y + r.height
-        })
-        .min_by(|a, b| (x - a.x).abs().total_cmp(&(x - b.x).abs()));
-    let execution = regions
-        .iter()
-        .filter(|r| {
-            r.kind == "sequence-execution"
-                && !r.id.contains('.')
-                && x >= r.x - tolerance
-                && x <= r.x + r.width + tolerance
-                && y >= r.y
-                && y <= r.y + r.height
-        })
-        .min_by(|a, b| {
-            (x - a.x - a.width / 2.0)
-                .abs()
-                .total_cmp(&(x - b.x - b.width / 2.0).abs())
-        });
-    let owner = execution.or(line)?;
-    let slot = regions
-        .iter()
-        .filter(|r| r.kind == "sequence-slot" && r.y >= owner.y && r.y <= owner.y + owner.height)
-        .min_by(|a, b| (a.y - y).abs().total_cmp(&(b.y - y).abs()))?;
-    Some(Anchor {
-        owner: owner.id.clone(),
-        before: slot.line,
-        x: if execution.is_some() {
-            owner.x + owner.width
-        } else {
-            owner.x
-        },
-        y: slot.y,
-        kind: if execution.is_some() {
-            Kind::Execution
-        } else {
-            Kind::Line
-        },
-        end_line: None,
-        right: None,
-        activation_line: None,
-    })
-}
 impl Editor {
-    pub(in crate::app) fn sequence_canvas(&mut self, ui: &mut egui::Ui, rect: egui::Rect) -> bool {
+    pub(in crate::app) fn sequence_canvas(
+        &mut self,
+        ui: &mut egui::Ui,
+        rect: egui::Rect,
+        response: &egui::Response,
+        navigation: bool,
+    ) {
         let revision = self.document.revision();
         if self.notation_ui.sequence.revision != Some(revision)
             || !self.can_edit_visually()
@@ -115,187 +18,157 @@ impl Editor {
                 ..Default::default()
             };
         }
-        if !self.can_edit_visually() {
-            return false;
-        }
-        if dialogs::blocked(ui.ctx()) {
-            return true;
-        }
+        self.notation_ui.drag = None;
         let Some(preview) = &self.preview else {
-            return false;
+            return;
         };
-        let bounds = preview.bounds;
-        let regions = preview.regions.clone();
-        let scale = f64::from(rect.width()) / (bounds.2 - bounds.0);
-        let pointer = ui.input(|i| i.pointer.hover_pos());
-        let local = |p: egui::Pos2| {
-            (
-                bounds.0 + f64::from(p.x - rect.left()) / scale,
-                bounds.1 + f64::from(p.y - rect.top()) / scale,
-            )
-        };
-        if self.sequence_participants(ui, rect) {
-            return true;
+        let scene = Scene::new(preview, rect);
+        // Selection is persistent, not a hover control: paint it during navigation too.
+        if self.notation_ui.sequence.gesture.is_none()
+            && let Some((line, id, _)) = &self.notation_ui.selected
+            && let Some(message) = scene.regions.iter().find(|r| {
+                r.kind == "message"
+                    && !r.path.is_empty()
+                    && r.line == *line
+                    && id.as_ref().is_none_or(|id| id == &r.id)
+            })
+        {
+            painting::selected_message(ui, &scene, message);
         }
-        if self.sequence_edge_drag(ui, rect) {
-            return true;
+        if navigation || !self.can_edit_visually() || dialogs::blocked(ui.ctx()) {
+            return;
         }
-        if self.sequence_destructions(ui, rect) {
-            return true;
+        if scene.heads.is_empty() {
+            let at = ui.clip_rect().center();
+            let button = ui.put(
+                egui::Rect::from_center_size(at, egui::vec2(190.0, 32.0)),
+                egui::Button::new(crate::i18n::tr("Add participant…")),
+            );
+            if button.clicked() {
+                self.sequence_add_default(None, None);
+            }
         }
-        if self.sequence_connections(ui, rect) {
-            return true;
-        }
-        if self.sequence_body_drag(ui, rect) {
-            return true;
-        }
-        if self.notation_ui.sequence.dialog.is_some() {
-            return true;
-        }
-        if !self.notation_ui.sequence.menu_open {
-            let retained = self.notation_ui.sequence.anchor.as_ref().is_some_and(|a| {
-                pointer.is_some_and(|p| {
-                    let center = point(rect, bounds, a.x, a.y) + egui::vec2(15.0, 0.0);
-                    p.distance(center) < 22.0
+        let pointer = ui
+            .input(|i| i.pointer.hover_pos())
+            .filter(|p| ui.clip_rect().contains(*p));
+        let hit = pointer.and_then(|p| {
+            if !self.responsive.touch {
+                return scene.hit(p);
+            }
+            let anchor = self
+                .notation_ui
+                .sequence
+                .touch_anchor
+                .map(|(x, y)| scene.point(x, y));
+            let anchored_hit = anchor.and_then(|p| scene.hit(p));
+            scene.hit_filtered(p, |area| {
+                matches!(
+                    area.hit,
+                    Hit::Participant(_) | Hit::Activation(_) | Hit::Event(_) | Hit::Destruction(_)
+                ) || anchor.is_some_and(|p| {
+                    painting::control_visible(&scene, area, p, anchored_hit.as_ref())
                 })
-            });
-            if !retained {
-                self.notation_ui.sequence.anchor = pointer
-                    .filter(|p| ui.clip_rect().contains(*p))
-                    .and_then(|p| {
-                        let (x, y) = local(p);
-                        anchor_at(&regions, x, y, 18.0 / scale)
-                    })
-                    .or_else(|| {
-                        let (line, id, selected_revision) = self.notation_ui.selected.as_ref()?;
-                        if *selected_revision != revision {
-                            return None;
-                        }
-                        let selected = regions.iter().find(|r| {
-                            r.line == *line
-                                && id.as_ref().is_none_or(|id| &r.id == id)
-                                && matches!(
-                                    r.kind.as_str(),
-                                    "participant" | "execution" | "lifeline"
-                                )
-                        })?;
-                        anchor_at(
-                            &regions,
-                            selected.x + selected.width / 2.0,
-                            selected.y + selected.height / 2.0,
-                            18.0 / scale,
+            })
+        });
+        if ui.input(|i| i.pointer.secondary_pressed()) && response.contains_pointer() {
+            self.notation_ui.sequence.press = None;
+            self.notation_ui.sequence.gesture = None;
+            self.notation_ui.sequence.context = hit.clone();
+            if let Some(hit) = &hit {
+                self.sequence_select_hit(hit);
+            }
+        }
+        if self.sequence_pick_reference(ui, &scene, pointer, response) {
+            return;
+        }
+        self.sequence_context(ui, response);
+        if self.notation_ui.sequence.insert.is_some() {
+            self.sequence_insert_menu(ui, &scene);
+            return;
+        }
+        if self.notation_ui.sequence.gesture.is_some() || self.notation_ui.sequence.press.is_some()
+        {
+            self.sequence_gesture(ui, &scene);
+        }
+        if self.notation_ui.sequence.gesture.is_some()
+            || self.notation_ui.sequence.insert.is_some()
+            || self.notation_ui.sequence.alternatives.is_some()
+            || self.notation_ui.sequence.picker.is_some()
+        {
+            return;
+        }
+        if ui.input(|i| i.pointer.primary_pressed()) && response.contains_pointer() {
+            if self.responsive.touch {
+                let scale = f64::from(rect.width()) / (scene.bounds.2 - scene.bounds.0);
+                self.notation_ui.sequence.touch_anchor =
+                    pointer.filter(|_| hit.is_some()).map(|p| {
+                        (
+                            scene.bounds.0 + f64::from(p.x - rect.left()) / scale,
+                            scene.bounds.1 + f64::from(p.y - rect.top()) / scale,
                         )
                     });
             }
-        }
-        let Some(mut anchor) = self.notation_ui.sequence.anchor.clone() else {
-            return false;
-        };
-        if anchor.kind == Kind::Execution {
-            // The renderer's execution endpoint and event regions share final geometry.
-            let bar = regions.iter().find(|r| {
-                r.kind == "sequence-execution"
-                    && r.id == anchor.owner
-                    && (r.x + r.width - anchor.x).abs() < 0.01
-                    && anchor.y >= r.y
-                    && anchor.y <= r.y + r.height
-            });
-            if let Some(bar) = bar {
-                let doc = laml::sequence::parse(self.document.source()).ok();
-                anchor.end_line = regions.iter().find(|r| r.kind == "event" && (r.y+12.0-bar.y-bar.height).abs() < 0.1
-                    && doc.as_ref().is_some_and(|doc| doc.events.iter().any(|e| matches!(e, laml::sequence::Event::Deactivate { participant, line, .. } if participant == &anchor.owner && *line == r.line)))).map(|r| r.line);
-            }
-        }
-        let center = point(rect, bounds, anchor.x, anchor.y) + egui::vec2(15.0, 0.0);
-        if anchor.kind != Kind::Head {
-            let stroke = egui::Stroke::new(
-                1.0,
-                appearance::color(ui.ctx(), appearance::MUTED).gamma_multiply(0.6),
-            );
-            ui.painter()
-                .hline(rect.left()..=rect.right(), center.y, stroke);
-        }
-        let response = ui
-            .push_id(("sequence-plus", self.id), |ui| {
-                ui.put(
-                    egui::Rect::from_center_size(center, egui::Vec2::splat(24.0)),
-                    egui::Button::new(egui::RichText::new(egui_phosphor::regular::PLUS).font(
-                        egui::FontId::new(16.0, egui::FontFamily::Name("phosphor".into())),
-                    ))
-                    .corner_radius(12),
-                )
-            })
-            .inner;
-        let owned = response.hovered()
-            || response.is_pointer_button_down_on()
-            || self.notation_ui.sequence.menu_open;
-        let popup = egui::Popup::menu(&response);
-        self.notation_ui.sequence.menu_open = popup.is_open();
-        let mut selected = None;
-        popup.show(|ui| {
-            ui.spacing_mut().button_padding = egui::vec2(16.0, 6.0);
-            let mut action = |title: &str, action: Action| {
-                // Target-dependent message validity is checked after choosing the target.
-                let valid = if matches!(action, Action::Sync | Action::SyncActivate | Action::Async)
-                {
-                    Ok(())
-                } else if action == Action::Reply {
-                    self.sequence_reply_available(&anchor)
-                } else if matches!(action, Action::Note | Action::Participant) {
-                    Ok(())
-                } else {
-                    self.sequence_candidate(&anchor, action, "", "", "")
-                        .map(|_| ())
-                };
-                let response =
-                    ui.add_enabled(valid.is_ok(), egui::Button::new(crate::i18n::tr(title)));
-                if response.clicked() {
-                    selected = Some(action);
-                    ui.close();
-                }
-                if let Err(error) = valid {
-                    response.on_disabled_hover_text(crate::i18n::message(&(error)));
-                }
-            };
-            if anchor.kind == Kind::Head {
-                action("Add participant…", Action::Participant);
+            if let Some(hit) = hit.clone() {
+                self.sequence_select_hit(&hit);
+                self.notation_ui.sequence.press = pointer.map(|p| (hit, p));
             } else {
-                action("Synchronous call →", Action::Sync);
-                action("Call with activation →", Action::SyncActivate);
-                action("Asynchronous message →", Action::Async);
-                action("Reply →", Action::Reply);
-                action(
-                    if anchor.kind == Kind::Execution {
-                        "Start nested activation"
-                    } else {
-                        "Start activation"
-                    },
-                    Action::Activate,
-                );
-                if anchor.kind == Kind::Execution {
-                    action("End activation here", Action::EndActivation);
-                }
-                action("Add note…", Action::Note);
-                if anchor.kind == Kind::End {
-                    action("Destroy participant ×", Action::Destroy);
-                }
+                self.notation_ui.selected = None;
+                self.notation_ui.sequence.clear_selection();
             }
-        });
-        if let Some(action) = selected {
-            self.sequence_action(anchor, action);
         }
-        owned || self.notation_ui.sequence.menu_open || selected.is_some()
+        if ui.input(|i| i.pointer.primary_released())
+            && let Some((pressed, origin)) = self.notation_ui.sequence.press.take()
+            && pointer.is_some_and(|p| p.distance(origin) < 5.0)
+        {
+            match pressed {
+                Hit::ParticipantPlus { neighbor, left } => {
+                    self.sequence_add_default(Some((neighbor, left)), None)
+                }
+                Hit::Insert(point) => {
+                    self.notation_ui.sequence.expanded = false;
+                    self.notation_ui.sequence.insert = Some(point);
+                }
+                Hit::Destroy { owner, before } => {
+                    match controls::destroy(self.document.source(), &owner, before) {
+                        Ok(edits) => self.sequence_apply(Proposal {
+                            edits,
+                            line: None,
+                            label: "Destroy participant",
+                        }),
+                        Err(e) => self.command_error = Some(e),
+                    }
+                }
+                _ => {}
+            }
+        }
+        let controls = if self.responsive.touch {
+            self.notation_ui
+                .sequence
+                .touch_anchor
+                .map(|(x, y)| scene.point(x, y))
+        } else {
+            pointer
+        };
+        if let Some(point) = controls {
+            let control_hit = scene.hit(point);
+            painting::hover(ui, &scene, point, control_hit.as_ref());
+        }
+        self.sequence_insert_menu(ui, &scene);
     }
-    fn sequence_reply_available(&self, anchor: &Anchor) -> Result<(), String> {
-        let doc = laml::sequence::parse(self.document.source()).map_err(|e| e.message)?;
-        for target in &doc.participants {
-            if self
-                .sequence_candidate(anchor, Action::Reply, &target.id, "", "Response")
-                .is_ok()
-            {
-                return Ok(());
+    fn sequence_select_hit(&mut self, hit: &Hit) {
+        let selected = match hit {
+            Hit::Participant(r) | Hit::Event(r) | Hit::Destruction(r) => {
+                Some((r.line, r.id.clone()))
             }
+            Hit::Endpoint { message, .. } => Some((message.line, message.id.clone())),
+            Hit::Activation(bar) | Hit::Resize(bar, _) => {
+                Some((bar.region.line, format!("line:{}", bar.region.line)))
+            }
+            _ => None,
+        };
+        if let Some((line, id)) = selected {
+            self.notation_select(line, Some(id));
+            self.notation_ui.sequence.selection = Some(hit.clone());
         }
-        Err("No unambiguous open call can be answered by this participant here".into())
     }
 }

@@ -26,7 +26,7 @@ cp "target/release/$executable" "$folder/"
 cp -R target/editor-web/. "$folder/web/"
 cp docs/editor.md docs/editor-host.md docs/editor-installation.md "$folder/docs/"
 cp examples/architecture.laml examples/architecture.lamlstyle "$folder/examples/"
-cp LICENSE assets/INTER-LICENSE.txt assets/GEIST-LICENSE.txt assets/GEIST-SOURCE.txt "$folder/"
+cp LICENSE assets/INTER-LICENSE.txt assets/GEIST-LICENSE.txt assets/GEIST-SOURCE.txt assets/DEJAVU-LICENSE.txt "$folder/"
 cp assets/phosphor/LICENSE "$folder/PHOSPHOR-LICENSE.txt"
 cp crates/laml-ui/LICENSE "$folder/EDITOR-LICENSE.txt"
 printf '%s\n' 'Editor: GPL-3.0-or-later. Compiler: MIT.' \

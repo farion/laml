@@ -68,6 +68,8 @@ impl Worker {
             | Operation::InspectOutput { address }
             | Operation::WriteOutput { address, .. }
             | Operation::WatchDependencies { address, .. }
+            | Operation::SequenceTargets { address, .. }
+            | Operation::SequenceOptions { address, .. }
             | Operation::GestureRender { address, .. } => network_path(address)?,
             Operation::RecoverySync {
                 address: Some(address),

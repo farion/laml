@@ -16,6 +16,9 @@ pub(super) struct Creation {
 
 impl Editor {
     pub(super) fn can_edit_visually(&self) -> bool {
+        !self.placement.released && self.can_edit_current_revision()
+    }
+    pub(super) fn can_edit_current_revision(&self) -> bool {
         #[cfg(target_arch = "wasm32")]
         if laml_ui::services::browser_mode() && !crate::browser_storage::available() {
             return false;

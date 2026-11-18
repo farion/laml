@@ -30,7 +30,7 @@ cp deploy/server/Dockerfile deploy/server/.dockerignore deploy/server/README.md 
 sed "s/image: laml-editor:.*/image: laml-editor:$version/" deploy/server/compose.yaml > "$folder/compose.yaml"
 cp LICENSE "$folder/licenses/COMPILER-MIT.txt"
 cp crates/laml-ui/LICENSE "$folder/licenses/EDITOR-GPL-3.0.txt"
-cp assets/INTER-LICENSE.txt assets/GEIST-LICENSE.txt assets/GEIST-SOURCE.txt "$folder/licenses/"
+cp assets/INTER-LICENSE.txt assets/GEIST-LICENSE.txt assets/GEIST-SOURCE.txt assets/DEJAVU-LICENSE.txt "$folder/licenses/"
 cp assets/phosphor/LICENSE "$folder/licenses/PHOSPHOR-MIT.txt"
 cat > "$folder/SOURCE.txt" <<EOF
 LAML v$version

@@ -152,20 +152,21 @@ pub(super) fn validate(diagram: &Diagram) -> Result<(), ParseError> {
         .iter()
         .filter(|n| n.kind == NodeKind::Stereotype)
         .collect();
-    if !diagram.nodes.iter().any(|n| n.kind == NodeKind::Profile) || stereotypes.is_empty() {
-        return Err(error(
-            1,
-            "profile diagram needs a profile with a stereotype definition",
-        ));
+    if !diagram.nodes.iter().any(|n| n.kind == NodeKind::Profile) {
+        return Err(error(1, "profile diagram needs a profile"));
     }
     for profile in diagram
         .nodes
         .iter()
         .filter(|node| node.kind == NodeKind::Profile)
     {
-        if !stereotypes
+        if diagram
+            .nodes
             .iter()
             .any(|node| node.parent.as_deref() == Some(profile.id.as_str()))
+            && !stereotypes
+                .iter()
+                .any(|node| node.parent.as_deref() == Some(profile.id.as_str()))
         {
             return Err(error(
                 profile.line,

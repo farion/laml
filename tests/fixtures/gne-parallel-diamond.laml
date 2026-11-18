@@ -1,0 +1,40 @@
+settings {
+    theme: modern-dark
+    background: transparent
+}
+semantics {
+    Browser
+    API
+    Browser -> API : request
+    @Relation1 API -> API
+    Node1(label="Rectangle")
+    @Relation2 API -> Node1
+    Node2(label="Diamond")
+    @Relation3 Node1 -> Node2
+    @Relation4 Node1 -> Node2
+    package Group1(label="Package") {
+    }
+    @Relation5 Browser -> Group1
+    @Node3 class Node3(label="Node3")
+}
+
+layout {
+    relation[Relation1].source : side=top
+    Node2 < Node1
+    API above Node1
+    Node2 below Browser
+    Node2 ? Browser : align=left
+    relation[Relation4].source : side=right
+    relation[Relation4].target : side=bottom
+    Group1 above Browser
+    Node3 below Group1
+}
+
+styling {
+    node[Node1] {
+        shape: rectangle
+    }
+    node[Node2] {
+        shape: diamond
+    }
+}

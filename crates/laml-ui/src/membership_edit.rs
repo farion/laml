@@ -22,6 +22,58 @@ pub struct Move {
     pub changes: Vec<String>,
 }
 
+/// A body drop supersedes the moved node's outside placement against its new
+/// enclosing frame(s). Other layout intent and all semantic relations survive.
+pub fn plan_drop(source: &str, id: &str, parent: &str) -> Result<Move, String> {
+    let diagram = node_edit::diagram(source)?;
+    let mut ancestors = BTreeSet::new();
+    let mut current = Some(parent);
+    while let Some(id) = current {
+        if !ancestors.insert(id) {
+            return Err("Cyclic container membership".into());
+        }
+        current = diagram
+            .nodes
+            .iter()
+            .find(|n| n.id == id)
+            .and_then(|n| n.parent.as_deref());
+    }
+    let conflicts: Vec<_> = diagram
+        .layout
+        .iter()
+        .filter(|r| {
+            (r.first == id && ancestors.contains(r.second.as_str()))
+                || (r.second == id && ancestors.contains(r.first.as_str()))
+        })
+        .collect();
+    if conflicts.is_empty() {
+        return plan(source, id, Some(parent));
+    }
+    let removals = conflicts
+        .iter()
+        .map(|r| source_patch::remove_line(source, r.line))
+        .collect::<Result<Vec<_>, _>>()?;
+    let cleaned = node_edit::candidate(source, &removals)?;
+    let mut moved = plan(&cleaned, id, Some(parent))?;
+    let candidate = node_edit::candidate(&cleaned, &moved.edits)?;
+    moved.edits = crate::graph_edit::difference(source, &candidate);
+    for change in &mut moved.changes {
+        *change = change.replace("and all layout rules.", "and remaining layout rules.");
+    }
+    for rule in conflicts {
+        moved.changes.push(format!(
+            "Replace outside placement: {}",
+            source
+                .lines()
+                .nth(rule.line - 1)
+                .map(code)
+                .unwrap_or("")
+                .trim()
+        ));
+    }
+    Ok(moved)
+}
+
 pub fn plan(source: &str, id: &str, parent: Option<&str>) -> Result<Move, String> {
     let diagram = node_edit::diagram(source)?;
     let node = diagram
@@ -31,6 +83,40 @@ pub fn plan(source: &str, id: &str, parent: Option<&str>) -> Result<Move, String
         .ok_or("Missing selected node")?;
     if node.parent.as_deref() == parent {
         return Err("Node already belongs to this container.".into());
+    }
+    if let Some(parent) = parent
+        && let Some(destination) = diagram
+            .nodes
+            .iter()
+            .find(|n| n.id == parent && crate::notation::container_kind(n.kind))
+        && !node_edit::blocks(source, &diagram)?.contains_key(&destination.line)
+    {
+        let line = SourceIndex::new(source)
+            .line(destination.line)
+            .ok_or("Missing container line")?;
+        let text = &source[line.clone()];
+        let at = line.start + code(text).trim_end().len();
+        let indent: String = text.chars().take_while(|c| c.is_whitespace()).collect();
+        let opened = node_edit::candidate(
+            source,
+            &[
+                Edit {
+                    range: at..at,
+                    replacement: " {".into(),
+                },
+                Edit {
+                    range: line.end..line.end,
+                    replacement: format!("{}{indent}}}", newline(source)),
+                },
+            ],
+        )?;
+        let moved = plan(&opened, id, Some(parent))?;
+        let candidate = node_edit::candidate(&opened, &moved.edits)?;
+        return Ok(Move {
+            id: moved.id,
+            edits: crate::graph_edit::difference(source, &candidate),
+            changes: moved.changes,
+        });
     }
     if let Some(parent) = parent
         && !diagram.nodes.iter().any(|n| {

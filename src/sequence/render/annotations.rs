@@ -168,7 +168,8 @@ pub(super) fn draw(
     canvas_bottom: f64,
     canvas_width: f64,
 ) -> Result<Vec<text_collision::Rect>, String> {
-    let mut occupied = text_collision::messages(positioned, anchors, sheet)?;
+    let mut occupied =
+        text_collision::messages(positioned, anchors, sheet, diagram.allow_diagonal)?;
     let mut annotation_regions = Vec::new();
     occupied.extend_from_slice(frame_text);
     occupied.extend(text_collision::note_regions(

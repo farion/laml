@@ -71,6 +71,36 @@ pub trait Backend: Send + Sync + Debug {
         path: &Path,
         presentation: Presentation,
     ) -> Result<Preview, Diagnostic>;
+    /// Batch target validity without requiring final export/text outlines per candidate.
+    fn sequence_targets(
+        &self,
+        source: &str,
+        path: &Path,
+        presentation: Presentation,
+        action: &crate::notation_edit::sequence_targets::Action,
+        targets: &[crate::notation_edit::sequence_targets::Target],
+    ) -> Vec<crate::notation_edit::sequence_targets::Choice> {
+        crate::notation_edit::sequence_targets::build(
+            self,
+            source,
+            path,
+            presentation,
+            action,
+            targets,
+        )
+    }
+    fn sequence_options(
+        &self,
+        source: &str,
+        path: &Path,
+        presentation: Presentation,
+        queries: &[crate::notation_edit::sequence_options::Query],
+        references: bool,
+    ) -> Vec<crate::notation_edit::sequence_options::Choice> {
+        crate::notation_edit::sequence_options::build_with(source, queries, references, |text| {
+            self.compile(text, path, presentation).is_ok()
+        })
+    }
     /// Reuse a server-owned preview only when node/layout inputs are unchanged.
     /// Backends without incremental compilation retain the full compiler path.
     fn compile_relations(

@@ -14,7 +14,7 @@ pub(super) fn draw(
     m: &Message,
     anchor: &MessageAnchor,
     drawn_gates: &mut Vec<(String, f64, f64)>,
-    allow_diagonal: bool,
+    route: &crate::route::Route,
 ) -> Result<(), String> {
     let (start, y) = anchor.send;
     let (end, receive_y) = anchor.receive;
@@ -25,10 +25,15 @@ pub(super) fn draw(
     } else {
         ""
     };
-    let points =
-        super::message_geometry::path(anchor.send, anchor.receive, m.from == m.to, allow_diagonal);
-    let path = super::message_geometry::svg_path(&points, m.from == m.to);
-    writeln!(svg, "<path d=\"{path}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\"{dash} data-message=\"{name}\" />", paint.color, paint.width).unwrap();
+    let points = route.points.iter().map(|p| (p.x, p.y)).collect::<Vec<_>>();
+    if route.bridges.is_empty() && route.gaps.is_empty() {
+        let path = super::message_geometry::svg_path(&points, m.from == m.to);
+        writeln!(svg, "<path d=\"{path}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\"{dash} data-message=\"{name}\" />",paint.color,paint.width).unwrap();
+    } else {
+        for path in crate::svg_paths::fragments_with_ends_rounded(route, None, None, 0.0)? {
+            writeln!(svg, "<path d=\"{path}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\"{dash} data-message=\"{name}\" />",paint.color,paint.width).unwrap();
+        }
+    }
     if m.to != "?" && m.kind != MessageKind::Delete {
         let previous = points[points.len() - 2];
         arrows::draw(
@@ -62,23 +67,9 @@ pub(super) fn draw(
             styled_text(svg, at, at_y - 30.0, id, gate.font_size, &gate.color);
         }
     }
-    if let Some(label) = &m.label {
-        let bent_message = !allow_diagonal && m.from != m.to && (receive_y - y).abs() >= 0.01;
-        let x = if m.from == m.to {
-            start + 44.0 + label_width_at(label, paint.font_size)? / 2.0 + 8.0
-        } else if bent_message {
-            let width = label_width_at(label, paint.font_size)?;
-            start + (end - start).signum() * (width / 2.0 + 20.0).min((end - start).abs() / 2.0)
-        } else {
-            (start + end) / 2.0
-        };
+    if let Some(label) = m.label.as_ref().filter(|label| !label.trim().is_empty()) {
         let lines = label.split('\n').count();
-        let baseline_y = if bent_message {
-            y
-        } else {
-            (y + receive_y) / 2.0
-        };
-        let baseline = baseline_y - 9.0 - paint.font_size * 1.25 * (lines - 1) as f64;
+        let (x, baseline) = super::routing::label(m, anchor, &points, paint.font_size)?;
         if sheet.theme.modern() {
             let width = label_width_at(label, paint.font_size)? + 10.0;
             let height = paint.font_size * 1.25 * (lines - 1) as f64 + paint.font_size * 1.2 + 4.0;

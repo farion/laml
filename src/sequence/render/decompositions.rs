@@ -81,3 +81,28 @@ pub(super) fn draw(
     }
     Ok(())
 }
+
+/// Account for routed child extents, including nested self-message corridors.
+pub(super) fn fit_widths(
+    diagram: &SequenceDiagram,
+    prepared: &[Prepared],
+    centers: &mut [f64],
+    widths: &mut [f64],
+) {
+    let mut extra = vec![0.0_f64; widths.len()];
+    for (part, child) in diagram.decompositions.iter().zip(prepared) {
+        if let Some(i) = diagram
+            .participants
+            .iter()
+            .position(|p| p.id == part.parent)
+        {
+            extra[i] = extra[i].max((child.width + 32.0 - widths[i]).max(0.0));
+        }
+    }
+    let mut shift = 0.0;
+    for i in 0..widths.len() {
+        centers[i] += shift + extra[i] / 2.0;
+        widths[i] += extra[i];
+        shift += extra[i];
+    }
+}

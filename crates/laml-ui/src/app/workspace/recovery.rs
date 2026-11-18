@@ -133,7 +133,9 @@ impl Workspace {
             self.recovery.open = true;
         }
     }
-    #[cfg(target_arch = "wasm32")]
+    pub(super) fn open_recovery(&mut self) {
+        self.recovery.open = true;
+    }
     pub(super) fn recovery_count(&self) -> usize {
         self.recovery.discovery.records.len()
     }

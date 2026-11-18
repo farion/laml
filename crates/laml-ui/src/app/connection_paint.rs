@@ -162,27 +162,9 @@ impl Editor {
         {
             return;
         }
-        let hovered = pointer
-            .and_then(|p| geometry::hit_node(preview, canvas, p).map(|n| n.id.clone()))
-            .or_else(|| {
-                self.graph
-                    .hover_node
-                    .as_ref()
-                    .filter(|id| {
-                        preview
-                            .nodes
-                            .iter()
-                            .find(|n| &n.id == *id)
-                            .is_some_and(|n| {
-                                pointer.is_some_and(|p| {
-                                    geometry::node_rect(preview, canvas, n)
-                                        .expand(geometry::radius(preview, canvas, n) * 2.5)
-                                        .contains(p)
-                                })
-                            })
-                    })
-                    .cloned()
-            });
+        let hovered = self
+            .graph_control_node(preview, canvas, pointer)
+            .map(|n| n.id.clone());
         self.graph.hover_node = hovered.clone();
         if let Some(node) = hovered.and_then(|id| preview.nodes.iter().find(|n| n.id == id)) {
             for handle in geometry::handles(preview, canvas, node, true) {
@@ -201,23 +183,13 @@ impl Editor {
                     handle.radius,
                     egui::Stroke::new(1.0, appearance::color(ui.ctx(), appearance::SELECTED)),
                 );
-                let icon = match handle.dock.side {
-                    Some("left") => egui_phosphor::regular::ARROW_LEFT,
-                    Some("right") => egui_phosphor::regular::ARROW_RIGHT,
-                    Some("top") => egui_phosphor::regular::ARROW_UP,
-                    Some("bottom") => egui_phosphor::regular::ARROW_DOWN,
-                    _ => egui_phosphor::regular::ARROW_UP_RIGHT,
-                };
-                ui.painter().text(
-                    handle.point,
-                    egui::Align2::CENTER_CENTER,
-                    icon,
-                    egui::FontId::new(
-                        handle.radius * 1.45,
-                        egui::FontFamily::Name("phosphor".into()),
-                    ),
-                    appearance::color(ui.ctx(), appearance::TEXT),
-                );
+                if hot {
+                    ui.painter().circle_stroke(
+                        handle.point,
+                        handle.radius + 4.0,
+                        egui::Stroke::new(2.0, appearance::color(ui.ctx(), appearance::ACCENT)),
+                    );
+                }
                 if hot {
                     ui.ctx().set_cursor_icon(egui::CursorIcon::Grab);
                     egui::Tooltip::always_open(
@@ -227,13 +199,19 @@ impl Editor {
                         handle.point,
                     )
                     .show(|ui| {
-                        ui.label(crate::i18n::tr("Drag a connection · fixed sides"));
-                        ui.label(crate::i18n::tr(
-                            "Shift when starting: automatic source side",
-                        ));
-                        ui.label(crate::i18n::tr(
-                            "Shift when releasing: automatic target side",
-                        ));
+                        let title = crate::i18n::tr(if handle.dock.side.is_none() {
+                            "Drag a connection · automatic source side"
+                        } else {
+                            "Drag a connection · fixed sides"
+                        });
+                        hover_help::show(
+                            ui,
+                            &format!(
+                                "{title}\n{}\n{}",
+                                crate::i18n::tr("Shift when starting: automatic source side"),
+                                crate::i18n::tr("Shift when releasing: automatic target side")
+                            ),
+                        );
                     });
                 }
             }

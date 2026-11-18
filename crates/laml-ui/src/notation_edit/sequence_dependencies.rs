@@ -223,6 +223,22 @@ pub(super) fn expand(
             _ => {}
         }
     }
+    // Layout-only message docks depend on the referenced execution, not on its
+    // visible label or the spelling of the opening declaration.
+    let removed = |reference: &str| {
+        laml::sequence::activation_layout::resolve(doc, reference)
+            .is_ok_and(|e| selected.contains(&absolute(e.start)))
+    };
+    let mut layout_lines = Vec::new();
+    for rule in &doc.activation_layout {
+        if removed(&rule.first) || removed(&rule.second) {
+            layout_lines.push(rule.line);
+        }
+    }
+    for rule in &doc.occurrence_layout {
+        if [&rule.first,&rule.second].iter().any(|e|matches!(e,laml::sequence::occurrence_layout::Endpoint::Activation {reference,..} if removed(reference))) {layout_lines.push(rule.line);}
+    }
+    selected.extend(layout_lines);
     // Lifelines created in an operand have a local lifetime. Do not remove an
     // independent reuse of the same ID in a different alternative.
     for (id, born) in &doc.births {

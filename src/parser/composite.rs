@@ -141,22 +141,6 @@ pub(super) fn validate(diagram: &Diagram) -> Result<(), ParseError> {
         ));
     }
     let owner = owners[0];
-    if !diagram
-        .nodes
-        .iter()
-        .any(|n| n.parent.as_deref() == Some(owner.id.as_str()))
-    {
-        return Err(error(
-            owner.line,
-            "internal structure needs at least one part or role",
-        ));
-    }
-    if diagram.relations.is_empty() {
-        return Err(error(
-            owner.line,
-            "internal structure needs an explicitly typed connector",
-        ));
-    }
     for node in &diagram.nodes {
         if node.kind == NodeKind::Class && node.id == owner.id {
             return Err(error(

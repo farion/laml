@@ -58,6 +58,9 @@ impl Editor {
         if ui.button(crate::i18n::tr("Add construct…")).clicked() {
             self.open_construct_dialog();
         }
+        if self.notation() == Notation::Sequence {
+            return;
+        }
         ui.label(crate::i18n::tr("Destination"));
         destination(
             ui,
@@ -84,5 +87,19 @@ impl Editor {
         if action(ui, "Move to destination", &proposal) {
             self.notation_submit("Move construct", proposal.unwrap(), None);
         }
+    }
+}
+
+pub(super) fn notation_choice_title<'a>(field: &str, value: &'a str) -> &'a str {
+    if field.ends_with("activation / lifetime") {
+        match value {
+            "" => "Unchanged",
+            "+" => "Start activation / create if new",
+            "-" => "End activation",
+            "!" => "Destroy participant",
+            _ => value,
+        }
+    } else {
+        value
     }
 }

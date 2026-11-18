@@ -4,12 +4,7 @@ pub type Point = (f64, f64);
 
 pub fn path(send: Point, receive: Point, self_message: bool, diagonal: bool) -> Vec<Point> {
     if self_message {
-        return vec![
-            send,
-            (send.0 + 44.0, send.1),
-            (send.0 + 44.0, receive.1),
-            receive,
-        ];
+        return self_path(send, receive, send.0.max(receive.0) + 44.0);
     }
     if diagonal || (send.1 - receive.1).abs() < 0.01 {
         return vec![send, receive];
@@ -19,21 +14,34 @@ pub fn path(send: Point, receive: Point, self_message: bool, diagonal: bool) -> 
     vec![send, (elbow, send.1), (elbow, receive.1), receive]
 }
 
+pub fn self_path(send: Point, receive: Point, right: f64) -> Vec<Point> {
+    vec![send, (right, send.1), (right, receive.1), receive]
+}
 pub fn svg_path(points: &[Point], self_message: bool) -> String {
     let (sx, sy) = points[0];
-    let (tx, ty) = points[points.len() - 1];
-    if self_message {
-        let height = ty - sy;
-        if (sx - tx).abs() < 0.01 {
-            format!("M{sx:.2},{sy:.2} h44 v{height:.2} h-44")
+    let (tx, ty) = *points.last().unwrap();
+    if self_message && points.len() == 4 {
+        let right = points[1].0;
+        let outward = if (right - sx - 44.0).abs() < 0.001 {
+            "44".into()
         } else {
-            format!("M{sx:.2},{sy:.2} h44 v{height:.2} H{tx:.2}")
-        }
-    } else if points.len() == 4 {
-        format!("M{sx:.2},{sy:.2} H{:.2} V{ty:.2} H{tx:.2}", points[1].0)
-    } else {
-        format!("M{sx:.2},{sy:.2} L{tx:.2},{ty:.2}")
+            format!("{:.2}", right - sx)
+        };
+        let inward = if (right - tx - 44.0).abs() < 0.001 {
+            "44".into()
+        } else {
+            format!("{:.2}", right - tx)
+        };
+        return if (sx - tx).abs() < 0.01 {
+            format!("M{sx:.2},{sy:.2} h{outward} v{:.2} h-{inward}", ty - sy)
+        } else {
+            format!("M{sx:.2},{sy:.2} h{outward} v{:.2} H{tx:.2}", ty - sy)
+        };
     }
+    if points.len() == 4 {
+        return format!("M{sx:.2},{sy:.2} H{:.2} V{ty:.2} H{tx:.2}", points[1].0);
+    }
+    format!("M{sx:.2},{sy:.2} L{tx:.2},{ty:.2}")
 }
 
 pub fn arrowhead(tip: Point, direction: Point, modern: bool) -> [Point; 3] {

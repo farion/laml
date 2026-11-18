@@ -47,6 +47,86 @@ fn ready(source: &str, selection: std::ops::Range<usize>) -> (Editor, egui::Cont
     (editor, ctx)
 }
 #[test]
+fn short_source_editor_fills_available_height_including_horizontal_overflow() {
+    for source in [
+        String::new(),
+        "semantics {}".into(),
+        format!("// {}", "wide ".repeat(200)),
+    ] {
+        let mut editor = Editor::new(source.clone(), None);
+        let ctx = egui::Context::default();
+        for height in [400.0, 900.0] {
+            for _ in 0..3 {
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        screen_rect: Some(egui::Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            egui::vec2(600.0, height),
+                        )),
+                        ..Default::default()
+                    },
+                    |ui| {
+                        let bottom = ui.max_rect().bottom();
+                        editor.source_editor(ui);
+                        let rect = editor.source_ui.rect.unwrap();
+                        assert!(
+                            rect.bottom() >= bottom - 20.0,
+                            "editor {rect:?} does not fill height to {bottom}"
+                        );
+                        assert!(
+                            ui.min_rect().bottom() <= bottom + 1.0,
+                            "source pane must not overflow its available height"
+                        );
+                    },
+                );
+                output.textures_delta.clear();
+            }
+        }
+        assert_eq!(editor.document.source(), source);
+        assert_eq!(editor.document.revision(), 0);
+    }
+}
+
+#[test]
+fn source_clipboard_copy_cut_paste_preserves_unicode_and_shared_undo() {
+    let source = "// Grüße 日本語\n";
+    let (mut editor, ctx) = ready(source, 3..source.len() - 1);
+    let revision = editor.document.revision();
+    let mut copied = None;
+    let mut output = ctx.run_ui(
+        egui::RawInput {
+            events: vec![egui::Event::Copy],
+            ..Default::default()
+        },
+        |ui| editor.source_editor(ui),
+    );
+    for command in &output.platform_output.commands {
+        if let egui::OutputCommand::CopyText(text) = command {
+            copied = Some(text.clone());
+        }
+    }
+    output.textures_delta.clear();
+    assert_eq!(copied.as_deref(), Some("Grüße 日本語"));
+    assert_eq!(editor.document.revision(), revision);
+    frame(&mut editor, &ctx, vec![egui::Event::Cut]);
+    assert_eq!(editor.document.source(), "// \n");
+    frame(&mut editor, &ctx, vec![egui::Event::Paste(copied.unwrap())]);
+    assert_eq!(editor.document.source(), source);
+    frame(
+        &mut editor,
+        &ctx,
+        vec![key(egui::Key::Z, egui::Modifiers::COMMAND)],
+    );
+    assert_eq!(editor.document.source(), "// \n");
+    frame(
+        &mut editor,
+        &ctx,
+        vec![key(egui::Key::Z, egui::Modifiers::COMMAND)],
+    );
+    assert_eq!(editor.document.source(), source);
+}
+
+#[test]
 fn real_source_typing_has_shared_grouped_undo_without_native_snapshot_history() {
     let (mut editor, ctx) = ready("// ", 3..3);
     frame(&mut editor, &ctx, vec![egui::Event::Text("Gr".into())]);
@@ -263,7 +343,7 @@ fn completion_acceptance_is_atomic_and_stale_candidates_are_rejected() {
     frame(
         &mut editor,
         &ctx,
-        vec![key(egui::Key::Enter, egui::Modifiers::NONE)],
+        vec![key(egui::Key::Tab, egui::Modifiers::NONE)],
     );
     assert_eq!(
         editor.document.source(),

@@ -279,11 +279,15 @@ fn either_endpoint_can_move_and_original_arrow_is_removed_during_drag() {
         let source = "semantics {\n A\n B\n C\n @r A -> B : request\n}\nlayout {\n relation[r].source : side=right\n}\n";
         let (mut editor, ctx) = ready(source);
         let preview = editor.preview.as_ref().unwrap();
-        let line = preview.routes[0].source_line;
-        let p = laml_ui::relation_selection::endpoint(&preview.routes[0], end).unwrap();
-        let from = geometry::screen(preview, editor.creation.canvas_rect.unwrap(), p.x, p.y);
+        let from = geometry::endpoint_grip(
+            preview,
+            editor.creation.canvas_rect.unwrap(),
+            &preview.routes[0],
+            end,
+        )
+        .unwrap();
         let to = body(&editor, "C");
-        editor.selection.click_relation(line, false);
+        assert!(editor.selection.relations.is_empty());
         begin(&mut editor, &ctx, from, to);
         let end_wait = Instant::now() + Duration::from_secs(10);
         while editor.graph.drag_image.is_none() {
@@ -330,7 +334,7 @@ fn shift_at_press_and_release_independently_controls_each_end() {
             let canvas = editor.creation.canvas_rect.unwrap();
             assert_eq!(
                 geometry::handles(preview, canvas, &preview.nodes[0], true).len(),
-                4
+                5
             );
             assert!(geometry::source_at(preview, canvas, body(&editor, "A")).is_none());
             let from = grip(&editor, "A", Some("right"), true);
@@ -362,7 +366,7 @@ fn shift_at_press_and_release_independently_controls_each_end() {
 }
 
 #[test]
-fn body_drop_is_fixed_by_default_and_shift_preserves_named_ports() {
+fn body_drop_is_automatic_and_shift_preserves_named_ports() {
     let (editor, _) = ready("semantics {\n A\n B {\n @P port Input\n }\n}\n");
     let preview = editor.preview.as_ref().unwrap();
     let canvas = editor.creation.canvas_rect.unwrap();
@@ -371,7 +375,7 @@ fn body_drop_is_fixed_by_default_and_shift_preserves_named_ports() {
         geometry::target_at(preview, canvas, body, false)
             .unwrap()
             .side
-            .is_some()
+            .is_none()
     );
     assert!(
         geometry::target_at(preview, canvas, body, true)

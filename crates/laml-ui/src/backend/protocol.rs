@@ -115,6 +115,20 @@ pub enum Operation {
     DependenciesChanged {
         watch: u64,
     },
+    SequenceOptions {
+        source: String,
+        address: String,
+        presentation: Presentation,
+        queries: Vec<crate::notation_edit::sequence_options::Query>,
+        references: bool,
+    },
+    SequenceTargets {
+        source: String,
+        address: String,
+        presentation: Presentation,
+        action: crate::notation_edit::sequence_targets::Action,
+        targets: Vec<crate::notation_edit::sequence_targets::Target>,
+    },
     GestureRender {
         presentation: Presentation,
         source: String,
@@ -148,6 +162,8 @@ pub enum Reply {
         overlay: Option<String>,
     },
     Compiled(Result<Box<Preview>, Diagnostic>),
+    SequenceTargets(Vec<crate::notation_edit::sequence_targets::Choice>),
+    SequenceOptions(Vec<crate::notation_edit::sequence_options::Choice>),
     Export(Vec<u8>),
     OpenedSource {
         address: String,
@@ -176,6 +192,8 @@ pub enum ReplyKind {
     RecoveryRecords,
     GestureSvg,
     Compiled,
+    SequenceTargets,
+    SequenceOptions,
     Export,
     OpenedSource,
     SourceSnapshot,
@@ -190,7 +208,11 @@ impl Operation {
     pub fn discardable(&self) -> bool {
         matches!(
             self,
-            Self::Compile { .. } | Self::RenderExport { .. } | Self::GestureRender { .. }
+            Self::Compile { .. }
+                | Self::SequenceTargets { .. }
+                | Self::SequenceOptions { .. }
+                | Self::RenderExport { .. }
+                | Self::GestureRender { .. }
         )
     }
     pub fn reply_kind(&self) -> ReplyKind {
@@ -199,6 +221,8 @@ impl Operation {
             Self::RecoverySync { .. } | Self::RecoveryDiscard { .. } => ReplyKind::Unit,
             Self::GestureRender { .. } => ReplyKind::GestureSvg,
             Self::Compile { .. } => ReplyKind::Compiled,
+            Self::SequenceTargets { .. } => ReplyKind::SequenceTargets,
+            Self::SequenceOptions { .. } => ReplyKind::SequenceOptions,
             Self::RenderExport { .. } => ReplyKind::Export,
             Self::OpenSource { .. } => ReplyKind::OpenedSource,
             Self::InspectSource { .. } => ReplyKind::SourceSnapshot,
@@ -219,6 +243,8 @@ impl Reply {
             Self::RecoveryRecords(_) => ReplyKind::RecoveryRecords,
             Self::GestureSvg { .. } => ReplyKind::GestureSvg,
             Self::Compiled(_) => ReplyKind::Compiled,
+            Self::SequenceTargets(_) => ReplyKind::SequenceTargets,
+            Self::SequenceOptions(_) => ReplyKind::SequenceOptions,
             Self::Export(_) => ReplyKind::Export,
             Self::OpenedSource { .. } => ReplyKind::OpenedSource,
             Self::SourceSnapshot { .. } => ReplyKind::SourceSnapshot,

@@ -1,4 +1,5 @@
 //! Source-backed text targets. Picking uses measured compiler text, not node whitespace.
+mod sequence_fragments;
 #[cfg(test)]
 mod tests;
 use crate::{document::Edit, notation::Notation, notation_edit as edit, preview::Preview};
@@ -9,6 +10,8 @@ pub enum Target {
     Node(String),
     Port(String),
     Relation(usize),
+    SequenceMessage(usize),
+    SequenceGuard(usize),
     Field(edit::fields::Field),
     Attribute { line: usize, id: String },
     BpmnNode(String),
@@ -31,6 +34,27 @@ impl Text {
             Target::Node(id) => crate::node_edit::label(source, id, value),
             Target::Port(id) => crate::port_edit::label(source, id, value),
             Target::Relation(line) => crate::relation_edit::label(source, *line, value),
+            Target::SequenceMessage(line) => {
+                if let Some(mut field) = edit::item_fields(source, *line, None)
+                    .into_iter()
+                    .find(|f| f.name == "Label")
+                {
+                    field.kind = edit::fields::Kind::Quoted;
+                    return edit::fields::edit(source, &field, value);
+                }
+                let range = crate::source::SourceIndex::new(source)
+                    .line(*line)
+                    .ok_or("Missing message")?;
+                let at = range.start
+                    + crate::style_edit::code(&source[range.clone()])
+                        .trim_end()
+                        .len();
+                Ok(vec![Edit {
+                    range: at..at,
+                    replacement: format!(": {}", crate::relation_edit::quote(value)),
+                }])
+            }
+            Target::SequenceGuard(line) => sequence_fragments::edits(source, *line, value),
             Target::Field(field) => edit::fields::edit(source, field, value),
             Target::Attribute { line, id } => {
                 edit::attribute(source, *line, Some(id), "label", value)
@@ -92,6 +116,9 @@ fn field_text(source: &str, line: usize, id: Option<&str>, drawn: &str) -> Vec<T
 /// Resolve the smallest actual text hit, then the nearest matching semantic owner.
 /// Repeated labels are disambiguated geometrically; equal candidates fail closed.
 pub fn hit(preview: &Preview, source: &str, x: f64, y: f64) -> Option<Text> {
+    if let Some(text) = sequence_fragments::hit(preview, source, x, y) {
+        return Some(text);
+    }
     let drawn = preview
         .texts
         .iter()
@@ -101,8 +128,58 @@ pub fn hit(preview: &Preview, source: &str, x: f64, y: f64) -> Option<Text> {
                 && y >= t.y - 2.0
                 && y <= t.y + t.height + 2.0
         })
-        .min_by(|a, b| (a.width * a.height).total_cmp(&(b.width * b.height)))?;
-    resolve(preview, source, drawn)
+        .min_by(|a, b| (a.width * a.height).total_cmp(&(b.width * b.height)));
+    if let Some(text) = drawn.and_then(|drawn| resolve(preview, source, drawn)) {
+        return Some(text);
+    }
+    sequence_arrow(preview, source, x, y)
+}
+fn sequence_arrow(preview: &Preview, source: &str, x: f64, y: f64) -> Option<Text> {
+    if preview.notation != Notation::Sequence {
+        return None;
+    }
+    let mut hits = preview
+        .regions
+        .iter()
+        .filter(|r| r.kind == "message" && !r.path.is_empty())
+        .filter_map(|r| {
+            let distance = r
+                .path
+                .windows(2)
+                .map(|p| {
+                    let (dx, dy) = (p[1].0 - p[0].0, p[1].1 - p[0].1);
+                    let length = dx * dx + dy * dy;
+                    let t = if length > 0.0 {
+                        (((x - p[0].0) * dx + (y - p[0].1) * dy) / length).clamp(0.0, 1.0)
+                    } else {
+                        0.0
+                    };
+                    (x - p[0].0 - t * dx).hypot(y - p[0].1 - t * dy)
+                })
+                .fold(f64::INFINITY, f64::min);
+            (distance <= 6.0).then_some((distance, r))
+        })
+        .collect::<Vec<_>>();
+    hits.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let (distance, region) = hits.first()?;
+    if hits
+        .get(1)
+        .is_some_and(|next| (next.0 - distance).abs() < 1e-6)
+    {
+        return None;
+    }
+    let value = edit::item_fields(source, region.line, None)
+        .into_iter()
+        .find(|f| f.name == "Label")
+        .map(|f| f.value)
+        .unwrap_or_default();
+    Some(Text {
+        target: Target::SequenceMessage(region.line),
+        value,
+        multiline: true,
+        line: region.line,
+        bounds: (x, y - 24.0, x + 100.0, y),
+    })
 }
 fn resolve(preview: &Preview, source: &str, drawn: &TextRegion) -> Option<Text> {
     let (x, y) = (drawn.x + drawn.width / 2.0, drawn.y + drawn.height / 2.0);
@@ -264,9 +341,9 @@ fn same_target(a: &Target, b: &Target) -> bool {
         (Target::Node(a), Target::Node(b))
         | (Target::Port(a), Target::Port(b))
         | (Target::BpmnNode(a), Target::BpmnNode(b)) => a == b,
-        (Target::Relation(a), Target::Relation(b)) | (Target::BpmnFlow(a), Target::BpmnFlow(b)) => {
-            a == b
-        }
+        (Target::Relation(a), Target::Relation(b))
+        | (Target::SequenceGuard(a), Target::SequenceGuard(b))
+        | (Target::BpmnFlow(a), Target::BpmnFlow(b)) => a == b,
         (Target::Field(a), Target::Field(b)) => a.range == b.range,
         _ => false,
     }

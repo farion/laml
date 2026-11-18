@@ -28,7 +28,16 @@ impl Editor {
                 ui.set_min_height(appearance::HEADER_HEIGHT - 12.0);
                 ui.set_min_width(ui.available_width());
                 ui.horizontal(|ui| {
-                    ui.label(crate::i18n::tr(self.notation().title()));
+                    self.pane_title(ui, responsive::Pane::Diagram);
+                    if ui.available_width() > 430.0 {
+                        ui.add(
+                            egui::Label::new(
+                                egui::RichText::new(crate::i18n::tr(self.notation().title()))
+                                    .color(appearance::color(ui.ctx(), appearance::MUTED)),
+                            )
+                            .truncate(),
+                        );
+                    }
                     let mut items = vec![toolbar::Item {
                         label: "Add node",
                         icon: Some(PLUS),
@@ -53,17 +62,26 @@ impl Editor {
                             });
                         }
                     }
-                    toolbar::show_right(ui, &items, |ui, index, in_menu| {
-                        if toolbar::button(ui, &items[index], in_menu).clicked() {
-                            match index {
-                                0 => self.open_node_dialog(),
-                                1 => self.notation_ui.navigator = true,
-                                _ => self.open_construct_dialog(),
-                            }
-                            if in_menu {
-                                ui.close();
-                            }
-                        }
+                    let sequence = self.notation() == laml_ui::notation::Notation::Sequence;
+                    if sequence {
+                        items.remove(0);
+                    }
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        self.properties_button(ui);
+                        ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                            toolbar::show_right(ui, &items, |ui, index, in_menu| {
+                                if toolbar::button(ui, &items[index], in_menu).clicked() {
+                                    match if sequence { index + 1 } else { index } {
+                                        0 => self.open_node_dialog(),
+                                        1 => self.notation_ui.navigator = true,
+                                        _ => self.open_construct_dialog(),
+                                    }
+                                    if in_menu {
+                                        ui.close();
+                                    }
+                                }
+                            });
+                        });
                     });
                 });
             });

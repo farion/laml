@@ -19,7 +19,9 @@ fn picks_shorter_clear_corridor_over_first_external_detour() {
     let diagram = parse(source).unwrap();
     let sheet = StyleSheet::default();
     let boxes = place(&diagram, &sheet).unwrap();
-    let stable = route_pass(&diagram, &boxes, &sheet, None).unwrap();
+    let stable = PassCache::default()
+        .pass(&diagram, &boxes, &sheet, None)
+        .unwrap();
     let chosen = route(&diagram, &boxes, &sheet).unwrap();
     assert!(
         ranking::better_than_orthogonal(&chosen, &stable),

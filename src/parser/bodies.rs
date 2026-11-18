@@ -133,6 +133,16 @@ pub(super) fn node(
     }
     let explicit = explicit_id.is_some();
     let mut result = NodeDecl {
+        container: block
+            && (matches!(
+                kind,
+                NodeKind::Package
+                    | NodeKind::Profile
+                    | NodeKind::Component
+                    | NodeKind::CompositeStructure
+                    | NodeKind::State
+                    | NodeKind::UseCaseSystem
+            ) || kind.is_deployment_target()),
         id: explicit_id
             .unwrap_or_else(|| parent.map_or(name.clone(), |path| format!("{path}.{name}"))),
         explicit,

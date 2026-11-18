@@ -5,7 +5,9 @@ pub(crate) mod activity;
 mod c4_frame;
 pub(crate) mod composite;
 mod constraints;
+mod container_body;
 mod containers;
+mod empty_containers;
 mod junctions;
 mod lollipop;
 mod members;
@@ -165,10 +167,13 @@ pub(crate) fn place_with_spacing(
             || node.kind == NodeKind::State
             || node.kind == NodeKind::UseCaseSystem
             || node.kind.is_deployment_target())
-            && diagram
+            && (diagram
                 .nodes
                 .iter()
                 .any(|child| child.parent.as_deref() == Some(node.id.as_str()))
+                || diagram.nodes.iter().any(|source| {
+                    source.id == node.id && source.container && source.parts.is_empty()
+                }))
         {
             node.is_container = true;
         }
@@ -194,6 +199,7 @@ pub(crate) fn place_with_spacing(
             });
         }
     }
+    empty_containers::size(diagram, &mut boxes, styles);
     containers::place(diagram, &mut boxes, styles, spacing)?;
     ports::position(diagram, &mut boxes);
     port_contours::validate(&boxes)?;

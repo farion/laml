@@ -23,9 +23,16 @@ pub(super) fn hit(regions: &[Region], x: f64, y: f64, tolerance: f64) -> Option<
             if r.path.is_empty() {
                 x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height
             } else {
-                r.path
-                    .windows(2)
-                    .any(|p| distance((x, y), p[0], p[1]) <= tolerance)
+                if r.pick_paths.is_empty() {
+                    r.path
+                        .windows(2)
+                        .any(|p| distance((x, y), p[0], p[1]) <= tolerance)
+                } else {
+                    r.pick_paths.iter().any(|path| {
+                        path.windows(2)
+                            .any(|p| distance((x, y), p[0], p[1]) <= tolerance)
+                    })
+                }
             }
         })
         .min_by(|a, b| {
@@ -75,8 +82,8 @@ impl Editor {
                     && !r.kind.starts_with("sequence-")
                     && id.as_ref().is_none_or(|id| &r.id == id)
             }) {
-                // Endpoint grips identify selected sequence messages without painting
-                // a solid highlight over their dashed strokes and arrowheads.
+                // Sequence owns its translucent route highlight and persistent grips;
+                // do not replace the original dashed strokes with a solid selection line.
                 if matches!(
                     (self.notation(), r.kind.as_str()),
                     (Notation::Sequence, "message") | (Notation::Bpmn, "flow")
@@ -104,6 +111,10 @@ impl Editor {
                     }
                 }
             }
+        }
+        if self.notation() == Notation::Sequence {
+            self.sequence_canvas(ui, rect, response, navigation);
+            return;
         }
         let enabled = self.can_edit_visually();
         response.context_menu(|ui| {
@@ -136,9 +147,6 @@ impl Editor {
         });
         if navigation {
             self.notation_ui.drag = None;
-            return;
-        }
-        if self.notation() == Notation::Sequence && self.sequence_canvas(ui, rect) {
             return;
         }
         if self.notation() == Notation::Bpmn && self.bpmn_canvas(ui, rect) {
@@ -211,69 +219,6 @@ impl Editor {
                                 Ok(edits) => {
                                     self.notation_submit("Reorder timing lifelines", edits, None)
                                 }
-                                Err(e) => self.command_error = Some(e),
-                            }
-                        } else if self.notation() == Notation::Sequence
-                            && matches!(kind.as_str(), "note" | "continuation")
-                            && matches!(target.kind.as_str(), "participant" | "message")
-                        {
-                            let target = if target.kind == "message" {
-                                format!("{}.receive", target.id)
-                            } else {
-                                target.id.clone()
-                            };
-                            match edit::sequence::place_annotation(
-                                self.document.source(),
-                                &id,
-                                &target,
-                                kind == "continuation",
-                                false,
-                            ) {
-                                Ok(edits) => self.notation_submit(
-                                    "Place sequence annotation",
-                                    edits,
-                                    Some(line),
-                                ),
-                                Err(e) => self.command_error = Some(e),
-                            }
-                        } else if self.notation() == Notation::Sequence
-                            && kind == "participant"
-                            && target.kind == "participant"
-                        {
-                            let op = if x < target.x + target.width / 2.0 {
-                                "<"
-                            } else {
-                                ">"
-                            };
-                            self.notation_relative(&id, &target.id, op);
-                        } else if self.notation() == Notation::Sequence
-                            && matches!(
-                                kind.as_str(),
-                                "message" | "frame" | "event" | "decomposition"
-                            )
-                            && matches!(
-                                target.kind.as_str(),
-                                "message" | "frame" | "event" | "decomposition"
-                            )
-                        {
-                            let before = if y <= target.y {
-                                Some(target.line)
-                            } else {
-                                edit::records(self.document.source())
-                                    .into_iter()
-                                    .find(|r| r.line > target.line && r.section == "semantics")
-                                    .map(|r| r.line)
-                            };
-                            let mut parent = edit::record(self.document.source(), target.line)
-                                .ok()
-                                .and_then(|r| r.parent);
-                            let mut before = before;
-                            if target.kind == "frame" && y > target.y + 28.0 {
-                                parent = Some(target.line);
-                                before = None;
-                            }
-                            match edit::move_record(self.document.source(), line, parent, before) {
-                                Ok(edits) => self.notation_submit("Move message", edits, None),
                                 Err(e) => self.command_error = Some(e),
                             }
                         } else if self.notation() == Notation::Bpmn && kind == "node" {

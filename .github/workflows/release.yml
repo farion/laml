@@ -85,9 +85,19 @@ jobs:
         run: '& .\tests\replace_windows.ps1'
       - name: Build standalone CLI and editor release binaries
         shell: bash
+        env:
+          RUSTFLAGS: ${{ runner.os == 'Windows' && '-C target-feature=+crt-static' || '' }}
         run: |
-          cargo +stable build --locked --release -p laml
-          cargo +stable build --locked --release -p laml-ui
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            # Explicit target keeps static CRT flags away from host proc macros.
+            cargo +stable build --locked --release --target x86_64-pc-windows-msvc -p laml
+            cargo +stable build --locked --release --target x86_64-pc-windows-msvc -p laml-ui
+            mkdir -p target/release
+            cp target/x86_64-pc-windows-msvc/release/laml{,-ui}.exe target/release/
+          else
+            cargo +stable build --locked --release -p laml
+            cargo +stable build --locked --release -p laml-ui
+          fi
       - name: Smoke test (Unix)
         if: runner.os != 'Windows'
         shell: bash
@@ -102,6 +112,9 @@ jobs:
           & .\target\release\laml.exe check examples\architecture.laml
           & .\target\release\laml.exe check examples\bpmn-order.laml
           if (-not ((& .\target\release\laml.exe icons clock) -contains 'clock')) { throw 'missing bundled Phosphor clock' }
+      - name: Verify binaries without sibling assets
+        shell: bash
+        run: python3 scripts/test-standalone-binaries.py target/release
       - name: Package (Unix)
         if: runner.os != 'Windows'
         shell: bash
@@ -114,9 +127,6 @@ jobs:
           cp target/release/laml README.md LICENSE assets/INTER-LICENSE.txt assets/GEIST-LICENSE.txt assets/GEIST-SOURCE.txt "stage/${name}/"
           cp assets/phosphor/LICENSE "stage/${name}/PHOSPHOR-LICENSE.txt"
           cp assets/phosphor/README.md "stage/${name}/PHOSPHOR-README.md"
-          mkdir -p "stage/${name}/assets/phosphor"
-          cp assets/phosphor/LICENSE assets/phosphor/README.md assets/phosphor/icons.txt "stage/${name}/assets/phosphor/"
-          cp -R docs examples scripts "stage/${name}/"
           tar -czf "dist/${name}.tar.gz" -C stage "${name}"
       - name: Package (Windows)
         if: runner.os == 'Windows'
@@ -131,9 +141,6 @@ jobs:
           Copy-Item target/release/laml.exe, README.md, LICENSE, assets/INTER-LICENSE.txt, assets/GEIST-LICENSE.txt, assets/GEIST-SOURCE.txt -Destination $folder
           Copy-Item assets/phosphor/LICENSE -Destination "$folder/PHOSPHOR-LICENSE.txt"
           Copy-Item assets/phosphor/README.md -Destination "$folder/PHOSPHOR-README.md"
-          New-Item -ItemType Directory -Path "$folder/assets/phosphor" -Force | Out-Null
-          Copy-Item assets/phosphor/LICENSE, assets/phosphor/README.md, assets/phosphor/icons.txt -Destination "$folder/assets/phosphor"
-          Copy-Item docs, examples, scripts -Destination $folder -Recurse
           Compress-Archive -Path $folder -DestinationPath "dist/$name.zip"
       - name: Package Unix editor
         if: runner.os != 'Windows'
@@ -145,7 +152,7 @@ jobs:
           name="laml-ui-${GITHUB_REF_NAME}-${TARGET}"
           folder="stage/$name"
           mkdir -p "$folder" dist
-          cp LICENSE assets/INTER-LICENSE.txt assets/GEIST-LICENSE.txt assets/GEIST-SOURCE.txt "$folder/"
+          cp LICENSE assets/INTER-LICENSE.txt assets/GEIST-LICENSE.txt assets/GEIST-SOURCE.txt assets/DEJAVU-LICENSE.txt "$folder/"
           cp assets/phosphor/LICENSE "$folder/PHOSPHOR-LICENSE.txt"
           cp crates/laml-ui/LICENSE "$folder/EDITOR-LICENSE.txt"
           printf 'Source: https://github.com/farion/laml/tree/%s\nEditor: GPL-3.0-or-later. Compiler: MIT.\n' "$GITHUB_REF_NAME" > "$folder/SOURCE.txt"
@@ -174,7 +181,7 @@ jobs:
           $name = "laml-ui-$version-$env:TARGET"
           $folder = "stage/$name"
           New-Item -ItemType Directory -Path $folder, 'dist' -Force | Out-Null
-          Copy-Item target/release/laml-ui.exe, LICENSE, assets/INTER-LICENSE.txt, assets/GEIST-LICENSE.txt, assets/GEIST-SOURCE.txt -Destination $folder
+          Copy-Item target/release/laml-ui.exe, LICENSE, assets/INTER-LICENSE.txt, assets/GEIST-LICENSE.txt, assets/GEIST-SOURCE.txt, assets/DEJAVU-LICENSE.txt -Destination $folder
           Copy-Item assets/phosphor/LICENSE -Destination "$folder/PHOSPHOR-LICENSE.txt"
           Copy-Item crates/laml-ui/LICENSE -Destination "$folder/EDITOR-LICENSE.txt"
           "Source: https://github.com/farion/laml/tree/$env:GITHUB_REF_NAME`nEditor: GPL-3.0-or-later. Compiler: MIT." | Set-Content "$folder/SOURCE.txt"

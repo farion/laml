@@ -6,6 +6,8 @@ use laml_ui::{
 use std::ops::Range;
 
 pub(super) struct SourceUi {
+    pub context: source_context::State,
+    pub line_numbers: bool,
     pub id: Option<egui::Id>,
     pub selection: Range<usize>,
     pub selection_revision: u64,
@@ -25,6 +27,8 @@ pub(super) struct SourceUi {
 impl Default for SourceUi {
     fn default() -> Self {
         Self {
+            context: Default::default(),
+            line_numbers: true,
             id: None,
             selection: 0..0,
             selection_revision: 0,

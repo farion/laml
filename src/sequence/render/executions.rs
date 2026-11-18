@@ -97,7 +97,7 @@ pub(super) fn draw(
         );
         region.end_line = bar.end_line;
         regions.push(region);
-        regions.push(crate::authoring::Region::rect(
+        let mut dock = crate::authoring::Region::rect(
             id,
             "sequence-execution",
             *line,
@@ -105,7 +105,9 @@ pub(super) fn draw(
             *from,
             width,
             height,
-        ));
+        );
+        dock.end_line = bar.end_line;
+        regions.push(dock);
         let radius = if sheet.theme.modern() { 3.0 } else { 0.0 };
         writeln!(svg, "<rect x=\"{x:.2}\" y=\"{from:.2}\" width=\"{width:.2}\" height=\"{height:.2}\" rx=\"{radius:.2}\" fill=\"{}\" stroke=\"{}\" stroke-width=\"{:.2}\" data-activation-owner=\"{}\" data-activation-id=\"{}\" />",
             paint.fill, paint.border, paint.border_width, styles::escape(id),

@@ -304,7 +304,7 @@ fn placement_preflight_uses_the_injected_backend_and_commits_one_undo_step() {
         revision: editor.document.revision(),
         from: "A".into(),
         target: "B".into(),
-        side: laml::syntax::Placement::Right,
+        side: Some(laml::syntax::Placement::Right),
     };
     let end = Instant::now() + Duration::from_secs(10);
     while !editor.placement.ready() {

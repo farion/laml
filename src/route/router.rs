@@ -1,7 +1,7 @@
 //! Route relations with notation-aware feasibility checks and bounded candidate ranking.
 use super::{
     Route, RouteError, attachments, bridges, candidates, edge_style, geometry::route_is_clear,
-    parallel, qualifiers, ranking, route_labels, self_loops, side_rules,
+    parallel, pass_cache::PassCache, qualifiers, ranking, route_labels, self_loops, side_rules,
 };
 use crate::{geometry::BoxNode, styles::StyleSheet, syntax::Diagram};
 
@@ -18,7 +18,11 @@ pub fn route(
     boxes: &[BoxNode],
     sheet: &StyleSheet,
 ) -> Result<Vec<Route>, RouteError> {
-    let failure = match route_fast(diagram, boxes, sheet) {
+    if let Some(routes) = super::corridor::route(diagram, boxes, sheet) {
+        return Ok(routes);
+    }
+    let mut cache = PassCache::default();
+    let failure = match route_fast(diagram, boxes, sheet, &mut cache) {
         Ok(routes) => return Ok(routes),
         Err(error) => error,
     };
@@ -32,13 +36,12 @@ pub fn route(
         .map_err(|(line, message)| RouteError { line, message })?;
     let order: Vec<_> = (0..visible.relations.len()).collect();
     let mut orders = vec![order];
-    if visible.relations.iter().all(|r| r.from != r.to) {
-        orders.extend(super::routing_order::alternatives(&visible, boxes));
-    }
+    // An earlier edge can occupy a self-loop's mandatory docking corridor.
+    // Retry allocation order too: loop lane ranks are computed from declaration
+    // indices below, and returned routes are restored to declaration order.
+    orders.extend(super::routing_order::alternatives(&visible, boxes));
     for order in orders {
-        if let Ok(routes) =
-            route_in_order_mode(&visible, boxes, sheet, Some(usize::MAX), &order, true, None)
-        {
+        if let Ok(routes) = cache.run(&visible, boxes, sheet, Some(usize::MAX), &order, true) {
             return Ok(routes);
         }
     }
@@ -49,11 +52,12 @@ fn route_fast(
     diagram: &Diagram,
     boxes: &[BoxNode],
     sheet: &StyleSheet,
+    cache: &mut PassCache,
 ) -> Result<Vec<Route>, RouteError> {
     let visible = crate::geometry::visible_diagram(diagram, sheet)
         .map_err(|(line, message)| RouteError { line, message })?;
     let diagram = &visible;
-    let stable = route_pass(diagram, boxes, sheet, None);
+    let stable = cache.pass(diagram, boxes, sheet, None);
     // UML-specialized relations can require notation-specific arms and docking;
     // preserve those checked candidates instead of optimizing them as generic lines.
     if !matches!(
@@ -71,12 +75,12 @@ fn route_fast(
             && !diagram.settings.allow_diagonal
             && diagram.settings.diagram_type == crate::syntax::DiagramType::Generic
         {
-            return super::optimize::route(diagram, boxes, sheet, stable);
+            return super::optimize::route(diagram, boxes, sheet, stable, cache);
         }
         return stable;
     }
     if !diagram.settings.allow_diagonal {
-        return super::optimize::route(diagram, boxes, sheet, stable);
+        return super::optimize::route(diagram, boxes, sheet, stable, cache);
     }
     // A locally feasible early candidate can block a later relation. If the
     // stable pass fails, retry from scratch with crossing-aware candidate order.
@@ -84,7 +88,7 @@ fn route_fast(
         Ok(routes) => routes,
         Err(error) => {
             let mut failure = error;
-            if let Ok(routes) = route_pass(diagram, boxes, sheet, Some(usize::MAX))
+            if let Ok(routes) = cache.pass(diagram, boxes, sheet, Some(usize::MAX))
                 && ranking::visibly_clear(&routes, boxes)
             {
                 return Ok(routes);
@@ -95,7 +99,7 @@ fn route_fast(
                 .position(|relation| relation.line == failure.line)
                 .unwrap_or(0);
             for cutoff in first_blocked..diagram.relations.len().min(first_blocked + 12) {
-                match route_pass(diagram, boxes, sheet, Some(cutoff)) {
+                match cache.pass(diagram, boxes, sheet, Some(cutoff)) {
                     Ok(routes) if ranking::visibly_clear(&routes, boxes) => return Ok(routes),
                     Ok(_) => {}
                     Err(alternative) => failure = furthest_failure(failure, alternative),
@@ -104,7 +108,7 @@ fn route_fast(
             return Err(failure);
         }
     };
-    let fully_ranked = route_pass(diagram, boxes, sheet, Some(usize::MAX));
+    let fully_ranked = cache.pass(diagram, boxes, sheet, Some(usize::MAX));
     let fully_ranked_failed = fully_ranked.is_err();
     if let Ok(ranked) = fully_ranked
         && ranking::no_worse_clearance(&ranked, &stable, boxes)
@@ -123,7 +127,7 @@ fn route_fast(
     // only the first few edges improves a needlessly long stable route.
     if fully_ranked_failed {
         for cutoff in 0..diagram.relations.len().min(3) {
-            if let Ok(candidate) = route_pass(diagram, boxes, sheet, Some(cutoff))
+            if let Ok(candidate) = cache.pass(diagram, boxes, sheet, Some(cutoff))
                 && ranking::no_worse_clearance(&candidate, &stable, boxes)
                 && diagram.relations.iter().enumerate().all(|(i, relation)| {
                     relation.from != relation.to || candidate[i].points == stable[i].points
@@ -141,31 +145,7 @@ fn route_fast(
     Ok(stable)
 }
 
-fn route_pass(
-    diagram: &Diagram,
-    boxes: &[BoxNode],
-    sheet: &StyleSheet,
-    ranked_until: Option<usize>,
-) -> Result<Vec<Route>, RouteError> {
-    route_in_order(
-        diagram,
-        boxes,
-        sheet,
-        ranked_until,
-        &(0..diagram.relations.len()).collect::<Vec<_>>(),
-    )
-}
-
-pub(super) fn route_in_order(
-    diagram: &Diagram,
-    boxes: &[BoxNode],
-    sheet: &StyleSheet,
-    ranked_until: Option<usize>,
-    order: &[usize],
-) -> Result<Vec<Route>, RouteError> {
-    route_in_order_mode(diagram, boxes, sheet, ranked_until, order, false, None)
-}
-
+#[allow(clippy::too_many_arguments)] // Fixed search inputs plus its call-local prefix cache.
 pub(super) fn route_in_order_mode(
     diagram: &Diagram,
     boxes: &[BoxNode],
@@ -174,12 +154,19 @@ pub(super) fn route_in_order_mode(
     order: &[usize],
     rescue: bool,
     seeds: Option<&std::collections::BTreeMap<usize, Vec<super::Point>>>,
+    cache: &mut PassCache,
 ) -> Result<Vec<Route>, RouteError> {
     // The public entry point resolves visibility and notation exactly once.
     let mut routed = Vec::new();
+    let mut prefix = Vec::new();
     for &index in order {
         let relation = &diagram.relations[index];
         let ranked = ranked_until.is_some_and(|cutoff| index <= cutoff);
+        prefix.push((index, ranked));
+        if let Some(previous) = cache.get(rescue, &prefix) {
+            routed = previous;
+            continue;
+        }
         let owner = |id: &str| {
             boxes
                 .iter()
@@ -210,6 +197,10 @@ pub(super) fn route_in_order_mode(
                 message: "composite connector stroke must remain visible".into(),
             });
         }
+        let terminal_gap = [relation.appearance.start, relation.appearance.end]
+            .into_iter()
+            .map(|symbol| super::terminal::minimum(symbol, width, sheet.theme.modern(), true))
+            .fold(24.0_f64, f64::max);
         let mut options = if let Some(seeds) = seeds {
             seeds.get(&relation.line).cloned().into_iter().collect()
         } else if from == to {
@@ -234,6 +225,8 @@ pub(super) fn route_in_order_mode(
                 &boxes[from],
                 self_loops::candidates(&boxes[from], rank),
             )
+        } else if cache.corridor {
+            super::corridor::direct(diagram, index, boxes, &routed, terminal_gap)
         } else {
             let offset =
                 parallel::offset(diagram, index, boxes, from, to, sheet).map_err(|message| {
@@ -242,7 +235,17 @@ pub(super) fn route_in_order_mode(
                         message,
                     }
                 })?;
-            candidates(diagram, index, from, to, boxes, &routed, offset, ranked)
+            candidates(
+                diagram,
+                index,
+                from,
+                to,
+                boxes,
+                &routed,
+                offset,
+                ranked,
+                terminal_gap,
+            )
         };
         let obstacles = (!diagram.settings.allow_diagonal
             && matches!(
@@ -289,15 +292,42 @@ pub(super) fn route_in_order_mode(
         let label_line = label_rule.map_or(relation.line, |rule| rule.line);
         let mut choice = None;
         let mut label_error = None;
-        let extra = std::iter::once_with(|| {
-            if rescue {
-                super::rescue::candidates(diagram, index, boxes, &routed)
+        let extra: Box<dyn Iterator<Item = Vec<super::Point>> + '_> =
+            if cache.corridor && from != to {
+                Box::new(super::corridor::paths(
+                    diagram,
+                    index,
+                    boxes,
+                    &routed,
+                    terminal_gap,
+                    cache.crossing_free,
+                ))
             } else {
-                Vec::new()
-            }
-        })
-        .flatten();
+                Box::new(
+                    std::iter::once_with(|| {
+                        if rescue {
+                            super::rescue::candidates(diagram, index, boxes, &routed, terminal_gap)
+                        } else {
+                            Vec::new()
+                        }
+                    })
+                    .flatten(),
+                )
+            };
+        let contours = super::orthogonal::Contours::new(&boxes[from], &boxes[to]);
         for mut points in options.into_iter().chain(extra) {
+            if cache.corridor && cache.crossing_free && super::corridor::crosses(&points, &routed) {
+                continue;
+            }
+            // Seed replay and grid rescue must obey the same terminal directions
+            // as ordinary candidates; collision clearance alone permits tangency.
+            if matches!(
+                diagram.settings.diagram_type,
+                crate::syntax::DiagramType::Generic | crate::syntax::DiagramType::Package
+            ) && !contours.normal(&points, diagram.settings.allow_diagonal)
+            {
+                continue;
+            }
             let qualifier_boxes = match qualifiers::attach(
                 relation,
                 &mut points,
@@ -313,6 +343,16 @@ pub(super) fn route_in_order_mode(
                     continue;
                 }
             };
+            if !super::terminal::clear(
+                &points,
+                relation,
+                width,
+                sheet.theme.modern(),
+                &boxes[from],
+                &boxes[to],
+            ) {
+                continue;
+            }
             if !diagram.settings.allow_diagonal && !super::orthogonal::axis_aligned(&points) {
                 continue;
             }
@@ -436,6 +476,7 @@ pub(super) fn route_in_order_mode(
             marker_end: relation.kind != crate::RelationKind::Undirected,
             appearance: relation.appearance,
         });
+        cache.insert(rescue, &prefix, &routed);
     }
     // Bridge/gap plans are already attached to their routes; restore source
     // order before rendering or resolving relation attachments.

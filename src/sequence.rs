@@ -1,10 +1,8 @@
 //! Sequence-diagram parsing and drawable structural checks.
 //! Never feed these messages to the graph-diagram router.
-
-use crate::lex::{find_arrow, quoted_string, split_once_top_level, valid_identifier};
+use crate::lex::{quoted_string, split_once_top_level, valid_identifier};
 use crate::parser::ParseError;
 use crate::syntax::StyleEntry;
-
 pub mod activation_layout;
 mod annotations;
 mod continuations;
@@ -18,12 +16,12 @@ mod frame_layout;
 mod identities;
 mod layout;
 mod layout_scoped;
+mod message_parse;
 mod messages;
 mod notes;
+pub mod occurrence_layout;
 pub mod render;
 pub(crate) mod styling;
-pub use styling::is_sequence_source;
-
 pub use annotations::{
     Annotation, End as AnnotationEnd, Kind as AnnotationKind, OrderingEnd, OrderingRule,
 };
@@ -33,11 +31,10 @@ pub use decompositions::Decomposition;
 pub use document::parse;
 pub use frame_layout::FrameCoverage;
 use messages::{
-    MessageOptions, close, gate_id, head_tokens, parse_label, parse_participant,
-    parse_relation_prefix, require_participant,
+    MessageOptions, parse_label, parse_participant, parse_relation_prefix, require_participant,
 };
 pub use notes::{Note, Placement as NotePlacement};
-
+pub use styling::is_sequence_source;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Participant {
     pub id: String,
@@ -48,8 +45,7 @@ pub struct Participant {
     pub created_line: Option<usize>,
     pub destroyed_line: Option<usize>,
 }
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum MessageKind {
     Sync,
     Async,
@@ -57,8 +53,7 @@ pub enum MessageKind {
     Create,
     Delete,
 }
-
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Message {
     pub name: Option<String>,
     pub classes: Vec<String>,
@@ -106,11 +101,13 @@ pub enum Event {
         participant: String,
         id: Option<String>,
         label: Option<String>,
+        at_send: bool,
         line: usize,
     },
     Deactivate {
         participant: String,
         id: Option<String>,
+        at_send: bool,
         line: usize,
     },
 }
@@ -140,6 +137,7 @@ pub struct SequenceDiagram {
     pub vertical_layout: Vec<VerticalRule>,
     pub destruction_layout: Vec<destruction_layout::DestructionAlignment>,
     pub activation_layout: Vec<activation_layout::Alignment>,
+    pub occurrence_layout: Vec<occurrence_layout::Alignment>,
     pub styling: Vec<StyleEntry>,
 }
 
@@ -245,6 +243,7 @@ pub(super) fn parse_semantic(
             diagram.events.push(Event::Deactivate {
                 participant: from,
                 id: None,
+                at_send: true,
                 line,
             });
         }
@@ -270,229 +269,13 @@ pub(super) fn parse_semantic(
         });
         return Ok(());
     }
-    let arrow_at = find_arrow(text)
-        .or_else(|| text.find(" <<- "))
-        .ok_or_else(|| error(line, "expected sequence message arrow"))?;
-    let (body, options) = messages::extract_message_prefix(text, arrow_at, line)?;
-    let (heads, label) = match split_once_top_level(body, ':') {
-        Some((heads, label)) => (
-            heads.trim(),
-            Some(
-                parse_label(&format!(":{label}"), line)?
-                    .ok_or_else(|| error(line, "empty message label"))?,
-            ),
-        ),
-        None => (body, None),
-    };
-    let words = head_tokens(heads);
-    if words.len() != 3 {
-        return Err(error(line, "expected message: A -> B"));
-    }
-    let (left_raw, right_raw) = (words[0], words[2]);
-    let (kind, reverse) = match words[1] {
-        "->" => (MessageKind::Sync, false),
-        "<-" => (MessageKind::Sync, true),
-        "->>" => (MessageKind::Async, false),
-        "<<-" => (MessageKind::Async, true),
-        "<--" => (MessageKind::Reply, true),
-        _ => return Err(error(line, "unknown sequence arrow")),
-    };
-    let (left_text, left_marker) = match left_raw.chars().last() {
-        Some('+' | '-' | '!') if reverse => {
-            (&left_raw[..left_raw.len() - 1], left_raw.chars().last())
-        }
-        _ => (left_raw, None),
-    };
-    let (right_text, right_marker) = match right_raw.chars().last() {
-        Some('+' | '-' | '!') => (&right_raw[..right_raw.len() - 1], right_raw.chars().last()),
-        _ => (right_raw, None),
-    };
-    if left_marker.is_some() && right_marker.is_some() {
-        return Err(error(
-            line,
-            "one message cannot change executions on both ends",
-        ));
-    }
-    let marker = left_marker.or(right_marker);
-    let (left_id, left_label, left_classes) = if left_marker.is_some() {
-        parse_participant(left_text, line)?
-    } else {
-        (left_text.into(), left_text.into(), Vec::new())
-    };
-    let left = left_id.as_str();
-    let (right_id, right_label, right_classes) =
-        if right_text == "?" || gate_id(right_text).is_some() {
-            (right_text.to_string(), right_text.to_string(), Vec::new())
-        } else {
-            parse_participant(right_text, line)?
-        };
-    let right = right_id.as_str();
-    let target = if left_marker.is_some() { left } else { right };
-    let receives_marker =
-        (left_marker.is_some() && reverse) || (right_marker.is_some() && !reverse);
-    if (left == "?" || gate_id(left).is_some()) && (right == "?" || gate_id(right).is_some()) {
-        return Err(error(line, "message needs at least one known participant"));
-    }
-    if (gate_id(left).is_some() || gate_id(right).is_some()) && !has_gate_frame {
-        return Err(error(line, "gate endpoint requires an enclosing frame"));
-    }
-    if marker.is_some() && (target == "?" || gate_id(target).is_some()) {
-        return Err(error(
-            line,
-            "unknown endpoint cannot have an activation marker",
-        ));
-    }
-    if (right_text.contains('(') && diagram.participants.iter().any(|p| p.id == right))
-        || (left_marker.is_some()
-            && left_text.contains('(')
-            && diagram.participants.iter().any(|p| p.id == left))
-    {
-        return Err(error(
-            line,
-            "inline participant label requires a new lifeline",
-        ));
-    }
-    let existed = diagram.participants.iter().any(|p| p.id == target);
-    let revives = marker == Some('+')
-        && receives_marker
-        && diagram
-            .participants
-            .iter()
-            .find(|p| p.id == target)
-            .is_some_and(|p| {
-                operand_scope.is_some_and(|(frame, operand)| {
-                    p.created_line
-                        .is_some_and(|created| created > frame && created < operand)
-                        && p.destroyed_line.is_some_and(|died| died < operand)
-                })
-            });
-    let creates = marker == Some('+') && receives_marker && (!existed || revives);
-    if options.create && (!creates || kind != MessageKind::Sync) {
-        return Err(error(
-            line,
-            "creation message requires -> or <- and a first target+",
-        ));
-    }
-    if options.arrow.is_some() && kind != MessageKind::Reply {
-        return Err(error(line, "arrow override applies only to replies"));
-    }
-    let deletes = marker == Some('!');
-    if deletes && (!receives_marker || kind == MessageKind::Reply || options.create) {
-        return Err(error(
-            line,
-            "deletion message must point to an existing target",
-        ));
-    }
-    if creates {
-        if revives {
-            diagram
-                .participants
-                .iter_mut()
-                .find(|p| p.id == target)
-                .expect("revived participant exists")
-                .destroyed_line = None;
-        } else {
-            diagram.participants.push(Participant {
-                id: target.into(),
-                label: if left_marker.is_some() {
-                    left_label
-                } else {
-                    right_label
-                },
-                classes: if left_marker.is_some() {
-                    left_classes
-                } else {
-                    right_classes
-                },
-                line,
-                created_line: Some(line),
-                destroyed_line: None,
-            });
-        }
-        diagram.births.push((target.into(), line));
-    }
-    for id in [left, right] {
-        if id != "?" && gate_id(id).is_none() {
-            require_participant(diagram, id, line)?;
-        }
-    }
-    if let Some(name) = &options.name
-        && diagram.events.iter().any(
-            |event| matches!(event, Event::Message(message) if message.name.as_ref() == Some(name)),
-        )
-    {
-        return Err(error(line, format!("duplicate message '{name}'")));
-    }
-    let (from, to) = if reverse {
-        (right, left)
-    } else {
-        (left, right)
-    };
-    if kind == MessageKind::Sync
-        && !deletes
-        && !options.create
-        && from != "?"
-        && to != "?"
-        && gate_id(from).is_none()
-        && gate_id(to).is_none()
-    {
-        calls.push((from.into(), to.into()));
-    }
-    if kind == MessageKind::Reply
-        && calls
-            .last()
-            .is_some_and(|(caller, callee)| caller == to && callee == from)
-    {
-        calls.pop();
-    }
-    match marker {
-        Some('+') => active.push((target.into(), line)),
-        Some('-') => close(active, target, line)?,
-        Some('!') => {
-            let participant = diagram
-                .participants
-                .iter_mut()
-                .find(|p| p.id == target)
-                .ok_or_else(|| error(line, "deletion requires an existing lifeline"))?;
-            participant.destroyed_line = Some(line);
-            active.retain(|(name, _)| name != target);
-            calls.retain(|(from, to)| from != target && to != target);
-        }
-        _ => {}
-    }
-    diagram.events.push(Event::Message(Message {
-        name: options.name,
-        classes: options.classes,
-        from: from.into(),
-        to: to.into(),
-        label,
-        kind: if options.create {
-            MessageKind::Create
-        } else if deletes {
-            MessageKind::Delete
-        } else {
-            kind
-        },
-        filled_reply: options.arrow.unwrap_or(false),
+    message_parse::parse(
+        text,
         line,
-    }));
-    match marker {
-        Some('+') => diagram.events.push(Event::Activate {
-            participant: target.into(),
-            id: None,
-            label: None,
-            line,
-        }),
-        Some('-') => diagram.events.push(Event::Deactivate {
-            participant: target.into(),
-            id: None,
-            line,
-        }),
-        Some('!') => diagram.events.push(Event::Destroy {
-            participant: target.into(),
-            line,
-        }),
-        _ => {}
-    }
-    Ok(())
+        diagram,
+        calls,
+        active,
+        operand_scope,
+        has_gate_frame,
+    )
 }
