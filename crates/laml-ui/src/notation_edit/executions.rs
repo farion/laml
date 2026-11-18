@@ -98,10 +98,7 @@ fn rename(
         if r.section == "layout" {
             for span in super::references::spans(text, "layout", false) {
                 let value = &text[span.clone()];
-                if value
-                    .strip_suffix(&format!(".{old}"))
-                    .is_some_and(|owner| matches(owner))
-                {
+                if value.strip_suffix(&format!(".{old}")).is_some_and(&matches) {
                     edits.push(Edit {
                         range: r.range.start + span.end - old.len()..r.range.start + span.end,
                         replacement: new.into(),

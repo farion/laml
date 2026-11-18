@@ -1,7 +1,7 @@
 use super::labels::segment_hits_rect;
 use super::{Point, Route};
 use crate::geometry::{BoxNode, NodeShape};
-fn compact_radius(node: &BoxNode) -> Option<f64> {
+pub(super) fn compact_radius(node: &BoxNode) -> Option<f64> {
     match node.kind {
         crate::syntax::NodeKind::Association | crate::syntax::NodeKind::Junction => Some(12.0),
         crate::syntax::NodeKind::Lollipop | crate::syntax::NodeKind::Socket => Some(10.0),

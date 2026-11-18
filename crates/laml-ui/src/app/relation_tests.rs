@@ -82,7 +82,13 @@ fn endpoint_handle_drag_reconnects_with_independent_shift_release_side_choice() 
             .iter()
             .find(|r| r.source_line == 5)
             .unwrap();
-        let start = point(&editor, *route.points.last().unwrap());
+        let start = connection_geometry::endpoint_grip(
+            editor.preview.as_ref().unwrap(),
+            editor.creation.canvas_rect.unwrap(),
+            route,
+            EndPosition::Target,
+        )
+        .unwrap();
         let c = editor
             .preview
             .as_ref()
@@ -91,13 +97,16 @@ fn endpoint_handle_drag_reconnects_with_independent_shift_release_side_choice() 
             .iter()
             .find(|n| n.id == "C")
             .unwrap();
-        let target = point(
-            &editor,
-            Point {
-                x: c.x + c.width / 2.0,
-                y: c.y + c.height / 2.0,
-            },
-        );
+        let target = connection_geometry::handles(
+            editor.preview.as_ref().unwrap(),
+            editor.creation.canvas_rect.unwrap(),
+            c,
+            false,
+        )
+        .into_iter()
+        .find(|h| h.dock.side == Some("left"))
+        .unwrap()
+        .point;
         canvas_frame(
             &mut editor,
             &ctx,

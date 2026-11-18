@@ -81,9 +81,7 @@ impl Context {
                         }
                     }
                     // Free-form notes may contain braces and comment-looking text.
-                    for role in &mut out {
-                        *role = Role::Text;
-                    }
+                    out.fill(Role::Text);
                     return out;
                 }
                 (Section::Semantics, Body::Members) if !element_line(&t) => {

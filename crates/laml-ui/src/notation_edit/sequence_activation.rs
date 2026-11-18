@@ -97,8 +97,7 @@ pub fn bind_end(
     }
     let execution = laml::sequence::activation_layout::executions(&doc)
         .into_iter()
-        .filter(|e| e.owner == owner && e.end == end)
-        .last()
+        .rfind(|e| e.owner == owner && e.end == end)
         .ok_or("The activation end no longer exists")?;
     let (finish, _) = super::sequence_align::snap_to_occurrence(
         &intermediate,

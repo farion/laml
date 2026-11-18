@@ -11,6 +11,7 @@ mod clearance;
 mod container_ends;
 mod corridor;
 mod crossing_fallback;
+mod departure;
 mod detours;
 mod edge_style;
 mod end_labels;
@@ -248,7 +249,7 @@ fn candidates(
         && let Some(points) = actor_usecase_straight(a, b)
     {
         results.push(points);
-        results.extend(actor_side_detours(a, b, boxes));
+        results.extend(actor_side_detours(a, b, boxes, terminal_gap));
     }
     if diagram.settings.diagram_type == crate::syntax::DiagramType::Class
         && source_side.is_none()

@@ -147,6 +147,10 @@ fn order_actors_align_and_lateral_association_avoids_the_actor_head() {
     );
     assert!(p[2].y > order.y + order.height + 8.0);
     assert!((p[4].y - order.y - order.height).abs() < 0.01);
+    assert!(
+        (p[3].y - p[4].y).abs() >= 20.0,
+        "keep the terminal straight run without moving the first elbow into the subject"
+    );
 }
 
 #[test]

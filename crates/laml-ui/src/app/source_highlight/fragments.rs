@@ -58,9 +58,7 @@ pub(super) fn classify(t: &[&Token<'_>], roles: &mut [Role]) -> bool {
             continue;
         }
         prefix = false;
-        if depth == 0 {
-            roles[i] = Role::Text;
-        } else if t[i].kind == Kind::Word && roles[i] == Role::Id {
+        if depth == 0 || t[i].kind == Kind::Word && roles[i] == Role::Id {
             roles[i] = Role::Text;
         }
     }

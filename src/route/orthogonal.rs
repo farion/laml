@@ -351,92 +351,6 @@ pub(super) fn candidates(
     result
 }
 
-// For box-like nodes, both terminal strokes must be normal to a visible
-// side; following an edge into an arrowhead is never a valid connector.
-fn valid_departure(
-    node: &BoxNode,
-    port: Point,
-    outside: Point,
-    allow_slant: bool,
-    visible_top: Option<(f64, f64)>,
-) -> bool {
-    if node.shape != NodeShape::Diamond
-        && !matches!(
-            node.kind,
-            crate::syntax::NodeKind::Generic
-                | crate::syntax::NodeKind::Package
-                | crate::syntax::NodeKind::Class
-                | crate::syntax::NodeKind::Object
-                | crate::syntax::NodeKind::UseCaseSystem
-        )
-    {
-        return true;
-    }
-    let (dx, dy) = (outside.x - port.x, outside.y - port.y);
-    let epsilon = 0.01;
-    let normal = |axial: f64, lateral: f64| {
-        if allow_slant {
-            let distance = axial.hypot(lateral);
-            distance >= 20.0 - epsilon && axial >= distance * 0.25
-        } else {
-            axial >= 20.0 - epsilon && lateral.abs() < epsilon
-        }
-    };
-    if let Some(boundary) = node
-        .ports
-        .iter()
-        .find(|p| (p.x - port.x).abs() < epsilon && (p.y - port.y).abs() < epsilon)
-    {
-        // Named ports may sit between a shaped node's extremes. Their authored
-        // side remains the direction contract, rather than forcing a vertex.
-        return match boundary.side {
-            PortSide::Left => normal(-dx, dy),
-            PortSide::Right => normal(dx, dy),
-            PortSide::Top => normal(-dy, dx),
-            PortSide::Bottom => normal(dy, dx),
-        };
-    }
-    if matches!(node.shape, NodeShape::Diamond | NodeShape::Ellipse) {
-        // A vertex/extreme is a directional dock, not a point that may be
-        // approached tangentially just because the segment stays outside.
-        for side in [
-            PortSide::Left,
-            PortSide::Right,
-            PortSide::Top,
-            PortSide::Bottom,
-        ] {
-            let dock = forced_port(node, side);
-            if (dock.x - port.x).abs() < epsilon && (dock.y - port.y).abs() < epsilon {
-                return match side {
-                    PortSide::Left => normal(-dx, dy),
-                    PortSide::Right => normal(dx, dy),
-                    PortSide::Top => normal(-dy, dx),
-                    PortSide::Bottom => normal(dy, dx),
-                };
-            }
-        }
-        if node.shape == NodeShape::Diamond && !allow_slant {
-            return false;
-        }
-        // Preserve deliberately diagonal/non-cardinal contour attachments, but
-        // reject tangent or inward departures there as well.
-        let c = super::geometry::center(node);
-        let (rx, ry) = (node.width / 2.0, node.height / 2.0);
-        let outward = ((port.x - c.x) / (rx * rx), (port.y - c.y) / (ry * ry));
-        return dx.hypot(dy) >= 20.0 - epsilon && dx * outward.0 + dy * outward.1 > epsilon;
-    }
-    let left = (port.x - node.x).abs() < epsilon && normal(-dx, dy);
-    let right = (port.x - node.x - node.width).abs() < epsilon
-        && visible_top.is_none_or(|(_, tab_height)| port.y >= node.y + tab_height - epsilon)
-        && normal(dx, dy);
-    let bottom = (port.y - node.y - node.height).abs() < epsilon && normal(dy, dx);
-    let top = visible_top.map_or((port.y - node.y).abs() < epsilon, |(tab_w, tab_h)| {
-        ((port.y - node.y).abs() < epsilon && port.x <= node.x + tab_w + epsilon)
-            || ((port.y - node.y - tab_h).abs() < epsilon && port.x >= node.x + tab_w - epsilon)
-    }) && normal(-dy, dx);
-    left || right || top || bottom
-}
-
 pub(super) struct Contours<'a> {
     a: &'a BoxNode,
     b: &'a BoxNode,
@@ -455,14 +369,14 @@ impl<'a> Contours<'a> {
     }
     pub(super) fn normal(&self, points: &[Point], slant: bool) -> bool {
         points.len() >= 2
-            && valid_departure(
+            && super::departure::valid(
                 self.a,
                 points[0],
                 super::container_ends::departure(self.a, self.b, points[0], points[1]),
                 slant,
                 self.tabs[0],
             )
-            && valid_departure(
+            && super::departure::valid(
                 self.b,
                 *points.last().unwrap(),
                 super::container_ends::departure(

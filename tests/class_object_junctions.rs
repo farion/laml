@@ -78,6 +78,24 @@ fn association_class_can_attach_to_a_named_nary_diamond() {
     let routes = route(&diagram, &boxes, &styles).unwrap();
     let svg = render(&boxes, &routes).unwrap();
     assert_eq!(routes.len(), 4);
+    let diamond = boxes.iter().find(|b| b.id == "Verordnet").unwrap();
+    let tip = *routes[3].points.last().unwrap();
+    let cx = diamond.x + 12.0;
+    let cy = diamond.y + diamond.height / 2.0;
+    assert!(
+        ((tip.x - cx).abs() + (tip.y - cy).abs() - 12.0).abs() < 1e-6,
+        "the fourth arm must use the actual compact diamond contour"
+    );
+    assert!(
+        routes[3]
+            .points
+            .windows(2)
+            .all(|p| (p[0].x - p[1].x).abs() < 1e-6 || (p[0].y - p[1].y).abs() < 1e-6)
+    );
+    assert!(
+        routes[..3].iter().all(|r| *r.points.last().unwrap() != tip),
+        "the fourth arm must not reuse an occupied vertex"
+    );
     assert!(svg.contains("zeit: Date"));
     assert!(svg.contains("stroke-dasharray=\"6 4\""));
     assert!(export::png(&svg).is_ok());

@@ -242,16 +242,15 @@ fn endpoint_handle_reconnects_to_an_existing_named_port() {
     editor.selection.click_relation(9, false);
     canvas_frame(&mut editor, &ctx, vec![]);
     let preview = editor.preview.as_ref().unwrap();
-    let endpoint = *preview
-        .routes
-        .iter()
-        .find(|r| r.source_line == 9)
-        .unwrap()
-        .points
-        .last()
-        .unwrap();
+    let route = preview.routes.iter().find(|r| r.source_line == 9).unwrap();
+    let start = connection_geometry::endpoint_grip(
+        preview,
+        editor.creation.canvas_rect.unwrap(),
+        route,
+        laml::syntax::EndPosition::Target,
+    )
+    .unwrap();
     let q = &preview.nodes.iter().find(|n| n.id == "B").unwrap().ports[0];
-    let start = screen(&editor, endpoint.x, endpoint.y);
     let target = screen(&editor, q.x, q.y);
     canvas_frame(
         &mut editor,

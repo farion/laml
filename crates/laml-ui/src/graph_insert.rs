@@ -287,12 +287,10 @@ pub fn plan(
         if !already_connected
             && let Ok((_, edits)) =
                 graph_edit::add_relation_labeled(&candidate, from, id, op, label, None, None)
+            && let Ok(connected) = edit::apply(&candidate, &edits)
+            && notation::inspect(&connected).is_ok()
         {
-            if let Ok(connected) = edit::apply(&candidate, &edits)
-                && notation::inspect(&connected).is_ok()
-            {
-                candidate = connected;
-            }
+            candidate = connected;
         }
     }
     notation::inspect(&candidate)?;

@@ -233,7 +233,7 @@ fn both_header_action_groups_end_at_the_right_margin_at_multiple_widths() {
 }
 
 #[test]
-fn connection_grip_geometry_and_hit_areas_scale_with_the_canvas_not_the_ui() {
+fn connection_docks_follow_the_canvas_while_grip_sizes_stay_bounded_for_zoom() {
     let (editor, _) = ready();
     let preview = editor.preview.as_ref().unwrap();
     let node = &preview.nodes[0];
@@ -245,10 +245,14 @@ fn connection_grip_geometry_and_hit_areas_scale_with_the_canvas_not_the_ui() {
     let large = egui::Rect::from_min_size(egui::Pos2::ZERO, size * 3.0);
     let a = connection_geometry::handles(preview, small, node, true);
     let b = connection_geometry::handles(preview, large, node, true);
-    for (a, b) in a.iter().zip(&b) {
-        assert!((b.radius - a.radius * 3.0).abs() < 0.01);
+    for (a, b) in a.iter().zip(&b).take(4) {
+        assert!((3.0..=6.0).contains(&a.radius));
+        assert!((3.0..=6.0).contains(&b.radius));
+        assert!(b.radius >= a.radius);
         assert!((b.point.to_vec2() - a.point.to_vec2() * 3.0).length() < 0.01);
     }
+    assert!(connection_geometry::node_rect(preview, small, node).contains(a[4].point));
+    assert!(connection_geometry::node_rect(preview, large, node).contains(b[4].point));
     let right = &b[1];
     let pointer = right.point + egui::vec2(0.0, right.radius * 0.8);
     assert_eq!(

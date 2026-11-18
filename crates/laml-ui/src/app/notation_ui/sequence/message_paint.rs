@@ -1,16 +1,10 @@
 //! Compiler arrow mechanics with drag endpoints anchored to the current canvas.
 use super::*;
-use laml::sequence::{Message, MessageKind, render::message_geometry as geometry};
-pub(super) fn paint(
-    ui: &egui::Ui,
-    scene: &Scene,
-    preview: &Preview,
-    message: &Message,
-    send: (f64, f64),
-    receive: (f64, f64),
-    diagonal: bool,
-    loop_width: Option<f64>,
-) {
+use laml::sequence::{MessageKind, render::message_geometry as geometry};
+pub(super) fn paint(ui: &egui::Ui, scene: &Scene, preview: &Preview, arrow: &MessagePreview) {
+    let message = &arrow.message;
+    let (send, receive, diagonal, loop_width) =
+        (arrow.send, arrow.receive, arrow.diagonal, arrow.loop_width);
     let scale = scene.image.width() / (scene.bounds.2 - scene.bounds.0) as f32;
     let mut sheet = preview.styles.clone();
     sheet.theme = preview.diagram.settings.theme;
@@ -90,16 +84,7 @@ pub(super) fn ghost(
     operator: &str,
 ) {
     if let Some(ghost) = ghost_geometry(scene, g, pointer, source, operator) {
-        paint(
-            ui,
-            scene,
-            preview,
-            &ghost.message,
-            ghost.send,
-            ghost.receive,
-            ghost.diagonal,
-            ghost.loop_width,
-        );
+        paint(ui, scene, preview, &ghost);
     }
 }
 

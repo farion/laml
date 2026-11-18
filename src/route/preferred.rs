@@ -149,7 +149,12 @@ pub(super) fn actor_usecase_straight(a: &BoxNode, b: &BoxNode) -> Option<Vec<Poi
 // For a mostly lateral actor/use-case relation obstructed by another use case,
 // leave the figure from its side before routing around that obstacle. The
 // generic exterior candidates might otherwise pick the actor's head first.
-pub(super) fn actor_side_detours(a: &BoxNode, b: &BoxNode, boxes: &[BoxNode]) -> Vec<Vec<Point>> {
+pub(super) fn actor_side_detours(
+    a: &BoxNode,
+    b: &BoxNode,
+    boxes: &[BoxNode],
+    terminal_gap: f64,
+) -> Vec<Vec<Point>> {
     let (actor, usecase, actor_at_start) = match (a.kind, b.kind) {
         (crate::syntax::NodeKind::UseCaseActor, crate::syntax::NodeKind::UseCase) => (a, b, true),
         (crate::syntax::NodeKind::UseCase, crate::syntax::NodeKind::UseCaseActor) => (b, a, false),
@@ -203,7 +208,7 @@ pub(super) fn actor_side_detours(a: &BoxNode, b: &BoxNode, boxes: &[BoxNode]) ->
             && usecase.x >= node.x
             && usecase.x + usecase.width <= node.x + node.width
     }) {
-        let y = bottom + 14.0;
+        let y = bottom + terminal_gap.max(14.0);
         let side = forced_port(
             actor,
             if rightward {
@@ -217,7 +222,7 @@ pub(super) fn actor_side_detours(a: &BoxNode, b: &BoxNode, boxes: &[BoxNode]) ->
         } else {
             (side.x - 24.0).max(frame.x + frame.width + 12.0)
         };
-        if y < frame.y + frame.height - 14.0 && (x - side.x) * (uc.x - ac.x) > 0.0 {
+        if y < frame.y + frame.height - 8.0 && (x - side.x) * (uc.x - ac.x) > 0.0 {
             let bottom_port = port(
                 usecase,
                 Point {
